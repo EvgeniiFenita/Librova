@@ -51,3 +51,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added converter command foundation with a built-in `fb2cng` profile and a user-configurable argument-template contract.
 - `2026-03-30` Feature: added external converter runtime execution with process cancellation support and output relocation for directory-based converters.
 - `2026-03-30` Feature: added explicit conversion result statuses and a separate import conversion policy with tested fallback and cancellation behavior.
+- `2026-03-30` Feature: added explicit converter configuration modes for disabled, built-in `fb2cng`, and custom command profiles.

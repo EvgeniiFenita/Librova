@@ -39,6 +39,7 @@ Implemented slices at this point:
 - `ParserRegistry`
 - `SearchIndex`
 - `ConverterCommand`
+- `ConverterConfiguration`
 - `ConverterRuntime`
 - `ImportConversion`
 
@@ -74,6 +75,10 @@ Implemented slices at this point:
 - The default supported converter direction is `FB2 -> EPUB`.
 - The first built-in converter profile is based on `fb2cng` / `fbc`.
 - User-specified converters are planned to work through an explicit argument-template contract rather than through one hard-coded binary interface.
+- Converter configuration is modeled explicitly and currently supports three modes:
+  - disabled
+  - built-in `fb2cng`
+  - custom external command
 - The current implementation already contains command-building support for:
   - generic external converters with placeholders
   - the default `fb2cng` command shape
@@ -120,6 +125,7 @@ Stable facts taken from that reference:
   - converter command building
   - external converter runtime execution and cancellation
   - import conversion fallback policy
+  - converter configuration model
 
 ## 10. Current Gaps
 
