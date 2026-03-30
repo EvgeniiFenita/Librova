@@ -51,12 +51,15 @@ The user can import:
 
 The import flow includes:
 
+- file selection or drag-and-drop from the UI;
 - metadata parsing;
 - duplicate detection;
 - optional conversion `FB2 -> EPUB`;
 - staging before commit;
 - database write;
 - managed storage placement.
+
+The user-facing import screen is intentionally simplified: it centers on selecting or dropping a source file, then shows running progress and cancellation, rather than exposing internal job-management controls.
 
 ### 3.3 Library Browsing
 
