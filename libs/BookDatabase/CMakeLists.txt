@@ -9,6 +9,7 @@ target_include_directories(LibriFlowBookDatabase PUBLIC
 
 target_link_libraries(LibriFlowBookDatabase PUBLIC
     LibriFlowDomain
+    LibriFlowSearchIndex
     LibriFlowSqlite
 )
 

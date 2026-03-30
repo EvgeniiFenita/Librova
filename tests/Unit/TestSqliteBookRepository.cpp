@@ -119,12 +119,19 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
         formatStatement.BindInt64(1, bookId.Value);
         REQUIRE(formatStatement.Step());
         REQUIRE(formatStatement.GetColumnInt(0) == 0);
+
+        LibriFlow::Sqlite::CSqliteStatement searchIndexStatement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM search_index WHERE rowid = ?;");
+        searchIndexStatement.BindInt64(1, bookId.Value);
+        REQUIRE(searchIndexStatement.Step());
+        REQUIRE(searchIndexStatement.GetColumnInt(0) == 0);
     }
 
     std::filesystem::remove(databasePath);
 }
 
-TEST_CASE("Sqlite book query repository applies structured filters", "[book-database]")
+TEST_CASE("Sqlite book query repository applies structured filters and FTS text search", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-query-search.db";
     std::filesystem::remove(databasePath);
@@ -150,6 +157,7 @@ TEST_CASE("Sqlite book query repository applies structured filters", "[book-data
     secondBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     secondBook.Metadata.Language = "en";
     secondBook.Metadata.TagsUtf8 = {"sci-fi"};
+    secondBook.Metadata.DescriptionUtf8 = std::string{"A zone, artifacts, and dangerous expeditions"};
     secondBook.File.Format = LibriFlow::Domain::EBookFormat::Fb2;
     secondBook.File.ManagedPath = "Books/0000000102/book.fb2";
     secondBook.File.SizeBytes = 1024;
@@ -169,6 +177,25 @@ TEST_CASE("Sqlite book query repository applies structured filters", "[book-data
 
     REQUIRE(books.size() == 1);
     REQUIRE(books.front().Metadata.TitleUtf8 == "Пикник на обочине");
+
+    const std::vector<LibriFlow::Domain::SBook> authorSearch = queryRepository.Search({
+        .TextUtf8 = "arkady"
+    });
+    REQUIRE(authorSearch.size() == 1);
+    REQUIRE(authorSearch.front().Metadata.TitleUtf8 == "Roadside Picnic");
+
+    const std::vector<LibriFlow::Domain::SBook> tagSearch = queryRepository.Search({
+        .TextUtf8 = "classic"
+    });
+    REQUIRE(tagSearch.size() == 1);
+    REQUIRE(tagSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
+
+    const std::vector<LibriFlow::Domain::SBook> descriptionSearch = queryRepository.Search({
+        .TextUtf8 = "artifacts"
+    });
+    REQUIRE(descriptionSearch.size() == 1);
+    REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Roadside Picnic");
+
     std::filesystem::remove(databasePath);
 }
 

@@ -15,6 +15,7 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
+#include "SearchIndex/SearchIndexMaintenance.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
@@ -330,6 +331,7 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
     InsertAuthors(connection, bookId, book.Metadata.AuthorsUtf8);
     InsertTags(connection, bookId, book.Metadata.TagsUtf8);
     InsertFormatRow(connection, bookId, book.File);
+    LibriFlow::SearchIndex::CSearchIndexMaintenance::UpsertBook(connection, bookId, book.Metadata);
 
     transaction.Commit();
     return LibriFlow::Domain::SBookId{bookId};
@@ -382,6 +384,13 @@ std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const Lib
 void CSqliteBookRepository::Remove(const LibriFlow::Domain::SBookId id)
 {
     LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::optional<LibriFlow::Domain::SBook> existingBook = GetById(id);
+
+    if (existingBook.has_value())
+    {
+        LibriFlow::SearchIndex::CSearchIndexMaintenance::RemoveBook(connection, id.Value, existingBook->Metadata);
+    }
+
     LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "DELETE FROM books WHERE id = ?;");
     statement.BindInt64(1, id.Value);
     static_cast<void>(statement.Step());

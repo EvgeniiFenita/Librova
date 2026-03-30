@@ -16,11 +16,53 @@
 namespace LibriFlow::BookDatabase {
 namespace {
 
+std::string BuildFtsQuery(const std::string_view text)
+{
+    const std::string normalizedText = LibriFlow::Domain::NormalizeText(text);
+    std::string query;
+    std::string token;
+
+    for (const char currentCharacter : normalizedText)
+    {
+        if (currentCharacter == ' ')
+        {
+            if (!token.empty())
+            {
+                if (!query.empty())
+                {
+                    query.push_back(' ');
+                }
+
+                query.append(token);
+                query.push_back('*');
+                token.clear();
+            }
+
+            continue;
+        }
+
+        token.push_back(currentCharacter);
+    }
+
+    if (!token.empty())
+    {
+        if (!query.empty())
+        {
+            query.push_back(' ');
+        }
+
+        query.append(token);
+        query.push_back('*');
+    }
+
+    return query;
+}
+
 void BindTextFilters(LibriFlow::Sqlite::CSqliteStatement& statement, int& parameterIndex, const LibriFlow::Domain::SSearchQuery& query)
 {
     if (query.HasText())
     {
-        statement.BindText(parameterIndex++, "%" + query.TextUtf8 + "%");
+        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
     }
 
     if (query.AuthorUtf8.has_value())
@@ -58,6 +100,11 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
         "SELECT DISTINCT b.id "
         "FROM books b ";
 
+    if (query.HasText())
+    {
+        sql += "INNER JOIN search_index si ON si.rowid = b.id ";
+    }
+
     if (query.AuthorUtf8.has_value())
     {
         sql +=
@@ -69,7 +116,7 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
 
     if (query.HasText())
     {
-        sql += "AND b.title LIKE ? COLLATE NOCASE ";
+        sql += "AND si MATCH ? ";
     }
 
     if (query.AuthorUtf8.has_value())

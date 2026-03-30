@@ -40,3 +40,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added EPUB parser with metadata and cover extraction backed by `libzip` and `pugixml`.
 - `2026-03-30` Feature: added FB2 parser with metadata and embedded cover extraction backed by `pugixml`.
 - `2026-03-30` Feature: added parser registry with format detection and dispatch across EPUB and FB2 parsers.
+
+### Phase 4. Search Layer
+
+- `2026-03-30` Feature: added SQLite FTS index maintenance and routed text search through `search_index` for title, authors, tags, and description.

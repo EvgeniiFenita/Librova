@@ -37,6 +37,7 @@ if(BUILD_TESTING)
             LibriFlowFb2Parsing
             LibriFlowManagedStorage
             LibriFlowParserRegistry
+            LibriFlowSearchIndex
             LibriFlowSqlite
             LibriFlowStoragePlanning
     )
