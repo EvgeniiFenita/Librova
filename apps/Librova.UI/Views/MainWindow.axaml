@@ -221,7 +221,7 @@
             <TextBlock FontSize="12"
                        Opacity="0.64"
                        IsVisible="{Binding Setup.ShowHelperText}"
-                       Text="Choose an absolute directory path on an available drive. Librova will retry startup and only persist the library root after a successful shell launch."
+                       Text="{Binding Setup.HelperText}"
                        TextWrapping="Wrap" />
             <WrapPanel>
               <Button Classes="PrimaryAction"

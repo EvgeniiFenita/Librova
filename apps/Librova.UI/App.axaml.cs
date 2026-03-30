@@ -164,7 +164,8 @@ internal sealed partial class App : Application
                 preferencesStore,
                 launchOptions,
                 hostOptions.LibraryRoot,
-                cancellationToken);
+                cancellationToken,
+                requireDifferentLibraryRoot: true);
             ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message, recoverySetup);
         }
     }
@@ -175,7 +176,8 @@ internal sealed partial class App : Application
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string suggestedLibraryRoot,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        bool requireDifferentLibraryRoot = false) =>
         new(
             suggestedLibraryRoot,
             pathSelectionService,
@@ -186,7 +188,8 @@ internal sealed partial class App : Application
                 preferencesStore,
                 launchOptions,
                 libraryRoot,
-                cancellationToken));
+                cancellationToken),
+            requireDifferentLibraryRoot);
 
     private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {

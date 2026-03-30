@@ -124,6 +124,41 @@ public sealed class FirstRunSetupViewModelTests
         Assert.Contains("startup failed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ContinueCommand_DisabledWhenRecoveryRequiresDifferentLibraryRootAndPathIsUnchanged()
+    {
+        var libraryRoot = BuildAvailableLibraryRoot("same-path-retry");
+        var viewModel = new FirstRunSetupViewModel(
+            libraryRoot,
+            new FakePathSelectionService(),
+            new FakePreferencesStore(),
+            _ => Task.CompletedTask,
+            requireDifferentLibraryRoot: true);
+
+        Assert.False(viewModel.ContinueCommand.CanExecute(null));
+        Assert.True(viewModel.HasValidationError);
+        Assert.Contains("different library root", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ContinueCommand_EnabledWhenRecoveryRequiresDifferentLibraryRootAndPathChanges()
+    {
+        var initialLibraryRoot = BuildAvailableLibraryRoot("different-path-initial");
+        var otherLibraryRoot = BuildAvailableLibraryRoot("different-path-target");
+        var viewModel = new FirstRunSetupViewModel(
+            initialLibraryRoot,
+            new FakePathSelectionService(),
+            new FakePreferencesStore(),
+            _ => Task.CompletedTask,
+            requireDifferentLibraryRoot: true);
+
+        viewModel.LibraryRoot = otherLibraryRoot;
+
+        Assert.True(viewModel.ContinueCommand.CanExecute(null));
+        Assert.False(viewModel.HasValidationError);
+        Assert.Contains("different library root", viewModel.HelperText, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class FakePathSelectionService : IPathSelectionService
     {
         public string? SelectedWorkingDirectory { get; init; }

@@ -13,6 +13,8 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private readonly IUiPreferencesStore _preferencesStore;
     private readonly Func<string, Task> _continueAsync;
+    private readonly string _initialLibraryRoot;
+    private readonly bool _requireDifferentLibraryRoot;
     private string _libraryRoot;
     private string _statusText;
     private string _validationMessage = string.Empty;
@@ -22,8 +24,11 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
         string suggestedLibraryRoot,
         IPathSelectionService? pathSelectionService,
         IUiPreferencesStore? preferencesStore,
-        Func<string, Task> continueAsync)
+        Func<string, Task> continueAsync,
+        bool requireDifferentLibraryRoot = false)
     {
+        _initialLibraryRoot = suggestedLibraryRoot;
+        _requireDifferentLibraryRoot = requireDifferentLibraryRoot;
         _libraryRoot = suggestedLibraryRoot;
         _statusText = "Choose the managed library location for Librova.";
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
@@ -64,6 +69,10 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
 
     public bool HasValidationError => !string.IsNullOrWhiteSpace(ValidationMessage);
     public bool ShowHelperText => !HasValidationError;
+    public bool RequiresDifferentLibraryRoot => _requireDifferentLibraryRoot;
+    public string HelperText => _requireDifferentLibraryRoot
+        ? "Choose a different library root. The current library could not be opened, so retrying the same path will reopen the same startup error."
+        : "Choose an absolute directory path on an available drive. Librova will retry startup and only persist the library root after a successful shell launch.";
 
     public bool IsBusy
     {
@@ -117,9 +126,46 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
 
     private void UpdateValidation()
     {
-        ValidationMessage = LibraryRootValidation.BuildValidationMessage(LibraryRoot);
+        ValidationMessage = BuildValidationMessage();
         RaisePropertyChanged(nameof(HasValidationError));
         RaisePropertyChanged(nameof(ShowHelperText));
+        RaisePropertyChanged(nameof(HelperText));
         ContinueCommand.RaiseCanExecuteChanged();
+    }
+
+    private string BuildValidationMessage()
+    {
+        var validationMessage = LibraryRootValidation.BuildValidationMessage(LibraryRoot);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            return validationMessage;
+        }
+
+        if (_requireDifferentLibraryRoot && AreEquivalentLibraryRoots(LibraryRoot, _initialLibraryRoot))
+        {
+            return "Choose a different library root. Retrying the same library will reopen the same startup error.";
+        }
+
+        return string.Empty;
+    }
+
+    private static bool AreEquivalentLibraryRoots(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(left.Trim()),
+                Path.GetFullPath(right.Trim()),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

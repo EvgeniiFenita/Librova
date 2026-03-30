@@ -77,6 +77,25 @@ public sealed class ShellWindowConfiguratorTests
     }
 
     [Fact]
+    public void CreateStartupErrorState_WithRecoverySetupForCorruptedLibrary_DisablesSamePathRetry()
+    {
+        var libraryRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var setup = new FirstRunSetupViewModel(
+            libraryRoot,
+            null,
+            null,
+            _ => Task.CompletedTask,
+            requireDifferentLibraryRoot: true);
+
+        var state = ShellWindowConfigurator.CreateStartupErrorState("database is corrupted", setup);
+
+        Assert.True(state.ViewModel.HasStartupRecoverySetup);
+        Assert.NotNull(state.ViewModel.Setup);
+        Assert.True(state.ViewModel.Setup!.RequiresDifferentLibraryRoot);
+        Assert.False(state.ViewModel.Setup.ContinueCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void CreateFirstRunSetupState_ProducesSetupViewModel()
     {
         var setup = new FirstRunSetupViewModel(
