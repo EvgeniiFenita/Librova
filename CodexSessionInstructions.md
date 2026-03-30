@@ -13,6 +13,8 @@ Before making changes, review these documents in this order:
 5. `docs/ImplementationProgress.md`
 6. `CodexSessionInstructions.md`
 
+Use `docs/archive/Librova-Architecture-Full.md` only when the concise master document is insufficient and historical planning detail is actually needed.
+
 ## 2. Non-Negotiable Project Constraints
 
 - Librova MVP targets Windows only.
@@ -86,6 +88,7 @@ If any of these files stop matching the actual repository, update them early:
 - `docs/ImplementationProgress.md`
 - `docs/ProjectDocumentation.md`
 - `CodexSessionInstructions.md`
+- `docs/archive/Librova-Architecture-Full.md`
 
 If a new standing rule, workflow constraint, or repository convention appears during work, add it to this file in the same task instead of relying on memory.
 If a step becomes a completed and verified checkpoint, record it in `docs/ImplementationProgress.md` in the same task.
