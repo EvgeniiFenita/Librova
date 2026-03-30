@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Librova.UI.Logging;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 namespace Librova.UI.CoreHost;
 
@@ -32,7 +33,9 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             FileName = options.ExecutablePath,
             Arguments = BuildArguments(options),
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true
         };
 
         var process = new Process
@@ -40,6 +43,9 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             StartInfo = startInfo,
             EnableRaisingEvents = true
         };
+        var startupOutput = new ConcurrentQueue<string>();
+        process.OutputDataReceived += (_, eventArgs) => AppendStartupOutput(startupOutput, eventArgs.Data);
+        process.ErrorDataReceived += (_, eventArgs) => AppendStartupOutput(startupOutput, eventArgs.Data);
 
         if (!process.Start())
         {
@@ -47,9 +53,12 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             throw new InvalidOperationException("Failed to start Librova core host process.");
         }
 
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
         try
         {
-            await WaitForPipeReadyAsync(options.PipePath, cancellationToken).ConfigureAwait(false);
+            await WaitForPipeReadyAsync(process, options.PipePath, startupOutput, cancellationToken).ConfigureAwait(false);
             _process = process;
             UiLogging.Information(
                 "Core host process is ready. ProcessId={ProcessId} PipePath={PipePath}",
@@ -126,13 +135,22 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     private static string Quote(string value) => "\"" + value + "\"";
 
-    private static async Task WaitForPipeReadyAsync(string pipePath, CancellationToken cancellationToken)
+    private static async Task WaitForPipeReadyAsync(
+        Process process,
+        string pipePath,
+        ConcurrentQueue<string> startupOutput,
+        CancellationToken cancellationToken)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
 
         while (DateTime.UtcNow < deadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (process.HasExited)
+            {
+                throw new InvalidOperationException(BuildStartupFailureMessage(process.ExitCode, startupOutput));
+            }
 
             if (WaitNamedPipe(pipePath, 100))
             {
@@ -143,6 +161,32 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         }
 
         throw new TimeoutException("Timed out waiting for Librova core host pipe readiness.");
+    }
+
+    internal static string BuildStartupFailureMessage(int exitCode, IEnumerable<string> startupOutput)
+    {
+        var summary = string.Join(" ", startupOutput)
+            .Trim();
+
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return $"Librova core host exited before pipe readiness. ExitCode={exitCode}.";
+        }
+
+        return $"Librova core host exited before pipe readiness. ExitCode={exitCode}. {summary}";
+    }
+
+    private static void AppendStartupOutput(ConcurrentQueue<string> startupOutput, string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        startupOutput.Enqueue(line.Trim());
+        while (startupOutput.Count > 8 && startupOutput.TryDequeue(out _))
+        {
+        }
     }
 
     private static void TryTerminate(Process process)

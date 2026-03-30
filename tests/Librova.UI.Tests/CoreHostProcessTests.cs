@@ -101,6 +101,19 @@ public sealed class CoreHostProcessTests
         }
     }
 
+    [Fact]
+    public void BuildStartupFailureMessage_IncludesExitCodeAndCapturedOutput()
+    {
+        var message = CoreHostProcess.BuildStartupFailureMessage(
+            1,
+            [
+                "Librova.Core.Host failed: Library root must be on an available drive."
+            ]);
+
+        Assert.Contains("ExitCode=1", message, StringComparison.Ordinal);
+        Assert.Contains("Library root must be on an available drive.", message, StringComparison.Ordinal);
+    }
+
     private static async Task<string> ReadAllTextWhenAvailableAsync(string path, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;

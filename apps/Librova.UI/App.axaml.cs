@@ -115,6 +115,27 @@ internal sealed partial class App : Application
         CancellationToken cancellationToken,
         UiPreferencesSnapshot? savedPreferencesOverride = null)
     {
+        var validationMessage = LibraryRootValidation.BuildValidationMessage(hostOptions.LibraryRoot);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            UiLogging.Warning(
+                "Skipping host startup because the configured library root is invalid. LibraryRoot={LibraryRoot} Validation={Validation}",
+                hostOptions.LibraryRoot,
+                validationMessage);
+            var recoverySetup = CreateRecoverySetupViewModel(
+                mainWindow,
+                pathSelectionService,
+                preferencesStore,
+                launchOptions,
+                hostOptions.LibraryRoot,
+                cancellationToken);
+            ShellWindowConfigurator.ConfigureStartupError(
+                mainWindow,
+                $"Configured library root '{hostOptions.LibraryRoot}' is invalid: {validationMessage}",
+                recoverySetup);
+            return;
+        }
+
         try
         {
             UiLogging.Information("Starting Avalonia desktop shell.");

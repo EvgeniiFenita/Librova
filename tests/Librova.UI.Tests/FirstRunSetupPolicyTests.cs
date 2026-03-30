@@ -40,6 +40,23 @@ public sealed class FirstRunSetupPolicyTests
         });
     }
 
+    [Fact]
+    public void SavedPreferredLibraryRoot_CanBeValidatedBeforeHostStartup()
+    {
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            var validation = LibraryRootValidation.BuildValidationMessage(tempFile);
+
+            Assert.False(string.IsNullOrWhiteSpace(validation));
+            Assert.Contains("must not point to a file", validation, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
     private static void WithLibraryRootOverride(string? value, Action action)
     {
         var previous = Environment.GetEnvironmentVariable(RuntimeEnvironment.LibraryRootEnvVar);
