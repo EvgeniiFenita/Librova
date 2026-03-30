@@ -1,5 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <Windows.h>
+
+#include <array>
+#include <bit>
 #include <chrono>
 #include <exception>
 #include <filesystem>
@@ -76,6 +85,49 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
     REQUIRE(parsedResponse.Value->RequestId == request.RequestId);
     REQUIRE(parsedResponse.Value->Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
     REQUIRE(parsedResponse.Value->Payload == "pong");
+
+    serverThread.join();
+    REQUIRE(serverFailure == nullptr);
+}
+
+TEST_CASE("Named pipe channel rejects oversized framed payload before allocation", "[pipe]")
+{
+    const auto pipePath = BuildTestPipePath();
+    std::exception_ptr serverFailure;
+
+    std::jthread serverThread([&pipePath, &serverFailure] {
+        try
+        {
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            auto connection = server.WaitForClient();
+            REQUIRE_THROWS_WITH(
+                connection.ReadMessage(),
+                Catch::Matchers::ContainsSubstring("maximum size"));
+        }
+        catch (...)
+        {
+            serverFailure = std::current_exception();
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    const HANDLE clientHandle = CreateFileW(
+        pipePath.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        nullptr,
+        OPEN_EXISTING,
+        0,
+        nullptr);
+    REQUIRE(clientHandle != INVALID_HANDLE_VALUE);
+
+    const auto oversizedLength = static_cast<std::uint32_t>(Librova::PipeTransport::MaxPipeFrameBytes + 1U);
+    const auto rawLength = std::bit_cast<std::array<std::byte, sizeof(oversizedLength)>>(oversizedLength);
+    DWORD bytesWritten = 0;
+    REQUIRE(WriteFile(clientHandle, rawLength.data(), static_cast<DWORD>(rawLength.size()), &bytesWritten, nullptr) != FALSE);
+    REQUIRE(bytesWritten == rawLength.size());
+    CloseHandle(clientHandle);
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);

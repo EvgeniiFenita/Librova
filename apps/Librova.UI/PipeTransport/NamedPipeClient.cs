@@ -18,6 +18,7 @@ internal sealed class PipeTransportException : IOException
 
 internal sealed class NamedPipeClient
 {
+    internal const int MaxPipeFrameBytes = 8 * 1024 * 1024;
     private static ulong _nextRequestId = 1;
     private readonly string _pipePath;
 
@@ -87,6 +88,11 @@ internal sealed class NamedPipeClient
         byte[] message,
         CancellationToken cancellationToken)
     {
+        if (message.Length > MaxPipeFrameBytes)
+        {
+            throw new PipeTransportException("Named pipe frame exceeds the configured maximum size.");
+        }
+
         var prefix = new byte[sizeof(uint)];
         BinaryPrimitives.WriteUInt32LittleEndian(prefix, checked((uint)message.Length));
         await pipe.WriteAsync(prefix, cancellationToken).ConfigureAwait(false);
@@ -105,6 +111,11 @@ internal sealed class NamedPipeClient
         if (length == 0)
         {
             return [];
+        }
+
+        if (length > MaxPipeFrameBytes)
+        {
+            throw new PipeTransportException("Named pipe frame exceeds the configured maximum size.");
         }
 
         return await ReadExactAsync(pipe, checked((int)length), cancellationToken).ConfigureAwait(false);

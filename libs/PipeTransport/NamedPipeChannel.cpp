@@ -184,6 +184,10 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage() const
 
     const HANDLE handle = static_cast<HANDLE>(m_handle.get());
     const auto byteCount = static_cast<std::size_t>(ReadLengthPrefix(handle));
+    if (byteCount > MaxPipeFrameBytes)
+    {
+        throw std::runtime_error("Named pipe frame exceeds the configured maximum size.");
+    }
 
     std::vector<std::byte> bytes(byteCount);
     if (byteCount != 0)
@@ -206,6 +210,10 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage(const std::chrono::mill
 
     WaitForReadableBytes(handle, sizeof(std::uint32_t), timeout);
     const auto byteCount = static_cast<std::size_t>(ReadLengthPrefix(handle));
+    if (byteCount > MaxPipeFrameBytes)
+    {
+        throw std::runtime_error("Named pipe frame exceeds the configured maximum size.");
+    }
 
     std::vector<std::byte> bytes(byteCount);
     if (byteCount != 0)

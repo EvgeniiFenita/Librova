@@ -10,6 +10,8 @@
 
 namespace Librova::PipeTransport {
 
+inline constexpr std::size_t MaxPipeFrameBytes = 8U * 1024U * 1024U;
+
 using TPipeHandle = std::unique_ptr<void, void(*)(void*)>;
 
 class CNamedPipeConnection
