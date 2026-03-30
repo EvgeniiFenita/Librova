@@ -81,3 +81,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added an application-facing import job client over the named-pipe transport and reverse protobuf mapping.
 - `2026-03-30` Feature: added the first native core host executable with CLI options, startup migration, and sequential named-pipe service loop.
 - `2026-03-30` Fix: hardened named-pipe runtime with startup recovery cleanup, per-session host error isolation, RPC response timeout handling, and process-level host smoke coverage.
+
+### Phase 9. Stabilization
+
+- `2026-03-30` Refactor: removed stale `ProtoGrpcServices` scaffolding and added the first native `spdlog`-backed logging facade with host file logging.

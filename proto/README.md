@@ -20,7 +20,7 @@ Notes:
 - protobuf C++ code generation is now wired into the native build through `libs/ProtoContracts`
 - application-to-transport mapping is implemented separately in `libs/ProtoMapping`
 - service-shaped protobuf request/response handling is implemented in `libs/ProtoServices`
-- gRPC runtime/code generation wiring is not added yet in this checkpoint
+- the MVP path intentionally uses named-pipe transport and does not require gRPC runtime/code generation wiring
 - `protoc` is expected to come from the repository `vcpkg` toolchain via the `protobuf` package
 - current project-local `protoc` path for preset `x64-debug`:
   `out/build/x64-debug/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`

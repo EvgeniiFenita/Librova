@@ -18,6 +18,7 @@ target_link_libraries(LibriFlowCoreHostApp
         LibriFlowDatabaseRuntime
         LibriFlowImporting
         LibriFlowJobs
+        LibriFlowLogging
         LibriFlowManagedStorage
         LibriFlowParserRegistry
         LibriFlowPipeHost

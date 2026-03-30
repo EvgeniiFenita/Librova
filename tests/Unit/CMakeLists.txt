@@ -31,6 +31,7 @@ if(BUILD_TESTING)
         TestImportConversionPolicy.cpp
         TestImportJobManager.cpp
         TestImportJobRunner.cpp
+        TestLogging.cpp
         TestSingleFileImportCoordinator.cpp
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
@@ -67,6 +68,7 @@ if(BUILD_TESTING)
             LibriFlowImportConversion
             LibriFlowImporting
             LibriFlowJobs
+            LibriFlowLogging
             LibriFlowManagedStorage
             LibriFlowParserRegistry
             LibriFlowPipeClient

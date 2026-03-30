@@ -66,6 +66,7 @@ Implemented slices at this point:
 - `ConverterRuntime`
 - `ImportConversion`
 - `Importing`
+- `Logging`
 
 ## 4.1 Shared Contracts
 
@@ -139,6 +140,8 @@ Implemented slices at this point:
   - serves sequential named-pipe sessions according to host options
   - treats malformed or abruptly closed pipe sessions as per-session errors instead of terminating the whole host process
 - the current pipe client timeout is applied as an RPC deadline for waiting on the response after connect, not only as an initial connect timeout
+- `libs/Logging` now provides the first native logging facade over `spdlog`
+- the current core logging baseline writes host logs into `Logs/host.log` and mirrors the same records to `stderr`
 
 ## 5. Persistence And Storage
 
@@ -261,6 +264,7 @@ Stable facts taken from that reference:
 - end-to-end typed named-pipe client calls over the import job service
 - application-facing import job RPC calls over named pipes without direct protobuf usage in the caller
 - process-level smoke coverage for the native host executable over a real named-pipe request flow
+- native logging initialization and file output coverage
 
 ## 12. Current Gaps
 

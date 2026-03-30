@@ -19,6 +19,7 @@
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
+#include "Logging/Logging.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
@@ -47,6 +48,11 @@ namespace {
     return LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).DatabaseDirectory / "libriflow.db";
 }
 
+[[nodiscard]] std::filesystem::path GetLogFilePath(const std::filesystem::path& libraryRoot)
+{
+    return LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).LogsDirectory / "host.log";
+}
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -56,6 +62,8 @@ int main(int argc, char** argv)
         const auto options = LibriFlow::CoreHost::CHostOptions::Parse(CollectArguments(argc, argv));
 
         LibriFlow::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot);
+        LibriFlow::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
+        LibriFlow::Logging::Info("Starting LibriFlow.Core.Host for library root '{}'.", options.LibraryRoot.string());
 
         const auto databasePath = GetDatabasePath(options.LibraryRoot);
         LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -99,19 +107,30 @@ int main(int argc, char** argv)
             try
             {
                 LibriFlow::PipeTransport::CNamedPipeServer server(options.PipePath);
+                LibriFlow::Logging::Info("Waiting for pipe session on '{}'.", options.PipePath.string());
                 host.RunSingleSession(server.WaitForClient());
+                LibriFlow::Logging::Info("Pipe session completed successfully.");
                 ++servedSessions;
             }
             catch (const std::exception& error)
             {
+                LibriFlow::Logging::Error("Pipe session failed: {}", error.what());
                 std::cerr << "LibriFlow.Core.Host session error: " << error.what() << '\n';
             }
         }
 
+        LibriFlow::Logging::Info("LibriFlow.Core.Host stopped after serving {} sessions.", servedSessions);
+        LibriFlow::Logging::CLogging::Shutdown();
         return 0;
     }
     catch (const std::exception& error)
     {
+        if (LibriFlow::Logging::CLogging::IsInitialized())
+        {
+            LibriFlow::Logging::Critical("LibriFlow.Core.Host failed: {}", error.what());
+            LibriFlow::Logging::CLogging::Shutdown();
+        }
+
         std::cerr << "LibriFlow.Core.Host failed: " << error.what() << '\n';
         return 1;
     }
