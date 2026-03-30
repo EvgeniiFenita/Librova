@@ -29,6 +29,7 @@ Before making changes, review these documents in this order:
 - When adding new conventions, update the relevant document in the same task.
 - For native code, prefer one static library per logical slice under `libs/<SliceName>/`, with a local `CMakeLists.txt` in that folder.
 - In native libraries, keep `.hpp` and `.cpp` files together in the same directory unless a different layout becomes clearly necessary.
+- All build artifacts must go under the repository root `out/`; project-local `bin/` and `obj/` directories are not allowed as an intended steady state.
 
 ## 4. Implementation Priorities
 
