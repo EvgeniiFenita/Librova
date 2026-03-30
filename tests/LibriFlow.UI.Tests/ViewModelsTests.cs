@@ -55,6 +55,48 @@ public sealed class ViewModelsTests
         Assert.Null(viewModel.LastResult);
     }
 
+    [Fact]
+    public async Task ImportJobsViewModel_RefreshCommandLoadsCurrentSnapshot()
+    {
+        var service = new SnapshotOnlyImportJobsService();
+        var viewModel = new ImportJobsViewModel(service)
+        {
+            SourcePath = @"C:\Books\book.fb2",
+            WorkingDirectory = @"C:\Work"
+        };
+
+        await viewModel.StartImportAsync();
+        service.ReturnTerminalResult = false;
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.Equal("Still running", viewModel.StatusText);
+        Assert.True(service.RefreshSnapshotCalls > 0);
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_CancelCommandRequestsCancellationForActiveJob()
+    {
+        var service = new CancelAwareImportJobsService();
+        var viewModel = new ImportJobsViewModel(service)
+        {
+            SourcePath = @"C:\Books\book.fb2",
+            WorkingDirectory = @"C:\Work"
+        };
+
+        var runTask = viewModel.StartImportAsync();
+        await service.WaitForStartAsync();
+        await service.WaitForPollingAsync();
+
+        Assert.True(viewModel.CancelImportCommand.CanExecute(null));
+
+        await viewModel.CancelImportCommand.ExecuteAsyncForTests();
+        Assert.Contains("cancellation requested", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        await runTask;
+
+        Assert.True(service.CancelCalls > 0);
+        Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }
@@ -119,6 +161,106 @@ public sealed class ViewModelsTests
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => throw new InvalidOperationException("transport failed");
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class SnapshotOnlyImportJobsService : IImportJobsService
+    {
+        public int RefreshSnapshotCalls { get; private set; }
+        public bool ReturnTerminalResult { get; set; } = true;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(ReturnTerminalResult
+                ? new ImportJobResultModel
+                {
+                    Snapshot = new ImportJobSnapshotModel
+                    {
+                        JobId = jobId,
+                        Status = ImportJobStatusModel.Completed,
+                        Message = "Completed"
+                    }
+                }
+                : null);
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            RefreshSnapshotCalls++;
+            return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Still running"
+            });
+        }
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(64UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(false);
+    }
+
+    private sealed class CancelAwareImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _started = new();
+        private readonly TaskCompletionSource _polling = new();
+        private volatile bool _cancelled;
+
+        public int CancelCalls { get; private set; }
+        public Task WaitForStartAsync() => _started.Task;
+        public Task WaitForPollingAsync() => _polling.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            CancelCalls++;
+            _cancelled = true;
+            return Task.FromResult(true);
+        }
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _started.TrySetResult();
+
+            if (_cancelled)
+            {
+                return Task.FromResult<ImportJobResultModel?>(new ImportJobResultModel
+                {
+                    Snapshot = new ImportJobSnapshotModel
+                    {
+                        JobId = jobId,
+                        Status = ImportJobStatusModel.Cancelled,
+                        Message = "Cancelled"
+                    }
+                });
+            }
+
+            return Task.FromResult<ImportJobResultModel?>(null);
+        }
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _polling.TrySetResult();
+            return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Running"
+            });
+        }
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(77UL);
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

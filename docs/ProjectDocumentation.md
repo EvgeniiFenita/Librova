@@ -22,6 +22,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current `AsyncCommand` baseline captures command failures into controlled UI state instead of letting exceptions escape as unhandled command crashes.
 - `apps/LibriFlow.UI` now also contains the first UI logging baseline backed by `Serilog`, with file logging and debug output for startup, host lifecycle, IPC job calls, and command failure paths.
 - `apps/LibriFlow.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
+- the current Avalonia shell baseline now exposes explicit `Start`, `Refresh`, and `Cancel` import-job actions through the `ImportJobsViewModel` and bound window controls.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -287,6 +288,7 @@ Stable facts taken from that reference:
 - C# regression coverage for command error handling and terminal import polling behavior
 - C# logging initialization and file-output coverage
 - C# shell-window composition coverage without depending on a live Avalonia windowing platform in the test process
+- C# ViewModel coverage for refresh and cancellation actions in the UI import shell
 
 ## 12. Current Gaps
 

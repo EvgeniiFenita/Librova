@@ -81,6 +81,12 @@
           <Button MinWidth="180"
                   Command="{Binding ImportJobs.StartImportCommand}"
                   Content="Start Import" />
+          <Button MinWidth="140"
+                  Command="{Binding ImportJobs.RefreshCommand}"
+                  Content="Refresh" />
+          <Button MinWidth="140"
+                  Command="{Binding ImportJobs.CancelImportCommand}"
+                  Content="Cancel" />
           <TextBlock VerticalAlignment="Center"
                      FontWeight="SemiBold"
                      Text="{Binding ImportJobs.StatusText}" />

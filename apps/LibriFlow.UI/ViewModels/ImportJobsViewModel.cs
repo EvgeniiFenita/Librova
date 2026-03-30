@@ -15,11 +15,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool _isBusy;
     private ulong? _lastJobId;
     private ImportJobResultModel? _lastResult;
+    private CancellationTokenSource? _activeImportCancellation;
 
     public ImportJobsViewModel(IImportJobsService importJobsService)
     {
         _importJobsService = importJobsService;
         StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport, HandleCommandErrorAsync);
+        RefreshCommand = new AsyncCommand(RefreshCurrentAsync, CanRefresh, HandleCommandErrorAsync);
+        CancelImportCommand = new AsyncCommand(CancelCurrentAsync, CanCancel, HandleCommandErrorAsync);
     }
 
     public string SourcePath
@@ -60,6 +63,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
             if (SetProperty(ref _isBusy, value))
             {
                 StartImportCommand.RaiseCanExecuteChanged();
+                RefreshCommand.RaiseCanExecuteChanged();
+                CancelImportCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -67,7 +72,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public ulong? LastJobId
     {
         get => _lastJobId;
-        private set => SetProperty(ref _lastJobId, value);
+        private set
+        {
+            if (SetProperty(ref _lastJobId, value))
+            {
+                RefreshCommand.RaiseCanExecuteChanged();
+                CancelImportCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public ImportJobResultModel? LastResult
@@ -77,17 +89,19 @@ internal sealed class ImportJobsViewModel : ObservableObject
     }
 
     public AsyncCommand StartImportCommand { get; }
+    public AsyncCommand RefreshCommand { get; }
+    public AsyncCommand CancelImportCommand { get; }
 
     public async Task StartImportAsync()
     {
         IsBusy = true;
         StatusText = "Starting import...";
         LastResult = null;
+        _activeImportCancellation?.Dispose();
+        _activeImportCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
         try
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
             var jobId = await _importJobsService.StartAsync(
                 new StartImportRequestModel
                 {
@@ -95,14 +109,16 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     WorkingDirectory = WorkingDirectory
                 },
                 TimeSpan.FromSeconds(5),
-                cancellation.Token);
+                _activeImportCancellation.Token);
 
             LastJobId = jobId;
             StatusText = $"Import job {jobId} started.";
-            await PollUntilCompletedAsync(jobId, cancellation.Token);
+            await PollUntilCompletedAsync(jobId, _activeImportCancellation.Token);
         }
         finally
         {
+            _activeImportCancellation?.Dispose();
+            _activeImportCancellation = null;
             IsBusy = false;
         }
     }
@@ -141,6 +157,35 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 ? snapshot.Status.ToString()
                 : snapshot.Message;
         }
+    }
+
+    public Task RefreshCurrentAsync() => RefreshAsync();
+
+    public async Task CancelCurrentAsync()
+    {
+        if (LastJobId is null)
+        {
+            return;
+        }
+
+        var cancellation = _activeImportCancellation ?? new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var accepted = await _importJobsService.CancelAsync(
+            LastJobId.Value,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+
+        if (!ReferenceEquals(cancellation, _activeImportCancellation))
+        {
+            cancellation.Dispose();
+        }
+
+        if (accepted)
+        {
+            StatusText = $"Import job {LastJobId.Value} cancellation requested.";
+            return;
+        }
+
+        StatusText = $"Import job {LastJobId.Value} could not be cancelled.";
     }
 
     private async Task PollUntilCompletedAsync(ulong jobId, CancellationToken cancellationToken)
@@ -189,4 +234,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
         !IsBusy
         && !string.IsNullOrWhiteSpace(SourcePath)
         && !string.IsNullOrWhiteSpace(WorkingDirectory);
+
+    private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
+
+    private bool CanCancel() => LastJobId.HasValue && IsBusy;
 }
