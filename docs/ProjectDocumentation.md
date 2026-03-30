@@ -105,6 +105,12 @@ Implemented slices at this point:
   - reads one framed protobuf request
   - dispatches it through `PipeRequestDispatcher`
   - writes one framed protobuf response back to the client
+- `libs/PipeClient` now provides the first typed client helper for named-pipe RPC:
+  - opens a pipe connection on demand
+  - serializes protobuf requests
+  - validates request/response correlation through request ids
+  - translates invalid framing or non-`Ok` transport status into transport exceptions
+  - parses typed protobuf responses for callers
 
 ## 5. Persistence And Storage
 
@@ -224,6 +230,7 @@ Stable facts taken from that reference:
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
+- end-to-end typed named-pipe client calls over the import job service
 
 ## 12. Current Gaps
 

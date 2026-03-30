@@ -77,3 +77,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first Win32 named-pipe channel with real message round-trip coverage.
 - `2026-03-30` Fix: hardened import job manager teardown by joining worker threads and removed nondeterministic test-process crashes during shutdown.
 - `2026-03-30` Feature: added the first named-pipe host loop with end-to-end request dispatch over the protobuf job service.
+- `2026-03-30` Feature: added the first typed named-pipe client helper with end-to-end request/response coverage.

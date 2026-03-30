@@ -7,6 +7,7 @@ if(BUILD_TESTING)
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
         TestLibraryJobServiceAdapter.cpp
+        TestNamedPipeClient.cpp
         TestNamedPipeChannel.cpp
         TestNamedPipeHost.cpp
         TestPipeProtocol.cpp
@@ -62,6 +63,7 @@ if(BUILD_TESTING)
             LibriFlowJobs
             LibriFlowManagedStorage
             LibriFlowParserRegistry
+            LibriFlowPipeClient
             LibriFlowPipeHost
             LibriFlowPipeTransport
             LibriFlowProtoContracts
