@@ -6,6 +6,7 @@
 #include <format>
 #include <optional>
 #include <sstream>
+#include <unordered_set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -146,11 +147,13 @@ void InsertAuthors(
     const std::int64_t bookId,
     const std::vector<std::string>& authors)
 {
+    std::unordered_set<std::string> insertedAuthors;
+
     for (std::size_t index = 0; index < authors.size(); ++index)
     {
         const std::string normalizedAuthor = LibriFlow::Domain::NormalizeText(authors[index]);
 
-        if (normalizedAuthor.empty())
+        if (normalizedAuthor.empty() || !insertedAuthors.insert(normalizedAuthor).second)
         {
             continue;
         }
@@ -172,11 +175,13 @@ void InsertTags(
     const std::int64_t bookId,
     const std::vector<std::string>& tags)
 {
+    std::unordered_set<std::string> insertedTags;
+
     for (const std::string& tag : tags)
     {
         const std::string normalizedTag = LibriFlow::Domain::NormalizeText(tag);
 
-        if (normalizedTag.empty())
+        if (normalizedTag.empty() || !insertedTags.insert(normalizedTag).second)
         {
             continue;
         }

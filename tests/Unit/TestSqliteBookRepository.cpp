@@ -229,3 +229,50 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
 
     std::filesystem::remove(databasePath);
 }
+
+TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after normalization", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-repository-dedup.db";
+    std::filesystem::remove(databasePath);
+    LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    LibriFlow::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    LibriFlow::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Duplicate Normalization";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", " arkady   strugatsky ", "ARKADY STRUGATSKY"};
+    book.Metadata.Language = "en";
+    book.Metadata.TagsUtf8 = {"Sci-Fi", " sci-fi ", "SCI-FI"};
+    book.File.Format = LibriFlow::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.SizeBytes = 256;
+    book.File.Sha256Hex = "hash-dedup";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+
+    const LibriFlow::Domain::SBookId bookId = repository.Add(book);
+    const std::optional<LibriFlow::Domain::SBook> loadedBook = repository.GetById(bookId);
+
+    REQUIRE(loadedBook.has_value());
+    REQUIRE(loadedBook->Metadata.AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
+    REQUIRE(loadedBook->Metadata.TagsUtf8 == std::vector<std::string>({"Sci-Fi"}));
+
+    {
+        LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
+
+        LibriFlow::Sqlite::CSqliteStatement authorLinkStatement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM book_authors WHERE book_id = ?;");
+        authorLinkStatement.BindInt64(1, bookId.Value);
+        REQUIRE(authorLinkStatement.Step());
+        REQUIRE(authorLinkStatement.GetColumnInt(0) == 1);
+
+        LibriFlow::Sqlite::CSqliteStatement tagLinkStatement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM book_tags WHERE book_id = ?;");
+        tagLinkStatement.BindInt64(1, bookId.Value);
+        REQUIRE(tagLinkStatement.Step());
+        REQUIRE(tagLinkStatement.GetColumnInt(0) == 1);
+    }
+
+    std::filesystem::remove(databasePath);
+}
