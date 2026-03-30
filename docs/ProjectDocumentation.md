@@ -35,6 +35,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 Implemented slices at this point:
 
 - `Application`
+- `ApplicationJobs`
 - `Jobs`
 - `Domain`
 - `Core`
@@ -210,4 +211,11 @@ Not implemented yet, even if already planned architecturally:
   - `try-get result`
   - `cancel`
   - `wait`
+- `ApplicationJobs` provides an application-facing service above the in-memory job manager:
+  - start import job
+  - query snapshot by job id
+  - query final result by job id
+  - cancel job
+  - wait for completion
+- The application-facing job service maps internal `Jobs` types into its own DTO layer so future gRPC and UI code do not need to depend directly on low-level job internals.
 - Job-layer tests cover both single-file and ZIP-backed execution paths as well as in-memory job cancellation.
