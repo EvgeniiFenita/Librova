@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="using:LibriFlow.UI.ViewModels"
+        x:Class="LibriFlow.UI.Views.MainWindow"
+        x:DataType="viewModels:ShellViewModel"
+        Width="1100"
+        Height="760"
+        MinWidth="920"
+        MinHeight="640"
+        Background="#F3F1EA"
+        Foreground="#1F1B16"
+        mc:Ignorable="d">
+  <Grid RowDefinitions="Auto,*" Margin="28">
+    <Border Background="#D9E3D4"
+            CornerRadius="20"
+            Padding="24"
+            Margin="0,0,0,20">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="8">
+          <TextBlock FontSize="28"
+                     FontWeight="SemiBold"
+                     Text="LibriFlow" />
+          <TextBlock Opacity="0.75"
+                     Text="Desktop library import shell over native core host." />
+        </StackPanel>
+        <StackPanel Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    Spacing="6">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Library Root" />
+          <TextBlock MaxWidth="360"
+                     Text="{Binding LibraryRoot}"
+                     TextWrapping="Wrap" />
+          <TextBlock Margin="0,10,0,0"
+                     FontWeight="SemiBold"
+                     Text="Pipe" />
+          <TextBlock MaxWidth="360"
+                     Text="{Binding PipePath}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            Background="#FFFDF8"
+            BorderBrush="#D5CEC2"
+            BorderThickness="1"
+            CornerRadius="20"
+            Padding="24">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+            ColumnDefinitions="Auto,*"
+            ColumnSpacing="16"
+            RowSpacing="14">
+        <TextBlock Grid.ColumnSpan="2"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Text="Import Job" />
+
+        <TextBlock Grid.Row="1"
+                   VerticalAlignment="Center"
+                   Text="Source File" />
+        <TextBox Grid.Row="1"
+                 Grid.Column="1"
+                 Watermark="C:\Books\incoming\book.fb2"
+                 Text="{Binding ImportJobs.SourcePath}" />
+
+        <TextBlock Grid.Row="2"
+                   VerticalAlignment="Center"
+                   Text="Working Directory" />
+        <TextBox Grid.Row="2"
+                 Grid.Column="1"
+                 Watermark="C:\Temp\LibriFlow\Work"
+                 Text="{Binding ImportJobs.WorkingDirectory}" />
+
+        <StackPanel Grid.Row="3"
+                    Grid.ColumnSpan="2"
+                    Orientation="Horizontal"
+                    Spacing="12">
+          <Button MinWidth="180"
+                  Command="{Binding ImportJobs.StartImportCommand}"
+                  Content="Start Import" />
+          <TextBlock VerticalAlignment="Center"
+                     FontWeight="SemiBold"
+                     Text="{Binding ImportJobs.StatusText}" />
+        </StackPanel>
+
+        <Border Grid.Row="4"
+                Grid.ColumnSpan="2"
+                Background="#F3F1EA"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="10">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Latest Job State" />
+            <TextBlock Text="{Binding ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
+            <TextBlock Text="{Binding ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
+            <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Status, StringFormat='Status: {0}'}" />
+            <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
