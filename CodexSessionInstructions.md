@@ -6,9 +6,9 @@ This file is the startup checklist for each new coding session in this repositor
 
 Before making changes, review these documents in this order:
 
-1. `LibriFlow-Architecture-Master.md`
-2. `CodeStyleGuidelines.md`
-3. `CommitMessageGuidelines.md`
+1. `docs/LibriFlow-Architecture-Master.md`
+2. `docs/CodeStyleGuidelines.md`
+3. `docs/CommitMessageGuidelines.md`
 4. `CodexSessionInstructions.md`
 
 ## 2. Non-Negotiable Project Constraints
@@ -44,7 +44,7 @@ Do not trade away Unicode correctness, rollback safety, or contract clarity for 
 
 Before finishing a task, verify:
 
-- naming matches `CodeStyleGuidelines.md`;
+- naming matches `docs/CodeStyleGuidelines.md`;
 - new code respects layer boundaries;
 - file-system and Unicode handling are explicit;
 - long-running work is non-blocking where required;
@@ -54,14 +54,14 @@ Before finishing a task, verify:
 ## 6. Commit Discipline
 
 - Never commit unless explicitly requested.
-- When a commit is requested, follow `CommitMessageGuidelines.md`.
+- When a commit is requested, follow `docs/CommitMessageGuidelines.md`.
 - Prefer one coherent commit per logical change.
 
 ## 7. Document Maintenance
 
 If any of these files stop matching the actual repository, update them early:
 
-- `LibriFlow-Architecture-Master.md`
-- `CodeStyleGuidelines.md`
-- `CommitMessageGuidelines.md`
+- `docs/LibriFlow-Architecture-Master.md`
+- `docs/CodeStyleGuidelines.md`
+- `docs/CommitMessageGuidelines.md`
 - `CodexSessionInstructions.md`

@@ -941,8 +941,8 @@ This section records decisions that should be treated as fixed unless explicitly
 
 The architecture document is not the only project-level source of truth. The following companion documents are part of the repository bootstrap and should be read at the start of a new session:
 
-- `CodeStyleGuidelines.md`
-- `CommitMessageGuidelines.md`
+- `docs/CodeStyleGuidelines.md`
+- `docs/CommitMessageGuidelines.md`
 - `CodexSessionInstructions.md`
 
 Their purpose is:
