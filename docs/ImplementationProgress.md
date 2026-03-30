@@ -112,6 +112,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first persisted next-launch settings flow for `PreferredLibraryRoot`, with UI save/reset actions, default-host bootstrap integration, and C# coverage for preferences round-trip and shell settings behavior.
 - `2026-03-30` Feature: added an explicit diagnostics panel to the UI shell with runtime log/state/executable paths and verified shell-level coverage for the exposed diagnostics values.
 - `2026-03-30` Feature: added an explicit operational-notes layer to the UI shell so launch-argument prefill, next-launch library-root mismatch, and runtime redirection hints are visible in the running session.
+- `2026-03-30` Feature: enriched the startup-error screen with actionable guidance plus UI diagnostics paths for log, state, and preferences files.
 
 ### Phase 9. Stabilization
 

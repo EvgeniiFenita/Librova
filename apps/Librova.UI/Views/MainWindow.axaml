@@ -68,7 +68,44 @@
         <TextBlock MaxWidth="760"
                    FontSize="15"
                    Text="{Binding StartupError}"
-                   TextWrapping="Wrap" />
+                    TextWrapping="Wrap" />
+        <Border Background="#FFF9F1"
+                BorderBrush="#E0CAB4"
+                BorderThickness="1"
+                CornerRadius="18"
+                Padding="18">
+          <StackPanel Spacing="10">
+            <TextBlock FontWeight="SemiBold"
+                       Text="What to do next" />
+            <TextBlock Text="{Binding StartupGuidanceText}"
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10"
+                  RowDefinitions="Auto,Auto,Auto">
+              <TextBlock FontWeight="SemiBold"
+                         Text="UI log" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding UiLogFilePath}"
+                         TextWrapping="Wrap" />
+
+              <TextBlock Grid.Row="1"
+                         FontWeight="SemiBold"
+                         Text="UI state" />
+              <TextBlock Grid.Row="1"
+                         Grid.Column="1"
+                         Text="{Binding UiStateFilePath}"
+                         TextWrapping="Wrap" />
+
+              <TextBlock Grid.Row="2"
+                         FontWeight="SemiBold"
+                         Text="Preferences" />
+              <TextBlock Grid.Row="2"
+                         Grid.Column="1"
+                         Text="{Binding UiPreferencesFilePath}"
+                         TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
+        </Border>
       </StackPanel>
     </Border>
 

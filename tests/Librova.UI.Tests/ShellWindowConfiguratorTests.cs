@@ -40,6 +40,10 @@ public sealed class ShellWindowConfiguratorTests
         Assert.False(state.ViewModel.HasShell);
         Assert.True(state.ViewModel.HasStartupError);
         Assert.Equal("pipe startup failed", state.ViewModel.StartupError);
+        Assert.NotEmpty(state.ViewModel.UiLogFilePath);
+        Assert.NotEmpty(state.ViewModel.UiStateFilePath);
+        Assert.NotEmpty(state.ViewModel.UiPreferencesFilePath);
+        Assert.Contains("UI log", state.ViewModel.StartupGuidanceText, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService

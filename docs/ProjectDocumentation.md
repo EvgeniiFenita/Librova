@@ -183,6 +183,7 @@ Implemented slices at this point:
 - the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
 - the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 - the current UI shell now exposes an `Operational Notes` panel that surfaces launch-argument prefill, next-launch library-root mismatch, and runtime-redirection hints directly in the running shell instead of leaving them implicit
+- the current startup-error screen now includes actionable guidance and the current UI log/state/preferences file paths, so bootstrap failures can be diagnosed without leaving the error screen
 
 ## 5. Persistence And Storage
 
@@ -331,6 +332,7 @@ Stable facts taken from that reference:
 - C# coverage for persisted UI preferences and next-launch library-root settings behavior
 - C# shell composition coverage for diagnostics-path exposure in the running session
 - C# shell composition coverage for operational-warning visibility in the running session
+- C# startup-error-state coverage for diagnostics-path and guidance exposure
 
 ## 12. Current Gaps
 
