@@ -9,9 +9,13 @@ Before making changes, review these documents in this order:
 1. `docs/Librova-Architecture-Master.md`
 2. `docs/CodeStyleGuidelines.md`
 3. `docs/CommitMessageGuidelines.md`
-4. `docs/ProjectDocumentation.md`
-5. `docs/ImplementationProgress.md`
-6. `CodexSessionInstructions.md`
+4. `docs/MvpScopeGuard.md`
+5. `docs/FeaturePlaybooks.md`
+6. `docs/TestStrategy.md`
+7. `docs/TransportInvariants.md`
+8. `docs/ProjectDocumentation.md`
+9. `docs/ImplementationProgress.md`
+10. `CodexSessionInstructions.md`
 
 Use `docs/archive/Librova-Architecture-Full.md` only when the concise master document is insufficient and historical planning detail is actually needed.
 
@@ -50,6 +54,10 @@ Use `docs/archive/Librova-Architecture-Full.md` only when the concise master doc
 - Do not start convenience or side-feature work unless it directly closes one of the remaining MVP gaps or a concrete stabilization item.
 - Finish the current product gap end-to-end before branching into adjacent polish or secondary UX improvements.
 - If implemented reality removes a roadmap gap or makes a roadmap item obsolete, update `docs/Librova-Architecture-Master.md`, `docs/ProjectDocumentation.md`, and `docs/ImplementationProgress.md` in the same task.
+- For every new vertical slice, follow the appropriate checklist in `docs/FeaturePlaybooks.md` instead of inventing an ad hoc layer sequence.
+- For every proposed new task, apply `docs/MvpScopeGuard.md` first; if the task does not close an active MVP bucket or stabilization item, do not start it.
+- After any transport change, follow `docs/TransportInvariants.md` and verify both native and managed sides before treating the checkpoint as done.
+- Use `docs/TestStrategy.md` to decide whether a unit, integration, or strong host-backed test is actually needed; do not add decorative tests.
 
 ## 4. Implementation Priorities
 
@@ -76,6 +84,8 @@ Before finishing a task, verify:
 - `docs/ImplementationProgress.md` was updated when the task completed a verified checkpoint.
 - `docs/ProjectDocumentation.md` was updated when the task made current project reality more complete or more explicit.
 - phase placement in `docs/ImplementationProgress.md` still matches the current roadmap phase from `docs/Librova-Architecture-Master.md`.
+- the vertical slice followed the relevant checklist in `docs/FeaturePlaybooks.md`.
+- if the task changed transport, `docs/TransportInvariants.md` was respected and both language sides were verified.
 
 ## 6. Commit Discipline
 
@@ -92,6 +102,11 @@ If any of these files stop matching the actual repository, update them early:
 - `docs/CommitMessageGuidelines.md`
 - `docs/ImplementationProgress.md`
 - `docs/ProjectDocumentation.md`
+- `docs/MvpScopeGuard.md`
+- `docs/FeaturePlaybooks.md`
+- `docs/TestStrategy.md`
+- `docs/TransportInvariants.md`
+- `docs/ReviewChecklist.md`
 - `CodexSessionInstructions.md`
 - `docs/archive/Librova-Architecture-Full.md`
 

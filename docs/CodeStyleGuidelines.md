@@ -189,6 +189,7 @@ Logging rules:
 - Field names use `snake_case`, as standard for protobuf.
 - Do not leak internal database or file-layout assumptions into public DTOs unless explicitly part of the contract.
 - Prefer additive contract evolution; avoid breaking field renames or number reuse.
+- Treat named-pipe method ids as append-only and keep C++ and C# transport enums synchronized in the same checkpoint.
 
 ## 13. Testing Style
 

@@ -130,3 +130,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first UI `Serilog`-backed logging baseline with file/debug sinks, lifecycle logging across host bootstrap and import-job service calls, and `xUnit` file-output coverage.
 - `2026-03-30` Docs: archived the original long-form architecture plan and reduced `docs/Librova-Architecture-Master.md` to a concise active architecture summary with only frozen decisions and the remaining roadmap.
 - `2026-03-30` Docs: resynchronized the active roadmap, stable project documentation, and session rules so only the real remaining MVP gaps stay on the forward path.
+- `2026-03-30` Docs: added permanent MVP scope, feature-playbook, test-strategy, transport-invariant, and review-checklist documents to standardize future vertical slices and reduce roadmap drift.

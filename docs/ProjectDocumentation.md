@@ -51,6 +51,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - The repository now also contains the first native host executable under `apps/Librova.Core.Host`.
 - Repository-level documentation lives under `docs/`.
 - `docs/Librova-Architecture-Master.md` is now the concise active architecture summary, while the original long-form planning document lives in `docs/archive/Librova-Architecture-Full.md`.
+- the repository now also contains workflow guard documents under `docs/` for MVP scope, vertical-slice playbooks, test strategy, transport invariants, and review checklists.
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
