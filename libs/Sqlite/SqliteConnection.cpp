@@ -1,5 +1,6 @@
 #include "Sqlite/SqliteConnection.hpp"
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 
@@ -55,6 +56,11 @@ void CSqliteConnection::Execute(const std::string_view sql) const
         sqlite3_free(errorMessage);
         throw std::runtime_error(fullMessage);
     }
+}
+
+std::int64_t CSqliteConnection::GetLastInsertRowId() const noexcept
+{
+    return sqlite3_last_insert_rowid(m_connection.get());
 }
 
 sqlite3* CSqliteConnection::GetNativeHandle() const noexcept

@@ -10,6 +10,7 @@ include(CTest)
 
 add_subdirectory(libs/Domain)
 add_subdirectory(libs/Core)
+add_subdirectory(libs/BookDatabase)
 add_subdirectory(libs/DatabaseSchema)
 add_subdirectory(libs/DatabaseRuntime)
 add_subdirectory(libs/Sqlite)

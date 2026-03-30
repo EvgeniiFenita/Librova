@@ -31,3 +31,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added versioned database schema definitions and migration statements.
 - `2026-03-30` Feature: added SQLite RAII wrappers and temporary-database smoke coverage.
 - `2026-03-30` Feature: added schema migration runner with `user_version` handling and idempotence coverage.
+- `2026-03-30` Feature: added first SQLite book repository with transactional add/get/remove behavior and round-trip coverage.

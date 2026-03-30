@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string_view>
@@ -14,6 +15,7 @@ public:
     explicit CSqliteConnection(const std::filesystem::path& databasePath);
 
     void Execute(std::string_view sql) const;
+    [[nodiscard]] std::int64_t GetLastInsertRowId() const noexcept;
     [[nodiscard]] sqlite3* GetNativeHandle() const noexcept;
 
 private:

@@ -5,6 +5,7 @@ if(BUILD_TESTING)
 
     add_executable(LibriFlowCoreTests
         TestBook.cpp
+        TestSqliteBookRepository.cpp
         TestBookRepository.cpp
         TestBookFormat.cpp
         TestBookId.cpp
@@ -23,6 +24,7 @@ if(BUILD_TESTING)
     target_link_libraries(LibriFlowCoreTests
         PRIVATE
             Catch2::Catch2WithMain
+            LibriFlowBookDatabase
             LibriFlowDomain
             LibriFlowCore
             LibriFlowDatabaseRuntime
