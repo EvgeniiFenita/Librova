@@ -37,6 +37,7 @@ internal sealed partial class App : Application
                     session,
                     new AvaloniaPathSelectionService(mainWindow),
                     launchOptions);
+                _shellApplication.InitializeAsync().GetAwaiter().GetResult();
                 ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
                 desktop.MainWindow = mainWindow;
                 UiLogging.Information("Avalonia desktop shell is ready.");

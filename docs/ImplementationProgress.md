@@ -117,6 +117,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: enriched the startup-error screen with actionable guidance plus UI diagnostics paths for log, state, and preferences files.
 - `2026-03-30` Feature: added the first UI-side library catalog client/service, wired it into shell sessions, and exposed a refreshable library snapshot panel with host-backed C# coverage and browser ViewModel tests.
 - `2026-03-30` Feature: expanded the UI library snapshot into a real browser slice with filters, sort selection, page navigation, and selected-book details while keeping the flow covered by C# ViewModel tests.
+- `2026-03-30` Feature: linked import and browser flows so the library view preloads on shell startup and refreshes automatically after successful imports, with C# shell/viewmodel coverage for both paths.
 
 ### Phase 9. Stabilization
 

@@ -35,6 +35,7 @@ internal sealed class ShellViewModel : ObservableObject
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
         LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog);
+        ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
@@ -105,6 +106,8 @@ internal sealed class ShellViewModel : ObservableObject
     public bool HasOperationalWarnings => !string.IsNullOrWhiteSpace(OperationalWarningsText);
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
+
+    public Task InitializeAsync() => LibraryBrowser.RefreshAsync();
 
     private async Task BrowsePreferredLibraryRootAsync()
     {
@@ -194,5 +197,10 @@ internal sealed class ShellViewModel : ObservableObject
         return messages.Count == 0
             ? string.Empty
             : string.Join(Environment.NewLine, messages);
+    }
+
+    private async Task HandleImportCompletedSuccessfullyAsync()
+    {
+        await LibraryBrowser.RefreshAsync();
     }
 }

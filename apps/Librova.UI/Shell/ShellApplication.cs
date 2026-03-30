@@ -24,7 +24,9 @@ internal sealed class ShellApplication : IAsyncDisposable
     public static async Task<ShellApplication> StartDevelopmentAsync(CancellationToken cancellationToken)
     {
         var session = await ShellBootstrap.StartDevelopmentSessionAsync(cancellationToken).ConfigureAwait(false);
-        return Create(session);
+        var application = Create(session);
+        await application.InitializeAsync().ConfigureAwait(false);
+        return application;
     }
 
     public static ShellApplication Create(
@@ -43,6 +45,8 @@ internal sealed class ShellApplication : IAsyncDisposable
             new ShellViewModel(session, pathSelectionService, launchOptions, savedState, effectivePreferencesStore, savedPreferences),
             effectiveStateStore);
     }
+
+    public Task InitializeAsync() => Shell.InitializeAsync();
 
     public async ValueTask DisposeAsync()
     {

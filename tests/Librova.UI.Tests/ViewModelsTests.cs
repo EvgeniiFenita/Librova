@@ -417,6 +417,47 @@ public sealed class ViewModelsTests
         Assert.Equal("Alpha", viewModel.SelectedBookTitle);
     }
 
+    [Fact]
+    public async Task ImportJobsViewModel_EmitsSuccessEventForCompletedImport()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var invoked = 0;
+            viewModel.ImportCompletedSuccessfully += () =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(1, invoked);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }

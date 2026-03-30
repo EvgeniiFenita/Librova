@@ -12,6 +12,7 @@ public sealed class ShellApplicationTests
     [Fact]
     public void Create_BuildsShellViewModelFromSession()
     {
+        var catalogService = new FakeLibraryCatalogService();
         var session = new ShellSession(
             new CoreHostProcess(),
             new CoreHostLaunchOptions
@@ -21,7 +22,7 @@ public sealed class ShellApplicationTests
                 LibraryRoot = @"C:\Libraries\Librova"
             },
             new FakeImportJobsService(),
-            new FakeLibraryCatalogService());
+            catalogService);
 
         var application = ShellApplication.Create(
             session,
@@ -35,6 +36,92 @@ public sealed class ShellApplicationTests
         Assert.Equal(
             Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
             application.Shell.ImportJobs.WorkingDirectory);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_PreloadsLibraryBrowser()
+    {
+        var catalogService = new FakeLibraryCatalogService
+        {
+            Items = [
+                new BookListItemModel
+                {
+                    BookId = 1,
+                    Title = "Roadside Picnic",
+                    Authors = ["Arkady Strugatsky"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000001/book.epub",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]
+        };
+
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService(),
+            catalogService);
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        await application.InitializeAsync();
+
+        Assert.Equal(1, catalogService.ListCalls);
+        Assert.Single(application.Shell.LibraryBrowser.Books);
+    }
+
+    [Fact]
+    public async Task Shell_RefreshesLibraryBrowserAfterSuccessfulImport()
+    {
+        var catalogService = new SequencedLibraryCatalogService(
+            [],
+            [
+                new BookListItemModel
+                {
+                    BookId = 7,
+                    Title = "Fresh Import",
+                    Authors = ["Author"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000007/fresh.epub",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService(),
+            catalogService);
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        await application.InitializeAsync();
+        Assert.Empty(application.Shell.LibraryBrowser.Books);
+
+        application.Shell.ImportJobs.SourcePath = CreateTempFile(".fb2");
+        application.Shell.ImportJobs.WorkingDirectory = Path.Combine(Path.GetTempPath(), "librova-shell-refresh", $"{Guid.NewGuid():N}");
+        await application.Shell.ImportJobs.StartImportAsync();
+
+        Assert.Equal(2, catalogService.ListCalls);
+        Assert.Single(application.Shell.LibraryBrowser.Books);
+        Assert.Equal("Fresh Import", application.Shell.LibraryBrowser.Books[0].Title);
     }
 
     [Fact]
@@ -341,20 +428,51 @@ public sealed class ShellApplicationTests
 
     private sealed class FakeImportJobsService : IImportJobsService
     {
+        private bool _resultReady;
+
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
 
         public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<ImportJobResultModel?>(null);
+            => Task.FromResult<ImportJobResultModel?>(_resultReady
+                ? new ImportJobResultModel
+                {
+                    Snapshot = new ImportJobSnapshotModel
+                    {
+                        JobId = jobId,
+                        Status = ImportJobStatusModel.Completed,
+                        Message = "Completed"
+                    },
+                    Summary = new ImportSummaryModel
+                    {
+                        Mode = ImportModeModel.SingleFile,
+                        TotalEntries = 1,
+                        ImportedEntries = 1,
+                        FailedEntries = 0,
+                        SkippedEntries = 0
+                    }
+                }
+                : null);
 
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<ImportJobSnapshotModel?>(null);
+        {
+            _resultReady = true;
+            return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Running"
+            });
+        }
 
         public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(1UL);
+        {
+            _resultReady = true;
+            return Task.FromResult(1UL);
+        }
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
@@ -362,8 +480,37 @@ public sealed class ShellApplicationTests
 
     private sealed class FakeLibraryCatalogService : ILibraryCatalogService
     {
+        public int ListCalls { get; private set; }
+        public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
+
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+        {
+            ListCalls++;
+            return Task.FromResult(Items);
+        }
+    }
+
+    private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly Queue<IReadOnlyList<BookListItemModel>> _responses;
+
+        public SequencedLibraryCatalogService(params IReadOnlyList<BookListItemModel>[] responses)
+        {
+            _responses = new Queue<IReadOnlyList<BookListItemModel>>(responses);
+        }
+
+        public int ListCalls { get; private set; }
+
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            ListCalls++;
+            if (_responses.Count == 0)
+            {
+                return Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+            }
+
+            return Task.FromResult(_responses.Dequeue());
+        }
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService
@@ -376,5 +523,14 @@ public sealed class ShellApplicationTests
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);
+    }
+
+    private static string CreateTempFile(string extension)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "librova-shell-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "book" + extension);
+        File.WriteAllText(path, "content");
+        return path;
     }
 }

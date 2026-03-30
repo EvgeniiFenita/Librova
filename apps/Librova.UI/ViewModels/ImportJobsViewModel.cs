@@ -26,6 +26,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
+    public event Func<Task>? ImportCompletedSuccessfully;
 
     public ImportJobsViewModel(IImportJobsService importJobsService, IPathSelectionService? pathSelectionService = null)
     {
@@ -342,6 +343,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 StatusText = result.Snapshot.Message.Length == 0
                     ? result.Snapshot.Status.ToString()
                     : result.Snapshot.Message;
+                await RaiseImportCompletedSuccessfullyAsync(result);
                 return;
             }
 
@@ -394,6 +396,26 @@ internal sealed class ImportJobsViewModel : ObservableObject
         ErrorText = LastResult.Error is null
             ? "No error."
             : $"{LastResult.Error.Code}: {LastResult.Error.Message}";
+    }
+
+    private async Task RaiseImportCompletedSuccessfullyAsync(ImportJobResultModel result)
+    {
+        if (ImportCompletedSuccessfully is null)
+        {
+            return;
+        }
+
+        if (result.Snapshot.Status is not ImportJobStatusModel.Completed)
+        {
+            return;
+        }
+
+        if (result.Summary is null || result.Summary.ImportedEntries == 0)
+        {
+            return;
+        }
+
+        await ImportCompletedSuccessfully.Invoke();
     }
 
     private bool CanStartImport() =>

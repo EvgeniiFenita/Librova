@@ -195,6 +195,7 @@ Implemented slices at this point:
 - `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
+- the current shell now preloads the library browser on startup and refreshes it automatically after a successful import, so the read-side view no longer requires a manual refresh to reflect new books.
 
 ## 5. Persistence And Storage
 
@@ -350,6 +351,7 @@ Stable facts taken from that reference:
 - C# startup-error-state coverage for diagnostics-path and guidance exposure
 - C# ViewModel coverage for the first UI-side library browser refresh flow
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
+- C# shell-level coverage for startup browser preload and post-import browser refresh
 
 ## 12. Current Gaps
 
