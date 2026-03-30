@@ -8,6 +8,7 @@ if(BUILD_TESTING)
         TestBookRepository.cpp
         TestBookFormat.cpp
         TestBookId.cpp
+        TestDatabaseSchema.cpp
         TestMetadataNormalization.cpp
         TestSearchQuery.cpp
         TestServiceContracts.cpp
@@ -22,6 +23,7 @@ if(BUILD_TESTING)
             Catch2::Catch2WithMain
             LibriFlowDomain
             LibriFlowCore
+            LibriFlowDatabaseSchema
             LibriFlowStoragePlanning
     )
 
