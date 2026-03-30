@@ -41,6 +41,7 @@ Before making changes, review these documents in this order:
 - After changing files under `proto/`, validate contracts with `scripts/ValidateProto.ps1` before considering the checkpoint verified.
 - Do not introduce `gRPC` runtime dependencies into the MVP path unless the architecture decision is explicitly revisited; the current baseline is transport-neutral protobuf adapters over named pipes.
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup for spawned host processes instead of relying on fixed sleeps.
+- When a completed checkpoint belongs to a new roadmap phase, start that new phase explicitly in `docs/ImplementationProgress.md` instead of continuing to append entries under the previous phase.
 
 ## 4. Implementation Priorities
 
@@ -66,6 +67,7 @@ Before finishing a task, verify:
 - docs were updated if the change introduced a new rule or decision.
 - `docs/ImplementationProgress.md` was updated when the task completed a verified checkpoint.
 - `docs/ProjectDocumentation.md` was updated when the task made current project reality more complete or more explicit.
+- phase placement in `docs/ImplementationProgress.md` still matches the current roadmap phase from `docs/LibriFlow-Architecture-Master.md`.
 
 ## 6. Commit Discipline
 
