@@ -129,6 +129,7 @@ Implemented slices at this point:
   - enumerates archive entries
   - skips directory entries
   - skips nested `.zip` entries as unsupported
+  - rejects unsafe archive entry paths such as traversal outside the extraction root
   - extracts supported `.fb2` and `.epub` files into a temp workspace
   - runs the existing single-file import pipeline per extracted entry
   - aggregates per-entry results without rolling back successful entries
@@ -202,6 +203,7 @@ Not implemented yet, even if already planned architecturally:
   - partial-success ZIP import -> completed with partial-success message
   - probable-duplicate decision-required -> failed with structured domain error
   - cancellation -> cancelled with structured domain error
+  - ZIP requests with no successfully imported books -> failed instead of false success
 - `ImportJobManager` provides the first in-memory long-running job container with:
   - numeric job ids
   - background execution through `std::jthread`
@@ -211,11 +213,14 @@ Not implemented yet, even if already planned architecturally:
   - `try-get result`
   - `cancel`
   - `wait`
+  - `remove` for completed jobs so finished records do not need to stay in memory forever
 - `ApplicationJobs` provides an application-facing service above the in-memory job manager:
   - start import job
   - query snapshot by job id
   - query final result by job id
   - cancel job
   - wait for completion
+  - remove completed job
 - The application-facing job service maps internal `Jobs` types into its own DTO layer so future gRPC and UI code do not need to depend directly on low-level job internals.
-- Job-layer tests cover both single-file and ZIP-backed execution paths as well as in-memory job cancellation.
+- Progress callback failures inside `ImportJobRunner` are ignored so observers cannot accidentally fail the import itself.
+- Job-layer tests cover both single-file and ZIP-backed execution paths as well as in-memory job cancellation and completed-job cleanup.

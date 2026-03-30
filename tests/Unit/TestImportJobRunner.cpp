@@ -83,6 +83,22 @@ public:
     mutable std::vector<std::string> Calls;
 };
 
+class CCallbackThrowingSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
+        const LibriFlow::Importing::SSingleFileImportRequest&,
+        LibriFlow::Domain::IProgressSink& progressSink,
+        std::stop_token) const override
+    {
+        progressSink.ReportValue(20, "Before throwing callback");
+        return {
+            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = LibriFlow::Domain::SBookId{3}
+        };
+    }
+};
+
 void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string& text)
 {
     void* buffer = std::malloc(text.size());
@@ -121,6 +137,27 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
     AddZipEntry(archive, "first.fb2", "<fb2/>");
     AddZipEntry(archive, "second.fb2", "<fb2/>");
     AddZipEntry(archive, "notes.txt", "ignored");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
+std::filesystem::path CreateSkippedOnlyZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "notes.txt", "ignored");
+    AddZipEntry(archive, "nested/archive.zip", "nested");
 
     if (zip_close(archive) != 0)
     {
@@ -223,4 +260,47 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
     REQUIRE(result.Snapshot.Message == "Import completed with partial success.");
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(importer.Calls == std::vector<std::string>{"first.fb2", "second.fb2"});
+}
+
+TEST_CASE("Import job runner fails when ZIP import produces no imported books", "[jobs][import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-job-runner-skipped");
+    const std::filesystem::path zipPath = CreateSkippedOnlyZipFixture(sandbox.GetPath() / "archive.zip");
+    CZipAwareStubSingleFileImporter importer;
+    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    LibriFlow::Jobs::CImportJobRunner runner(facade);
+
+    const auto result = runner.Run({
+        .SourcePath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, {});
+
+    REQUIRE(result.ImportResult.has_value());
+    REQUIRE(result.ImportResult->Summary.ImportedEntries == 0);
+    REQUIRE(result.ImportResult->Summary.FailedEntries == 0);
+    REQUIRE(result.ImportResult->Summary.SkippedEntries == 2);
+    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Failed);
+    REQUIRE(result.Snapshot.Message == "Import completed without importing any supported books.");
+    REQUIRE(result.Error.has_value());
+    REQUIRE(result.Error->Code == LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat);
+}
+
+TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][import]")
+{
+    CCallbackThrowingSingleFileImporter importer;
+    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    LibriFlow::Jobs::CImportJobRunner runner(facade);
+
+    const auto result = runner.Run({
+        .SourcePath = "C:/books/book.fb2",
+        .WorkingDirectory = "C:/work"
+    }, {}, [](const LibriFlow::Jobs::SJobProgressSnapshot&) {
+        throw std::runtime_error("observer failure");
+    });
+
+    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Completed);
+    REQUIRE_FALSE(result.Error.has_value());
+    REQUIRE(result.ImportResult.has_value());
 }

@@ -111,6 +111,24 @@ private:
     return extension == ".epub" || extension == ".fb2";
 }
 
+[[nodiscard]] bool IsSafeRelativeEntryPath(const std::filesystem::path& entryPath)
+{
+    if (entryPath.empty() || entryPath.is_absolute() || entryPath.has_root_name() || entryPath.has_root_directory())
+    {
+        return false;
+    }
+
+    for (const auto& part : entryPath)
+    {
+        if (part == "..")
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void EnsureDirectory(const std::filesystem::path& path)
 {
     std::error_code errorCode;
@@ -129,6 +147,12 @@ std::filesystem::path ExtractEntryToWorkspace(
     const std::filesystem::path& workingDirectory)
 {
     const std::filesystem::path relativePath = std::filesystem::path{entryName}.lexically_normal();
+
+    if (!IsSafeRelativeEntryPath(relativePath))
+    {
+        throw std::runtime_error("ZIP entry path is unsafe.");
+    }
+
     const std::filesystem::path destinationPath = workingDirectory / "extracted" / relativePath;
     EnsureDirectory(destinationPath.parent_path());
 
@@ -199,6 +223,16 @@ SZipImportResult CZipImportCoordinator::Run(
                 .ArchivePath = entryPath,
                 .Status = EZipEntryImportStatus::NestedArchiveSkipped,
                 .Error = "Nested ZIP archives are not supported."
+            });
+            continue;
+        }
+
+        if (!IsSafeRelativeEntryPath(entryPath.lexically_normal()))
+        {
+            result.Entries.push_back({
+                .ArchivePath = entryPath,
+                .Status = EZipEntryImportStatus::UnsupportedEntry,
+                .Error = "Unsafe ZIP entry path."
             });
             continue;
         }

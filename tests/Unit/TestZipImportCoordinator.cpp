@@ -133,6 +133,27 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
     return outputPath;
 }
 
+std::filesystem::path CreateUnsafeZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "../outside.fb2", "<fb2/>");
+    AddZipEntry(archive, "safe/inside.fb2", "<fb2/>");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
 } // namespace
 
 TEST_CASE("ZIP import coordinator imports supported entries and keeps partial success", "[zip-import]")
@@ -170,4 +191,27 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
 
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "folder" / "first.fb2"));
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "second.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-zip-import-unsafe");
+    const std::filesystem::path zipPath = CreateUnsafeZipFixture(sandbox.GetPath() / "unsafe.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const LibriFlow::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 2);
+    REQUIRE(result.Entries[0].ArchivePath == std::filesystem::path("../outside.fb2"));
+    REQUIRE(result.Entries[0].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::UnsupportedEntry);
+    REQUIRE(result.Entries[0].Error == "Unsafe ZIP entry path.");
+    REQUIRE(result.Entries[1].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::Imported);
+    REQUIRE(importer.Calls.size() == 1);
+    REQUIRE(importer.Calls[0].SourcePath.filename() == "inside.fb2");
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "outside.fb2"));
 }

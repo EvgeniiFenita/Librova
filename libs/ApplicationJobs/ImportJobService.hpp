@@ -56,6 +56,7 @@ public:
     [[nodiscard]] std::optional<SImportJobResult> TryGetResult(TImportJobId jobId) const;
     [[nodiscard]] bool Cancel(TImportJobId jobId) const;
     [[nodiscard]] bool Wait(TImportJobId jobId, std::chrono::milliseconds timeout) const;
+    [[nodiscard]] bool Remove(TImportJobId jobId) const;
 
 private:
     [[nodiscard]] static EImportJobStatus MapStatus(LibriFlow::Jobs::EJobStatus status) noexcept;

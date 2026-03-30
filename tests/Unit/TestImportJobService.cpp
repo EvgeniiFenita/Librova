@@ -146,3 +146,23 @@ TEST_CASE("Import job service returns empty state for unknown jobs", "[applicati
     REQUIRE_FALSE(service.Cancel(123));
     REQUIRE_FALSE(service.Wait(123, std::chrono::milliseconds(10)));
 }
+
+TEST_CASE("Import job service removes completed jobs through application-facing API", "[application-jobs]")
+{
+    CImmediateSingleFileImporter importer;
+    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    LibriFlow::Jobs::CImportJobManager manager(runner);
+    LibriFlow::ApplicationJobs::CImportJobService service(manager);
+
+    const auto jobId = service.Start({
+        .SourcePath = "C:/books/book.fb2",
+        .WorkingDirectory = "C:/work"
+    });
+
+    REQUIRE(service.Wait(jobId, std::chrono::seconds(1)));
+    REQUIRE(service.Remove(jobId));
+    REQUIRE_FALSE(service.TryGetSnapshot(jobId).has_value());
+    REQUIRE_FALSE(service.TryGetResult(jobId).has_value());
+}

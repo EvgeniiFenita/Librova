@@ -63,7 +63,13 @@ void CImportJobRunner::CJobProgressSink::PublishSnapshot() const
 {
     if (m_progressCallback)
     {
-        m_progressCallback(m_snapshot);
+        try
+        {
+            m_progressCallback(m_snapshot);
+        }
+        catch (...)
+        {
+        }
     }
 }
 
@@ -122,6 +128,13 @@ std::optional<LibriFlow::Domain::SDomainError> CImportJobRunner::TryMapError(
     return std::nullopt;
 }
 
+bool CImportJobRunner::HasNoSuccessfulImports(const LibriFlow::Application::SImportResult& importResult) noexcept
+{
+    return importResult.Summary.ImportedEntries == 0
+        && importResult.Summary.FailedEntries == 0
+        && importResult.Summary.SkippedEntries > 0;
+}
+
 SImportJobResult CImportJobRunner::Run(
     const LibriFlow::Application::SImportRequest& request,
     const std::stop_token stopToken) const
@@ -158,6 +171,19 @@ SImportJobResult CImportJobRunner::Run(
                 .Snapshot = progressSink.GetSnapshot(),
                 .ImportResult = importResult,
                 .Error = mappedError
+            };
+        }
+
+        if (HasNoSuccessfulImports(importResult))
+        {
+            progressSink.Fail("Import completed without importing any supported books.");
+            return {
+                .Snapshot = progressSink.GetSnapshot(),
+                .ImportResult = importResult,
+                .Error = LibriFlow::Domain::SDomainError{
+                    .Code = LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat,
+                    .Message = "Import completed without importing any supported books."
+                }
             };
         }
 

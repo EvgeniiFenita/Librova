@@ -142,6 +142,36 @@ bool CImportJobManager::Wait(const TImportJobId jobId, const std::chrono::millis
     });
 }
 
+bool CImportJobManager::Remove(const TImportJobId jobId)
+{
+    std::shared_ptr<SJobRecord> record;
+
+    {
+        const std::scoped_lock lock(m_jobsMutex);
+        const auto iterator = m_jobs.find(jobId);
+
+        if (iterator == m_jobs.end())
+        {
+            return false;
+        }
+
+        record = iterator->second;
+
+        {
+            const std::scoped_lock recordLock(record->Mutex);
+
+            if (!record->Result.has_value())
+            {
+                return false;
+            }
+        }
+
+        m_jobs.erase(iterator);
+    }
+
+    return true;
+}
+
 std::shared_ptr<CImportJobManager::SJobRecord> CImportJobManager::TryGetRecord(const TImportJobId jobId) const
 {
     const std::scoped_lock lock(m_jobsMutex);

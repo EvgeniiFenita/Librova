@@ -60,6 +60,8 @@ public:
         TProgressCallback progressCallback) const;
 
 private:
+    [[nodiscard]] static bool HasNoSuccessfulImports(const LibriFlow::Application::SImportResult& importResult) noexcept;
+
     class CJobProgressSink final : public LibriFlow::Domain::IProgressSink
     {
     public:

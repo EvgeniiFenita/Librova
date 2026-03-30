@@ -34,6 +34,11 @@ bool CImportJobService::Wait(const TImportJobId jobId, const std::chrono::millis
     return m_jobManager.Wait(jobId, timeout);
 }
 
+bool CImportJobService::Remove(const TImportJobId jobId) const
+{
+    return m_jobManager.Remove(jobId);
+}
+
 EImportJobStatus CImportJobService::MapStatus(const LibriFlow::Jobs::EJobStatus status) noexcept
 {
     switch (status)

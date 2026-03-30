@@ -60,3 +60,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first import job runner with normalized job status snapshots, structured error mapping, and ZIP-aware partial-success coverage.
 - `2026-03-30` Feature: added the first in-memory import job manager with background execution, live snapshots, cancellation, and result lookup.
 - `2026-03-30` Feature: added an application-facing import job service with dedicated DTOs above the in-memory job manager.
+- `2026-03-30` Fix: hardened ZIP import paths, empty-import job semantics, progress callback isolation, and completed-job cleanup APIs.

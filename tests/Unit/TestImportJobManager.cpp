@@ -142,3 +142,42 @@ TEST_CASE("Import job manager returns empty results for unknown job id", "[jobs]
     REQUIRE_FALSE(manager.Cancel(999));
     REQUIRE_FALSE(manager.Wait(999, std::chrono::milliseconds(10)));
 }
+
+TEST_CASE("Import job manager can remove completed jobs", "[jobs][manager]")
+{
+    CImmediateSingleFileImporter importer;
+    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    LibriFlow::Jobs::CImportJobManager manager(runner);
+
+    const auto handle = manager.Start({
+        .SourcePath = "C:/books/book.fb2",
+        .WorkingDirectory = "C:/work"
+    });
+
+    REQUIRE(manager.Wait(handle.Id, std::chrono::seconds(1)));
+    REQUIRE(manager.Remove(handle.Id));
+    REQUIRE_FALSE(manager.TryGetSnapshot(handle.Id).has_value());
+    REQUIRE_FALSE(manager.TryGetResult(handle.Id).has_value());
+    REQUIRE_FALSE(manager.Remove(handle.Id));
+}
+
+TEST_CASE("Import job manager does not remove running jobs", "[jobs][manager]")
+{
+    CBlockingSingleFileImporter importer;
+    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    LibriFlow::Jobs::CImportJobManager manager(runner);
+
+    const auto handle = manager.Start({
+        .SourcePath = "C:/books/book.fb2",
+        .WorkingDirectory = "C:/work"
+    });
+
+    REQUIRE(importer.WaitUntilStarted(std::chrono::seconds(1)));
+    REQUIRE_FALSE(manager.Remove(handle.Id));
+    REQUIRE(manager.Cancel(handle.Id));
+    REQUIRE(manager.Wait(handle.Id, std::chrono::seconds(1)));
+}
