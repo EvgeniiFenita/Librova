@@ -58,10 +58,12 @@ Update it when an implementation detail becomes stable enough to be treated as c
 ## 3. Application Layer
 
 - A first application-facing import facade is implemented.
+- A first application-facing catalog facade is implemented for read-side book listing.
 - The facade dispatches between:
   - single-file import
   - ZIP archive import
 - The facade returns one aggregated result shape for higher layers instead of exposing low-level coordinator types directly.
+- The catalog facade maps repository search results into lighter list DTOs for future UI and transport read-side flows instead of exposing full domain `SBook` objects directly.
 
 ## 4. Implemented Native Slices
 
@@ -300,6 +302,7 @@ Stable facts taken from that reference:
   - review regression coverage for id reservation, cancellation cleanup, and staged-file rollback
 - ZIP import orchestration and partial-success aggregation
 - application-level import facade routing and summary aggregation
+- application-level catalog facade mapping and pagination/filter integration over the real SQLite read side
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
