@@ -7,6 +7,7 @@ if(BUILD_TESTING)
         TestBook.cpp
         TestBookFormat.cpp
         TestBookId.cpp
+        TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
     )

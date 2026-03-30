@@ -9,7 +9,8 @@ Before making changes, review these documents in this order:
 1. `docs/LibriFlow-Architecture-Master.md`
 2. `docs/CodeStyleGuidelines.md`
 3. `docs/CommitMessageGuidelines.md`
-4. `CodexSessionInstructions.md`
+4. `docs/ImplementationProgress.md`
+5. `CodexSessionInstructions.md`
 
 ## 2. Non-Negotiable Project Constraints
 
@@ -53,6 +54,7 @@ Before finishing a task, verify:
 - long-running work is non-blocking where required;
 - tests cover the intended behavior or the gap is stated clearly;
 - docs were updated if the change introduced a new rule or decision.
+- `docs/ImplementationProgress.md` was updated when the task completed a verified checkpoint.
 
 ## 6. Commit Discipline
 
@@ -67,6 +69,8 @@ If any of these files stop matching the actual repository, update them early:
 - `docs/LibriFlow-Architecture-Master.md`
 - `docs/CodeStyleGuidelines.md`
 - `docs/CommitMessageGuidelines.md`
+- `docs/ImplementationProgress.md`
 - `CodexSessionInstructions.md`
 
 If a new standing rule, workflow constraint, or repository convention appears during work, add it to this file in the same task instead of relying on memory.
+If a step becomes a completed and verified checkpoint, record it in `docs/ImplementationProgress.md` in the same task.
