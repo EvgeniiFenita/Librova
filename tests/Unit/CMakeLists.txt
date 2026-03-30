@@ -16,6 +16,7 @@ if(BUILD_TESTING)
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
+        TestImportJobRunner.cpp
         TestSingleFileImportCoordinator.cpp
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
@@ -48,6 +49,7 @@ if(BUILD_TESTING)
             LibriFlowFb2Parsing
             LibriFlowImportConversion
             LibriFlowImporting
+            LibriFlowJobs
             LibriFlowManagedStorage
             LibriFlowParserRegistry
             LibriFlowSearchIndex

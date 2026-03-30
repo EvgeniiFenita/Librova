@@ -35,6 +35,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 Implemented slices at this point:
 
 - `Application`
+- `Jobs`
 - `Domain`
 - `Core`
 - `DatabaseSchema`
@@ -174,7 +175,30 @@ Stable facts taken from that reference:
 Not implemented yet, even if already planned architecturally:
 
 - trash implementation
-- full job engine and streaming job state model
+- full job engine with persistent job registry and streaming job state model
 - protobuf contracts
 - gRPC services
 - Avalonia UI workflow
+
+## 13. Import Jobs
+
+- The repository now contains a first `Jobs` slice above the application import facade.
+- `ImportJobRunner` wraps one import request into a normalized job result shape with:
+  - status
+  - percent
+  - message
+  - warnings
+  - optional aggregated import result
+  - optional structured domain error
+- The current job status model distinguishes:
+  - pending
+  - running
+  - completed
+  - failed
+  - cancelled
+- The current job runner maps import outcomes into stable higher-level job outcomes:
+  - successful single-file import -> completed
+  - partial-success ZIP import -> completed with partial-success message
+  - probable-duplicate decision-required -> failed with structured domain error
+  - cancellation -> cancelled with structured domain error
+- Job runner tests cover both single-file and ZIP-backed execution paths.
