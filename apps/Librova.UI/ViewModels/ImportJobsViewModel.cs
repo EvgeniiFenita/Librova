@@ -1,3 +1,4 @@
+using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.Mvvm;
 using System;
@@ -9,6 +10,7 @@ namespace Librova.UI.ViewModels;
 internal sealed class ImportJobsViewModel : ObservableObject
 {
     private readonly IImportJobsService _importJobsService;
+    private readonly IPathSelectionService _pathSelectionService;
     private string _sourcePath = string.Empty;
     private string _workingDirectory = string.Empty;
     private string _statusText = "Idle";
@@ -20,13 +22,16 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
 
-    public ImportJobsViewModel(IImportJobsService importJobsService)
+    public ImportJobsViewModel(IImportJobsService importJobsService, IPathSelectionService? pathSelectionService = null)
     {
         _importJobsService = importJobsService;
+        _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport, HandleCommandErrorAsync);
         RefreshCommand = new AsyncCommand(RefreshCurrentAsync, CanRefresh, HandleCommandErrorAsync);
         CancelImportCommand = new AsyncCommand(CancelCurrentAsync, CanCancel, HandleCommandErrorAsync);
         RemoveJobCommand = new AsyncCommand(RemoveCurrentAsync, CanRemove, HandleCommandErrorAsync);
+        BrowseSourceCommand = new AsyncCommand(BrowseSourceAsync, () => !IsBusy, HandleCommandErrorAsync);
+        BrowseWorkingDirectoryCommand = new AsyncCommand(BrowseWorkingDirectoryAsync, () => !IsBusy, HandleCommandErrorAsync);
     }
 
     public string SourcePath
@@ -70,6 +75,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 RefreshCommand.RaiseCanExecuteChanged();
                 CancelImportCommand.RaiseCanExecuteChanged();
                 RemoveJobCommand.RaiseCanExecuteChanged();
+                BrowseSourceCommand.RaiseCanExecuteChanged();
+                BrowseWorkingDirectoryCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -122,6 +129,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand CancelImportCommand { get; }
     public AsyncCommand RemoveJobCommand { get; }
+    public AsyncCommand BrowseSourceCommand { get; }
+    public AsyncCommand BrowseWorkingDirectoryCommand { get; }
 
     public async Task StartImportAsync()
     {
@@ -242,6 +251,26 @@ internal sealed class ImportJobsViewModel : ObservableObject
         LastJobId = null;
         LastResult = null;
         StatusText = $"Import job {removedJobId} was removed.";
+    }
+
+    public async Task BrowseSourceAsync()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var selectedPath = await _pathSelectionService.PickSourceFileAsync(cancellation.Token);
+        if (!string.IsNullOrWhiteSpace(selectedPath))
+        {
+            SourcePath = selectedPath;
+        }
+    }
+
+    public async Task BrowseWorkingDirectoryAsync()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(cancellation.Token);
+        if (!string.IsNullOrWhiteSpace(selectedPath))
+        {
+            WorkingDirectory = selectedPath;
+        }
     }
 
     private async Task PollUntilCompletedAsync(ulong jobId, CancellationToken cancellationToken)

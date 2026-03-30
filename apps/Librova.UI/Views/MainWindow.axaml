@@ -84,6 +84,13 @@
                  Grid.Column="1"
                  Watermark="C:\Books\incoming\book.fb2"
                  Text="{Binding Shell.ImportJobs.SourcePath}" />
+        <Button Grid.Row="1"
+                Grid.Column="1"
+                HorizontalAlignment="Right"
+                MinWidth="96"
+                Margin="0,0,0,0"
+                Command="{Binding Shell.ImportJobs.BrowseSourceCommand}"
+                Content="Browse..." />
 
         <TextBlock Grid.Row="2"
                    VerticalAlignment="Center"
@@ -92,6 +99,13 @@
                  Grid.Column="1"
                  Watermark="C:\Temp\Librova\Work"
                  Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
+        <Button Grid.Row="2"
+                Grid.Column="1"
+                HorizontalAlignment="Right"
+                MinWidth="96"
+                Margin="0,0,0,0"
+                Command="{Binding Shell.ImportJobs.BrowseWorkingDirectoryCommand}"
+                Content="Browse..." />
 
         <StackPanel Grid.Row="3"
                     Grid.ColumnSpan="2"

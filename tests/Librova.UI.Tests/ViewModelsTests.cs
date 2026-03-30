@@ -1,3 +1,4 @@
+using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.ViewModels;
 using Xunit;
@@ -121,6 +122,23 @@ public sealed class ViewModelsTests
         Assert.Null(viewModel.LastResult);
         Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
         Assert.Contains("was removed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_BrowseCommandsPopulatePathsFromSelectionService()
+    {
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedSourcePath = @"C:\Incoming\book.fb2",
+            SelectedWorkingDirectory = @"C:\Temp\Librova\Work"
+        };
+        var viewModel = new ImportJobsViewModel(new FakeImportJobsService(), selectionService);
+
+        await viewModel.BrowseSourceCommand.ExecuteAsyncForTests();
+        await viewModel.BrowseWorkingDirectoryCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(@"C:\Incoming\book.fb2", viewModel.SourcePath);
+        Assert.Equal(@"C:\Temp\Librova\Work", viewModel.WorkingDirectory);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService
@@ -298,5 +316,17 @@ public sealed class ViewModelsTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+    }
+
+    private sealed class FakePathSelectionService : IPathSelectionService
+    {
+        public string? SelectedSourcePath { get; init; }
+        public string? SelectedWorkingDirectory { get; init; }
+
+        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
+            => Task.FromResult(SelectedSourcePath);
+
+        public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
+            => Task.FromResult(SelectedWorkingDirectory);
     }
 }
