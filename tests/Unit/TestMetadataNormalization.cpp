@@ -12,6 +12,7 @@ TEST_CASE("Text normalization treats cyrillic yo and ye as equivalent", "[domain
 {
     REQUIRE(LibriFlow::Domain::NormalizeText("Ёжик") == LibriFlow::Domain::NormalizeText("ежик"));
     REQUIRE(LibriFlow::Domain::NormalizeText("ФЁДОР") == "федор");
+    REQUIRE(LibriFlow::Domain::NormalizeText("Борис") == "борис");
 }
 
 TEST_CASE("Optional text normalization drops empty values", "[domain][normalization]")

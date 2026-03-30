@@ -31,6 +31,7 @@ Before making changes, review these documents in this order:
 - For native code, prefer one static library per logical slice under `libs/<SliceName>/`, with a local `CMakeLists.txt` in that folder.
 - In native libraries, keep `.hpp` and `.cpp` files together in the same directory unless a different layout becomes clearly necessary.
 - All build artifacts must go under the repository root `out/`; project-local `bin/` and `obj/` directories are not allowed as an intended steady state.
+- `CMake` is the canonical build system for native code; Visual Studio solutions exist for developer convenience, not as the primary source of build truth.
 
 ## 4. Implementation Priorities
 

@@ -11,6 +11,7 @@ if(BUILD_TESTING)
         TestMetadataNormalization.cpp
         TestSearchQuery.cpp
         TestServiceContracts.cpp
+        TestManagedLibraryLayout.cpp
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
@@ -21,6 +22,7 @@ if(BUILD_TESTING)
             Catch2::Catch2WithMain
             LibriFlowDomain
             LibriFlowCore
+            LibriFlowStoragePlanning
     )
 
     target_compile_features(LibriFlowCoreTests PRIVATE cxx_std_20)

@@ -32,7 +32,7 @@ void AppendLowercasedNormalizedUtf8(const std::string_view value, std::string& r
 
             if (firstByte == 0xD0)
             {
-                if (secondByte == 0x81 || secondByte == 0x91)
+                if (secondByte == 0x81)
                 {
                     result.push_back(static_cast<char>(0xD0));
                     result.push_back(static_cast<char>(0xB5));
@@ -55,6 +55,14 @@ void AppendLowercasedNormalizedUtf8(const std::string_view value, std::string& r
                     index += 2;
                     continue;
                 }
+            }
+
+            if (firstByte == 0xD1 && secondByte == 0x91)
+            {
+                result.push_back(static_cast<char>(0xD0));
+                result.push_back(static_cast<char>(0xB5));
+                index += 2;
+                continue;
             }
 
             result.push_back(static_cast<char>(firstByte));

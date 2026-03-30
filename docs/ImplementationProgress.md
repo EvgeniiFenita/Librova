@@ -24,3 +24,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added initial domain query types and repository ports.
 - `2026-03-30` Feature: added remaining domain service contracts for parser, converter, storage, trash, cover, and progress reporting.
 - `2026-03-30` Feature: added metadata normalization rules for text, ISBN, and duplicate keys.
+
+### Phase 2. Persistence And Managed Storage
+
+- `2026-03-30` Feature: added managed library storage planning and stable path layout rules.

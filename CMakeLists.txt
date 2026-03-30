@@ -10,4 +10,5 @@ include(CTest)
 
 add_subdirectory(libs/Domain)
 add_subdirectory(libs/Core)
+add_subdirectory(libs/StoragePlanning)
 add_subdirectory(tests/Unit)
