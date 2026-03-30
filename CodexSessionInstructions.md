@@ -32,6 +32,7 @@ Before making changes, review these documents in this order:
 - In native libraries, keep `.hpp` and `.cpp` files together in the same directory unless a different layout becomes clearly necessary.
 - All build artifacts must go under the repository root `out/`; project-local `bin/` and `obj/` directories are not allowed as an intended steady state.
 - `CMake` is the canonical build system for native code; Visual Studio solutions exist for developer convenience, not as the primary source of build truth.
+- If the SQLite schema depends on optional SQLite modules such as `FTS5`, declare the required features explicitly in `vcpkg.json` instead of relying on default port settings.
 
 ## 4. Implementation Priorities
 

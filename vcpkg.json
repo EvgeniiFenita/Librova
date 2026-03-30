@@ -4,6 +4,11 @@
   "builtin-baseline": "b5d1a94fb7f88fd835e360fd23a45a09ceedbf48",
   "dependencies": [
     "catch2",
-    "sqlite3"
+    {
+      "name": "sqlite3",
+      "features": [
+        "fts5"
+      ]
+    }
   ]
 }
