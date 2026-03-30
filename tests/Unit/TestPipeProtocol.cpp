@@ -77,3 +77,20 @@ TEST_CASE("Pipe protocol recognizes list books method in request framing", "[pip
     REQUIRE(parsed.Value->Method == Librova::PipeTransport::EPipeMethod::ListBooks);
     REQUIRE(parsed.Value->Payload == "catalog");
 }
+
+TEST_CASE("Pipe protocol recognizes move-book-to-trash method in request framing", "[pipe]")
+{
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
+        .RequestId = 89,
+        .Method = Librova::PipeTransport::EPipeMethod::MoveBookToTrash,
+        .Payload = "trash"
+    };
+
+    const auto bytes = Librova::PipeTransport::SerializeRequestEnvelope(request);
+    const auto parsed = Librova::PipeTransport::DeserializeRequestEnvelope(bytes);
+
+    REQUIRE(parsed.HasValue());
+    REQUIRE(parsed.Value->RequestId == request.RequestId);
+    REQUIRE(parsed.Value->Method == Librova::PipeTransport::EPipeMethod::MoveBookToTrash);
+    REQUIRE(parsed.Value->Payload == "trash");
+}

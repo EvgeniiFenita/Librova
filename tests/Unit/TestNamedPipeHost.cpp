@@ -13,9 +13,11 @@
 #include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
+#include "Application/LibraryTrashFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
+#include "ManagedTrash/ManagedTrashService.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
 
 namespace {
@@ -91,10 +93,12 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     CEmptyBookRepository bookRepository;
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     Librova::PipeHost::CNamedPipeHost host(dispatcher);
 

@@ -313,4 +313,103 @@ public sealed class LibraryCatalogClientTests
             }
         }
     }
+
+    [Fact]
+    public async Task LibraryCatalogClient_MovesSelectedBookToTrashThroughNativeHost()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-library-client-trash",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.LibraryTrashTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+            };
+
+            var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
+            await File.WriteAllTextAsync(sourcePath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook>
+                  <description>
+                    <title-info>
+                      <book-title>Trash Me</book-title>
+                      <author>
+                        <first-name>Arkady</first-name>
+                        <last-name>Strugatsky</last-name>
+                      </author>
+                      <lang>en</lang>
+                    </title-info>
+                  </description>
+                  <body>
+                    <section><p>Body</p></section>
+                  </body>
+                </FictionBook>
+                """);
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var importService = new ImportJobsService(options.PipePath);
+            var jobId = await importService.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePath = sourcePath,
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await importService.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(2),
+                cancellation.Token));
+
+            var client = new LibraryCatalogClient(options.PipePath);
+            var listResponse = await client.ListBooksAsync(
+                LibraryCatalogMapper.ToProto(new BookListRequestModel
+                {
+                    Text = "trash",
+                    Limit = 10
+                }),
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.Single(listResponse.Items);
+
+            var trashResponse = await client.MoveBookToTrashAsync(
+                listResponse.Items[0].BookId,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(trashResponse.HasTrashedBookId);
+            Assert.Equal(listResponse.Items[0].BookId, trashResponse.TrashedBookId);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
 }

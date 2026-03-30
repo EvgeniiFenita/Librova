@@ -15,6 +15,7 @@ SLibraryLayoutPaths CManagedLibraryLayout::Build(const std::filesystem::path& li
         .BooksDirectory = libraryRoot / "Books",
         .CoversDirectory = libraryRoot / "Covers",
         .TempDirectory = libraryRoot / "Temp",
+        .TrashDirectory = libraryRoot / "Trash",
         .LogsDirectory = libraryRoot / "Logs"
     };
 }

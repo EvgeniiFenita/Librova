@@ -52,4 +52,18 @@ internal sealed class LibraryCatalogClient
             ExportBookResponse.Parser,
             timeout,
             cancellationToken);
+
+    public Task<MoveBookToTrashResponse> MoveBookToTrashAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        _pipeClient.CallAsync(
+            PipeMethod.MoveBookToTrash,
+            new MoveBookToTrashRequest
+            {
+                BookId = bookId
+            },
+            MoveBookToTrashResponse.Parser,
+            timeout,
+            cancellationToken);
 }

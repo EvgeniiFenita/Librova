@@ -567,6 +567,22 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_MovesSelectedBookToTrashThroughCatalogService()
+    {
+        var service = new FakeLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        Assert.NotNull(viewModel.SelectedBook);
+        var selectedBookId = viewModel.SelectedBook!.BookId;
+
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.Equal(selectedBookId, service.LastTrashedBookId);
+        Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_ClampsInvalidPageSize()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
@@ -831,6 +847,7 @@ public sealed class ViewModelsTests
     {
         public long? LastExportBookId { get; private set; }
         public string? LastExportPath { get; private set; }
+        public long? LastTrashedBookId { get; private set; }
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([
@@ -872,6 +889,12 @@ public sealed class ViewModelsTests
             LastExportPath = destinationPath;
             return Task.FromResult<string?>(destinationPath);
         }
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastTrashedBookId = bookId;
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class EmptyLibraryCatalogService : ILibraryCatalogService
@@ -884,6 +907,9 @@ public sealed class ViewModelsTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(false);
     }
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
@@ -905,6 +931,9 @@ public sealed class ViewModelsTests
             LastExportRequest = (bookId, destinationPath);
             return Task.FromResult<string?>(destinationPath);
         }
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
@@ -966,6 +995,9 @@ public sealed class ViewModelsTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private sealed class ExactPageLibraryCatalogService : ILibraryCatalogService
@@ -1004,5 +1036,8 @@ public sealed class ViewModelsTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 }

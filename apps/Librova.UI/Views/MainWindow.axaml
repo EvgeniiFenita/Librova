@@ -428,6 +428,10 @@
                             Width="160"
                             Command="{Binding Shell.LibraryBrowser.ExportSelectedBookCommand}"
                             Content="Export Book..." />
+                    <Button Classes="SecondaryAction"
+                            Width="160"
+                            Command="{Binding Shell.LibraryBrowser.MoveSelectedBookToTrashCommand}"
+                            Content="Move To Trash" />
                     <Border Background="#EFE5D8"
                             CornerRadius="12"
                             Padding="12">

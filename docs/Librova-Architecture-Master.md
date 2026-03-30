@@ -128,7 +128,6 @@ Details belong in `docs/ProjectDocumentation.md`, not here.
 
 The UI shell is no longer just an import placeholder. The current remaining Phase 8 work should stay focused on product-critical user flows:
 
-- delete or move selected book to trash with explicit managed-library policy
 - first-run setup for library-root selection and bootstrap
 - richer settings flow for converter configuration and runtime preferences
 
@@ -145,7 +144,6 @@ Still expected before MVP completion:
 
 Important planned capabilities that are not yet implemented end-to-end:
 
-- delete-to-trash flow
 - first-run setup wizard
 - richer settings and converter configuration UI
 - packaging-oriented release validation

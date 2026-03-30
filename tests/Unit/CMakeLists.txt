@@ -17,6 +17,7 @@ if(BUILD_TESTING)
         TestProtoContracts.cpp
         TestLibraryCatalogFacade.cpp
         TestLibraryExportFacade.cpp
+        TestLibraryTrashFacade.cpp
         TestLibraryImportFacade.cpp
         TestBook.cpp
         TestSqliteBookRepository.cpp
@@ -39,6 +40,7 @@ if(BUILD_TESTING)
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
         TestManagedFileStorage.cpp
+        TestManagedTrashService.cpp
         TestMetadataNormalization.cpp
         TestParserRegistry.cpp
         TestSearchQuery.cpp
@@ -73,6 +75,7 @@ if(BUILD_TESTING)
             LibrovaJobs
             LibrovaLogging
             LibrovaManagedStorage
+            LibrovaManagedTrash
             LibrovaParserRegistry
             LibrovaPipeClient
             LibrovaPipeHost

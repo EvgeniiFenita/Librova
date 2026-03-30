@@ -10,12 +10,14 @@
 #include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
+#include "Application/LibraryTrashFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
+#include "ManagedTrash/ManagedTrashService.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 
 namespace {
@@ -126,10 +128,12 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     CEmptyBookRepository bookRepository;
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
 
     librova::v1::StartImportRequest startRequest;
     auto* import = startRequest.mutable_import();
@@ -165,10 +169,12 @@ TEST_CASE("Library job service adapter exposes snapshot cancellation and removal
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     CEmptyBookRepository bookRepository;
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
 
     librova::v1::StartImportRequest startRequest;
     startRequest.mutable_import()->set_source_path("C:/books/book.fb2");
@@ -225,10 +231,12 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
 
     librova::v1::ListBooksRequest request;
     request.mutable_query()->set_text("road");
@@ -272,10 +280,12 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox / "Library");
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, sandbox / "Library");
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
 
     librova::v1::ExportBookRequest request;
     request.set_book_id(bookId.Value);
@@ -284,6 +294,54 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     const auto response = adapter.ExportBook(request);
     REQUIRE(response.has_exported_path());
     REQUIRE(std::filesystem::exists(response.exported_path()));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library job service adapter moves managed book to trash over protobuf", "[proto-service][catalog]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-trash";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000203");
+
+    const std::filesystem::path databasePath = sandbox / "librova-proto-service-trash.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Trash Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000203/book.epub";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "trash-adapter-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto bookId = writeRepository.Add(book);
+    std::ofstream(sandbox / "Library/Books/0000000203/book.epub", std::ios::binary) << "epub-trash";
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox / "Library");
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, sandbox / "Library");
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+
+    librova::v1::MoveBookToTrashRequest request;
+    request.set_book_id(bookId.Value);
+
+    const auto response = adapter.MoveBookToTrash(request);
+    REQUIRE(response.has_trashed_book_id());
+    REQUIRE(response.trashed_book_id() == bookId.Value);
+    REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000203/book.epub"));
 
     std::filesystem::remove_all(sandbox);
 }

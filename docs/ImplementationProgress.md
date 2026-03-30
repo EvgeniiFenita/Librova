@@ -121,6 +121,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Test: added strong host-backed UI integration coverage for shell preload, real import-to-browser refresh, and browser pagination through the native host and SQLite catalog path.
 - `2026-03-30` Feature: added end-to-end read-side book details lookup over protobuf/named pipes and surfaced explicit full-details loading in the UI library browser with native and C# coverage.
 - `2026-03-30` Feature: added end-to-end managed-book export from the library browser over protobuf/named pipes, including native managed-path safety checks, C# path-selection wiring, and strong host-backed integration coverage.
+- `2026-03-30` Feature: added end-to-end delete-to-trash from the library browser over protobuf/named pipes, including managed-library trash policy, rollback-friendly native deletion semantics, and strong host-backed integration coverage.
 - `2026-03-30` Build: generalized UI-side core-host resolution beyond `Debug` only and added `Run-Tests.ps1` as a root-level sequential full test runner for native and managed suites.
 - `2026-03-30` Fix: hardened the UI shell by making Avalonia startup/shutdown non-blocking, adding an explicit loading state, switching browser pagination to lookahead-based `HasMoreResults`, clamping invalid page sizes, and replacing optimistic import ViewModel tests with validated command-path coverage.
 

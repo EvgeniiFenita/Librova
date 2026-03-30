@@ -64,6 +64,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - A first application-facing catalog facade is implemented for read-side book listing.
 - The application-facing catalog facade now also supports richer book-details lookup by `BookId`.
 - The application-facing catalog facade now also supports exporting a managed book file to a user-selected destination path.
+- The application-facing catalog facade now also supports moving a managed book and its cover into the managed-library trash with repository-row removal and rollback-friendly semantics.
 - The facade dispatches between:
   - single-file import
   - ZIP archive import
@@ -87,6 +88,7 @@ Implemented slices at this point:
 - `BookDatabase`
 - `StoragePlanning`
 - `ManagedStorage`
+- `ManagedTrash`
 - `ZipImporting`
 - `EpubParsing`
 - `Fb2Parsing`
@@ -121,6 +123,7 @@ Implemented slices at this point:
 - The shared contract now also exposes `ListBooks` for read-side catalog queries over the same named-pipe/protobuf boundary.
 - The shared contract now also exposes `GetBookDetails` for richer read-side metadata lookup over the same named-pipe/protobuf boundary.
 - The shared contract now also exposes `ExportBook` for exporting a selected managed book to a user-chosen destination path over the same named-pipe/protobuf boundary.
+- The shared contract now also exposes `MoveBookToTrash` for deleting a selected managed book through the same named-pipe/protobuf boundary.
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 - `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
@@ -137,6 +140,7 @@ Implemented slices at this point:
   - `ListBooks`
   - `GetBookDetails`
   - `ExportBook`
+  - `MoveBookToTrash`
   - `GetImportJobSnapshot`
   - `GetImportJobResult`
   - `WaitImportJob`
@@ -154,6 +158,7 @@ Implemented slices at this point:
   - real round-trip coverage against a live Windows named pipe
 - The current named-pipe method set now covers import-job operations, read-side `ListBooks` queries, and `GetBookDetails`.
 - The current named-pipe method set now also covers `ExportBook`.
+- The current named-pipe method set now also covers `MoveBookToTrash`.
 - `libs/PipeHost` now provides the first core-side named-pipe host loop:
   - accepts one connected pipe session
   - reads one framed protobuf request
@@ -185,6 +190,7 @@ Implemented slices at this point:
   - clears stale `Temp/` state during startup recovery
   - migrates SQLite schema on startup
   - composes parser registry, repositories, managed storage, import facade, job service, protobuf adapter, and named-pipe host
+  - composes managed-trash infrastructure and delete-to-trash use case wiring
   - serves sequential named-pipe sessions according to host options
   - treats malformed or abruptly closed pipe sessions as per-session errors instead of terminating the whole host process
 - the current pipe client timeout is applied as an RPC deadline for waiting on the response after connect, not only as an initial connect timeout
@@ -207,6 +213,7 @@ Implemented slices at this point:
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
 - the current `Library Snapshot` panel now also supports explicit full-details loading for the selected book, including publisher, ISBN, identifier, description, and SHA256 metadata from the native host.
 - the current `Library Snapshot` panel now also supports exporting the selected managed book into a user-chosen destination path through the real `UI -> named pipes -> C++ host` flow.
+- the current `Library Snapshot` panel now also supports moving the selected managed book into the managed-library trash and refreshing the browser immediately after the deletion.
 - the current library browser uses lookahead pagination (`limit = page size + 1`) so `HasMoreResults` is based on a real extra row instead of a false `count == page size` heuristic.
 - the current browser `PageSize` is clamped to a valid positive value instead of accepting zero or negative sizes.
 - the current shell now preloads the library browser on startup and refreshes it automatically after a successful import, so the read-side view no longer requires a manual refresh to reflect new books.
@@ -219,7 +226,13 @@ Implemented slices at this point:
 - Book ids can be reserved before persistence so managed storage planning can use stable `BookId`-based paths before the final repository insert.
 - Reserved book ids are allocated through a dedicated SQLite sequence row instead of `MAX(id) + 1`, so sequential reservations from different repository instances do not collide.
 - Managed storage uses stable `BookId`-based paths under `Books/`, `Covers/`, and `Temp/`.
+- Managed-library trash now lives under `Trash/` inside the same library root.
 - Managed file import is staged first, then committed, with rollback logic for partial commit failures.
+- Delete-to-trash is implemented through a dedicated managed-trash service:
+  - managed files are moved under `Trash/` while preserving their relative library layout
+  - the cover file follows the same policy
+  - repository-row removal happens after file moves
+  - moved files are restored if a later step in the delete flow fails
 
 ## 6. Search
 
@@ -329,9 +342,11 @@ Stable facts taken from that reference:
 - application-level catalog facade mapping and pagination/filter integration over the real SQLite read side
 - application-level catalog details lookup over the real SQLite repository path
 - application-level catalog export flow with managed-path safety checks and destination copy behavior
+- application-level catalog delete-to-trash flow with managed-path safety checks, rollback behavior, and repository-row removal
 - protobuf catalog mapping and `ListBooks` adapter/dispatcher coverage over the real SQLite read side
 - protobuf catalog mapping and `GetBookDetails` adapter/dispatcher coverage over the real SQLite read side
 - protobuf catalog mapping and `ExportBook` adapter/dispatcher coverage over the real SQLite repository path
+- protobuf catalog mapping and `MoveBookToTrash` adapter/dispatcher coverage over the real SQLite repository path
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
@@ -344,6 +359,7 @@ Stable facts taken from that reference:
 - C# end-to-end library-catalog client coverage against the real native host process
 - C# end-to-end library-details client coverage against the real native host process
 - C# end-to-end library-export client coverage against the real native host process
+- C# end-to-end library-delete-to-trash client coverage against the real native host process
 - C# mapping and service-layer coverage for UI-facing import job DTOs
 - C# mapping and service-layer coverage for UI-facing library-catalog DTOs
 - C# shell bootstrap/session coverage over a real host-backed import flow
@@ -373,6 +389,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
 - C# ViewModel coverage for explicit full-details loading from the selected library item
 - C# ViewModel coverage for exporting the selected library item through the desktop path-selection abstraction
+- C# ViewModel coverage for moving the selected library item to trash through the real catalog service abstraction
 - C# regression coverage for exact-full-page pagination, clamped page size, and import-command happy paths with real validated source files
 - C# shell-level coverage for startup browser preload and post-import browser refresh
 - C# strong host-backed integration coverage for:
@@ -380,6 +397,7 @@ Stable facts taken from that reference:
   - real import-command execution followed by automatic browser refresh
   - real browser pagination against the native host and SQLite-backed library catalog
   - real selected-book export through the native host and managed library
+  - real selected-book delete-to-trash through the native host and managed library
 - the UI-side core-host path resolver now supports:
   - explicit `LIBROVA_CORE_HOST_EXECUTABLE` override
   - fallback probing of both `x64-debug/Debug` and `x64-release/Release` repository build layouts
@@ -388,7 +406,6 @@ Stable facts taken from that reference:
 
 Not implemented yet, but still on the active MVP path:
 
-- delete-to-trash flow with explicit managed-file, cover, and database-row policy
 - first-run setup flow for choosing and validating the library root before normal shell startup
 - richer settings UI for converter configuration and runtime preferences
 - packaging-oriented release validation and startup sanity outside the development layout

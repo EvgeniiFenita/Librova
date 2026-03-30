@@ -10,6 +10,7 @@ TEST_CASE("Managed library layout builds stable root directories", "[storage-pla
     REQUIRE(layout.BooksDirectory == std::filesystem::path{"D:/Library/Books"});
     REQUIRE(layout.CoversDirectory == std::filesystem::path{"D:/Library/Covers"});
     REQUIRE(layout.TempDirectory == std::filesystem::path{"D:/Library/Temp"});
+    REQUIRE(layout.TrashDirectory == std::filesystem::path{"D:/Library/Trash"});
     REQUIRE(layout.LogsDirectory == std::filesystem::path{"D:/Library/Logs"});
 }
 

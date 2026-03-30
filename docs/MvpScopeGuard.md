@@ -6,7 +6,6 @@ This document protects the project from drifting into side features before the M
 
 As of the current roadmap, only these forward-looking buckets are on the active MVP path:
 
-- delete-to-trash flow
 - first-run setup flow
 - richer settings and converter configuration UI
 - stabilization and packaging validation

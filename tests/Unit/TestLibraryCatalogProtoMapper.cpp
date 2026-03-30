@@ -99,3 +99,16 @@ TEST_CASE("Library catalog proto mapper builds export response", "[proto-mapping
     REQUIRE(response.has_exported_path());
     REQUIRE(response.exported_path() == "C:/Exports/DefinitelyMaybe.fb2");
 }
+
+TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-mapping][catalog]")
+{
+    const Librova::Application::STrashedBookResult result{
+        .BookId = Librova::Domain::SBookId{17},
+        .TrashedBookPath = std::filesystem::path(u8"Trash/Books/0000000017/book.epub")
+    };
+
+    const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(&result);
+
+    REQUIRE(response.has_trashed_book_id());
+    REQUIRE(response.trashed_book_id() == 17);
+}

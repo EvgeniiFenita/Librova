@@ -25,4 +25,10 @@ internal sealed class NullLibraryCatalogService : ILibraryCatalogService
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
         Task.FromResult<string?>(null);
+
+    public Task<bool> MoveBookToTrashAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(false);
 }

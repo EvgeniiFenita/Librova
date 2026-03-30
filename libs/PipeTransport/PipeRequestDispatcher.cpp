@@ -37,6 +37,12 @@ SPipeResponseEnvelope CPipeRequestDispatcher::Dispatch(const SPipeRequestEnvelop
             [this](const auto& typedRequest) {
                 return m_adapter.ExportBook(typedRequest);
             });
+    case EPipeMethod::MoveBookToTrash:
+        return DispatchTyped<librova::v1::MoveBookToTrashRequest, librova::v1::MoveBookToTrashResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.MoveBookToTrash(typedRequest);
+            });
     case EPipeMethod::GetImportJobSnapshot:
         return DispatchTyped<librova::v1::GetImportJobSnapshotRequest, librova::v1::GetImportJobSnapshotResponse>(
             request,

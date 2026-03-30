@@ -148,7 +148,10 @@ class ITrashService
 public:
     virtual ~ITrashService() = default;
 
-    virtual void MoveToTrash(const std::filesystem::path& path) = 0;
+    [[nodiscard]] virtual std::filesystem::path MoveToTrash(const std::filesystem::path& path) = 0;
+    virtual void RestoreFromTrash(
+        const std::filesystem::path& trashedPath,
+        const std::filesystem::path& destinationPath) = 0;
 };
 
 class ICoverProvider

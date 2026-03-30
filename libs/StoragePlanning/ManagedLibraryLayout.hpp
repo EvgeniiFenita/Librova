@@ -15,6 +15,7 @@ struct SLibraryLayoutPaths
     std::filesystem::path BooksDirectory;
     std::filesystem::path CoversDirectory;
     std::filesystem::path TempDirectory;
+    std::filesystem::path TrashDirectory;
     std::filesystem::path LogsDirectory;
 };
 

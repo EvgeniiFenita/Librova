@@ -250,6 +250,18 @@ librova::v1::ExportBookResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     return response;
 }
 
+librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse(
+    const Librova::Application::STrashedBookResult* result)
+{
+    librova::v1::MoveBookToTrashResponse response;
+    if (result != nullptr)
+    {
+        response.set_trashed_book_id(result->BookId.Value);
+    }
+
+    return response;
+}
+
 std::string CLibraryCatalogProtoMapper::PathToUtf8(const std::filesystem::path& path)
 {
     return ToUtf8String(path.generic_u8string());

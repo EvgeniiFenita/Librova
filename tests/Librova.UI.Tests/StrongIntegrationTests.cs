@@ -148,6 +148,36 @@ public sealed class StrongIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task LibraryBrowserViewModel_MovesSelectedBookToTrashAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-trash");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserTrash");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            await ImportBookAsync(session.ImportJobs, sandboxRoot, "trash.fb2", "Trash Book", "Arkady", "Strugatsky", cancellation.Token);
+
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog);
+
+            await viewModel.RefreshAsync();
+            Assert.NotNull(viewModel.SelectedBook);
+
+            await viewModel.MoveSelectedBookToTrashAsync();
+
+            Assert.Empty(viewModel.Books);
+            Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static ShellApplication CreateApplication(ShellSession session, string sandboxRoot) =>
         ShellApplication.Create(
             session,

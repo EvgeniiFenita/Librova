@@ -30,10 +30,12 @@ void LogWarnIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... a
 CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
     Librova::ApplicationJobs::CImportJobService& importJobService,
     const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade,
-    const Librova::Application::CLibraryExportFacade& libraryExportFacade)
+    const Librova::Application::CLibraryExportFacade& libraryExportFacade,
+    const Librova::Application::CLibraryTrashFacade& libraryTrashFacade)
     : m_importJobService(importJobService)
     , m_libraryCatalogFacade(libraryCatalogFacade)
     , m_libraryExportFacade(libraryExportFacade)
+    , m_libraryTrashFacade(libraryTrashFacade)
 {
 }
 
@@ -88,6 +90,26 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
 
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
         exportedPath.has_value() ? &*exportedPath : nullptr);
+}
+
+librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
+    const librova::v1::MoveBookToTrashRequest& request) const
+{
+    LogInfoIfInitialized("MoveBookToTrash requested for book {}.", request.book_id());
+
+    const auto result = m_libraryTrashFacade.MoveBookToTrash(Librova::Domain::SBookId{request.book_id()});
+
+    if (result.has_value())
+    {
+        LogInfoIfInitialized("MoveBookToTrash completed for book {}.", request.book_id());
+    }
+    else
+    {
+        LogWarnIfInitialized("MoveBookToTrash requested unknown book {}.", request.book_id());
+    }
+
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        result.has_value() ? &*result : nullptr);
 }
 
 librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(

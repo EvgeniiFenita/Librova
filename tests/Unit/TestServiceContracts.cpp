@@ -93,12 +93,25 @@ public:
 class CStubTrashService final : public Librova::Domain::ITrashService
 {
 public:
-    void MoveToTrash(const std::filesystem::path& path) override
+    std::filesystem::path MoveToTrash(const std::filesystem::path& path) override
     {
         LastTrashedPath = path;
+        LastTrashDestination = std::filesystem::path{"Trash"} / path.filename();
+        return LastTrashDestination;
+    }
+
+    void RestoreFromTrash(
+        const std::filesystem::path& trashedPath,
+        const std::filesystem::path& destinationPath) override
+    {
+        LastRestoredFromPath = trashedPath;
+        LastRestoredToPath = destinationPath;
     }
 
     std::filesystem::path LastTrashedPath;
+    std::filesystem::path LastTrashDestination;
+    std::filesystem::path LastRestoredFromPath;
+    std::filesystem::path LastRestoredToPath;
 };
 
 class CStubCoverProvider final : public Librova::Domain::ICoverProvider
@@ -181,7 +194,8 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
 
     storage.CommitImport(prepared);
     storage.RollbackImport(prepared);
-    trash.MoveToTrash("Books/9/book.epub");
+    const auto trashPath = trash.MoveToTrash("Books/9/book.epub");
+    trash.RestoreFromTrash(trashPath, "Books/9/book.epub");
 
     const auto cover = coverProvider.TryResolve({
         .TitleUtf8 = "Roadside Picnic",
@@ -193,6 +207,9 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     REQUIRE(storage.LastCommittedPath == std::filesystem::path{"Books/9/book.epub"});
     REQUIRE(storage.LastRolledBackPath == std::filesystem::path{"Temp/book.epub"});
     REQUIRE(trash.LastTrashedPath == std::filesystem::path{"Books/9/book.epub"});
+    REQUIRE(trash.LastTrashDestination == std::filesystem::path{"Trash/book.epub"});
+    REQUIRE(trash.LastRestoredFromPath == std::filesystem::path{"Trash/book.epub"});
+    REQUIRE(trash.LastRestoredToPath == std::filesystem::path{"Books/9/book.epub"});
     REQUIRE(cover.has_value());
     REQUIRE_FALSE(cover->IsEmpty());
 }

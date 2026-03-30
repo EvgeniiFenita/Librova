@@ -5,6 +5,8 @@ add_library(LibrovaApplication STATIC
     LibraryExportFacade.hpp
     LibraryImportFacade.cpp
     LibraryImportFacade.hpp
+    LibraryTrashFacade.cpp
+    LibraryTrashFacade.hpp
 )
 
 target_include_directories(LibrovaApplication
@@ -16,6 +18,7 @@ target_link_libraries(LibrovaApplication
     PUBLIC
         LibrovaDomain
         LibrovaImporting
+        LibrovaManagedTrash
         LibrovaZipImporting
 )
 

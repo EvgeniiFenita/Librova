@@ -75,4 +75,21 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
             throw;
         }
     }
+
+    public async Task<bool> MoveBookToTrashAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _client.MoveBookToTrashAsync(bookId, timeout, cancellationToken).ConfigureAwait(false);
+            return LibraryCatalogMapper.FromProto(response);
+        }
+        catch (Exception error)
+        {
+            UiLogging.Error(error, "Failed to move book to trash. BookId={BookId}", bookId);
+            throw;
+        }
+    }
 }

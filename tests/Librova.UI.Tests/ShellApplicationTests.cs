@@ -494,6 +494,9 @@ public sealed class ShellApplicationTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
@@ -523,6 +526,9 @@ public sealed class ShellApplicationTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService

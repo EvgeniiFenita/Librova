@@ -39,6 +39,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        MoveSelectedBookToTrashCommand = new AsyncCommand(MoveSelectedBookToTrashAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
@@ -47,6 +48,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public AsyncCommand PreviousPageCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
     public AsyncCommand ExportSelectedBookCommand { get; }
+    public AsyncCommand MoveSelectedBookToTrashCommand { get; }
     public IReadOnlyList<string> AvailableFormatFilters { get; } = ["All", "EPUB", "FB2"];
     public IReadOnlyList<BookSortModel> AvailableSortOptions { get; } = Enum.GetValues<BookSortModel>();
 
@@ -135,6 +137,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookPathText));
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
+                MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -157,6 +160,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 PreviousPageCommand.RaiseCanExecuteChanged();
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
+                MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -277,6 +281,48 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             StatusText = string.IsNullOrWhiteSpace(exportedPath)
                 ? "Selected book could not be exported."
                 : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task MoveSelectedBookToTrashAsync()
+    {
+        if (SelectedBook is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = $"Moving '{SelectedBook.Title}' to trash...";
+
+        try
+        {
+            var deletedTitle = SelectedBook.Title;
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var moved = await _libraryCatalogService.MoveBookToTrashAsync(
+                SelectedBook.BookId,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            if (!moved)
+            {
+                StatusText = "Selected book could not be moved to trash.";
+                return;
+            }
+
+            StatusText = $"Moved '{SelectedBook.Title}' to trash.";
+            var requestedPage = CurrentPage;
+            await RefreshPageAsync(requestedPage);
+
+            if (Books.Count == 0 && requestedPage > 1)
+            {
+                await RefreshPageAsync(requestedPage - 1);
+            }
+
+            StatusText = $"Moved '{deletedTitle}' to trash.";
         }
         finally
         {

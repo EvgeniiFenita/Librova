@@ -22,4 +22,9 @@ internal interface ILibraryCatalogService
         string destinationPath,
         TimeSpan timeout,
         CancellationToken cancellationToken);
+
+    Task<bool> MoveBookToTrashAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken);
 }

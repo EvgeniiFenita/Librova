@@ -158,6 +158,14 @@ message ExportBookResponse {
   optional string exported_path = 1;
 }
 
+message MoveBookToTrashRequest {
+  int64 book_id = 1;
+}
+
+message MoveBookToTrashResponse {
+  optional int64 trashed_book_id = 1;
+}
+
 message StartImportRequest {
   ImportRequest import = 1;
 }
@@ -212,6 +220,7 @@ service LibraryJobService {
   rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
   rpc GetBookDetails(GetBookDetailsRequest) returns (GetBookDetailsResponse);
   rpc ExportBook(ExportBookRequest) returns (ExportBookResponse);
+  rpc MoveBookToTrash(MoveBookToTrashRequest) returns (MoveBookToTrashResponse);
   rpc GetImportJobSnapshot(GetImportJobSnapshotRequest) returns (GetImportJobSnapshotResponse);
   rpc GetImportJobResult(GetImportJobResultRequest) returns (GetImportJobResultResponse);
   rpc WaitImportJob(WaitImportJobRequest) returns (WaitImportJobResponse);

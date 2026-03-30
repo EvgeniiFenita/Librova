@@ -13,6 +13,7 @@ void CLibraryBootstrap::PrepareLibraryRoot(const std::filesystem::path& libraryR
     std::filesystem::create_directories(layout.CoversDirectory);
     std::filesystem::remove_all(layout.TempDirectory);
     std::filesystem::create_directories(layout.TempDirectory);
+    std::filesystem::create_directories(layout.TrashDirectory);
     std::filesystem::create_directories(layout.LogsDirectory);
 }
 

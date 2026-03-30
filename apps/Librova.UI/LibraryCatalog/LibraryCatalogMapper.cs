@@ -66,6 +66,9 @@ internal static class LibraryCatalogMapper
     public static string? FromProto(ExportBookResponse response) =>
         response.HasExportedPath ? response.ExportedPath : null;
 
+    public static bool FromProto(MoveBookToTrashResponse response) =>
+        response.HasTrashedBookId;
+
     public static BookListItemModel FromProto(BookListItem item) =>
         new()
         {

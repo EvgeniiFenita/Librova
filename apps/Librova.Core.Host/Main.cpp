@@ -10,6 +10,7 @@
 #include "Application/LibraryImportFacade.hpp"
 #include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryExportFacade.hpp"
+#include "Application/LibraryTrashFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
@@ -23,6 +24,7 @@
 #include "Jobs/ImportJobRunner.hpp"
 #include "Logging/Logging.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
+#include "ManagedTrash/ManagedTrashService.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"
@@ -74,6 +76,7 @@ int main(int argc, char** argv)
         Librova::BookDatabase::CSqliteBookRepository bookRepository(databasePath);
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
         Librova::ManagedStorage::CManagedFileStorage managedStorage(options.LibraryRoot);
+        Librova::ManagedTrash::CManagedTrashService trashService(options.LibraryRoot);
 
         std::optional<Librova::ConverterRuntime::CExternalBookConverter> converter;
         if (const auto profile =
@@ -98,10 +101,11 @@ int main(int argc, char** argv)
         const Librova::Application::CLibraryImportFacade importFacade(singleFileImporter, zipImportCoordinator);
         const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
         const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot);
+        const Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, options.LibraryRoot);
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);
         Librova::ApplicationJobs::CImportJobService jobService(jobManager);
-        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(jobService, catalogFacade, exportFacade);
+        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(jobService, catalogFacade, exportFacade, trashFacade);
         Librova::PipeTransport::CPipeRequestDispatcher dispatcher(serviceAdapter);
         const Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
