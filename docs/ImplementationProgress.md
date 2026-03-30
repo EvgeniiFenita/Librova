@@ -111,6 +111,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Fix: hardened the UI import shell by removing the hardcoded 15-second auto-cancel path, making shell-state persistence best-effort during shutdown, adding local path validation for import inputs, and reducing polling-related UI log noise.
 - `2026-03-30` Feature: added the first persisted next-launch settings flow for `PreferredLibraryRoot`, with UI save/reset actions, default-host bootstrap integration, and C# coverage for preferences round-trip and shell settings behavior.
 - `2026-03-30` Feature: added an explicit diagnostics panel to the UI shell with runtime log/state/executable paths and verified shell-level coverage for the exposed diagnostics values.
+- `2026-03-30` Feature: added an explicit operational-notes layer to the UI shell so launch-argument prefill, next-launch library-root mismatch, and runtime redirection hints are visible in the running session.
 
 ### Phase 9. Stabilization
 

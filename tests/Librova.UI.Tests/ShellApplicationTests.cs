@@ -86,6 +86,7 @@ public sealed class ShellApplicationTests
             preferencesStore: new FakePreferencesStore());
 
         Assert.Equal(@"C:\Incoming\opened.fb2", application.Shell.ImportJobs.SourcePath);
+        Assert.Contains("launch arguments", application.Shell.OperationalWarningsText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -196,6 +197,8 @@ public sealed class ShellApplicationTests
             });
 
         Assert.Equal(@"D:\Librova\SecondLibrary", application.Shell.PreferredLibraryRoot);
+        Assert.True(application.Shell.HasOperationalWarnings);
+        Assert.Contains("Restart the app", application.Shell.OperationalWarningsText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -220,6 +223,34 @@ public sealed class ShellApplicationTests
         Assert.Equal(Path.Combine(@"C:\Libraries\Librova", "Logs", "host.log"), application.Shell.HostLogFilePath);
         Assert.Contains("UI log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("host log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Create_WithoutLaunchOrPreferenceMismatch_HasNoOperationalWarnings()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore
+            {
+                Snapshot = new UiPreferencesSnapshot
+                {
+                    PreferredLibraryRoot = @"C:\Libraries\Librova"
+                }
+            });
+
+        Assert.False(application.Shell.HasOperationalWarnings);
+        Assert.Equal(string.Empty, application.Shell.OperationalWarningsText);
     }
 
     [Fact]

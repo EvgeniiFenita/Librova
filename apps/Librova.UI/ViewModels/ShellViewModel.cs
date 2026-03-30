@@ -5,6 +5,7 @@ using Librova.UI.Shell;
 using Librova.UI.Mvvm;
 using Librova.UI.Runtime;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -18,6 +19,7 @@ internal sealed class ShellViewModel : ObservableObject
     private string _preferredLibraryRoot = string.Empty;
     private string _preferencesStatusText = "Using current shell defaults.";
     private string _preferredLibraryRootValidationMessage = string.Empty;
+    private readonly string _launchPrefillNotice;
 
     public ShellViewModel(
         ShellSession session,
@@ -37,6 +39,9 @@ internal sealed class ShellViewModel : ObservableObject
         ImportJobs.AllowProbableDuplicates = savedState?.AllowProbableDuplicates ?? false;
         _preferredLibraryRoot = savedPreferences?.PreferredLibraryRoot ?? session.HostOptions.LibraryRoot;
         UpdatePreferredLibraryRootValidation();
+        _launchPrefillNotice = string.IsNullOrWhiteSpace(launchOptions?.InitialSourcePath)
+            ? string.Empty
+            : "Source path was prefilled from launch arguments for this session.";
 
         if (!string.IsNullOrWhiteSpace(launchOptions?.InitialSourcePath))
         {
@@ -93,6 +98,8 @@ internal sealed class ShellViewModel : ObservableObject
     public string HostLogFilePath => Path.Combine(LibraryRoot, "Logs", "host.log");
     public string DiagnosticsHintText =>
         "If startup or import flow looks suspicious, inspect the UI log first, then the host log. The current session keeps using the library root shown under Session, while the settings card only affects the next launch.";
+    public string OperationalWarningsText => BuildOperationalWarningsText();
+    public bool HasOperationalWarnings => !string.IsNullOrWhiteSpace(OperationalWarningsText);
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
@@ -132,6 +139,8 @@ internal sealed class ShellViewModel : ObservableObject
         PreferredLibraryRootValidationMessage = BuildPreferredLibraryRootValidationMessage(PreferredLibraryRoot);
         RaisePropertyChanged(nameof(HasPreferredLibraryRootValidationError));
         RaisePropertyChanged(nameof(ShowPreferredLibraryRootHelperText));
+        RaisePropertyChanged(nameof(OperationalWarningsText));
+        RaisePropertyChanged(nameof(HasOperationalWarnings));
     }
 
     private static string BuildPreferredLibraryRootValidationMessage(string preferredLibraryRoot)
@@ -152,5 +161,35 @@ internal sealed class ShellViewModel : ObservableObject
         }
 
         return string.Empty;
+    }
+
+    private string BuildOperationalWarningsText()
+    {
+        var messages = new List<string>();
+
+        if (_launchPrefillNotice.Length > 0)
+        {
+            messages.Add(_launchPrefillNotice);
+        }
+
+        if (!string.Equals(PreferredLibraryRoot, LibraryRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            messages.Add("Saved next-launch library root differs from the current session. Restart the app to switch the active library.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(RuntimeEnvironment.GetLibraryRootOverride()))
+        {
+            messages.Add("Library root is currently forced by environment override. Saved preferences will not affect this launch.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(RuntimeEnvironment.GetDefaultUiLogFilePath())
+            && RuntimeEnvironment.GetDefaultUiLogFilePath().Contains(@"\out\runtime\", StringComparison.OrdinalIgnoreCase))
+        {
+            messages.Add("Runtime files are redirected into the repository out directory for this launch.");
+        }
+
+        return messages.Count == 0
+            ? string.Empty
+            : string.Join(Environment.NewLine, messages);
     }
 }

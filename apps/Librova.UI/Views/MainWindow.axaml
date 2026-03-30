@@ -275,6 +275,18 @@
             </StackPanel>
           </Border>
 
+          <Border Classes="TintedCard"
+                  Background="#F8E6CE"
+                  BorderBrush="#DFBD8B"
+                  IsVisible="{Binding Shell.HasOperationalWarnings}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="SectionTitle"
+                         Text="Operational Notes" />
+              <TextBlock Text="{Binding Shell.OperationalWarningsText}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
           <Border Classes="SurfaceCard">
             <StackPanel Spacing="12">
               <TextBlock Classes="SectionTitle"
