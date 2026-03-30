@@ -9,8 +9,9 @@ Before making changes, review these documents in this order:
 1. `docs/LibriFlow-Architecture-Master.md`
 2. `docs/CodeStyleGuidelines.md`
 3. `docs/CommitMessageGuidelines.md`
-4. `docs/ImplementationProgress.md`
-5. `CodexSessionInstructions.md`
+4. `docs/ProjectDocumentation.md`
+5. `docs/ImplementationProgress.md`
+6. `CodexSessionInstructions.md`
 
 ## 2. Non-Negotiable Project Constraints
 
@@ -33,6 +34,8 @@ Before making changes, review these documents in this order:
 - All build artifacts must go under the repository root `out/`; project-local `bin/` and `obj/` directories are not allowed as an intended steady state.
 - `CMake` is the canonical build system for native code; Visual Studio solutions exist for developer convenience, not as the primary source of build truth.
 - If the SQLite schema depends on optional SQLite modules such as `FTS5`, declare the required features explicitly in `vcpkg.json` instead of relying on default port settings.
+- Keep `docs/ProjectDocumentation.md` updated with stable implementation facts, not plans or aspirations.
+- External converter integration should stay user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive dependency.
 
 ## 4. Implementation Priorities
 
@@ -57,6 +60,7 @@ Before finishing a task, verify:
 - tests cover the intended behavior or the gap is stated clearly;
 - docs were updated if the change introduced a new rule or decision.
 - `docs/ImplementationProgress.md` was updated when the task completed a verified checkpoint.
+- `docs/ProjectDocumentation.md` was updated when the task made current project reality more complete or more explicit.
 
 ## 6. Commit Discipline
 
@@ -72,6 +76,7 @@ If any of these files stop matching the actual repository, update them early:
 - `docs/CodeStyleGuidelines.md`
 - `docs/CommitMessageGuidelines.md`
 - `docs/ImplementationProgress.md`
+- `docs/ProjectDocumentation.md`
 - `CodexSessionInstructions.md`
 
 If a new standing rule, workflow constraint, or repository convention appears during work, add it to this file in the same task instead of relying on memory.

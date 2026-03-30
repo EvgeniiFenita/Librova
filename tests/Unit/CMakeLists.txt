@@ -7,6 +7,7 @@ if(BUILD_TESTING)
         TestBook.cpp
         TestSqliteBookRepository.cpp
         TestBookRepository.cpp
+        TestConverterCommandBuilder.cpp
         TestEpubParser.cpp
         TestFb2Parser.cpp
         TestBookFormat.cpp
@@ -29,6 +30,7 @@ if(BUILD_TESTING)
         PRIVATE
             Catch2::Catch2WithMain
             LibriFlowBookDatabase
+            LibriFlowConverterCommand
             LibriFlowDomain
             LibriFlowCore
             LibriFlowDatabaseRuntime

@@ -196,6 +196,7 @@ Deliberate decisions:
 - no C++/CLI;
 - no in-process native interop as the main architecture;
 - external converter is not bundled by architecture, it is configured by the user.
+- `fb2cng` / `fbc` is the first built-in converter profile, but converter integration must remain user-configurable through an explicit command-template contract.
 
 ## 7. Layered Design
 
@@ -692,6 +693,20 @@ Recommended default FB2 policy:
 - convert to EPUB when converter is available;
 - otherwise store original FB2 and report warning.
 
+### Converter configuration direction
+
+The converter configuration should support two modes from the start:
+
+- a built-in `fb2cng` profile for the default Windows setup;
+- a user-defined external converter command expressed through an explicit argument-template contract.
+
+Why this is preferred:
+
+- `fb2cng` is a strong default for `FB2 -> EPUB`;
+- the project should not be locked to one executable forever;
+- argument-template configuration is simpler and more transparent than inventing a scripting DSL for MVP;
+- the setup wizard can validate one explicit executable path and one explicit command shape.
+
 ## 23. Testing Strategy
 
 ### 23.1 C++ unit tests with Catch2
@@ -961,6 +976,7 @@ The architecture document is not the only project-level source of truth. The fol
 
 - `docs/CodeStyleGuidelines.md`
 - `docs/CommitMessageGuidelines.md`
+- `docs/ProjectDocumentation.md`
 - `CodexSessionInstructions.md`
 
 Their purpose is:
@@ -968,6 +984,7 @@ Their purpose is:
 - architecture document: product and technical decisions;
 - code style document: implementation and naming conventions;
 - commit message document: git history conventions;
+- project documentation: stable implementation facts already true in the repository;
 - session instructions: startup checklist and task execution discipline.
 
 If implementation reality changes any of these assumptions, update the relevant document instead of letting the repository drift.

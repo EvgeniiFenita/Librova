@@ -45,3 +45,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 
 - `2026-03-30` Feature: added SQLite FTS index maintenance and routed text search through `search_index` for title, authors, tags, and description.
 - `2026-03-30` Feature: validated real FTS search behavior for Cyrillic, prefix matching, and `е/ё` equivalence through repository integration tests.
+
+### Phase 5. Converter Integration
+
+- `2026-03-30` Feature: added converter command foundation with a built-in `fb2cng` profile and a user-configurable argument-template contract.
