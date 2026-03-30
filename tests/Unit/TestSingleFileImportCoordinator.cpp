@@ -113,6 +113,11 @@ public:
 
     [[nodiscard]] LibriFlow::Domain::SBookId Add(const LibriFlow::Domain::SBook& book) override
     {
+        if (ThrowOnAdd)
+        {
+            throw std::runtime_error("Repository add failed.");
+        }
+
         AddedBook = book;
         return book.Id;
     }
@@ -131,6 +136,7 @@ public:
     std::optional<LibriFlow::Domain::SBookId> ReservedId;
     std::optional<LibriFlow::Domain::SBook> AddedBook;
     std::vector<LibriFlow::Domain::SBookId> RemovedIds;
+    bool ThrowOnAdd = false;
 };
 
 class CStubQueryRepository final : public LibriFlow::Domain::IBookQueryRepository
@@ -175,6 +181,11 @@ public:
 
     void CommitImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) override
     {
+        if (ThrowOnCommit)
+        {
+            throw std::runtime_error("Storage commit failed.");
+        }
+
         LastPreparedStorage = preparedStorage;
         CommitCalled = true;
     }
@@ -190,6 +201,7 @@ public:
     std::optional<LibriFlow::Domain::SPreparedStorage> LastPreparedStorage;
     bool CommitCalled = false;
     bool RollbackCalled = false;
+    bool ThrowOnCommit = false;
 };
 
 class CStubBookConverter final : public LibriFlow::Domain::IBookConverter
@@ -371,4 +383,104 @@ TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "
     REQUIRE(managedStorage.LastPlan.has_value());
     REQUIRE(managedStorage.LastPlan->Format == LibriFlow::Domain::EBookFormat::Epub);
     REQUIRE_FALSE(std::filesystem::exists(convertedPath));
+}
+
+TEST_CASE("Single file import can continue after probable duplicate when explicitly allowed", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-probable-force");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    queryRepository.Duplicates = {{
+        .Severity = LibriFlow::Domain::EDuplicateSeverity::Probable,
+        .Reason = LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+        .ExistingBookId = {99}
+    }};
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .AllowProbableDuplicates = true
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(result.DuplicateMatches.size() == 1);
+    REQUIRE(result.Warnings == std::vector<std::string>({
+        "Import continued with explicit probable duplicate override.",
+        "FB2 converter unavailable. Original FB2 will be stored."
+    }));
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(managedStorage.CommitCalled);
+}
+
+TEST_CASE("Single file import rolls back prepared storage when repository add fails", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-add-failure");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.ThrowOnAdd = true;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error == "Repository add failed.");
+    REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE(bookRepository.RemovedIds.empty());
+}
+
+TEST_CASE("Single file import removes persisted book when storage commit fails", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-commit-failure");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    managedStorage.ThrowOnCommit = true;
+    CTestProgressSink progressSink;
+
+    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error == "Storage commit failed.");
+    REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE(bookRepository.RemovedIds.size() == 1);
+    REQUIRE(bookRepository.RemovedIds.front().Value == 1);
 }

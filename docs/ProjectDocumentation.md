@@ -100,9 +100,11 @@ Implemented slices at this point:
   - duplicate lookup
   - strict duplicate rejection
   - probable duplicate decision-required result unless forced
+  - explicit probable duplicate override path
   - conversion planning and execution
   - managed storage preparation and commit
   - repository write and cleanup
+  - rollback of prepared storage and repository state when late import steps fail
 
 ## 8. External Converter Reference
 
@@ -137,6 +139,7 @@ Stable facts taken from that reference:
   - import conversion fallback policy
   - converter configuration model
   - single-file import orchestration
+  - single-file import rollback and probable-duplicate override behavior
 
 ## 10. Current Gaps
 

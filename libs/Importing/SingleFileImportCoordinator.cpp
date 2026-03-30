@@ -11,6 +11,7 @@ namespace {
 
 constexpr auto GStrictDuplicateWarning = "Import rejected because a strict duplicate already exists.";
 constexpr auto GProbableDuplicateWarning = "Import requires user confirmation because a probable duplicate was found.";
+constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit probable duplicate override.";
 
 void EnsureDirectory(const std::filesystem::path& path)
 {
@@ -171,6 +172,13 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         const LibriFlow::Domain::SBookId reservedBookId = m_bookRepository.ReserveId();
         progressSink.ReportValue(30, "Planning conversion");
 
+        std::vector<std::string> importWarnings;
+
+        if (HasProbableDuplicate(duplicates) && request.AllowProbableDuplicates)
+        {
+            importWarnings.emplace_back(GForcedProbableDuplicateWarning);
+        }
+
         const std::filesystem::path convertedDestinationPath =
             request.WorkingDirectory / ("converted-" + std::to_string(reservedBookId.Value) + ".epub");
         const auto conversionPlan = LibriFlow::ImportConversion::PlanImportConversion(
@@ -197,10 +205,16 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (conversionOutcome.Decision == LibriFlow::ImportConversion::EImportConversionDecision::CancelImport)
         {
+            importWarnings.insert(
+                importWarnings.end(),
+                conversionOutcome.Warnings.begin(),
+                conversionOutcome.Warnings.end());
+
             return {
                 .Status = ESingleFileImportStatus::Cancelled,
                 .StoredFormat = parsedBook.SourceFormat,
-                .Warnings = conversionOutcome.Warnings
+                .DuplicateMatches = duplicates,
+                .Warnings = importWarnings
             };
         }
 
@@ -248,7 +262,14 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             .Status = ESingleFileImportStatus::Imported,
             .ImportedBookId = addedBookId,
             .StoredFormat = conversionOutcome.Format,
-            .Warnings = conversionOutcome.Warnings
+            .DuplicateMatches = duplicates,
+            .Warnings = [&] {
+                importWarnings.insert(
+                    importWarnings.end(),
+                    conversionOutcome.Warnings.begin(),
+                    conversionOutcome.Warnings.end());
+                return importWarnings;
+            }()
         };
     }
     catch (const std::exception& error)
