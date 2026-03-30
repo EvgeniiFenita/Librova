@@ -1,0 +1,73 @@
+#include "Sqlite/SqliteConnection.hpp"
+
+#include <stdexcept>
+#include <string>
+
+#include <sqlite3.h>
+
+namespace LibriFlow::Sqlite {
+namespace {
+
+std::string BuildErrorMessage(sqlite3* connection, std::string_view prefix)
+{
+    const char* errorMessage = connection != nullptr ? sqlite3_errmsg(connection) : "unknown sqlite error";
+    std::string result{prefix};
+    result.append(": ");
+    result.append(errorMessage);
+    return result;
+}
+
+} // namespace
+
+CSqliteConnection::CSqliteConnection(const std::filesystem::path& databasePath)
+{
+    sqlite3* rawConnection = nullptr;
+    const int openResult = sqlite3_open_v2(
+        databasePath.string().c_str(),
+        &rawConnection,
+        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+        nullptr);
+
+    if (openResult != SQLITE_OK)
+    {
+        const std::string errorMessage = BuildErrorMessage(rawConnection, "Failed to open sqlite database");
+
+        if (rawConnection != nullptr)
+        {
+            sqlite3_close(rawConnection);
+        }
+
+        throw std::runtime_error(errorMessage);
+    }
+
+    m_connection.reset(rawConnection);
+}
+
+void CSqliteConnection::Execute(const std::string_view sql) const
+{
+    char* errorMessage = nullptr;
+    const int execResult = sqlite3_exec(m_connection.get(), sql.data(), nullptr, nullptr, &errorMessage);
+
+    if (execResult != SQLITE_OK)
+    {
+        std::string fullMessage{"Failed to execute sqlite statement: "};
+        fullMessage.append(errorMessage != nullptr ? errorMessage : "unknown sqlite error");
+        sqlite3_free(errorMessage);
+        throw std::runtime_error(fullMessage);
+    }
+}
+
+sqlite3* CSqliteConnection::GetNativeHandle() const noexcept
+{
+    return m_connection.get();
+}
+
+void CSqliteConnection::SConnectionCloser::operator()(sqlite3* connection) const noexcept
+{
+    if (connection != nullptr)
+    {
+        sqlite3_close(connection);
+    }
+}
+
+} // namespace LibriFlow::Sqlite

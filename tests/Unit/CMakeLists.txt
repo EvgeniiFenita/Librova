@@ -13,6 +13,7 @@ if(BUILD_TESTING)
         TestSearchQuery.cpp
         TestServiceContracts.cpp
         TestManagedLibraryLayout.cpp
+        TestSqliteConnection.cpp
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
@@ -24,6 +25,7 @@ if(BUILD_TESTING)
             LibriFlowDomain
             LibriFlowCore
             LibriFlowDatabaseSchema
+            LibriFlowSqlite
             LibriFlowStoragePlanning
     )
 
