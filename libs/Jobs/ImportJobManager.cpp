@@ -1,0 +1,152 @@
+#include "Jobs/ImportJobManager.hpp"
+
+#include <utility>
+#include <vector>
+
+namespace LibriFlow::Jobs {
+
+CImportJobManager::CImportJobManager(const CImportJobRunner& jobRunner)
+    : m_jobRunner(jobRunner)
+{
+}
+
+CImportJobManager::~CImportJobManager()
+{
+    std::vector<std::shared_ptr<SJobRecord>> records;
+
+    {
+        const std::scoped_lock lock(m_jobsMutex);
+        records.reserve(m_jobs.size());
+
+        for (const auto& [jobId, record] : m_jobs)
+        {
+            (void)jobId;
+            records.push_back(record);
+        }
+    }
+
+    for (const auto& record : records)
+    {
+        if (record->Worker.joinable())
+        {
+            record->Worker.request_stop();
+        }
+    }
+}
+
+SImportJobHandle CImportJobManager::Start(const LibriFlow::Application::SImportRequest& request)
+{
+    auto record = std::make_shared<SJobRecord>();
+    record->Snapshot = {
+        .Status = EJobStatus::Pending,
+        .Message = "Queued"
+    };
+
+    TImportJobId jobId = 0;
+
+    {
+        const std::scoped_lock lock(m_jobsMutex);
+        jobId = m_nextJobId++;
+        m_jobs.emplace(jobId, record);
+    }
+
+    record->Worker = std::jthread([this, record, request](const std::stop_token stopToken) {
+        const auto publishSnapshot = [record](const SJobProgressSnapshot& snapshot) {
+            {
+                const std::scoped_lock lock(record->Mutex);
+                record->Snapshot = snapshot;
+            }
+
+            record->Condition.notify_all();
+        };
+
+        publishSnapshot({
+            .Status = EJobStatus::Running,
+            .Message = "Starting import job"
+        });
+
+        SImportJobResult result = m_jobRunner.Run(request, stopToken, publishSnapshot);
+
+        {
+            const std::scoped_lock lock(record->Mutex);
+            record->Snapshot = result.Snapshot;
+            record->Result = std::move(result);
+        }
+
+        record->Condition.notify_all();
+    });
+
+    return {.Id = jobId};
+}
+
+std::optional<SJobProgressSnapshot> CImportJobManager::TryGetSnapshot(const TImportJobId jobId) const
+{
+    const auto record = TryGetRecord(jobId);
+
+    if (!record)
+    {
+        return std::nullopt;
+    }
+
+    const std::scoped_lock lock(record->Mutex);
+    return record->Snapshot;
+}
+
+std::optional<SImportJobResult> CImportJobManager::TryGetResult(const TImportJobId jobId) const
+{
+    const auto record = TryGetRecord(jobId);
+
+    if (!record)
+    {
+        return std::nullopt;
+    }
+
+    const std::scoped_lock lock(record->Mutex);
+    return record->Result;
+}
+
+bool CImportJobManager::Cancel(const TImportJobId jobId)
+{
+    const auto record = TryGetRecord(jobId);
+
+    if (!record || !record->Worker.joinable())
+    {
+        return false;
+    }
+
+    {
+        const std::scoped_lock lock(record->Mutex);
+
+        if (record->Result.has_value())
+        {
+            return false;
+        }
+    }
+
+    record->Worker.request_stop();
+    return true;
+}
+
+bool CImportJobManager::Wait(const TImportJobId jobId, const std::chrono::milliseconds timeout) const
+{
+    const auto record = TryGetRecord(jobId);
+
+    if (!record)
+    {
+        return false;
+    }
+
+    std::unique_lock lock(record->Mutex);
+    return record->Condition.wait_for(lock, timeout, [&record] {
+        return record->Result.has_value();
+    });
+}
+
+std::shared_ptr<CImportJobManager::SJobRecord> CImportJobManager::TryGetRecord(const TImportJobId jobId) const
+{
+    const std::scoped_lock lock(m_jobsMutex);
+    const auto iterator = m_jobs.find(jobId);
+    return iterator == m_jobs.end() ? nullptr : iterator->second;
+}
+
+} // namespace LibriFlow::Jobs

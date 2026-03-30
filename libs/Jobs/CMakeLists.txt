@@ -1,4 +1,6 @@
 add_library(LibriFlowJobs STATIC
+    ImportJobManager.cpp
+    ImportJobManager.hpp
     ImportJobRunner.cpp
     ImportJobRunner.hpp
 )

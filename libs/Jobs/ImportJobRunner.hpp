@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <stop_token>
 #include <string>
@@ -45,17 +46,24 @@ struct SImportJobResult
 class CImportJobRunner final
 {
 public:
+    using TProgressCallback = std::function<void(const SJobProgressSnapshot&)>;
+
     explicit CImportJobRunner(const LibriFlow::Application::CLibraryImportFacade& importFacade);
 
     [[nodiscard]] SImportJobResult Run(
         const LibriFlow::Application::SImportRequest& request,
         std::stop_token stopToken) const;
 
+    [[nodiscard]] SImportJobResult Run(
+        const LibriFlow::Application::SImportRequest& request,
+        std::stop_token stopToken,
+        TProgressCallback progressCallback) const;
+
 private:
     class CJobProgressSink final : public LibriFlow::Domain::IProgressSink
     {
     public:
-        explicit CJobProgressSink(std::stop_token stopToken);
+        explicit CJobProgressSink(std::stop_token stopToken, TProgressCallback progressCallback);
 
         void ReportValue(int percent, std::string_view message) override;
         bool IsCancellationRequested() const override;
@@ -67,7 +75,10 @@ private:
         void Fail(std::string_view message);
 
     private:
+        void PublishSnapshot() const;
+
         std::stop_token m_stopToken;
+        TProgressCallback m_progressCallback;
         SJobProgressSnapshot m_snapshot{
             .Status = EJobStatus::Running
         };

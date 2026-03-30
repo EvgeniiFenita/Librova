@@ -16,6 +16,7 @@ if(BUILD_TESTING)
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
+        TestImportJobManager.cpp
         TestImportJobRunner.cpp
         TestSingleFileImportCoordinator.cpp
         TestSchemaMigrator.cpp

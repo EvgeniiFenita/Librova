@@ -201,4 +201,13 @@ Not implemented yet, even if already planned architecturally:
   - partial-success ZIP import -> completed with partial-success message
   - probable-duplicate decision-required -> failed with structured domain error
   - cancellation -> cancelled with structured domain error
-- Job runner tests cover both single-file and ZIP-backed execution paths.
+- `ImportJobManager` provides the first in-memory long-running job container with:
+  - numeric job ids
+  - background execution through `std::jthread`
+  - live snapshot updates from `ImportJobRunner`
+  - `start`
+  - `try-get snapshot`
+  - `try-get result`
+  - `cancel`
+  - `wait`
+- Job-layer tests cover both single-file and ZIP-backed execution paths as well as in-memory job cancellation.

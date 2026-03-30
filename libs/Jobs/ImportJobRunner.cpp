@@ -4,9 +4,13 @@
 
 namespace LibriFlow::Jobs {
 
-CImportJobRunner::CJobProgressSink::CJobProgressSink(const std::stop_token stopToken)
+CImportJobRunner::CJobProgressSink::CJobProgressSink(
+    const std::stop_token stopToken,
+    TProgressCallback progressCallback)
     : m_stopToken(stopToken)
+    , m_progressCallback(std::move(progressCallback))
 {
+    PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::ReportValue(const int percent, std::string_view message)
@@ -14,6 +18,7 @@ void CImportJobRunner::CJobProgressSink::ReportValue(const int percent, std::str
     m_snapshot.Status = EJobStatus::Running;
     m_snapshot.Percent = percent;
     m_snapshot.Message.assign(message);
+    PublishSnapshot();
 }
 
 bool CImportJobRunner::CJobProgressSink::IsCancellationRequested() const
@@ -29,6 +34,7 @@ const SJobProgressSnapshot& CImportJobRunner::CJobProgressSink::GetSnapshot() co
 void CImportJobRunner::CJobProgressSink::SetWarnings(std::vector<std::string> warnings)
 {
     m_snapshot.Warnings = std::move(warnings);
+    PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Complete(std::string_view message)
@@ -36,18 +42,29 @@ void CImportJobRunner::CJobProgressSink::Complete(std::string_view message)
     m_snapshot.Status = EJobStatus::Completed;
     m_snapshot.Percent = 100;
     m_snapshot.Message.assign(message);
+    PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Cancel(std::string_view message)
 {
     m_snapshot.Status = EJobStatus::Cancelled;
     m_snapshot.Message.assign(message);
+    PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Fail(std::string_view message)
 {
     m_snapshot.Status = EJobStatus::Failed;
     m_snapshot.Message.assign(message);
+    PublishSnapshot();
+}
+
+void CImportJobRunner::CJobProgressSink::PublishSnapshot() const
+{
+    if (m_progressCallback)
+    {
+        m_progressCallback(m_snapshot);
+    }
 }
 
 CImportJobRunner::CImportJobRunner(const LibriFlow::Application::CLibraryImportFacade& importFacade)
@@ -109,7 +126,15 @@ SImportJobResult CImportJobRunner::Run(
     const LibriFlow::Application::SImportRequest& request,
     const std::stop_token stopToken) const
 {
-    CJobProgressSink progressSink(stopToken);
+    return Run(request, stopToken, {});
+}
+
+SImportJobResult CImportJobRunner::Run(
+    const LibriFlow::Application::SImportRequest& request,
+    const std::stop_token stopToken,
+    TProgressCallback progressCallback) const
+{
+    CJobProgressSink progressSink(stopToken, std::move(progressCallback));
 
     try
     {
