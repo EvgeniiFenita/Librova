@@ -52,6 +52,7 @@ Implemented slices at this point:
 - `ParserRegistry`
 - `ProtoContracts`
 - `ProtoMapping`
+- `ProtoServices`
 - `SearchIndex`
 - `ConverterCommand`
 - `ConverterConfiguration`
@@ -81,6 +82,14 @@ Implemented slices at this point:
   - `ApplicationJobs::SImportJobResult` and `ImportJobResult`
   - domain errors and transport `ErrorCode`
 - Path mapping in the protobuf transport layer uses UTF-8 conversion instead of locale-dependent narrow path handling.
+- `libs/ProtoServices` provides the first service adapter over protobuf messages:
+  - `StartImport`
+  - `GetImportJobSnapshot`
+  - `GetImportJobResult`
+  - `WaitImportJob`
+  - `CancelImportJob`
+  - `RemoveImportJob`
+- The current adapter is transport-neutral and uses protobuf request/response types directly, but it does not yet depend on a real gRPC server runtime.
 
 ## 5. Persistence And Storage
 

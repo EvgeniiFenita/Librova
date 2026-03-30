@@ -70,4 +70,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first shared protobuf contract for import jobs and `LibraryJobService`.
 - `2026-03-30` Build: wired protobuf C++ code generation into the native build and added round-trip message tests.
 - `2026-03-30` Feature: added protobuf transport mapping between application job DTOs and generated contracts.
+- `2026-03-30` Feature: added the first protobuf service adapter over `ApplicationJobs` for `LibraryJobService` operations.
 - `2026-03-30` Build: enabled protobuf tooling through manifest `vcpkg` and added a local `protoc` validation script.
