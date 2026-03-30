@@ -105,7 +105,7 @@ Implemented slices at this point:
 
 ## 4.1 Shared Contracts
 
-- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\Librova\proto\import_jobs.proto).
+- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\LibriFlow\proto\import_jobs.proto).
 - Protobuf package baseline is `librova.v1`.
 - `.proto` file naming is now fixed as `snake_case`.
 - The first contract covers:
@@ -373,17 +373,25 @@ Stable facts taken from that reference:
   - explicit `LIBROVA_CORE_HOST_EXECUTABLE` override
   - fallback probing of both `x64-debug/Debug` and `x64-release/Release` repository build layouts
 
-## 12. Current Gaps
+## 12. Current MVP Gaps
 
-Not implemented yet, even if already planned architecturally:
+Not implemented yet, but still on the active MVP path:
 
-- trash implementation
-- full job engine with persistent job registry and streaming job state model
+- export flow from the managed library back to a user-chosen destination
+- delete-to-trash flow with explicit managed-file, cover, and database-row policy
+- first-run setup flow for choosing and validating the library root before normal shell startup
+- richer settings UI for converter configuration and runtime preferences
+- packaging-oriented release validation and startup sanity outside the development layout
+
+## 13. Deferred Beyond The Current MVP
+
+These items may still be useful later, but they are not the current execution focus:
+
+- persistent job registry and streaming job state model
 - richer long-running native host lifetime management beyond the current sequential session loop
-- Avalonia UI workflow
-- rich multi-screen Avalonia UI workflow beyond the current single-window shell
+- richer multi-screen UI workflow beyond the current shell-driven desktop window
 
-## 13. Import Jobs
+## 14. Import Jobs
 
 - The repository now contains a first `Jobs` slice above the application import facade.
 - `ImportJobRunner` wraps one import request into a normalized job result shape with:

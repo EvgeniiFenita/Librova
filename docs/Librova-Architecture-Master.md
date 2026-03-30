@@ -126,11 +126,12 @@ Details belong in `docs/ProjectDocumentation.md`, not here.
 
 ### Phase 8. UI Shell
 
-Still open within the current UI phase:
+The UI shell is no longer just an import placeholder. The current remaining Phase 8 work should stay focused on product-critical user flows:
 
-- make the first import screen more usable without manual field entry everywhere
-- improve startup and interaction UX around host failures
-- continue replacing placeholder shell behavior with real desktop interactions
+- export selected book from the managed library
+- delete or move selected book to trash with explicit managed-library policy
+- first-run setup for library-root selection and bootstrap
+- richer settings flow for converter configuration and runtime preferences
 
 ### Phase 9. Stabilization
 
@@ -147,9 +148,9 @@ Important planned capabilities that are not yet implemented end-to-end:
 
 - export flow
 - delete-to-trash flow
-- library browsing/search/details UI
 - first-run setup wizard
 - richer settings and converter configuration UI
+- packaging-oriented release validation
 
 ## 6. Working Rule For This Document
 
@@ -161,3 +162,5 @@ If a section starts turning into implementation inventory, move that detail to:
 - `docs/archive/Librova-Architecture-Full.md`
 
 Only update this file when a change affects active architectural direction, frozen decisions, or the remaining roadmap.
+
+Do not keep already-implemented UI or backend slices listed as roadmap gaps; move those facts into `docs/ProjectDocumentation.md` and keep this file focused on the real remaining MVP work.

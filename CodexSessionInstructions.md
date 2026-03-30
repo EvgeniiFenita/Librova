@@ -46,6 +46,10 @@ Use `docs/archive/Librova-Architecture-Full.md` only when the concise master doc
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup for spawned host processes instead of relying on fixed sleeps.
 - When a completed checkpoint belongs to a new roadmap phase, start that new phase explicitly in `docs/ImplementationProgress.md` instead of continuing to append entries under the previous phase.
 - Important execution paths in both C++ and C# must be covered by project logging; startup, shutdown, IPC boundaries, long-running jobs, and failure paths should emit actionable logs through the repository logging facade instead of ad hoc console output.
+- Before starting a new feature, map it to one of the still-open roadmap buckets in `docs/Librova-Architecture-Master.md`.
+- Do not start convenience or side-feature work unless it directly closes one of the remaining MVP gaps or a concrete stabilization item.
+- Finish the current product gap end-to-end before branching into adjacent polish or secondary UX improvements.
+- If implemented reality removes a roadmap gap or makes a roadmap item obsolete, update `docs/Librova-Architecture-Master.md`, `docs/ProjectDocumentation.md`, and `docs/ImplementationProgress.md` in the same task.
 
 ## 4. Implementation Priorities
 
