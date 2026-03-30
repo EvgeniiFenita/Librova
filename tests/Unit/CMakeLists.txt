@@ -4,6 +4,7 @@ if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
     add_executable(LibriFlowCoreTests
+        TestLibraryImportFacade.cpp
         TestBook.cpp
         TestSqliteBookRepository.cpp
         TestBookRepository.cpp
@@ -34,6 +35,7 @@ if(BUILD_TESTING)
     target_link_libraries(LibriFlowCoreTests
         PRIVATE
             Catch2::Catch2WithMain
+            LibriFlowApplication
             LibriFlowBookDatabase
             LibriFlowConverterCommand
             LibriFlowConverterConfiguration

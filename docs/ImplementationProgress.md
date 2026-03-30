@@ -56,3 +56,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: strengthened single-file import with explicit probable-duplicate override flow and rollback coverage for repository/storage failures.
 - `2026-03-30` Fix: closed review findings around book id reservation collisions, transactional repository removal, coordinator cancellation cleanup, and weak staged-file rollback tests.
 - `2026-03-30` Feature: added ZIP import orchestration with entry extraction, nested-archive skip, and partial-success aggregation over the single-file import pipeline.
+- `2026-03-30` Feature: added the first application-facing import facade that routes between single-file and ZIP flows and produces aggregated import summaries.

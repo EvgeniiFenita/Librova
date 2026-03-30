@@ -22,10 +22,19 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
 
-## 3. Implemented Native Slices
+## 3. Application Layer
+
+- A first application-facing import facade is implemented.
+- The facade dispatches between:
+  - single-file import
+  - ZIP archive import
+- The facade returns one aggregated result shape for higher layers instead of exposing low-level coordinator types directly.
+
+## 4. Implemented Native Slices
 
 Implemented slices at this point:
 
+- `Application`
 - `Domain`
 - `Core`
 - `DatabaseSchema`
@@ -45,7 +54,7 @@ Implemented slices at this point:
 - `ImportConversion`
 - `Importing`
 
-## 4. Persistence And Storage
+## 5. Persistence And Storage
 
 - SQLite is the active local database technology.
 - The schema includes `books`, `authors`, `book_authors`, `tags`, `book_tags`, `formats`, and `search_index`.
@@ -55,7 +64,7 @@ Implemented slices at this point:
 - Managed storage uses stable `BookId`-based paths under `Books/`, `Covers/`, and `Temp/`.
 - Managed file import is staged first, then committed, with rollback logic for partial commit failures.
 
-## 5. Search
+## 6. Search
 
 - Structured filtering is implemented in SQLite repository queries.
 - Text search is backed by SQLite `FTS5` through the `search_index` virtual table.
@@ -66,14 +75,14 @@ Implemented slices at this point:
   - `е/ё` equivalence
   - text search across title, authors, tags, and description
 
-## 6. Parsing
+## 7. Parsing
 
 - `EPUB` parsing is implemented with `libzip` and `pugixml`.
 - `FB2` parsing is implemented with `pugixml`.
 - Parser dispatch is centralized in `ParserRegistry`.
 - Parser tests cover both valid files and malformed metadata cases.
 
-## 7. Converter Direction
+## 8. Converter Direction
 
 - External conversion remains user-configurable and is not hard-wired to a single executable.
 - The default supported converter direction is `FB2 -> EPUB`.
@@ -110,7 +119,7 @@ Implemented slices at this point:
   - cleanup of temporary converter output when import finishes in cancellation
   - coordinator-level cancellation checks before late storage and persistence steps
 
-## 8. ZIP Import
+## 9. ZIP Import
 
 - ZIP import orchestration is implemented as a separate native slice.
 - ZIP handling uses `libzip`.
@@ -122,7 +131,7 @@ Implemented slices at this point:
   - runs the existing single-file import pipeline per extracted entry
   - aggregates per-entry results without rolling back successful entries
 
-## 9. External Converter Reference
+## 10. External Converter Reference
 
 The default converter profile is based on:
 
@@ -138,7 +147,7 @@ Stable facts taken from that reference:
 - overwrite support is provided by `--overwrite`
 - optional YAML configuration can be passed with `-c <file>`
 
-## 10. Testing Baseline
+## 11. Testing Baseline
 
 - Native tests use `Catch2`.
 - The repository currently has unit and integration-style tests for:
@@ -158,13 +167,14 @@ Stable facts taken from that reference:
   - single-file import rollback and probable-duplicate override behavior
   - review regression coverage for id reservation, cancellation cleanup, and staged-file rollback
   - ZIP import orchestration and partial-success aggregation
+  - application-level import facade routing and summary aggregation
 
-## 11. Current Gaps
+## 12. Current Gaps
 
 Not implemented yet, even if already planned architecturally:
 
 - trash implementation
-- application use cases and job engine
+- full job engine and streaming job state model
 - protobuf contracts
 - gRPC services
 - Avalonia UI workflow
