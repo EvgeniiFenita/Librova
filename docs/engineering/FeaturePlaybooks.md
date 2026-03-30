@@ -63,7 +63,7 @@ Checklist:
 10. Extend the C# client and UI service.
 11. Extend the ViewModel and UI command wiring.
 12. Add strong host-backed integration coverage.
-13. Update stable docs and progress docs.
+13. Update the relevant active docs and checkpoint history.
 
 Mutation-specific questions to answer before coding:
 
@@ -128,7 +128,7 @@ Checklist:
 2. Review timeout and cancellation semantics.
 3. Review logging coverage and noisy logs.
 4. Review test realism and fake-test smell.
-5. Review docs drift across architecture, project documentation, and progress.
+5. Review docs drift across product, architecture, roadmap, and checkpoint history.
 6. Close the highest-risk findings before adding more features.
 
 ## 7. Done Criteria

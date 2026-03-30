@@ -120,7 +120,7 @@ Rules:
 Required search behavior:
 
 - case-insensitive;
-- `е` and `ё` treated as equivalent;
+- Cyrillic `e` and `yo` treated as equivalent;
 - prefix search supported;
 - no morphology or stemming in MVP.
 
@@ -592,7 +592,7 @@ Search should use a hybrid model:
 
 - relational filters and sorting for structured data;
 - FTS5 for title, author text, tags, and description;
-- explicit normalization step for case folding and `е/ё` equivalence before indexing and query execution.
+- explicit normalization step for case folding and Cyrillic `e/yo` equivalence before indexing and query execution.
 
 This avoids overloading FTS with responsibilities better handled by the relational model.
 
@@ -977,7 +977,7 @@ This section records decisions that should be treated as fixed unless explicitly
 - Cover is stored as a file on disk, not in the DB.
 - Managed storage uses stable `BookId`-based folders, not `{Author}/{Title}` folders.
 - Search must support case-insensitive Cyrillic matching.
-- `е` and `ё` are treated as equivalent in search.
+- Cyrillic `e` and `yo` are treated as equivalent in search.
 - Rich filtering is more important than search-only behavior.
 
 ### Testing and development approach

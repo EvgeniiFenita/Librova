@@ -5,7 +5,7 @@ This document defines what kinds of tests the project should add and when.
 ## 1. Core Principles
 
 - Prefer the cheapest test that still protects the real risk.
-- Add stronger integration only where unit coverage would miss межслойные failures.
+- Add stronger integration only where unit coverage would miss cross-layer failures.
 - Avoid decorative tests that only restate implementation details.
 - Keep verification sequential: build first, then tests.
 
