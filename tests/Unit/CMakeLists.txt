@@ -8,6 +8,7 @@ if(BUILD_TESTING)
         TestSqliteBookRepository.cpp
         TestBookRepository.cpp
         TestEpubParser.cpp
+        TestFb2Parser.cpp
         TestBookFormat.cpp
         TestBookId.cpp
         TestSchemaMigrator.cpp
@@ -32,6 +33,7 @@ if(BUILD_TESTING)
             LibriFlowDatabaseRuntime
             LibriFlowDatabaseSchema
             LibriFlowEpubParsing
+            LibriFlowFb2Parsing
             LibriFlowManagedStorage
             LibriFlowSqlite
             LibriFlowStoragePlanning
