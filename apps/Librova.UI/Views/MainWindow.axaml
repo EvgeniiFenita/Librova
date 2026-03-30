@@ -306,14 +306,15 @@
           </Grid>
         </Border>
 
-        <Grid Grid.Row="1">
-          <views:LibraryView IsVisible="{Binding Shell.IsLibrarySectionActive}"
-                             DataContext="{Binding Shell}" />
-          <views:ImportView IsVisible="{Binding Shell.IsImportSectionActive}"
-                            DataContext="{Binding Shell}" />
-          <views:SettingsView IsVisible="{Binding Shell.IsSettingsSectionActive}"
-                              DataContext="{Binding Shell}" />
-        </Grid>
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <Grid DataContext="{Binding Shell}">
+            <views:LibraryView IsVisible="{Binding IsLibrarySectionActive}" />
+            <views:ImportView IsVisible="{Binding IsImportSectionActive}" />
+            <views:SettingsView IsVisible="{Binding IsSettingsSectionActive}" />
+          </Grid>
+        </ScrollViewer>
       </Grid>
     </Grid>
   </Grid>

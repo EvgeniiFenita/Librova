@@ -104,23 +104,25 @@
           </Border>
         </Grid>
 
-        <WrapPanel ItemWidth="150"
-                   ItemHeight="44"
-                   Orientation="Horizontal">
+        <WrapPanel Orientation="Horizontal">
           <Button Classes="PrimaryAction"
                   Width="190"
+                  Margin="0,0,10,10"
                   Command="{Binding ImportJobs.StartImportCommand}"
                   Content="Start Import" />
           <Button Classes="SecondaryAction"
                   Width="140"
+                  Margin="0,0,10,10"
                   Command="{Binding ImportJobs.RefreshCommand}"
                   Content="Refresh" />
           <Button Classes="SecondaryAction"
                   Width="140"
+                  Margin="0,0,10,10"
                   Command="{Binding ImportJobs.CancelImportCommand}"
                   Content="Cancel" />
           <Button Classes="SecondaryAction"
                   Width="150"
+                  Margin="0,0,10,10"
                   Command="{Binding ImportJobs.RemoveJobCommand}"
                   Content="Remove Job" />
         </WrapPanel>
