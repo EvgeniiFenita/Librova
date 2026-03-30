@@ -7,6 +7,11 @@ namespace {
 class CInMemoryBookRepository final : public LibriFlow::Domain::IBookRepository
 {
 public:
+    LibriFlow::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
     LibriFlow::Domain::SBookId Add(const LibriFlow::Domain::SBook& book) override
     {
         m_book = book;

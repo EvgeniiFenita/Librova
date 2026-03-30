@@ -337,6 +337,21 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
     return LibriFlow::Domain::SBookId{bookId};
 }
 
+LibriFlow::Domain::SBookId CSqliteBookRepository::ReserveId()
+{
+    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    LibriFlow::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT COALESCE(MAX(id), 0) + 1 FROM books;");
+
+    if (!statement.Step())
+    {
+        throw std::runtime_error("Failed to reserve next book id.");
+    }
+
+    return LibriFlow::Domain::SBookId{statement.GetColumnInt64(0)};
+}
+
 std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const LibriFlow::Domain::SBookId id) const
 {
     LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);

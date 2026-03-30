@@ -12,6 +12,7 @@ class CSqliteBookRepository final : public LibriFlow::Domain::IBookRepository
 public:
     explicit CSqliteBookRepository(std::filesystem::path databasePath);
 
+    [[nodiscard]] LibriFlow::Domain::SBookId ReserveId() override;
     [[nodiscard]] LibriFlow::Domain::SBookId Add(const LibriFlow::Domain::SBook& book) override;
     [[nodiscard]] std::optional<LibriFlow::Domain::SBook> GetById(LibriFlow::Domain::SBookId id) const override;
     void Remove(LibriFlow::Domain::SBookId id) override;

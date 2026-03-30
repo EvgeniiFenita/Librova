@@ -42,12 +42,14 @@ Implemented slices at this point:
 - `ConverterConfiguration`
 - `ConverterRuntime`
 - `ImportConversion`
+- `Importing`
 
 ## 4. Persistence And Storage
 
 - SQLite is the active local database technology.
 - The schema includes `books`, `authors`, `book_authors`, `tags`, `book_tags`, `formats`, and `search_index`.
 - SQLite connections enable `foreign_keys` per connection.
+- Book ids can be reserved before persistence so managed storage planning can use stable `BookId`-based paths before the final repository insert.
 - Managed storage uses stable `BookId`-based paths under `Books/`, `Covers/`, and `Temp/`.
 - Managed file import is staged first, then committed, with rollback logic for partial commit failures.
 
@@ -93,6 +95,14 @@ Implemented slices at this point:
   - `FB2` input attempts conversion to `EPUB` when a compatible converter is available
   - failed or unavailable conversion falls back to storing the original `FB2` with warnings
   - cancelled conversion remains a cancellation outcome and does not silently fall back to storing the source file
+- Single-file import orchestration is implemented for the non-UI core flow:
+  - format detection and parsing
+  - duplicate lookup
+  - strict duplicate rejection
+  - probable duplicate decision-required result unless forced
+  - conversion planning and execution
+  - managed storage preparation and commit
+  - repository write and cleanup
 
 ## 8. External Converter Reference
 
@@ -126,6 +136,7 @@ Stable facts taken from that reference:
   - external converter runtime execution and cancellation
   - import conversion fallback policy
   - converter configuration model
+  - single-file import orchestration
 
 ## 10. Current Gaps
 

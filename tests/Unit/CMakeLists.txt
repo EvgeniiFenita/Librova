@@ -15,6 +15,7 @@ if(BUILD_TESTING)
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
+        TestSingleFileImportCoordinator.cpp
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
         TestManagedFileStorage.cpp
@@ -43,6 +44,7 @@ if(BUILD_TESTING)
             LibriFlowEpubParsing
             LibriFlowFb2Parsing
             LibriFlowImportConversion
+            LibriFlowImporting
             LibriFlowManagedStorage
             LibriFlowParserRegistry
             LibriFlowSearchIndex

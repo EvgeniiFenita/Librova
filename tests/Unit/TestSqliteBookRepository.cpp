@@ -79,6 +79,34 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-repository-reserve.db";
+    std::filesystem::remove(databasePath);
+    LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    LibriFlow::BookDatabase::CSqliteBookRepository repository(databasePath);
+    const LibriFlow::Domain::SBookId firstReservedId = repository.ReserveId();
+    REQUIRE(firstReservedId.IsValid());
+    REQUIRE(firstReservedId.Value == 1);
+
+    LibriFlow::Domain::SBook book;
+    book.Id = firstReservedId;
+    book.Metadata.TitleUtf8 = "Reserved Id";
+    book.Metadata.AuthorsUtf8 = {"Author"};
+    book.Metadata.Language = "en";
+    book.File.ManagedPath = "Books/0000000001/book.epub";
+    book.File.SizeBytes = 100;
+    book.File.Sha256Hex = "reserve-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    REQUIRE(repository.Add(book).Value == firstReservedId.Value);
+
+    const LibriFlow::Domain::SBookId secondReservedId = repository.ReserveId();
+    REQUIRE(secondReservedId.Value == firstReservedId.Value + 1);
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-repository-remove.db";

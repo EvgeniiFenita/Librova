@@ -52,3 +52,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added external converter runtime execution with process cancellation support and output relocation for directory-based converters.
 - `2026-03-30` Feature: added explicit conversion result statuses and a separate import conversion policy with tested fallback and cancellation behavior.
 - `2026-03-30` Feature: added explicit converter configuration modes for disabled, built-in `fb2cng`, and custom command profiles.
+- `2026-03-30` Feature: added reserved book id allocation and first single-file import orchestration with tested duplicate handling, conversion, storage staging, and repository write flow.

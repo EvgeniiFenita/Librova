@@ -15,6 +15,7 @@ class IBookRepository
 public:
     virtual ~IBookRepository() = default;
 
+    virtual SBookId ReserveId() = 0;
     virtual SBookId Add(const SBook& book) = 0;
     virtual std::optional<SBook> GetById(SBookId id) const = 0;
     virtual void Remove(SBookId id) = 0;
