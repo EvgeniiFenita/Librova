@@ -2,7 +2,8 @@ param(
     [string]$Preset = "x64-debug",
     [string]$Configuration = "Debug",
     [switch]$NoLaunch,
-    [switch]$FirstRun
+    [switch]$FirstRun,
+    [switch]$StartupErrorRecovery
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,7 +19,7 @@ $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
 
 New-Item -ItemType Directory -Force -Path $runtimeLogs | Out-Null
-if (-not $FirstRun) {
+if (-not $FirstRun -and -not $StartupErrorRecovery) {
     New-Item -ItemType Directory -Force -Path $libraryRoot | Out-Null
 }
 
@@ -55,6 +56,9 @@ if ($FirstRun) {
 
     Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
 }
+elseif ($StartupErrorRecovery) {
+    Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
+}
 else {
     $env:LIBROVA_LIBRARY_ROOT = $libraryRoot
 }
@@ -65,6 +69,9 @@ Write-Host "    UI state:    $uiStateFile"
 Write-Host "    UI prefs:    $uiPreferencesFile"
 if ($FirstRun) {
     Write-Host "    Library root:(not preset; first-run setup should appear)"
+}
+elseif ($StartupErrorRecovery) {
+    Write-Host "    Library root:(not preset; startup error recovery should appear if preferences contain a bad root)"
 }
 else {
     Write-Host "    Library root:$libraryRoot"
