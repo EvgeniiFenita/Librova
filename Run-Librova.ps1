@@ -3,8 +3,13 @@ param(
     [string]$Configuration = "Debug",
     [switch]$NoLaunch,
     [switch]$FirstRun,
+    [switch]$SecondRun,
     [switch]$StartupErrorRecovery
 )
+
+if ($StartupErrorRecovery -and -not $SecondRun) {
+    $SecondRun = $true
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -19,7 +24,7 @@ $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
 
 New-Item -ItemType Directory -Force -Path $runtimeLogs | Out-Null
-if (-not $FirstRun -and -not $StartupErrorRecovery) {
+if (-not $FirstRun -and -not $SecondRun) {
     New-Item -ItemType Directory -Force -Path $libraryRoot | Out-Null
 }
 
@@ -56,7 +61,7 @@ if ($FirstRun) {
 
     Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
 }
-elseif ($StartupErrorRecovery) {
+elseif ($SecondRun) {
     Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
 }
 else {
@@ -70,8 +75,8 @@ Write-Host "    UI prefs:    $uiPreferencesFile"
 if ($FirstRun) {
     Write-Host "    Library root:(not preset; first-run setup should appear)"
 }
-elseif ($StartupErrorRecovery) {
-    Write-Host "    Library root:(not preset; startup error recovery should appear if preferences contain a bad root)"
+elseif ($SecondRun) {
+    Write-Host "    Library root:(not preset; app will use saved preferences if present)"
 }
 else {
     Write-Host "    Library root:$libraryRoot"

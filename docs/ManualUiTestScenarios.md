@@ -33,7 +33,7 @@
 
 1. Закрой приложение.
 2. Отредактируй `out\runtime\ui-preferences.json`, чтобы `PreferredLibraryRoot` указывал на плохой или недоступный путь.
-3. Запусти `.\Run-Librova.ps1 -StartupErrorRecovery`.
+3. Запусти `.\Run-Librova.ps1 -SecondRun`.
 Ожидаемое поведение:
 - показывается startup error screen.
 - на экране видны пути к UI log, UI state и preferences.
