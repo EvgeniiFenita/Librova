@@ -107,10 +107,13 @@ Implemented slices at this point:
 - `.proto` file naming is now fixed as `snake_case`.
 - The first contract covers:
   - import request DTO
+  - book list request DTO
+  - book list item DTO
   - import summary DTO
   - import job snapshot DTO
   - import job result DTO
   - `LibraryJobService` RPC surface for start/get/wait/cancel/remove
+- The shared contract now also exposes `ListBooks` for read-side catalog queries over the same named-pipe/protobuf boundary.
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 - `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
@@ -124,11 +127,13 @@ Implemented slices at this point:
 - Path mapping in the protobuf transport layer uses UTF-8 conversion instead of locale-dependent narrow path handling.
 - `libs/ProtoServices` provides the first service adapter over protobuf messages:
   - `StartImport`
+  - `ListBooks`
   - `GetImportJobSnapshot`
   - `GetImportJobResult`
   - `WaitImportJob`
   - `CancelImportJob`
   - `RemoveImportJob`
+- `libs/ProtoMapping` now also contains a dedicated catalog mapper for `BookListRequest`, `BookListItem`, and `ListBooksResponse`.
 - The current adapter is transport-neutral and uses protobuf request/response types directly, but it does not yet depend on a real gRPC server runtime.
 - The repository intentionally does not require a `gRPC C++` runtime for the MVP transport path.
 - `libs/PipeTransport` now provides the first transport foundation for `Protobuf over named pipes`:
@@ -138,6 +143,7 @@ Implemented slices at this point:
   - structured transport statuses for invalid request, unknown method, and internal error
   - synchronous Win32 named-pipe channel wrappers with length-prefixed message exchange
   - real round-trip coverage against a live Windows named pipe
+- The current named-pipe method set now covers both import-job operations and read-side `ListBooks` queries.
 - `libs/PipeHost` now provides the first core-side named-pipe host loop:
   - accepts one connected pipe session
   - reads one framed protobuf request
@@ -303,6 +309,7 @@ Stable facts taken from that reference:
 - ZIP import orchestration and partial-success aggregation
 - application-level import facade routing and summary aggregation
 - application-level catalog facade mapping and pagination/filter integration over the real SQLite read side
+- protobuf catalog mapping and `ListBooks` adapter/dispatcher coverage over the real SQLite read side
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service

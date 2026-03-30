@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Application/LibraryImportFacade.hpp"
+#include "Application/LibraryCatalogFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
@@ -94,10 +95,11 @@ int main(int argc, char** argv)
             converterPtr);
         const Librova::ZipImporting::CZipImportCoordinator zipImportCoordinator(singleFileImporter);
         const Librova::Application::CLibraryImportFacade importFacade(singleFileImporter, zipImportCoordinator);
+        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);
         Librova::ApplicationJobs::CImportJobService jobService(jobManager);
-        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(jobService);
+        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(jobService, catalogFacade);
         Librova::PipeTransport::CPipeRequestDispatcher dispatcher(serviceAdapter);
         const Librova::PipeHost::CNamedPipeHost host(dispatcher);
 

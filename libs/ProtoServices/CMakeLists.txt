@@ -10,6 +10,7 @@ target_include_directories(LibrovaProtoServices
 
 target_link_libraries(LibrovaProtoServices
     PUBLIC
+        LibrovaApplication
         LibrovaApplicationJobs
         LibrovaProtoContracts
         LibrovaProtoMapping

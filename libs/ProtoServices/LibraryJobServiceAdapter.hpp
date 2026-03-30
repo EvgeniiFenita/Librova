@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application/LibraryCatalogFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "import_jobs.pb.h"
 
@@ -8,10 +9,15 @@ namespace Librova::ProtoServices {
 class CLibraryJobServiceAdapter final
 {
 public:
-    explicit CLibraryJobServiceAdapter(Librova::ApplicationJobs::CImportJobService& importJobService);
+    CLibraryJobServiceAdapter(
+        Librova::ApplicationJobs::CImportJobService& importJobService,
+        const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade);
 
     [[nodiscard]] librova::v1::StartImportResponse StartImport(
         const librova::v1::StartImportRequest& request) const;
+
+    [[nodiscard]] librova::v1::ListBooksResponse ListBooks(
+        const librova::v1::ListBooksRequest& request) const;
 
     [[nodiscard]] librova::v1::GetImportJobSnapshotResponse GetImportJobSnapshot(
         const librova::v1::GetImportJobSnapshotRequest& request) const;
@@ -30,6 +36,7 @@ public:
 
 private:
     Librova::ApplicationJobs::CImportJobService& m_importJobService;
+    const Librova::Application::CLibraryCatalogFacade& m_libraryCatalogFacade;
 };
 
 } // namespace Librova::ProtoServices

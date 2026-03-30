@@ -12,7 +12,7 @@ Current conventions:
 Current files:
 
 - `import_jobs.proto`
-  first transport contract for import requests and import job lifecycle
+  transport contract for import requests, read-side book listing, and import job lifecycle
 
 Notes:
 

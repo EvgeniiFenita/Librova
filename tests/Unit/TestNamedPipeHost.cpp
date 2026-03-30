@@ -10,6 +10,7 @@
 #include <string>
 #include <thread>
 
+#include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "Jobs/ImportJobManager.hpp"
@@ -41,6 +42,20 @@ public:
     }
 };
 
+class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
+{
+public:
+    [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
+    [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+    {
+        return {};
+    }
+};
+
 } // namespace
 
 TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[pipe-host]")
@@ -48,10 +63,12 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const CEmptyQueryRepository queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     Librova::PipeHost::CNamedPipeHost host(dispatcher);
 

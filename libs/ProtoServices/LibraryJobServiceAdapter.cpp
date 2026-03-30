@@ -1,11 +1,15 @@
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 
+#include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
 
 namespace Librova::ProtoServices {
 
-CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(Librova::ApplicationJobs::CImportJobService& importJobService)
+CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
+    Librova::ApplicationJobs::CImportJobService& importJobService,
+    const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade)
     : m_importJobService(importJobService)
+    , m_libraryCatalogFacade(libraryCatalogFacade)
 {
 }
 
@@ -14,6 +18,14 @@ librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
 {
     const auto importRequest = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(request.import());
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(m_importJobService.Start(importRequest));
+}
+
+librova::v1::ListBooksResponse CLibraryJobServiceAdapter::ListBooks(
+    const librova::v1::ListBooksRequest& request) const
+{
+    const auto bookListRequest = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request.query());
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        m_libraryCatalogFacade.ListBooks(bookListRequest));
 }
 
 librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(

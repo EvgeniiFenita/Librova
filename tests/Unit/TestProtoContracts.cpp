@@ -52,3 +52,32 @@ TEST_CASE("Import request protobuf preserves optional sha256 field presence", "[
     REQUIRE(withHash.has_sha256_hex());
     REQUIRE_FALSE(withoutHash.has_sha256_hex());
 }
+
+TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
+{
+    librova::v1::ListBooksResponse response;
+    auto* item = response.add_items();
+    item->set_book_id(101);
+    item->set_title("Roadside Picnic");
+    item->add_authors("Arkady Strugatsky");
+    item->set_language("en");
+    item->set_series("Noon Universe");
+    item->set_series_index(1.0);
+    item->set_year(1972);
+    item->add_tags("classic");
+    item->set_format(librova::v1::BOOK_FORMAT_EPUB);
+    item->set_managed_path("Books/0000000101/book.epub");
+    item->set_cover_path("Covers/0000000101.jpg");
+    item->set_size_bytes(4096);
+    item->set_added_at_unix_ms(1711807200000LL);
+
+    const std::string payload = response.SerializeAsString();
+
+    librova::v1::ListBooksResponse parsed;
+    REQUIRE(parsed.ParseFromString(payload));
+    REQUIRE(parsed.items_size() == 1);
+    REQUIRE(parsed.items(0).book_id() == 101);
+    REQUIRE(parsed.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
+    REQUIRE(parsed.items(0).authors_size() == 1);
+    REQUIRE(parsed.items(0).has_cover_path());
+}

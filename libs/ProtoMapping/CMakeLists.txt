@@ -1,6 +1,8 @@
 add_library(LibrovaProtoMapping STATIC
     ImportJobProtoMapper.cpp
     ImportJobProtoMapper.hpp
+    LibraryCatalogProtoMapper.cpp
+    LibraryCatalogProtoMapper.hpp
 )
 
 target_include_directories(LibrovaProtoMapping

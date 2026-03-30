@@ -9,6 +9,23 @@ message ImportRequest {
   bool allow_probable_duplicates = 4;
 }
 
+enum BookFormat {
+  BOOK_FORMAT_UNSPECIFIED = 0;
+  BOOK_FORMAT_EPUB = 1;
+  BOOK_FORMAT_FB2 = 2;
+  BOOK_FORMAT_ZIP = 3;
+}
+
+enum BookSort {
+  BOOK_SORT_UNSPECIFIED = 0;
+  BOOK_SORT_TITLE = 1;
+  BOOK_SORT_AUTHOR = 2;
+  BOOK_SORT_DATE_ADDED = 3;
+  BOOK_SORT_SERIES = 4;
+  BOOK_SORT_YEAR = 5;
+  BOOK_SORT_FILE_SIZE = 6;
+}
+
 enum ImportMode {
   IMPORT_MODE_UNSPECIFIED = 0;
   IMPORT_MODE_SINGLE_FILE = 1;
@@ -67,6 +84,42 @@ message ImportJobResult {
   optional DomainError error = 3;
 }
 
+message BookListRequest {
+  string text = 1;
+  optional string author = 2;
+  optional string language = 3;
+  optional string series = 4;
+  repeated string tags = 5;
+  optional BookFormat format = 6;
+  optional BookSort sort_by = 7;
+  uint64 offset = 8;
+  uint64 limit = 9;
+}
+
+message BookListItem {
+  int64 book_id = 1;
+  string title = 2;
+  repeated string authors = 3;
+  string language = 4;
+  optional string series = 5;
+  optional double series_index = 6;
+  optional int32 year = 7;
+  repeated string tags = 8;
+  BookFormat format = 9;
+  string managed_path = 10;
+  optional string cover_path = 11;
+  uint64 size_bytes = 12;
+  int64 added_at_unix_ms = 13;
+}
+
+message ListBooksRequest {
+  BookListRequest query = 1;
+}
+
+message ListBooksResponse {
+  repeated BookListItem items = 1;
+}
+
 message StartImportRequest {
   ImportRequest import = 1;
 }
@@ -118,6 +171,7 @@ message RemoveImportJobResponse {
 
 service LibraryJobService {
   rpc StartImport(StartImportRequest) returns (StartImportResponse);
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
   rpc GetImportJobSnapshot(GetImportJobSnapshotRequest) returns (GetImportJobSnapshotResponse);
   rpc GetImportJobResult(GetImportJobResultRequest) returns (GetImportJobResultResponse);
   rpc WaitImportJob(WaitImportJobRequest) returns (WaitImportJobResponse);

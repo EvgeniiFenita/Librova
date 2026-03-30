@@ -8,11 +8,12 @@ namespace Librova.UI.PipeTransport;
 internal enum PipeMethod : uint
 {
     StartImport = 1,
-    GetImportJobSnapshot = 2,
-    GetImportJobResult = 3,
-    WaitImportJob = 4,
-    CancelImportJob = 5,
-    RemoveImportJob = 6
+    ListBooks = 2,
+    GetImportJobSnapshot = 3,
+    GetImportJobResult = 4,
+    WaitImportJob = 5,
+    CancelImportJob = 6,
+    RemoveImportJob = 7
 }
 
 internal enum PipeResponseStatus : uint

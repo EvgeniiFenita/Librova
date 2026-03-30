@@ -6,8 +6,12 @@
 #include <stop_token>
 #include <thread>
 
+#include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
+#include "BookDatabase/SqliteBookQueryRepository.hpp"
+#include "BookDatabase/SqliteBookRepository.hpp"
+#include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"
@@ -37,10 +41,24 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
+    {
+    public:
+        [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+        {
+            return {};
+        }
+    } queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::StartImportRequest typedRequest;
@@ -72,10 +90,24 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
+    {
+    public:
+        [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+        {
+            return {};
+        }
+    } queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     const Librova::PipeTransport::SPipeRequestEnvelope request{
@@ -88,4 +120,58 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
     REQUIRE(response.RequestId == request.RequestId);
     REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::InvalidRequest);
     REQUIRE_FALSE(response.ErrorMessage.empty());
+}
+
+TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-catalog.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.SizeBytes = 1024;
+    book.File.Sha256Hex = "pipe-catalog-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(book));
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+
+    librova::v1::ListBooksRequest typedRequest;
+    typedRequest.mutable_query()->set_text("road");
+    typedRequest.mutable_query()->set_limit(10);
+
+    std::string payload;
+    REQUIRE(typedRequest.SerializeToString(&payload));
+
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
+        .RequestId = 3003,
+        .Method = Librova::PipeTransport::EPipeMethod::ListBooks,
+        .Payload = payload
+    };
+
+    const auto response = dispatcher.Dispatch(request);
+    REQUIRE(response.RequestId == request.RequestId);
+    REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
+
+    librova::v1::ListBooksResponse typedResponse;
+    REQUIRE(typedResponse.ParseFromString(response.Payload));
+    REQUIRE(typedResponse.items_size() == 1);
+    REQUIRE(typedResponse.items(0).title() == "Roadside Picnic");
+
+    std::filesystem::remove(databasePath);
 }
