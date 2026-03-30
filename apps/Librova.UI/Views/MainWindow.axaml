@@ -9,6 +9,7 @@
         Height="760"
         MinWidth="920"
         MinHeight="640"
+        DragDrop.AllowDrop="True"
         Background="#F3F1EA"
         Foreground="#1F1B16"
         mc:Ignorable="d">

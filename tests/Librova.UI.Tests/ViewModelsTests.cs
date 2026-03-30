@@ -158,6 +158,29 @@ public sealed class ViewModelsTests
         Assert.True(service.LastStartRequest!.AllowProbableDuplicates);
     }
 
+    [Fact]
+    public void ImportJobsViewModel_ApplyDroppedSourcePathUpdatesSourceField()
+    {
+        var viewModel = new ImportJobsViewModel(new FakeImportJobsService());
+
+        viewModel.ApplyDroppedSourcePath(@"C:\Incoming\dropped.epub");
+
+        Assert.Equal(@"C:\Incoming\dropped.epub", viewModel.SourcePath);
+    }
+
+    [Fact]
+    public void ImportJobsViewModel_ApplyDroppedSourcePathIgnoresBlankValues()
+    {
+        var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+        {
+            SourcePath = @"C:\Incoming\existing.fb2"
+        };
+
+        viewModel.ApplyDroppedSourcePath("   ");
+
+        Assert.Equal(@"C:\Incoming\existing.fb2", viewModel.SourcePath);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }

@@ -32,6 +32,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now exposes an explicit `AllowProbableDuplicates` toggle, so probable-duplicate override can be chosen from the UI instead of only through backend contracts.
 - the current Avalonia shell baseline now accepts an initial source-file path from application launch arguments and pre-fills the import screen with that path on startup.
 - the current Avalonia shell baseline now persists import-screen state between launches in a JSON state file under `%LOCALAPPDATA%\\Librova`, including source path, working directory, and probable-duplicate override.
+- the current Avalonia shell baseline now accepts a dropped local file on the main window and applies it as the import `SourcePath`, so desktop drag-and-drop works without bypassing the ViewModel layer.
 - `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -308,6 +309,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for passing the probable-duplicate override flag through the UI import request
 - C# coverage for shell launch-argument parsing and startup source-path prefill in shell composition
 - C# coverage for persisted shell-state loading and saving across shell-application lifecycle
+- C# ViewModel coverage for source-file drag-and-drop path application
 
 ## 12. Current Gaps
 

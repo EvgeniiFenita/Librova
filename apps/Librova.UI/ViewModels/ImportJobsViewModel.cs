@@ -1,5 +1,6 @@
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
+using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
 using System.Threading;
@@ -146,6 +147,18 @@ internal sealed class ImportJobsViewModel : ObservableObject
             WorkingDirectory = WorkingDirectory,
             AllowProbableDuplicates = AllowProbableDuplicates
         };
+
+    public void ApplyDroppedSourcePath(string? sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            UiLogging.Warning("Ignored dropped source path because it was empty.");
+            return;
+        }
+
+        SourcePath = sourcePath;
+        UiLogging.Information("Applied dropped source path to import shell.");
+    }
 
     public async Task StartImportAsync()
     {
