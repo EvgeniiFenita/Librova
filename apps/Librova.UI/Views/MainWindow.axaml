@@ -91,10 +91,6 @@
           <TextBlock FontSize="16"
                      FontWeight="SemiBold"
                      Text="{Binding StatusText}" />
-          <TextBlock MaxWidth="760"
-                     FontSize="15"
-                     Text="{Binding StartupGuidanceText}"
-                     TextWrapping="Wrap" />
         </StackPanel>
 
         <Border Background="#FFF9F1"
