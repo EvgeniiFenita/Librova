@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace LibriFlow.UI.ImportJobs;
 
-internal sealed class ImportJobsService
+internal sealed class ImportJobsService : IImportJobsService
 {
     private readonly ImportJobClient _client;
 

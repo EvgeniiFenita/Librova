@@ -16,6 +16,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `apps/LibriFlow.UI` now also contains a real managed named-pipe RPC client and an import-job client over generated protobuf contracts.
 - `apps/LibriFlow.UI` now also contains a UI-facing import-jobs service and DTO layer that hides generated protobuf types from future ViewModels.
 - `apps/LibriFlow.UI` now also contains the first shell bootstrap/session layer that owns native host lifetime and exposes UI-facing services.
+- `apps/LibriFlow.UI` now also contains the first ViewModel-ready shell and import-jobs state layer with observable state and async command support.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -275,6 +276,7 @@ Stable facts taken from that reference:
 - C# end-to-end import-job client coverage against the real native host process
 - C# mapping and service-layer coverage for UI-facing import job DTOs
 - C# shell bootstrap/session coverage over a real host-backed import flow
+- C# ViewModel coverage for import job state and command enablement
 
 ## 12. Current Gaps
 
