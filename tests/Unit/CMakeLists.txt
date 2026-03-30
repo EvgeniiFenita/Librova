@@ -4,6 +4,7 @@ if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
     add_executable(LibriFlowCoreTests
+        TestBook.cpp
         TestBookFormat.cpp
         TestBookId.cpp
         TestDuplicateMatch.cpp
