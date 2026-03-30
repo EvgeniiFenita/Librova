@@ -194,6 +194,7 @@ Implemented slices at this point:
 - the current startup-error screen now includes actionable guidance and the current UI log/state/preferences file paths, so bootstrap failures can be diagnosed without leaving the error screen
 - `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
+- the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
 
 ## 5. Persistence And Storage
 
@@ -348,6 +349,7 @@ Stable facts taken from that reference:
 - C# shell composition coverage for operational-warning visibility in the running session
 - C# startup-error-state coverage for diagnostics-path and guidance exposure
 - C# ViewModel coverage for the first UI-side library browser refresh flow
+- C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
 
 ## 12. Current Gaps
 

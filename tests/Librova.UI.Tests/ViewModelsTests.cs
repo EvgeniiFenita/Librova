@@ -349,9 +349,11 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
 
         Assert.True(viewModel.HasBooks);
-        Assert.Equal("Loaded 1 book(s).", viewModel.StatusText);
+        Assert.Equal("Loaded 1 book(s) for page 1.", viewModel.StatusText);
         Assert.Single(viewModel.Books);
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
+        Assert.NotNull(viewModel.SelectedBook);
+        Assert.Contains("Arkady Strugatsky", viewModel.SelectedBookDetailsText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -363,6 +365,56 @@ public sealed class ViewModelsTests
 
         Assert.False(viewModel.HasBooks);
         Assert.Equal("No books found for the current filter.", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_PassesFiltersAndSortIntoCatalogRequest()
+    {
+        var service = new RecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            SearchText = "road",
+            AuthorFilter = "Arkady",
+            LanguageFilter = "en",
+            SelectedFormatFilter = "FB2",
+            SelectedSort = BookSortModel.Author,
+            PageSize = 10
+        };
+
+        await viewModel.RefreshAsync();
+
+        Assert.NotNull(service.LastRequest);
+        Assert.Equal("road", service.LastRequest!.Text);
+        Assert.Equal("Arkady", service.LastRequest.Author);
+        Assert.Equal("en", service.LastRequest.Language);
+        Assert.Equal(BookFormatModel.Fb2, service.LastRequest.Format);
+        Assert.Equal(BookSortModel.Author, service.LastRequest.SortBy);
+        Assert.Equal(0UL, service.LastRequest.Offset);
+        Assert.Equal(10UL, service.LastRequest.Limit);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_PaginatesForwardAndBackward()
+    {
+        var service = new PagingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+
+        await viewModel.RefreshAsync();
+        Assert.True(viewModel.HasMoreResults);
+        Assert.Equal("Page 1+", viewModel.PageLabelText);
+        Assert.Equal("Alpha", viewModel.SelectedBookTitle);
+
+        await viewModel.NextPageAsync();
+        Assert.Equal(2, viewModel.CurrentPage);
+        Assert.Equal("Page 2", viewModel.PageLabelText);
+        Assert.Equal("Gamma", viewModel.SelectedBookTitle);
+
+        await viewModel.PreviousPageAsync();
+        Assert.Equal(1, viewModel.CurrentPage);
+        Assert.Equal("Alpha", viewModel.SelectedBookTitle);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService
@@ -586,5 +638,61 @@ public sealed class ViewModelsTests
     {
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+    }
+
+    private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
+    {
+        public BookListRequestModel? LastRequest { get; private set; }
+
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+        }
+    }
+
+    private sealed class PagingLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (request.Offset == 0)
+            {
+                return Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Alpha",
+                        Authors = ["Author One"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/alpha.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    },
+                    new BookListItemModel
+                    {
+                        BookId = 2,
+                        Title = "Beta",
+                        Authors = ["Author Two"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000002/beta.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]);
+            }
+
+            return Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 3,
+                    Title = "Gamma",
+                    Authors = ["Author Three"],
+                    Language = "en",
+                    Format = BookFormatModel.Fb2,
+                    ManagedPath = "Books/0000000003/gamma.fb2",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+        }
     }
 }
