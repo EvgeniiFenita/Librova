@@ -28,6 +28,7 @@ if(BUILD_TESTING)
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
+        TestZipImportCoordinator.cpp
     )
 
     target_link_libraries(LibriFlowCoreTests
@@ -50,6 +51,7 @@ if(BUILD_TESTING)
             LibriFlowSearchIndex
             LibriFlowSqlite
             LibriFlowStoragePlanning
+            LibriFlowZipImporting
     )
 
     target_compile_features(LibriFlowCoreTests PRIVATE cxx_std_20)

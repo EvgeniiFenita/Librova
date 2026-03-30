@@ -34,6 +34,7 @@ Implemented slices at this point:
 - `BookDatabase`
 - `StoragePlanning`
 - `ManagedStorage`
+- `ZipImporting`
 - `EpubParsing`
 - `Fb2Parsing`
 - `ParserRegistry`
@@ -109,7 +110,19 @@ Implemented slices at this point:
   - cleanup of temporary converter output when import finishes in cancellation
   - coordinator-level cancellation checks before late storage and persistence steps
 
-## 8. External Converter Reference
+## 8. ZIP Import
+
+- ZIP import orchestration is implemented as a separate native slice.
+- ZIP handling uses `libzip`.
+- The current ZIP import flow:
+  - enumerates archive entries
+  - skips directory entries
+  - skips nested `.zip` entries as unsupported
+  - extracts supported `.fb2` and `.epub` files into a temp workspace
+  - runs the existing single-file import pipeline per extracted entry
+  - aggregates per-entry results without rolling back successful entries
+
+## 9. External Converter Reference
 
 The default converter profile is based on:
 
@@ -125,7 +138,7 @@ Stable facts taken from that reference:
 - overwrite support is provided by `--overwrite`
 - optional YAML configuration can be passed with `-c <file>`
 
-## 9. Testing Baseline
+## 10. Testing Baseline
 
 - Native tests use `Catch2`.
 - The repository currently has unit and integration-style tests for:
@@ -144,12 +157,12 @@ Stable facts taken from that reference:
   - single-file import orchestration
   - single-file import rollback and probable-duplicate override behavior
   - review regression coverage for id reservation, cancellation cleanup, and staged-file rollback
+  - ZIP import orchestration and partial-success aggregation
 
-## 10. Current Gaps
+## 11. Current Gaps
 
 Not implemented yet, even if already planned architecturally:
 
-- ZIP import orchestration
 - trash implementation
 - application use cases and job engine
 - protobuf contracts

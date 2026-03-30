@@ -51,7 +51,18 @@ struct SSingleFileImportResult
     }
 };
 
-class CSingleFileImportCoordinator final
+class ISingleFileImporter
+{
+public:
+    virtual ~ISingleFileImporter() = default;
+
+    [[nodiscard]] virtual SSingleFileImportResult Run(
+        const SSingleFileImportRequest& request,
+        LibriFlow::Domain::IProgressSink& progressSink,
+        std::stop_token stopToken) const = 0;
+};
+
+class CSingleFileImportCoordinator final : public ISingleFileImporter
 {
 public:
     CSingleFileImportCoordinator(
@@ -64,7 +75,7 @@ public:
     [[nodiscard]] SSingleFileImportResult Run(
         const SSingleFileImportRequest& request,
         LibriFlow::Domain::IProgressSink& progressSink,
-        std::stop_token stopToken) const;
+        std::stop_token stopToken) const override;
 
 private:
     [[nodiscard]] static LibriFlow::Domain::SCandidateBook BuildCandidateBook(

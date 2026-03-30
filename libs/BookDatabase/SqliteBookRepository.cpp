@@ -372,21 +372,25 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::ReserveId()
 {
     LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
     CSqliteTransaction transaction(connection);
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    LibriFlow::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
-        "UPDATE book_id_sequence "
-        "SET next_id = next_id + 1 "
-        "WHERE singleton = 1 "
-        "RETURNING next_id - 1;");
+        "SELECT next_id FROM book_id_sequence WHERE singleton = 1;");
 
-    if (!statement.Step())
+    if (!selectStatement.Step())
     {
-        throw std::runtime_error("Failed to reserve next book id.");
+        throw std::runtime_error("Failed to read next reserved book id.");
     }
 
-    const LibriFlow::Domain::SBookId reservedId{statement.GetColumnInt64(0)};
+    const std::int64_t nextId = selectStatement.GetColumnInt64(0);
+
+    LibriFlow::Sqlite::CSqliteStatement updateStatement(
+        connection.GetNativeHandle(),
+        "UPDATE book_id_sequence SET next_id = ? WHERE singleton = 1;");
+    updateStatement.BindInt64(1, nextId + 1);
+    static_cast<void>(updateStatement.Step());
+
     transaction.Commit();
-    return reservedId;
+    return LibriFlow::Domain::SBookId{nextId};
 }
 
 std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const LibriFlow::Domain::SBookId id) const
