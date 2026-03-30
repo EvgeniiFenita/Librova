@@ -12,7 +12,7 @@ public sealed class PipeProtocolTests
         {
             RequestId = 42,
             Method = PipeMethod.WaitImportJob,
-            Payload = "payload"
+            Payload = [1, 2, 3, 4]
         };
 
         var bytes = PipeProtocol.SerializeRequestEnvelope(envelope);
@@ -30,7 +30,7 @@ public sealed class PipeProtocolTests
         {
             RequestId = 77,
             Status = PipeResponseStatus.InvalidRequest,
-            Payload = "response",
+            Payload = [9, 8, 7],
             ErrorMessage = "broken payload"
         };
 

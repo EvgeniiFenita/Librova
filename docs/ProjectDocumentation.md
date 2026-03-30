@@ -13,6 +13,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - The UI is planned as `C# / Avalonia`.
 - `apps/LibriFlow.UI` now also contains the first non-visual UI infrastructure for resolving and launching the native core host process during development.
 - `apps/LibriFlow.UI` now also generates C# protobuf contracts from `proto/import_jobs.proto` and contains the first managed implementation of the named-pipe framing protocol.
+- `apps/LibriFlow.UI` now also contains a real managed named-pipe RPC client and an import-job client over generated protobuf contracts.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -269,6 +270,7 @@ Stable facts taken from that reference:
 - process-level smoke coverage for the native host executable over a real named-pipe request flow
 - native logging initialization and file output coverage
 - C# pipe protocol round-trip and corruption-rejection coverage
+- C# end-to-end import-job client coverage against the real native host process
 
 ## 12. Current Gaps
 

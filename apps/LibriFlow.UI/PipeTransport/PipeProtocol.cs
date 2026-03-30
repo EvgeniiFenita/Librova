@@ -27,14 +27,14 @@ internal sealed class PipeRequestEnvelope
 {
     public ulong RequestId { get; init; }
     public PipeMethod Method { get; init; }
-    public string Payload { get; init; } = string.Empty;
+    public byte[] Payload { get; init; } = [];
 }
 
 internal sealed class PipeResponseEnvelope
 {
     public ulong RequestId { get; init; }
     public PipeResponseStatus Status { get; init; }
-    public string Payload { get; init; } = string.Empty;
+    public byte[] Payload { get; init; } = [];
     public string ErrorMessage { get; init; } = string.Empty;
 }
 
@@ -59,7 +59,7 @@ internal static class PipeProtocol
         WriteUInt32(stream, ProtocolVersion);
         WriteUInt64(stream, envelope.RequestId);
         WriteUInt32(stream, (uint)envelope.Method);
-        WriteString(stream, envelope.Payload);
+        WriteBytes(stream, envelope.Payload);
         return stream.ToArray();
     }
 
@@ -70,7 +70,7 @@ internal static class PipeProtocol
         WriteUInt32(stream, ProtocolVersion);
         WriteUInt64(stream, envelope.RequestId);
         WriteUInt32(stream, (uint)envelope.Status);
-        WriteString(stream, envelope.Payload);
+        WriteBytes(stream, envelope.Payload);
         WriteString(stream, envelope.ErrorMessage);
         return stream.ToArray();
     }
@@ -98,7 +98,7 @@ internal static class PipeProtocol
             throw new PipeParseException("Unknown pipe method.");
         }
 
-        var payload = reader.ReadString();
+        var payload = reader.ReadBytes();
         reader.EnsureFullyConsumed("Request envelope contains trailing bytes.");
 
         return new PipeRequestEnvelope
@@ -132,7 +132,7 @@ internal static class PipeProtocol
             throw new PipeParseException("Unknown response status.");
         }
 
-        var payload = reader.ReadString();
+        var payload = reader.ReadBytes();
         var errorMessage = reader.ReadString();
         reader.EnsureFullyConsumed("Response envelope contains trailing bytes.");
 
@@ -159,11 +159,16 @@ internal static class PipeProtocol
         stream.Write(buffer);
     }
 
+    private static void WriteBytes(Stream stream, byte[] value)
+    {
+        WriteUInt32(stream, checked((uint)value.Length));
+        stream.Write(value);
+    }
+
     private static void WriteString(Stream stream, string value)
     {
         var bytes = Encoding.UTF8.GetBytes(value);
-        WriteUInt32(stream, checked((uint)bytes.Length));
-        stream.Write(bytes);
+        WriteBytes(stream, bytes);
     }
 
     private ref struct PipeReader
@@ -203,18 +208,20 @@ internal static class PipeProtocol
             return value;
         }
 
-        public string ReadString()
+        public byte[] ReadBytes()
         {
             var length = checked((int)ReadUInt32());
             if (_offset + length > _bytes.Length)
             {
-                throw new PipeParseException("Unexpected end of message while reading string.");
+                throw new PipeParseException("Unexpected end of message while reading bytes.");
             }
 
-            var value = Encoding.UTF8.GetString(_bytes.Slice(_offset, length));
+            var value = _bytes.Slice(_offset, length).ToArray();
             _offset += length;
             return value;
         }
+
+        public string ReadString() => Encoding.UTF8.GetString(ReadBytes());
 
         public void EnsureFullyConsumed(string message)
         {
