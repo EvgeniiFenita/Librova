@@ -8,6 +8,7 @@ if(BUILD_TESTING)
         TestBookRepository.cpp
         TestBookFormat.cpp
         TestBookId.cpp
+        TestMetadataNormalization.cpp
         TestSearchQuery.cpp
         TestServiceContracts.cpp
         TestDomainError.cpp

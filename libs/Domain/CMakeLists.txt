@@ -1,6 +1,7 @@
 add_library(LibriFlowDomain STATIC
     BookFormat.cpp
     DomainError.cpp
+    MetadataNormalization.cpp
 )
 
 target_include_directories(LibriFlowDomain PUBLIC
