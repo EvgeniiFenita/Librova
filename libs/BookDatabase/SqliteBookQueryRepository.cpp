@@ -102,7 +102,7 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
 
     if (query.HasText())
     {
-        sql += "INNER JOIN search_index si ON si.rowid = b.id ";
+        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
     }
 
     if (query.AuthorUtf8.has_value())
@@ -116,7 +116,7 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
 
     if (query.HasText())
     {
-        sql += "AND si MATCH ? ";
+        sql += "AND search_index MATCH ? ";
     }
 
     if (query.AuthorUtf8.has_value())

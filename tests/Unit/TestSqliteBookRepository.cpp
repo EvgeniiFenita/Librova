@@ -199,6 +199,66 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and е ё equivalence", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-query-cyrillic.db";
+    std::filesystem::remove(databasePath);
+    LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    LibriFlow::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    LibriFlow::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    LibriFlow::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Ёжик в тумане";
+    firstBook.Metadata.AuthorsUtf8 = {"Юрий Норштейн"};
+    firstBook.Metadata.Language = "ru";
+    firstBook.Metadata.DescriptionUtf8 = std::string{"История о ежике и тумане"};
+    firstBook.File.Format = LibriFlow::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000401/book.epub";
+    firstBook.File.SizeBytes = 333;
+    firstBook.File.Sha256Hex = "hash-cyr-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    LibriFlow::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Пикник на обочине";
+    secondBook.Metadata.AuthorsUtf8 = {"Аркадий Стругацкий", "Борис Стругацкий"};
+    secondBook.Metadata.Language = "ru";
+    secondBook.Metadata.DescriptionUtf8 = std::string{"Зона и опасные экспедиции"};
+    secondBook.File.Format = LibriFlow::Domain::EBookFormat::Fb2;
+    secondBook.File.ManagedPath = "Books/0000000402/book.fb2";
+    secondBook.File.SizeBytes = 444;
+    secondBook.File.Sha256Hex = "hash-cyr-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    const std::vector<LibriFlow::Domain::SBook> prefixSearch = queryRepository.Search({
+        .TextUtf8 = "пик"
+    });
+    REQUIRE(prefixSearch.size() == 1);
+    REQUIRE(prefixSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
+
+    const std::vector<LibriFlow::Domain::SBook> yoSearch = queryRepository.Search({
+        .TextUtf8 = "ежик"
+    });
+    REQUIRE(yoSearch.size() == 1);
+    REQUIRE(yoSearch.front().Metadata.TitleUtf8 == "Ёжик в тумане");
+
+    const std::vector<LibriFlow::Domain::SBook> upperCaseSearch = queryRepository.Search({
+        .TextUtf8 = "БОРИС"
+    });
+    REQUIRE(upperCaseSearch.size() == 1);
+    REQUIRE(upperCaseSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
+
+    const std::vector<LibriFlow::Domain::SBook> descriptionPrefixSearch = queryRepository.Search({
+        .TextUtf8 = "экспед"
+    });
+    REQUIRE(descriptionPrefixSearch.size() == 1);
+    REQUIRE(descriptionPrefixSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-query-duplicates.db";
