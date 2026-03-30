@@ -96,17 +96,9 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
         try
         {
             await _continueAsync(LibraryRoot);
-            var existing = _preferencesStore.TryLoad();
-            _preferencesStore.Save(new UiPreferencesSnapshot
-            {
-                PreferredLibraryRoot = LibraryRoot,
-                ConverterMode = existing?.ConverterMode ?? CoreHost.UiConverterMode.Disabled,
-                Fb2CngExecutablePath = existing?.Fb2CngExecutablePath,
-                Fb2CngConfigPath = existing?.Fb2CngConfigPath,
-                CustomConverterExecutablePath = existing?.CustomConverterExecutablePath,
-                CustomConverterArguments = existing?.CustomConverterArguments,
-                CustomConverterOutputMode = existing?.CustomConverterOutputMode ?? CoreHost.UiConverterOutputMode.ExactDestinationPath
-            });
+            _preferencesStore.Save(UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
+                _preferencesStore.TryLoad(),
+                LibraryRoot));
             UiLogging.Information("Saved first-run library root after successful shell startup. LibraryRoot={LibraryRoot}", LibraryRoot);
         }
         finally

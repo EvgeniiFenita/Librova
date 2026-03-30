@@ -61,6 +61,35 @@ public sealed class FirstRunSetupViewModelTests
     }
 
     [Fact]
+    public async Task ContinueCommand_PreservesExistingConverterPreferences()
+    {
+        var preferences = new FakePreferencesStore
+        {
+            Snapshot = new UiPreferencesSnapshot
+            {
+                PreferredLibraryRoot = @"C:\Libraries\Old",
+                ConverterMode = CoreHost.UiConverterMode.CustomCommand,
+                CustomConverterExecutablePath = @"C:\Tools\convert.exe",
+                CustomConverterArguments = ["--source", "{source}"],
+                CustomConverterOutputMode = CoreHost.UiConverterOutputMode.SingleFileInDestinationDirectory
+            }
+        };
+
+        var viewModel = new FirstRunSetupViewModel(
+            @"D:\Librova\Data",
+            new FakePathSelectionService(),
+            preferences,
+            _ => Task.CompletedTask);
+
+        await viewModel.ContinueCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(@"D:\Librova\Data", preferences.LastSavedSnapshot?.PreferredLibraryRoot);
+        Assert.Equal(CoreHost.UiConverterMode.CustomCommand, preferences.LastSavedSnapshot?.ConverterMode);
+        Assert.Equal(@"C:\Tools\convert.exe", preferences.LastSavedSnapshot?.CustomConverterExecutablePath);
+        Assert.Equal(CoreHost.UiConverterOutputMode.SingleFileInDestinationDirectory, preferences.LastSavedSnapshot?.CustomConverterOutputMode);
+    }
+
+    [Fact]
     public async Task ContinueCommand_DoesNotSavePreferenceWhenCallbackFails()
     {
         var preferences = new FakePreferencesStore();

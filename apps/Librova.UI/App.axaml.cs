@@ -10,12 +10,16 @@ using Librova.UI.ViewModels;
 using Librova.UI.Views;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Librova.UI;
 
 internal sealed partial class App : Application
 {
     private ShellApplication? _shellApplication;
+    private CancellationTokenSource? _startupCancellation;
+    private Task? _startupTask;
+    private bool _isShuttingDown;
 
     public override void Initialize()
     {
@@ -33,19 +37,27 @@ internal sealed partial class App : Application
             ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
             desktop.MainWindow = mainWindow;
 
-            InitializeShellWindowAsync(desktop, mainWindow, pathSelectionService, preferencesStore);
+            _startupCancellation = new CancellationTokenSource();
+            _startupTask = InitializeShellWindowAsync(
+                desktop,
+                mainWindow,
+                pathSelectionService,
+                preferencesStore,
+                _startupCancellation.Token);
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private async void InitializeShellWindowAsync(
+    private async Task InitializeShellWindowAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
-        IUiPreferencesStore preferencesStore)
+        IUiPreferencesStore preferencesStore,
+        CancellationToken cancellationToken)
     {
         var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (FirstRunSetupPolicy.RequiresSetup(preferencesStore))
         {
@@ -55,7 +67,8 @@ internal sealed partial class App : Application
                 pathSelectionService,
                 preferencesStore,
                 launchOptions,
-                CoreHostDevelopmentDefaults.GetFallbackLibraryRoot());
+                CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
+                cancellationToken);
             ShellWindowConfigurator.ConfigureFirstRunSetup(mainWindow, setup);
             return;
         }
@@ -65,7 +78,8 @@ internal sealed partial class App : Application
             pathSelectionService,
             preferencesStore,
             launchOptions,
-            CoreHostDevelopmentDefaults.Create(preferencesStore: preferencesStore));
+            CoreHostDevelopmentDefaults.Create(preferencesStore: preferencesStore),
+            cancellationToken);
     }
 
     private Task StartShellWithLibraryRootAsync(
@@ -73,9 +87,13 @@ internal sealed partial class App : Application
         IPathSelectionService pathSelectionService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
-        string libraryRoot)
+        string libraryRoot,
+        CancellationToken cancellationToken)
     {
         ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
+        var effectivePreferences = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
+            preferencesStore.TryLoad(),
+            libraryRoot);
         return StartShellWithLaunchOptionsAsync(
             mainWindow,
             pathSelectionService,
@@ -83,7 +101,9 @@ internal sealed partial class App : Application
             launchOptions,
             CoreHostDevelopmentDefaults.CreateForLibraryRoot(
                 libraryRoot,
-                preferencesStore.TryLoad()));
+                effectivePreferences),
+            cancellationToken,
+            effectivePreferences);
     }
 
     private async Task StartShellWithLaunchOptionsAsync(
@@ -91,20 +111,28 @@ internal sealed partial class App : Application
         IPathSelectionService pathSelectionService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
-        CoreHostLaunchOptions hostOptions)
+        CoreHostLaunchOptions hostOptions,
+        CancellationToken cancellationToken,
+        UiPreferencesSnapshot? savedPreferencesOverride = null)
     {
         try
         {
             UiLogging.Information("Starting Avalonia desktop shell.");
-            var session = await ShellBootstrap.StartSessionAsync(hostOptions, CancellationToken.None);
+            var session = await ShellBootstrap.StartSessionAsync(hostOptions, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             _shellApplication = ShellApplication.Create(
                 session,
                 pathSelectionService,
                 launchOptions,
-                preferencesStore: preferencesStore);
+                preferencesStore: preferencesStore,
+                savedPreferencesOverride: savedPreferencesOverride);
             await _shellApplication.InitializeAsync();
             ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
             UiLogging.Information("Avalonia desktop shell is ready.");
+        }
+        catch (OperationCanceledException) when (_isShuttingDown || cancellationToken.IsCancellationRequested)
+        {
+            UiLogging.Information("Avalonia desktop shell startup was cancelled.");
         }
         catch (Exception error)
         {
@@ -114,7 +142,8 @@ internal sealed partial class App : Application
                 pathSelectionService,
                 preferencesStore,
                 launchOptions,
-                hostOptions.LibraryRoot);
+                hostOptions.LibraryRoot,
+                cancellationToken);
             ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message, recoverySetup);
         }
     }
@@ -124,7 +153,8 @@ internal sealed partial class App : Application
         IPathSelectionService pathSelectionService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
-        string suggestedLibraryRoot) =>
+        string suggestedLibraryRoot,
+        CancellationToken cancellationToken) =>
         new(
             suggestedLibraryRoot,
             pathSelectionService,
@@ -134,26 +164,42 @@ internal sealed partial class App : Application
                 pathSelectionService,
                 preferencesStore,
                 launchOptions,
-                libraryRoot));
+                libraryRoot,
+                cancellationToken));
 
     private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
-        if (_shellApplication is null)
-        {
-            return;
-        }
-
-        UiLogging.Information("Shutting down Avalonia desktop shell.");
         e.Cancel = true;
+        _isShuttingDown = true;
+        UiLogging.Information("Shutting down Avalonia desktop shell.");
+        _startupCancellation?.Cancel();
         var application = _shellApplication;
+        var startupTask = _startupTask;
         _shellApplication = null;
+        _startupTask = null;
 
         try
         {
-            await application.DisposeAsync();
+            if (startupTask is not null)
+            {
+                try
+                {
+                    await startupTask;
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+
+            if (application is not null)
+            {
+                await application.DisposeAsync();
+            }
         }
         finally
         {
+            _startupCancellation?.Dispose();
+            _startupCancellation = null;
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.ShutdownRequested -= OnShutdownRequested;
