@@ -12,7 +12,7 @@ internal sealed class ShellSession : IAsyncDisposable
     public ShellSession(
         CoreHostProcess coreHostProcess,
         CoreHostLaunchOptions hostOptions,
-        ImportJobsService importJobs)
+        IImportJobsService importJobs)
     {
         _coreHostProcess = coreHostProcess;
         HostOptions = hostOptions;
@@ -20,7 +20,7 @@ internal sealed class ShellSession : IAsyncDisposable
     }
 
     public CoreHostLaunchOptions HostOptions { get; }
-    public ImportJobsService ImportJobs { get; }
+    public IImportJobsService ImportJobs { get; }
 
     public ValueTask DisposeAsync() => _coreHostProcess.DisposeAsync();
 }
