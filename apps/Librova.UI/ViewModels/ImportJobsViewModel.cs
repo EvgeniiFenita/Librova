@@ -13,6 +13,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private string _sourcePath = string.Empty;
     private string _workingDirectory = string.Empty;
+    private bool _allowProbableDuplicates;
     private string _statusText = "Idle";
     private bool _isBusy;
     private ulong? _lastJobId;
@@ -81,6 +82,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
     }
 
+    public bool AllowProbableDuplicates
+    {
+        get => _allowProbableDuplicates;
+        set => SetProperty(ref _allowProbableDuplicates, value);
+    }
+
     public ulong? LastJobId
     {
         get => _lastJobId;
@@ -146,7 +153,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 new StartImportRequestModel
                 {
                     SourcePath = SourcePath,
-                    WorkingDirectory = WorkingDirectory
+                    WorkingDirectory = WorkingDirectory,
+                    AllowProbableDuplicates = AllowProbableDuplicates
                 },
                 TimeSpan.FromSeconds(5),
                 _activeImportCancellation.Token);

@@ -68,7 +68,7 @@
             BorderThickness="1"
             CornerRadius="20"
             Padding="24">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
             ColumnDefinitions="Auto,*"
             ColumnSpacing="16"
             RowSpacing="14">
@@ -107,7 +107,15 @@
                 Command="{Binding Shell.ImportJobs.BrowseWorkingDirectoryCommand}"
                 Content="Browse..." />
 
-        <StackPanel Grid.Row="3"
+        <TextBlock Grid.Row="3"
+                   VerticalAlignment="Center"
+                   Text="Duplicates" />
+        <CheckBox Grid.Row="3"
+                  Grid.Column="1"
+                  Content="Allow import when only probable duplicates are found"
+                  IsChecked="{Binding Shell.ImportJobs.AllowProbableDuplicates}" />
+
+        <StackPanel Grid.Row="4"
                     Grid.ColumnSpan="2"
                     Orientation="Horizontal"
                     Spacing="12">
@@ -128,7 +136,7 @@
                      Text="{Binding Shell.ImportJobs.StatusText}" />
         </StackPanel>
 
-        <Border Grid.Row="4"
+        <Border Grid.Row="5"
                 Grid.ColumnSpan="2"
                 Background="#F3F1EA"
                 CornerRadius="16"
@@ -144,7 +152,7 @@
           </StackPanel>
         </Border>
 
-        <Border Grid.Row="5"
+        <Border Grid.Row="6"
                 Grid.ColumnSpan="2"
                 Background="#E3EBF0"
                 CornerRadius="16"
@@ -157,7 +165,7 @@
           </StackPanel>
         </Border>
 
-        <Border Grid.Row="6"
+        <Border Grid.Row="7"
                 Grid.ColumnSpan="2"
                 Background="#F4E8DA"
                 CornerRadius="16"

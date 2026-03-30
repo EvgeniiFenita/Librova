@@ -141,10 +141,28 @@ public sealed class ViewModelsTests
         Assert.Equal(@"C:\Temp\Librova\Work", viewModel.WorkingDirectory);
     }
 
+    [Fact]
+    public async Task ImportJobsViewModel_StartImportPassesProbableDuplicateOverrideFlag()
+    {
+        var service = new FakeImportJobsService();
+        var viewModel = new ImportJobsViewModel(service)
+        {
+            SourcePath = @"C:\Books\book.fb2",
+            WorkingDirectory = @"C:\Work",
+            AllowProbableDuplicates = true
+        };
+
+        await viewModel.StartImportAsync();
+
+        Assert.NotNull(service.LastStartRequest);
+        Assert.True(service.LastStartRequest!.AllowProbableDuplicates);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }
         public ulong? LastRemovedJobId { get; private set; }
+        public StartImportRequestModel? LastStartRequest { get; private set; }
         private bool _resultReady;
 
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -191,7 +209,10 @@ public sealed class ViewModelsTests
         }
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(42UL);
+        {
+            LastStartRequest = request;
+            return Task.FromResult(42UL);
+        }
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
