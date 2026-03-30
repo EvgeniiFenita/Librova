@@ -65,6 +65,7 @@ struct SStoragePlan
     SBookId BookId;
     EBookFormat Format = EBookFormat::Epub;
     std::filesystem::path SourcePath;
+    std::optional<std::filesystem::path> CoverSourcePath;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

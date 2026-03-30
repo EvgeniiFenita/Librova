@@ -71,6 +71,7 @@ public:
     {
         return {
             .StagedBookPath = std::filesystem::path{"Temp"} / "book.epub",
+            .StagedCoverPath = plan.CoverSourcePath.has_value() ? std::make_optional(std::filesystem::path{"Temp"} / "cover.jpg") : std::nullopt,
             .FinalBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub"
         };
     }
@@ -131,7 +132,8 @@ TEST_CASE("Domain service contract value types expose minimal validity helpers",
     const LibriFlow::Domain::SStoragePlan storagePlan{
         .BookId = {5},
         .Format = LibriFlow::Domain::EBookFormat::Epub,
-        .SourcePath = "source.epub"
+        .SourcePath = "source.epub",
+        .CoverSourcePath = "source.jpg"
     };
 
     REQUIRE(request.IsValid());
@@ -172,7 +174,8 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     const LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {9},
         .Format = LibriFlow::Domain::EBookFormat::Epub,
-        .SourcePath = "book.epub"
+        .SourcePath = "book.epub",
+        .CoverSourcePath = "cover.jpg"
     });
 
     storage.CommitImport(prepared);
@@ -185,6 +188,7 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     });
 
     REQUIRE(prepared.HasStagedBook());
+    REQUIRE(prepared.StagedCoverPath.has_value());
     REQUIRE(storage.LastCommittedPath == std::filesystem::path{"Books/9/book.epub"});
     REQUIRE(storage.LastRolledBackPath == std::filesystem::path{"Temp/book.epub"});
     REQUIRE(trash.LastTrashedPath == std::filesystem::path{"Books/9/book.epub"});

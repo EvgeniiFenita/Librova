@@ -1,0 +1,173 @@
+#include "ManagedStorage/ManagedFileStorage.hpp"
+
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+
+#include "StoragePlanning/ManagedLibraryLayout.hpp"
+
+namespace LibriFlow::ManagedStorage {
+namespace {
+
+void EnsureDirectory(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    std::filesystem::create_directories(path, errorCode);
+
+    if (errorCode)
+    {
+        throw std::runtime_error(std::string{"Failed to create directory: "} + path.string());
+    }
+}
+
+void RemovePathNoThrow(const std::filesystem::path& path) noexcept
+{
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove_all(path, errorCode);
+}
+
+void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
+{
+    std::error_code errorCode;
+    std::filesystem::rename(sourcePath, destinationPath, errorCode);
+
+    if (errorCode)
+    {
+        throw std::runtime_error(
+            std::string{"Failed to move file from "} + sourcePath.string() + " to " + destinationPath.string());
+    }
+}
+
+void CopyFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
+{
+    std::error_code errorCode;
+    const bool copied = std::filesystem::copy_file(
+        sourcePath,
+        destinationPath,
+        std::filesystem::copy_options::overwrite_existing,
+        errorCode);
+
+    if (!copied || errorCode)
+    {
+        throw std::runtime_error(
+            std::string{"Failed to copy file from "} + sourcePath.string() + " to " + destinationPath.string());
+    }
+}
+
+std::filesystem::path BuildStagedCoverPath(
+    const std::filesystem::path& stagingDirectory,
+    const std::filesystem::path& coverSourcePath)
+{
+    const std::filesystem::path extension = coverSourcePath.extension();
+
+    if (extension.empty())
+    {
+        throw std::invalid_argument("Cover source path must have an extension.");
+    }
+
+    return stagingDirectory / std::filesystem::path{"cover"}.replace_extension(extension);
+}
+
+void CleanupEmptyParentDirectory(const std::filesystem::path& path) noexcept
+{
+    const std::filesystem::path parentPath = path.parent_path();
+
+    if (parentPath.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove(parentPath, errorCode);
+}
+
+} // namespace
+
+CManagedFileStorage::CManagedFileStorage(std::filesystem::path libraryRoot)
+    : m_libraryRoot(std::move(libraryRoot))
+{
+}
+
+LibriFlow::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const LibriFlow::Domain::SStoragePlan& plan)
+{
+    if (!plan.IsValid())
+    {
+        throw std::invalid_argument("Storage plan must contain a valid book id and source path.");
+    }
+
+    const LibriFlow::StoragePlanning::SLibraryLayoutPaths layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
+    const std::filesystem::path stagingDirectory = LibriFlow::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(m_libraryRoot, plan.BookId);
+    const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
+    const std::filesystem::path finalBookPath =
+        LibriFlow::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format);
+
+    EnsureDirectory(layout.BooksDirectory);
+    EnsureDirectory(layout.CoversDirectory);
+    EnsureDirectory(layout.TempDirectory);
+
+    RemovePathNoThrow(stagingDirectory);
+    EnsureDirectory(stagingDirectory);
+    CopyFile(plan.SourcePath, stagedBookPath);
+
+    LibriFlow::Domain::SPreparedStorage preparedStorage{
+        .StagedBookPath = stagedBookPath,
+        .FinalBookPath = finalBookPath
+    };
+
+    if (plan.CoverSourcePath.has_value())
+    {
+        const std::filesystem::path stagedCoverPath = BuildStagedCoverPath(stagingDirectory, *plan.CoverSourcePath);
+        const std::string extension = stagedCoverPath.extension().string();
+
+        CopyFile(*plan.CoverSourcePath, stagedCoverPath);
+
+        preparedStorage.StagedCoverPath = stagedCoverPath;
+        preparedStorage.FinalCoverPath =
+            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+    }
+
+    return preparedStorage;
+}
+
+void CManagedFileStorage::CommitImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage)
+{
+    if (!preparedStorage.HasStagedBook())
+    {
+        throw std::invalid_argument("Prepared storage must contain a staged book.");
+    }
+
+    EnsureDirectory(preparedStorage.FinalBookPath.parent_path());
+    MoveFile(preparedStorage.StagedBookPath, preparedStorage.FinalBookPath);
+
+    if (preparedStorage.StagedCoverPath.has_value())
+    {
+        if (!preparedStorage.FinalCoverPath.has_value())
+        {
+            throw std::invalid_argument("Prepared storage must contain a final cover path when a cover is staged.");
+        }
+
+        EnsureDirectory(preparedStorage.FinalCoverPath->parent_path());
+        MoveFile(*preparedStorage.StagedCoverPath, *preparedStorage.FinalCoverPath);
+    }
+
+    RemovePathNoThrow(preparedStorage.StagedBookPath.parent_path());
+}
+
+void CManagedFileStorage::RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept
+{
+    RemovePathNoThrow(preparedStorage.StagedBookPath);
+
+    if (preparedStorage.StagedCoverPath.has_value())
+    {
+        RemovePathNoThrow(*preparedStorage.StagedCoverPath);
+    }
+
+    CleanupEmptyParentDirectory(preparedStorage.StagedBookPath);
+}
+
+} // namespace LibriFlow::ManagedStorage

@@ -11,6 +11,7 @@ if(BUILD_TESTING)
         TestBookId.cpp
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
+        TestManagedFileStorage.cpp
         TestMetadataNormalization.cpp
         TestSearchQuery.cpp
         TestServiceContracts.cpp
@@ -29,6 +30,7 @@ if(BUILD_TESTING)
             LibriFlowCore
             LibriFlowDatabaseRuntime
             LibriFlowDatabaseSchema
+            LibriFlowManagedStorage
             LibriFlowSqlite
             LibriFlowStoragePlanning
     )
