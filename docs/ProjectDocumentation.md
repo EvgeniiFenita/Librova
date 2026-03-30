@@ -55,6 +55,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
 - the repository root now contains [Run-Librova.ps1](C:\Users\evgen\Desktop\LibriFlow\Run-Librova.ps1) as the one-click development entry point for full build and UI launch.
+- the repository root now also contains [Run-Tests.ps1](C:\Users\evgen\Desktop\LibriFlow\Run-Tests.ps1) as the one-click local verification entry point for sequential native build/test plus managed UI build/test.
 
 ## 3. Application Layer
 
@@ -360,6 +361,9 @@ Stable facts taken from that reference:
   - shell startup with real browser preload through the native host
   - real import-command execution followed by automatic browser refresh
   - real browser pagination against the native host and SQLite-backed library catalog
+- the UI-side core-host path resolver now supports:
+  - explicit `LIBROVA_CORE_HOST_EXECUTABLE` override
+  - fallback probing of both `x64-debug/Debug` and `x64-release/Release` repository build layouts
 
 ## 12. Current Gaps
 
