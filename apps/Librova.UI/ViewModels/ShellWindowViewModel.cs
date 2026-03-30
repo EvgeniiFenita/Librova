@@ -8,6 +8,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
     private ShellWindowViewModel(
         string title,
         ShellViewModel? shell,
+        FirstRunSetupViewModel? setup,
         string statusText,
         string? startupError,
         string uiLogFilePath,
@@ -17,6 +18,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
     {
         Title = title;
         Shell = shell;
+        Setup = setup;
         StatusText = statusText;
         StartupError = startupError;
         UiLogFilePath = uiLogFilePath;
@@ -27,6 +29,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
 
     public string Title { get; }
     public ShellViewModel? Shell { get; }
+    public FirstRunSetupViewModel? Setup { get; }
     public string StatusText { get; }
     public string? StartupError { get; }
     public string UiLogFilePath { get; }
@@ -34,12 +37,14 @@ internal sealed class ShellWindowViewModel : ObservableObject
     public string UiPreferencesFilePath { get; }
     public string StartupGuidanceText { get; }
     public bool HasShell => Shell is not null;
+    public bool HasSetup => Setup is not null;
     public bool HasStartupError => !string.IsNullOrWhiteSpace(StartupError);
-    public bool IsStartingUp => !HasShell && !HasStartupError;
+    public bool IsStartingUp => !HasShell && !HasStartupError && !HasSetup;
 
     public static ShellWindowViewModel CreateStartingUp() =>
         new(
             "Librova",
+            null,
             null,
             "Starting native core host...",
             null,
@@ -52,6 +57,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
         new(
             "Librova",
             shell,
+            null,
             "Connected to native core host.",
             null,
             shell.UiLogFilePath,
@@ -59,9 +65,22 @@ internal sealed class ShellWindowViewModel : ObservableObject
             shell.UiPreferencesFilePath,
             string.Empty);
 
+    public static ShellWindowViewModel CreateFirstRunSetup(FirstRunSetupViewModel setup) =>
+        new(
+            "Librova Setup",
+            null,
+            setup,
+            "Choose the managed library location before the first launch.",
+            null,
+            RuntimeEnvironment.GetDefaultUiLogFilePath(),
+            RuntimeEnvironment.GetDefaultUiStateFilePath(),
+            RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
+            "Librova stores the managed library, database, covers, logs, temporary import files, and trash under the selected root. You can change this again later in the running shell settings.");
+
     public static ShellWindowViewModel CreateStartupError(string message) =>
         new(
             "Librova Startup Error",
+            null,
             null,
             "Startup failed.",
             string.IsNullOrWhiteSpace(message) ? "Failed to start Librova." : message,

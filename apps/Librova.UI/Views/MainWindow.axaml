@@ -72,6 +72,98 @@
       </StackPanel>
     </Border>
 
+    <Border IsVisible="{Binding HasSetup}"
+            Background="#FFF8EF"
+            BorderBrush="#D9C7AE"
+            BorderThickness="1"
+            CornerRadius="28"
+            Padding="30">
+      <StackPanel Spacing="18">
+        <StackPanel Spacing="10">
+          <TextBlock FontSize="34"
+                     FontWeight="Bold"
+                     Text="Set up your Librova library" />
+          <TextBlock FontSize="16"
+                     FontWeight="SemiBold"
+                     Text="{Binding StatusText}" />
+          <TextBlock MaxWidth="760"
+                     FontSize="15"
+                     Text="{Binding StartupGuidanceText}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Background="#FFF9F1"
+                BorderBrush="#E0CAB4"
+                BorderThickness="1"
+                CornerRadius="20"
+                Padding="20">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="SectionTitle"
+                       Text="Managed Library Root" />
+            <TextBlock Opacity="0.74"
+                       Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10">
+              <TextBox Classes="ImportField"
+                       Watermark="C:\Libraries\Librova"
+                       Text="{Binding Setup.LibraryRoot}" />
+              <Button Grid.Column="1"
+                      Classes="SecondaryAction"
+                      MinWidth="108"
+                      Command="{Binding Setup.BrowseLibraryRootCommand}"
+                      Content="Browse..." />
+            </Grid>
+            <TextBlock FontSize="12"
+                       Foreground="#A04628"
+                       IsVisible="{Binding Setup.HasValidationError}"
+                       Text="{Binding Setup.ValidationMessage}"
+                       TextWrapping="Wrap" />
+            <TextBlock FontSize="12"
+                       Opacity="0.64"
+                       IsVisible="{Binding Setup.ShowHelperText}"
+                       Text="Choose an absolute directory path. The folder may be new; Librova will create its managed structure on first launch."
+                       TextWrapping="Wrap" />
+            <WrapPanel ItemWidth="160"
+                       ItemHeight="44">
+              <Button Classes="PrimaryAction"
+                      Width="180"
+                      Command="{Binding Setup.ContinueCommand}"
+                      Content="Continue" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Background="#FFF9F1"
+                BorderBrush="#E0CAB4"
+                BorderThickness="1"
+                CornerRadius="18"
+                Padding="18">
+          <StackPanel Spacing="10">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Setup files" />
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10"
+                  RowDefinitions="Auto,Auto">
+              <TextBlock FontWeight="SemiBold"
+                         Text="UI log" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding UiLogFilePath}"
+                         TextWrapping="Wrap" />
+
+              <TextBlock Grid.Row="1"
+                         FontWeight="SemiBold"
+                         Text="Preferences" />
+              <TextBlock Grid.Row="1"
+                         Grid.Column="1"
+                         Text="{Binding UiPreferencesFilePath}"
+                         TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+
     <Border IsVisible="{Binding HasStartupError}"
             Background="#FFF4EC"
             BorderBrush="#D97C49"

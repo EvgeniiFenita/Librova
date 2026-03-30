@@ -205,6 +205,7 @@ Implemented slices at this point:
   - `out\\runtime\\library\\Logs\\host.log`
 - the current UI host-readiness check uses `WaitNamedPipe` and no longer creates a throwaway client connection that pollutes `host.log` with false broken-pipe startup errors
 - the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
+- the current Avalonia shell now includes a dedicated first-run setup state before host startup; when no library-root override or saved preference exists, the user must choose a managed library root before the native host session is launched
 - the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 - the current UI shell now exposes an `Operational Notes` panel that surfaces launch-argument prefill, next-launch library-root mismatch, and runtime-redirection hints directly in the running shell instead of leaving them implicit
 - the current startup-error screen now includes actionable guidance and the current UI log/state/preferences file paths, so bootstrap failures can be diagnosed without leaving the error screen
@@ -406,7 +407,6 @@ Stable facts taken from that reference:
 
 Not implemented yet, but still on the active MVP path:
 
-- first-run setup flow for choosing and validating the library root before normal shell startup
 - richer settings UI for converter configuration and runtime preferences
 - packaging-oriented release validation and startup sanity outside the development layout
 

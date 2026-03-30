@@ -1,6 +1,7 @@
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
 using Librova.UI.Shell;
+using Librova.UI.ViewModels;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -56,6 +57,25 @@ public sealed class ShellWindowConfiguratorTests
         Assert.NotEmpty(state.ViewModel.UiStateFilePath);
         Assert.NotEmpty(state.ViewModel.UiPreferencesFilePath);
         Assert.Contains("UI log", state.ViewModel.StartupGuidanceText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CreateFirstRunSetupState_ProducesSetupViewModel()
+    {
+        var setup = new FirstRunSetupViewModel(
+            @"C:\Libraries\Librova",
+            null,
+            null,
+            _ => Task.CompletedTask);
+
+        var state = ShellWindowConfigurator.CreateFirstRunSetupState(setup);
+
+        Assert.Equal("Librova Setup", state.ViewModel.Title);
+        Assert.True(state.ViewModel.HasSetup);
+        Assert.False(state.ViewModel.HasShell);
+        Assert.False(state.ViewModel.HasStartupError);
+        Assert.False(state.ViewModel.IsStartingUp);
+        Assert.Same(setup, state.ViewModel.Setup);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService

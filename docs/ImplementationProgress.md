@@ -124,6 +124,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added end-to-end delete-to-trash from the library browser over protobuf/named pipes, including managed-library trash policy, rollback-friendly native deletion semantics, and strong host-backed integration coverage.
 - `2026-03-30` Build: generalized UI-side core-host resolution beyond `Debug` only and added `Run-Tests.ps1` as a root-level sequential full test runner for native and managed suites.
 - `2026-03-30` Fix: hardened the UI shell by making Avalonia startup/shutdown non-blocking, adding an explicit loading state, switching browser pagination to lookahead-based `HasMoreResults`, clamping invalid page sizes, and replacing optimistic import ViewModel tests with validated command-path coverage.
+- `2026-03-30` Feature: added a first-run setup state before shell startup so the user chooses and persists the managed library root before launching the native host, with dedicated validation, browse flow, and C# coverage for setup policy and setup ViewModel behavior.
 
 ### Phase 9. Stabilization
 

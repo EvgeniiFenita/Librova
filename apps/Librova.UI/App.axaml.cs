@@ -3,8 +3,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Avalonia.Markup.Xaml;
 using Librova.UI.Desktop;
+using Librova.UI.CoreHost;
 using Librova.UI.Logging;
 using Librova.UI.Shell;
+using Librova.UI.ViewModels;
 using Librova.UI.Views;
 using System;
 using System.Threading;
@@ -26,26 +28,82 @@ internal sealed partial class App : Application
         {
             desktop.ShutdownRequested += OnShutdownRequested;
             var mainWindow = new MainWindow();
+            var pathSelectionService = new AvaloniaPathSelectionService(mainWindow);
+            var preferencesStore = UiPreferencesStore.CreateDefault();
             ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
             desktop.MainWindow = mainWindow;
 
-            StartShellAsync(desktop, mainWindow);
+            InitializeShellWindowAsync(desktop, mainWindow, pathSelectionService, preferencesStore);
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private async void StartShellAsync(IClassicDesktopStyleApplicationLifetime desktop, MainWindow mainWindow)
+    private async void InitializeShellWindowAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore)
+    {
+        var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
+
+        if (FirstRunSetupPolicy.RequiresSetup(preferencesStore))
+        {
+            UiLogging.Information("Showing first-run setup before host startup.");
+            var setup = new FirstRunSetupViewModel(
+                CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
+                pathSelectionService,
+                preferencesStore,
+                libraryRoot => StartShellWithLibraryRootAsync(
+                    mainWindow,
+                    pathSelectionService,
+                    preferencesStore,
+                    launchOptions,
+                    libraryRoot));
+            ShellWindowConfigurator.ConfigureFirstRunSetup(mainWindow, setup);
+            return;
+        }
+
+        await StartShellWithLaunchOptionsAsync(
+            mainWindow,
+            pathSelectionService,
+            preferencesStore,
+            launchOptions,
+            CoreHostDevelopmentDefaults.Create(preferencesStore: preferencesStore));
+    }
+
+    private Task StartShellWithLibraryRootAsync(
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore,
+        ShellLaunchOptions launchOptions,
+        string libraryRoot)
+    {
+        ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
+        return StartShellWithLaunchOptionsAsync(
+            mainWindow,
+            pathSelectionService,
+            preferencesStore,
+            launchOptions,
+            CoreHostDevelopmentDefaults.CreateForLibraryRoot(libraryRoot));
+    }
+
+    private async Task StartShellWithLaunchOptionsAsync(
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore,
+        ShellLaunchOptions launchOptions,
+        CoreHostLaunchOptions hostOptions)
     {
         try
         {
             UiLogging.Information("Starting Avalonia desktop shell.");
-            var session = await ShellBootstrap.StartDevelopmentSessionAsync(CancellationToken.None);
-            var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
+            var session = await ShellBootstrap.StartSessionAsync(hostOptions, CancellationToken.None);
             _shellApplication = ShellApplication.Create(
                 session,
-                new AvaloniaPathSelectionService(mainWindow),
-                launchOptions);
+                pathSelectionService,
+                launchOptions,
+                preferencesStore: preferencesStore);
             await _shellApplication.InitializeAsync();
             ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
             UiLogging.Information("Avalonia desktop shell is ready.");

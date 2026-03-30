@@ -7,25 +7,21 @@ namespace Librova.UI.CoreHost;
 
 internal static class CoreHostDevelopmentDefaults
 {
-    public static CoreHostLaunchOptions Create(string? baseDirectory = null)
+    public static CoreHostLaunchOptions Create(string? baseDirectory = null, IUiPreferencesStore? preferencesStore = null)
     {
         var libraryRoot = RuntimeEnvironment.GetLibraryRootOverride();
         if (string.IsNullOrWhiteSpace(libraryRoot))
         {
-            libraryRoot = UiPreferencesStore.CreateDefault().TryLoad()?.PreferredLibraryRoot;
+            libraryRoot = (preferencesStore ?? UiPreferencesStore.CreateDefault()).TryLoad()?.PreferredLibraryRoot;
         }
 
-        if (string.IsNullOrWhiteSpace(libraryRoot))
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(localAppData))
-            {
-                throw new InvalidOperationException("LocalAppData is not available.");
-            }
+        return CreateForLibraryRoot(
+            string.IsNullOrWhiteSpace(libraryRoot) ? GetFallbackLibraryRoot() : libraryRoot,
+            baseDirectory);
+    }
 
-            libraryRoot = Path.Combine(localAppData, "Librova", "Library");
-        }
-
+    public static CoreHostLaunchOptions CreateForLibraryRoot(string libraryRoot, string? baseDirectory = null)
+    {
         var executablePath = RuntimeEnvironment.GetCoreHostExecutableOverride()
             ?? CoreHostPathResolver.ResolveDevelopmentExecutablePath(baseDirectory);
         var pipePath = $@"\\.\pipe\Librova.UI.{Environment.ProcessId}.{Environment.TickCount64}";
@@ -36,5 +32,16 @@ internal static class CoreHostDevelopmentDefaults
             PipePath = pipePath,
             LibraryRoot = libraryRoot
         };
+    }
+
+    public static string GetFallbackLibraryRoot()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+        {
+            throw new InvalidOperationException("LocalAppData is not available.");
+        }
+
+        return Path.Combine(localAppData, "Librova", "Library");
     }
 }

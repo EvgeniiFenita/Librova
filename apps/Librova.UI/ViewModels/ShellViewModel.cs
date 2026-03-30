@@ -142,31 +142,11 @@ internal sealed class ShellViewModel : ObservableObject
 
     private void UpdatePreferredLibraryRootValidation()
     {
-        PreferredLibraryRootValidationMessage = BuildPreferredLibraryRootValidationMessage(PreferredLibraryRoot);
+        PreferredLibraryRootValidationMessage = LibraryRootValidation.BuildValidationMessage(PreferredLibraryRoot);
         RaisePropertyChanged(nameof(HasPreferredLibraryRootValidationError));
         RaisePropertyChanged(nameof(ShowPreferredLibraryRootHelperText));
         RaisePropertyChanged(nameof(OperationalWarningsText));
         RaisePropertyChanged(nameof(HasOperationalWarnings));
-    }
-
-    private static string BuildPreferredLibraryRootValidationMessage(string preferredLibraryRoot)
-    {
-        if (string.IsNullOrWhiteSpace(preferredLibraryRoot))
-        {
-            return "Library root cannot be empty.";
-        }
-
-        if (!Path.IsPathFullyQualified(preferredLibraryRoot))
-        {
-            return "Use an absolute library root path.";
-        }
-
-        if (File.Exists(preferredLibraryRoot))
-        {
-            return "Library root must not point to a file.";
-        }
-
-        return string.Empty;
     }
 
     private string BuildOperationalWarningsText()
