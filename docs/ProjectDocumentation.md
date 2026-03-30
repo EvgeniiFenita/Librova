@@ -33,6 +33,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now accepts an initial source-file path from application launch arguments and pre-fills the import screen with that path on startup.
 - the current Avalonia shell baseline now persists import-screen state between launches in a JSON state file under `%LOCALAPPDATA%\\Librova`, including source path, working directory, and probable-duplicate override.
 - the current Avalonia shell baseline now accepts a dropped local file on the main window and applies it as the import `SourcePath`, so desktop drag-and-drop works without bypassing the ViewModel layer.
+- the current Avalonia shell baseline now uses a two-column desktop layout with an explicit import workspace, session summary, operational cards, and a visible drag-and-drop callout instead of the earlier raw form-like shell.
 - `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
