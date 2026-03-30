@@ -25,7 +25,7 @@ internal sealed partial class MainWindow : Window
         eventArgs.Handled = true;
     }
 
-    private void OnDrop(object? sender, DragEventArgs eventArgs)
+    private async void OnDrop(object? sender, DragEventArgs eventArgs)
     {
         if (DataContext is not ShellWindowViewModel { HasShell: true, Shell: not null } viewModel)
         {
@@ -33,7 +33,8 @@ internal sealed partial class MainWindow : Window
         }
 
         var sourcePath = TryGetDroppedSourcePath(eventArgs);
-        viewModel.Shell.ImportJobs.ApplyDroppedSourcePath(sourcePath);
+        await viewModel.Shell.ActivateImportSectionAsync();
+        await viewModel.Shell.ImportJobs.ApplyDroppedSourcePathAndStartAsync(sourcePath);
         eventArgs.Handled = true;
     }
 

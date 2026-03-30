@@ -3,6 +3,7 @@ using Librova.UI.ImportJobs;
 using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,15 +28,18 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
     public event Func<Task>? ImportCompletedSuccessfully;
+    public event Action<bool>? ImportActivityChanged;
 
     public ImportJobsViewModel(IImportJobsService importJobsService, IPathSelectionService? pathSelectionService = null)
     {
         _importJobsService = importJobsService;
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
+        PropertyChanged += OnPropertyChanged;
         StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport, HandleCommandErrorAsync);
         RefreshCommand = new AsyncCommand(RefreshCurrentAsync, CanRefresh, HandleCommandErrorAsync);
         CancelImportCommand = new AsyncCommand(CancelCurrentAsync, CanCancel, HandleCommandErrorAsync);
         RemoveJobCommand = new AsyncCommand(RemoveCurrentAsync, CanRemove, HandleCommandErrorAsync);
+        SelectSourceAndImportCommand = new AsyncCommand(SelectSourceAndImportAsync, () => !IsBusy, HandleCommandErrorAsync);
         BrowseSourceCommand = new AsyncCommand(BrowseSourceAsync, () => !IsBusy, HandleCommandErrorAsync);
         BrowseWorkingDirectoryCommand = new AsyncCommand(BrowseWorkingDirectoryAsync, () => !IsBusy, HandleCommandErrorAsync);
         UpdateValidationState();
@@ -89,6 +93,16 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public bool HasWorkingDirectoryValidationError => !string.IsNullOrWhiteSpace(WorkingDirectoryValidationMessage);
     public bool ShowSourceHelperText => !HasSourceValidationError;
     public bool ShowWorkingDirectoryHelperText => !HasWorkingDirectoryValidationError;
+    public bool HasSelectedSource => !string.IsNullOrWhiteSpace(SourcePath);
+    public bool ShowIdleImportPicker => !IsBusy;
+    public bool ShowRunningImportState => IsBusy;
+    public bool HasImportResult => LastResult is not null;
+    public string SelectedSourceLabel => string.IsNullOrWhiteSpace(SourcePath)
+        ? "No file selected yet."
+        : Path.GetFileName(SourcePath);
+    public string SelectedSourcePathText => string.IsNullOrWhiteSpace(SourcePath)
+        ? "Drop a local .fb2, .epub, or .zip file here or use Select Files..."
+        : SourcePath;
 
     public bool IsBusy
     {
@@ -101,6 +115,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 RefreshCommand.RaiseCanExecuteChanged();
                 CancelImportCommand.RaiseCanExecuteChanged();
                 RemoveJobCommand.RaiseCanExecuteChanged();
+                SelectSourceAndImportCommand.RaiseCanExecuteChanged();
                 BrowseSourceCommand.RaiseCanExecuteChanged();
                 BrowseWorkingDirectoryCommand.RaiseCanExecuteChanged();
             }
@@ -161,6 +176,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand CancelImportCommand { get; }
     public AsyncCommand RemoveJobCommand { get; }
+    public AsyncCommand SelectSourceAndImportCommand { get; }
     public AsyncCommand BrowseSourceCommand { get; }
     public AsyncCommand BrowseWorkingDirectoryCommand { get; }
 
@@ -182,6 +198,16 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         SourcePath = sourcePath;
         UiLogging.Information("Applied dropped source path to import shell.");
+    }
+
+    public async Task ApplyDroppedSourcePathAndStartAsync(string? sourcePath)
+    {
+        ApplyDroppedSourcePath(sourcePath);
+
+        if (CanStartImport())
+        {
+            await StartImportAsync();
+        }
     }
 
     public async Task StartImportAsync()
@@ -316,6 +342,22 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
     }
 
+    public async Task SelectSourceAndImportAsync()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var selectedPath = await _pathSelectionService.PickSourceFileAsync(cancellation.Token);
+        if (string.IsNullOrWhiteSpace(selectedPath))
+        {
+            return;
+        }
+
+        SourcePath = selectedPath;
+        if (CanStartImport())
+        {
+            await StartImportAsync();
+        }
+    }
+
     public async Task BrowseWorkingDirectoryAsync()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -396,6 +438,26 @@ internal sealed class ImportJobsViewModel : ObservableObject
         ErrorText = LastResult.Error is null
             ? "No error."
             : $"{LastResult.Error.Code}: {LastResult.Error.Message}";
+    }
+
+    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is nameof(SourcePath))
+        {
+            RaisePropertyChanged(nameof(HasSelectedSource));
+            RaisePropertyChanged(nameof(SelectedSourceLabel));
+            RaisePropertyChanged(nameof(SelectedSourcePathText));
+        }
+        else if (eventArgs.PropertyName is nameof(IsBusy))
+        {
+            RaisePropertyChanged(nameof(ShowIdleImportPicker));
+            RaisePropertyChanged(nameof(ShowRunningImportState));
+            ImportActivityChanged?.Invoke(IsBusy);
+        }
+        else if (eventArgs.PropertyName is nameof(LastResult))
+        {
+            RaisePropertyChanged(nameof(HasImportResult));
+        }
     }
 
     private async Task RaiseImportCompletedSuccessfullyAsync(ImportJobResultModel result)

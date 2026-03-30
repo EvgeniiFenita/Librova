@@ -256,6 +256,48 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_SelectSourceAndImportCommand_StartsImportAfterPickingSource()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = CreateSupportedSourceFile(sandboxRoot, "selected.fb2");
+            var viewModel = new ImportJobsViewModel(
+                service,
+                new FakePathSelectionService
+                {
+                    SelectedSourcePath = sourcePath
+                })
+            {
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.SelectSourceAndImportCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(sourcePath, viewModel.SourcePath);
+            Assert.Equal(42UL, viewModel.LastJobId);
+            Assert.NotNull(viewModel.LastResult);
+            Assert.Equal(sourcePath, service.LastStartRequest?.SourcePath);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_StartImportPassesProbableDuplicateOverrideFlag()
     {
         var service = new FakeImportJobsService();

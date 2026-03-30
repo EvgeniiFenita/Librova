@@ -158,6 +158,43 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task Shell_DisablesNavigationWhileImportIsRunning()
+    {
+        var importService = new BlockingImportJobsService();
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            importService,
+            new FakeLibraryCatalogService());
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        application.Shell.ImportJobs.SourcePath = CreateTempFile(".fb2");
+        application.Shell.ImportJobs.WorkingDirectory = Path.Combine(Path.GetTempPath(), "librova-shell-running", $"{Guid.NewGuid():N}");
+
+        var runTask = application.Shell.ImportJobs.StartImportAsync();
+        await importService.WaitForPollingAsync();
+
+        Assert.True(application.Shell.IsImportInProgress);
+        Assert.True(application.Shell.IsImportSectionActive);
+        Assert.False(application.Shell.ShowLibrarySectionCommand.CanExecute(null));
+        Assert.False(application.Shell.ShowSettingsSectionCommand.CanExecute(null));
+
+        await application.Shell.ImportJobs.CancelCurrentAsync();
+        await runTask;
+
+        Assert.False(application.Shell.IsImportInProgress);
+        Assert.True(application.Shell.ShowLibrarySectionCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task Create_WithPathSelectionService_WiresBrowseActionsIntoShellViewModel()
     {
         var session = new ShellSession(
@@ -540,6 +577,53 @@ public sealed class ShellApplicationTests
             _resultReady = true;
             return Task.FromResult(1UL);
         }
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class BlockingImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _polling = new();
+        private volatile bool _cancelled;
+
+        public Task WaitForPollingAsync() => _polling.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _cancelled = true;
+            return Task.FromResult(true);
+        }
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(_cancelled
+                ? new ImportJobResultModel
+                {
+                    Snapshot = new ImportJobSnapshotModel
+                    {
+                        JobId = jobId,
+                        Status = ImportJobStatusModel.Cancelled,
+                        Message = "Cancelled"
+                    }
+                }
+                : null);
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _polling.TrySetResult();
+            return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Running"
+            });
+        }
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(11UL);
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

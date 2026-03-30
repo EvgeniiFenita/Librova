@@ -11,156 +11,96 @@
       <StackPanel Spacing="18">
         <StackPanel Spacing="6">
           <TextBlock Classes="SectionTitle"
-                     Text="Import Workspace" />
+                     Text="Import Books" />
           <TextBlock Opacity="0.72"
-                     Text="Drop `.fb2`, `.epub`, or `.zip` onto the window or use the fields below to start an import job."
+                     Text="Drop a local `.fb2`, `.epub`, or `.zip` file onto the window, or use `Select Files...` to import it into the managed library."
                      TextWrapping="Wrap" />
         </StackPanel>
 
         <Border Classes="TintedCard"
                 Background="#F6E8D7"
                 BorderBrush="#D9BE98">
-          <StackPanel Spacing="8">
+          <StackPanel Spacing="12">
             <TextBlock FontWeight="SemiBold"
-                       Text="Quick drop zone" />
+                       Text="Drop files here" />
             <TextBlock Opacity="0.82"
-                       Text="When a local file is dropped onto the window, Librova applies it as the import source path."
+                       Text="Librova accepts single `.fb2`, `.epub`, and `.zip` inputs. Selecting or dropping a file starts the import flow immediately."
                        TextWrapping="Wrap" />
+            <Button Classes="PrimaryAction"
+                    Width="180"
+                    HorizontalAlignment="Left"
+                    Command="{Binding ImportJobs.SelectSourceAndImportCommand}"
+                    Content="Select Files..." />
           </StackPanel>
         </Border>
 
-        <Grid RowDefinitions="Auto,Auto,Auto"
-              ColumnDefinitions="Auto,*"
-              ColumnSpacing="16"
-              RowSpacing="14">
-          <TextBlock VerticalAlignment="Center"
-                     Text="Source File" />
-          <StackPanel Grid.Column="1"
-                      Spacing="6">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-              <TextBox Classes="ImportField"
-                       Watermark="C:\Books\incoming\book.fb2"
-                       Text="{Binding ImportJobs.SourcePath}" />
-              <Button Grid.Column="1"
-                      Classes="SecondaryAction"
-                      MinWidth="108"
-                      Command="{Binding ImportJobs.BrowseSourceCommand}"
-                      Content="Browse..." />
-            </Grid>
+        <Border Classes="TintedCard"
+                Background="#FAF4EC"
+                BorderBrush="#E0D4C4">
+          <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Selected Source" />
+            <TextBlock FontSize="16"
+                       FontWeight="SemiBold"
+                       Text="{Binding ImportJobs.SelectedSourceLabel}" />
+            <TextBlock Opacity="0.78"
+                       Text="{Binding ImportJobs.SelectedSourcePathText}"
+                       TextWrapping="Wrap" />
             <TextBlock FontSize="12"
                        Foreground="#A04628"
                        IsVisible="{Binding ImportJobs.HasSourceValidationError}"
                        Text="{Binding ImportJobs.SourceValidationMessage}"
                        TextWrapping="Wrap" />
-            <TextBlock FontSize="12"
-                       Opacity="0.64"
-                       IsVisible="{Binding ImportJobs.ShowSourceHelperText}"
-                       Text="Supported input types: .fb2, .epub, .zip"
-                       TextWrapping="Wrap" />
           </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
 
-          <TextBlock Grid.Row="1"
-                     VerticalAlignment="Center"
-                     Text="Working Directory" />
-          <StackPanel Grid.Row="1"
-                      Grid.Column="1"
-                      Spacing="6">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-              <TextBox Classes="ImportField"
-                       Watermark="C:\Temp\Librova\Work"
-                       Text="{Binding ImportJobs.WorkingDirectory}" />
-              <Button Grid.Column="1"
-                      Classes="SecondaryAction"
-                      MinWidth="108"
-                      Command="{Binding ImportJobs.BrowseWorkingDirectoryCommand}"
-                      Content="Browse..." />
-            </Grid>
-            <TextBlock FontSize="12"
-                       Foreground="#A04628"
-                       IsVisible="{Binding ImportJobs.HasWorkingDirectoryValidationError}"
-                       Text="{Binding ImportJobs.WorkingDirectoryValidationMessage}"
-                       TextWrapping="Wrap" />
-            <TextBlock FontSize="12"
-                       Opacity="0.64"
-                       IsVisible="{Binding ImportJobs.ShowWorkingDirectoryHelperText}"
-                       Text="Temporary work area used for extraction and conversion."
-                       TextWrapping="Wrap" />
-          </StackPanel>
-
-          <TextBlock Grid.Row="2"
-                     VerticalAlignment="Center"
-                     Text="Duplicate Policy" />
-          <Border Grid.Row="2"
-                  Grid.Column="1"
-                  Background="#FAF4EC"
-                  BorderBrush="#E0D4C4"
-                  BorderThickness="1"
-                  CornerRadius="14"
-                  Padding="14">
-            <CheckBox Content="Allow import when only probable duplicates are found"
-                      IsChecked="{Binding ImportJobs.AllowProbableDuplicates}" />
-          </Border>
-        </Grid>
-
-        <WrapPanel Orientation="Horizontal">
-          <Button Classes="PrimaryAction"
-                  Width="190"
-                  Margin="0,0,10,10"
-                  Command="{Binding ImportJobs.StartImportCommand}"
-                  Content="Start Import" />
+    <Border Classes="SurfaceCard"
+            IsVisible="{Binding ImportJobs.ShowRunningImportState}">
+      <StackPanel Spacing="14">
+        <TextBlock Classes="SectionTitle"
+                   Text="Import In Progress" />
+        <TextBlock FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="{Binding ImportJobs.StatusText}" />
+        <TextBlock Opacity="0.78"
+                   Text="The import pipeline is running. Navigation and other actions stay locked until the import finishes or is cancelled."
+                   TextWrapping="Wrap" />
+        <WrapPanel>
           <Button Classes="SecondaryAction"
                   Width="140"
-                  Margin="0,0,10,10"
-                  Command="{Binding ImportJobs.RefreshCommand}"
-                  Content="Refresh" />
-          <Button Classes="SecondaryAction"
-                  Width="140"
-                  Margin="0,0,10,10"
                   Command="{Binding ImportJobs.CancelImportCommand}"
                   Content="Cancel" />
-          <Button Classes="SecondaryAction"
-                  Width="150"
-                  Margin="0,0,10,10"
-                  Command="{Binding ImportJobs.RemoveJobCommand}"
-                  Content="Remove Job" />
         </WrapPanel>
       </StackPanel>
     </Border>
 
-    <Grid ColumnDefinitions="1.05*,0.95*"
-          ColumnSpacing="18">
-      <Border Grid.Column="0"
-              Classes="TintedCard"
-              Background="#E6EEF0"
-              BorderBrush="#C5D2D8">
-        <StackPanel Spacing="10">
-          <TextBlock Classes="SectionTitle"
-                     Text="Import Summary" />
-          <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
-                     TextWrapping="Wrap" />
-        </StackPanel>
-      </Border>
+    <Border Classes="SurfaceCard"
+            IsVisible="{Binding ImportJobs.HasImportResult}">
+      <StackPanel Spacing="14">
+        <TextBlock Classes="SectionTitle"
+                   Text="Last Import Result" />
+        <TextBlock FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="{Binding ImportJobs.StatusText}" />
+        <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
+                   TextWrapping="Wrap" />
 
-      <Border Grid.Column="1"
-              Classes="TintedCard"
-              Background="#F5E8DB"
-              BorderBrush="#DEC5A9">
-        <StackPanel Spacing="10">
-          <TextBlock Classes="SectionTitle"
-                     Text="Warnings and Errors" />
+        <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Warnings" />
           <TextBlock Text="{Binding ImportJobs.WarningsText}"
                      TextWrapping="Wrap" />
-          <TextBlock Margin="0,6,0,0"
-                     FontWeight="SemiBold"
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock FontWeight="SemiBold"
                      Text="Error" />
           <TextBlock Text="{Binding ImportJobs.ErrorText}"
                      TextWrapping="Wrap" />
         </StackPanel>
-      </Border>
-    </Grid>
+      </StackPanel>
+    </Border>
   </StackPanel>
 </UserControl>

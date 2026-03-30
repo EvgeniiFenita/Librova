@@ -286,12 +286,6 @@
                 <TextBlock FontSize="12"
                            Text="{Binding Shell.LibraryRoot}"
                            TextWrapping="Wrap" />
-                <TextBlock Margin="0,8,0,0"
-                           FontWeight="SemiBold"
-                           Text="Host Status" />
-                <TextBlock FontSize="12"
-                           Text="{Binding Shell.ImportJobs.StatusText}"
-                           TextWrapping="Wrap" />
               </StackPanel>
             </Border>
           </StackPanel>

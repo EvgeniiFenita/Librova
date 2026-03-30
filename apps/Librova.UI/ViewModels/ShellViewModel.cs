@@ -8,6 +8,7 @@ using Librova.UI.Runtime;
 using Librova.UI.CoreHost;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -45,6 +46,7 @@ internal sealed class ShellViewModel : ObservableObject
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
         LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
+        ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
@@ -62,9 +64,9 @@ internal sealed class ShellViewModel : ObservableObject
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
         ResetPreferencesCommand = new AsyncCommand(ResetPreferencesAsync, () => true);
         BrowsePreferredLibraryRootCommand = new AsyncCommand(BrowsePreferredLibraryRootAsync, () => true);
-        ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => CurrentSection is not ShellSection.Library);
-        ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => CurrentSection is not ShellSection.Import);
-        ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => CurrentSection is not ShellSection.Settings);
+        ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Library);
+        ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Import);
+        ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Settings);
 
         UpdatePreferredLibraryRootValidation();
         UpdateConverterValidation();
@@ -228,6 +230,7 @@ internal sealed class ShellViewModel : ObservableObject
     public bool IsLibrarySectionActive => CurrentSection is ShellSection.Library;
     public bool IsImportSectionActive => CurrentSection is ShellSection.Import;
     public bool IsSettingsSectionActive => CurrentSection is ShellSection.Settings;
+    public bool IsImportInProgress => ImportJobs.IsBusy;
     public bool IsConverterDisabled => SelectedConverterMode is UiConverterMode.Disabled;
     public bool IsBuiltInConverterSelected => SelectedConverterMode is UiConverterMode.BuiltInFb2Cng;
     public bool IsCustomConverterSelected => SelectedConverterMode is UiConverterMode.CustomCommand;
@@ -260,6 +263,12 @@ internal sealed class ShellViewModel : ObservableObject
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
     public Task InitializeAsync() => LibraryBrowser.RefreshAsync();
+
+    public Task ActivateImportSectionAsync()
+    {
+        CurrentSection = ShellSection.Import;
+        return Task.CompletedTask;
+    }
 
     private Task ShowLibrarySectionAsync()
     {
@@ -435,5 +444,23 @@ internal sealed class ShellViewModel : ObservableObject
     private async Task HandleImportCompletedSuccessfullyAsync()
     {
         await LibraryBrowser.RefreshAsync();
+    }
+
+    private void OnImportJobsPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is not nameof(ImportJobsViewModel.IsBusy))
+        {
+            return;
+        }
+
+        RaisePropertyChanged(nameof(IsImportInProgress));
+        if (ImportJobs.IsBusy && CurrentSection is not ShellSection.Import)
+        {
+            CurrentSection = ShellSection.Import;
+        }
+
+        ShowLibrarySectionCommand.RaiseCanExecuteChanged();
+        ShowImportSectionCommand.RaiseCanExecuteChanged();
+        ShowSettingsSectionCommand.RaiseCanExecuteChanged();
     }
 }
