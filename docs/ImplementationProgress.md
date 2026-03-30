@@ -49,3 +49,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 ### Phase 5. Converter Integration
 
 - `2026-03-30` Feature: added converter command foundation with a built-in `fb2cng` profile and a user-configurable argument-template contract.
+- `2026-03-30` Feature: added external converter runtime execution with process cancellation support and output relocation for directory-based converters.

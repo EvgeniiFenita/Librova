@@ -39,6 +39,7 @@ Implemented slices at this point:
 - `ParserRegistry`
 - `SearchIndex`
 - `ConverterCommand`
+- `ConverterRuntime`
 
 ## 4. Persistence And Storage
 
@@ -75,6 +76,11 @@ Implemented slices at this point:
 - The current implementation already contains command-building support for:
   - generic external converters with placeholders
   - the default `fb2cng` command shape
+- External converter execution is implemented through a native process runner.
+- The runtime currently supports two output modes:
+  - exact destination file path
+  - single produced file in a destination directory with relocation into the managed target path
+- Converter execution supports cancellation through `stop_token` and progress reporting through `IProgressSink`.
 
 ## 8. External Converter Reference
 
@@ -105,12 +111,12 @@ Stable facts taken from that reference:
   - parser registry
   - search behavior
   - converter command building
+  - external converter runtime execution and cancellation
 
 ## 10. Current Gaps
 
 Not implemented yet, even if already planned architecturally:
 
-- external converter process runner
 - ZIP import orchestration
 - trash implementation
 - application use cases and job engine
