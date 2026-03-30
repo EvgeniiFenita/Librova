@@ -420,6 +420,7 @@ public sealed class ShellApplicationTests
     [Fact]
     public async Task ShellSettings_CanSaveAndResetPreferredLibraryRoot()
     {
+        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "preferred-root", Guid.NewGuid().ToString("N"));
         var preferencesStore = new FakePreferencesStore();
         var session = new ShellSession(
             new CoreHostProcess(),
@@ -434,7 +435,7 @@ public sealed class ShellApplicationTests
             session,
             new FakePathSelectionService
             {
-                SelectedWorkingDirectory = @"D:\Librova\Preferred"
+                SelectedWorkingDirectory = selectedPath
             },
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: preferencesStore);
@@ -442,7 +443,7 @@ public sealed class ShellApplicationTests
         await application.Shell.BrowsePreferredLibraryRootCommand.ExecuteAsyncForTests();
         await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(@"D:\Librova\Preferred", preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
+        Assert.Equal(selectedPath, preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
         Assert.Contains("Next app launch", application.Shell.PreferencesStatusText, StringComparison.OrdinalIgnoreCase);
 
         await application.Shell.ResetPreferencesCommand.ExecuteAsyncForTests();

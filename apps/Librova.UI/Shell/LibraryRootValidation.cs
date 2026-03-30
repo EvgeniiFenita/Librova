@@ -21,6 +21,12 @@ internal static class LibraryRootValidation
             return "Library root must not point to a file.";
         }
 
+        var rootPath = Path.GetPathRoot(libraryRoot);
+        if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+        {
+            return "Library root must be on an available drive.";
+        }
+
         return string.Empty;
     }
 }

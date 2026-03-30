@@ -73,7 +73,7 @@
       </StackPanel>
     </Border>
 
-    <Border IsVisible="{Binding HasSetup}"
+    <Border IsVisible="{Binding IsShowingFirstRunSetup}"
             Background="#FFF8EF"
             BorderBrush="#D9C7AE"
             BorderThickness="1"
@@ -161,48 +161,6 @@
             </Grid>
           </StackPanel>
         </Border>
-
-        <Border Background="#FFF9F1"
-                BorderBrush="#E0CAB4"
-                BorderThickness="1"
-                CornerRadius="20"
-                Padding="20"
-                IsVisible="{Binding HasStartupRecoverySetup}">
-          <StackPanel Spacing="14">
-            <TextBlock Classes="SectionTitle"
-                       Text="Choose Another Library Root" />
-            <TextBlock Opacity="0.74"
-                       Text="If startup failed because the configured library root is unavailable or invalid, pick a different managed library root and retry startup from here."
-                       TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-              <TextBox Classes="ImportField"
-                       Watermark="C:\Libraries\Librova"
-                       Text="{Binding Setup.LibraryRoot}" />
-              <Button Grid.Column="1"
-                      Classes="SecondaryAction"
-                      MinWidth="108"
-                      Command="{Binding Setup.BrowseLibraryRootCommand}"
-                      Content="Browse..." />
-            </Grid>
-            <TextBlock FontSize="12"
-                       Foreground="#A04628"
-                       IsVisible="{Binding Setup.HasValidationError}"
-                       Text="{Binding Setup.ValidationMessage}"
-                       TextWrapping="Wrap" />
-            <TextBlock FontSize="12"
-                       Opacity="0.64"
-                       IsVisible="{Binding Setup.ShowHelperText}"
-                       Text="Choose an absolute directory path. Librova will retry startup and only persist the library root after a successful shell launch."
-                       TextWrapping="Wrap" />
-            <WrapPanel>
-              <Button Classes="PrimaryAction"
-                      Width="220"
-                      Command="{Binding Setup.ContinueCommand}"
-                      Content="Retry With This Library" />
-            </WrapPanel>
-          </StackPanel>
-        </Border>
       </StackPanel>
     </Border>
 
@@ -256,6 +214,48 @@
                          Text="{Binding UiPreferencesFilePath}"
                          TextWrapping="Wrap" />
             </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Background="#FFF9F1"
+                BorderBrush="#E0CAB4"
+                BorderThickness="1"
+                CornerRadius="20"
+                Padding="20"
+                IsVisible="{Binding HasStartupRecoverySetup}">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="SectionTitle"
+                       Text="Choose Another Library Root" />
+            <TextBlock Opacity="0.74"
+                       Text="If startup failed because the configured library root is unavailable or invalid, pick a different managed library root and retry startup from here."
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10">
+              <TextBox Classes="ImportField"
+                       Watermark="C:\Libraries\Librova"
+                       Text="{Binding Setup.LibraryRoot}" />
+              <Button Grid.Column="1"
+                      Classes="SecondaryAction"
+                      MinWidth="108"
+                      Command="{Binding Setup.BrowseLibraryRootCommand}"
+                      Content="Browse..." />
+            </Grid>
+            <TextBlock FontSize="12"
+                       Foreground="#A04628"
+                       IsVisible="{Binding Setup.HasValidationError}"
+                       Text="{Binding Setup.ValidationMessage}"
+                       TextWrapping="Wrap" />
+            <TextBlock FontSize="12"
+                       Opacity="0.64"
+                       IsVisible="{Binding Setup.ShowHelperText}"
+                       Text="Choose an absolute directory path on an available drive. Librova will retry startup and only persist the library root after a successful shell launch."
+                       TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Classes="PrimaryAction"
+                      Width="220"
+                      Command="{Binding Setup.ContinueCommand}"
+                      Content="Retry With This Library" />
+            </WrapPanel>
           </StackPanel>
         </Border>
       </StackPanel>

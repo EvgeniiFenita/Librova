@@ -22,30 +22,47 @@ public sealed class FirstRunSetupViewModelTests
     }
 
     [Fact]
+    public void ContinueCommand_DisabledForUnavailableDrive()
+    {
+        var unavailableRoot = GetUnavailableDriveRoot();
+        var viewModel = new FirstRunSetupViewModel(
+            unavailableRoot,
+            new FakePathSelectionService(),
+            new FakePreferencesStore(),
+            _ => Task.CompletedTask);
+
+        Assert.False(viewModel.ContinueCommand.CanExecute(null));
+        Assert.True(viewModel.HasValidationError);
+        Assert.Contains("available drive", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task BrowseLibraryRootAsync_AppliesPickedPath()
     {
+        var selectedPath = BuildAvailableLibraryRoot("browse");
         var viewModel = new FirstRunSetupViewModel(
-            @"C:\Libraries\Librova",
+            BuildAvailableLibraryRoot("initial"),
             new FakePathSelectionService
             {
-                SelectedWorkingDirectory = @"D:\Librova\Data"
+                SelectedWorkingDirectory = selectedPath
             },
             new FakePreferencesStore(),
             _ => Task.CompletedTask);
 
         await viewModel.BrowseLibraryRootCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(@"D:\Librova\Data", viewModel.LibraryRoot);
+        Assert.Equal(selectedPath, viewModel.LibraryRoot);
         Assert.False(viewModel.HasValidationError);
     }
 
     [Fact]
     public async Task ContinueCommand_SavesPreferenceAfterSuccessfulCallback()
     {
+        var libraryRoot = BuildAvailableLibraryRoot("save-success");
         var preferences = new FakePreferencesStore();
         string? continuedWith = null;
         var viewModel = new FirstRunSetupViewModel(
-            @"D:\Librova\Data",
+            libraryRoot,
             new FakePathSelectionService(),
             preferences,
             libraryRoot =>
@@ -56,13 +73,14 @@ public sealed class FirstRunSetupViewModelTests
 
         await viewModel.ContinueCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(@"D:\Librova\Data", preferences.LastSavedSnapshot?.PreferredLibraryRoot);
-        Assert.Equal(@"D:\Librova\Data", continuedWith);
+        Assert.Equal(libraryRoot, preferences.LastSavedSnapshot?.PreferredLibraryRoot);
+        Assert.Equal(libraryRoot, continuedWith);
     }
 
     [Fact]
     public async Task ContinueCommand_PreservesExistingConverterPreferences()
     {
+        var libraryRoot = BuildAvailableLibraryRoot("preserve-converter");
         var preferences = new FakePreferencesStore
         {
             Snapshot = new UiPreferencesSnapshot
@@ -76,14 +94,14 @@ public sealed class FirstRunSetupViewModelTests
         };
 
         var viewModel = new FirstRunSetupViewModel(
-            @"D:\Librova\Data",
+            libraryRoot,
             new FakePathSelectionService(),
             preferences,
             _ => Task.CompletedTask);
 
         await viewModel.ContinueCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(@"D:\Librova\Data", preferences.LastSavedSnapshot?.PreferredLibraryRoot);
+        Assert.Equal(libraryRoot, preferences.LastSavedSnapshot?.PreferredLibraryRoot);
         Assert.Equal(CoreHost.UiConverterMode.CustomCommand, preferences.LastSavedSnapshot?.ConverterMode);
         Assert.Equal(@"C:\Tools\convert.exe", preferences.LastSavedSnapshot?.CustomConverterExecutablePath);
         Assert.Equal(CoreHost.UiConverterOutputMode.SingleFileInDestinationDirectory, preferences.LastSavedSnapshot?.CustomConverterOutputMode);
@@ -92,9 +110,10 @@ public sealed class FirstRunSetupViewModelTests
     [Fact]
     public async Task ContinueCommand_DoesNotSavePreferenceWhenCallbackFails()
     {
+        var libraryRoot = BuildAvailableLibraryRoot("callback-fails");
         var preferences = new FakePreferencesStore();
         var viewModel = new FirstRunSetupViewModel(
-            @"D:\Librova\Data",
+            libraryRoot,
             new FakePathSelectionService(),
             preferences,
             _ => throw new InvalidOperationException("startup failed"));
@@ -135,4 +154,22 @@ public sealed class FirstRunSetupViewModelTests
         {
         }
     }
+
+    private static string GetUnavailableDriveRoot()
+    {
+        for (var drive = 'D'; drive <= 'Z'; drive++)
+        {
+            var candidate = $"{drive}:\\Librova";
+            var root = Path.GetPathRoot(candidate);
+            if (!string.IsNullOrWhiteSpace(root) && !Directory.Exists(root))
+            {
+                return candidate;
+            }
+        }
+
+        return @"\\nonexistent-server\missing-share\Librova";
+    }
+
+    private static string BuildAvailableLibraryRoot(string scenario) =>
+        Path.Combine(Path.GetTempPath(), "librova-ui-tests", scenario, Guid.NewGuid().ToString("N"));
 }

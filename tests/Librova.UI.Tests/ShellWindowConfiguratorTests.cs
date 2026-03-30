@@ -72,6 +72,7 @@ public sealed class ShellWindowConfiguratorTests
 
         Assert.True(state.ViewModel.HasStartupError);
         Assert.True(state.ViewModel.HasStartupRecoverySetup);
+        Assert.False(state.ViewModel.IsShowingFirstRunSetup);
         Assert.Same(setup, state.ViewModel.Setup);
     }
 
@@ -90,6 +91,7 @@ public sealed class ShellWindowConfiguratorTests
         Assert.True(state.ViewModel.HasSetup);
         Assert.False(state.ViewModel.HasShell);
         Assert.False(state.ViewModel.HasStartupError);
+        Assert.True(state.ViewModel.IsShowingFirstRunSetup);
         Assert.False(state.ViewModel.IsStartingUp);
         Assert.Same(setup, state.ViewModel.Setup);
     }

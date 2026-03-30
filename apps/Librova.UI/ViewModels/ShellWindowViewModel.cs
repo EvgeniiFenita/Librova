@@ -40,6 +40,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
     public bool HasSetup => Setup is not null;
     public bool HasStartupError => !string.IsNullOrWhiteSpace(StartupError);
     public bool HasStartupRecoverySetup => HasStartupError && Setup is not null;
+    public bool IsShowingFirstRunSetup => HasSetup && !HasStartupError;
     public bool IsStartingUp => !HasShell && !HasStartupError && !HasSetup;
 
     public static ShellWindowViewModel CreateStartingUp() =>
