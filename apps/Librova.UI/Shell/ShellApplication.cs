@@ -9,10 +9,12 @@ namespace Librova.UI.Shell;
 internal sealed class ShellApplication : IAsyncDisposable
 {
     private readonly ShellSession _session;
+    private readonly ShellStateStore _stateStore;
 
-    public ShellApplication(ShellSession session, ShellViewModel shellViewModel)
+    public ShellApplication(ShellSession session, ShellViewModel shellViewModel, ShellStateStore stateStore)
     {
         _session = session;
+        _stateStore = stateStore;
         Shell = shellViewModel;
     }
 
@@ -27,8 +29,20 @@ internal sealed class ShellApplication : IAsyncDisposable
     public static ShellApplication Create(
         ShellSession session,
         IPathSelectionService? pathSelectionService = null,
-        ShellLaunchOptions? launchOptions = null)
-        => new(session, new ShellViewModel(session, pathSelectionService, launchOptions));
+        ShellLaunchOptions? launchOptions = null,
+        ShellStateStore? stateStore = null)
+    {
+        var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();
+        var savedState = effectiveStateStore.TryLoad();
+        return new(
+            session,
+            new ShellViewModel(session, pathSelectionService, launchOptions, savedState),
+            effectiveStateStore);
+    }
 
-    public ValueTask DisposeAsync() => _session.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        _stateStore.Save(Shell.CreateStateSnapshot());
+        await _session.DisposeAsync();
+    }
 }

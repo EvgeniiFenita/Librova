@@ -1,0 +1,8 @@
+namespace Librova.UI.Shell;
+
+internal sealed class ShellStateSnapshot
+{
+    public string? SourcePath { get; init; }
+    public string? WorkingDirectory { get; init; }
+    public bool AllowProbableDuplicates { get; init; }
+}

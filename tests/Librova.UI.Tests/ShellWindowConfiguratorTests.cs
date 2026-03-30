@@ -19,7 +19,9 @@ public sealed class ShellWindowConfiguratorTests
                 LibraryRoot = @"C:\Libraries\Librova"
             },
             new FakeImportJobsService());
-        var application = ShellApplication.Create(session);
+        var application = ShellApplication.Create(
+            session,
+            stateStore: new ShellStateStore(Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json")));
 
         var state = ShellWindowConfigurator.CreateState(application);
 

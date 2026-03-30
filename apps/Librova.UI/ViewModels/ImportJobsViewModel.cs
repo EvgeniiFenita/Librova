@@ -139,6 +139,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public AsyncCommand BrowseSourceCommand { get; }
     public AsyncCommand BrowseWorkingDirectoryCommand { get; }
 
+    public Shell.ShellStateSnapshot CreateStateSnapshot() =>
+        new()
+        {
+            SourcePath = SourcePath,
+            WorkingDirectory = WorkingDirectory,
+            AllowProbableDuplicates = AllowProbableDuplicates
+        };
+
     public async Task StartImportAsync()
     {
         IsBusy = true;
