@@ -23,6 +23,7 @@ if(BUILD_TESTING)
         TestExternalBookConverter.cpp
         TestEpubParser.cpp
         TestFb2Parser.cpp
+        TestHostOptions.cpp
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
@@ -56,6 +57,7 @@ if(BUILD_TESTING)
             LibriFlowConverterRuntime
             LibriFlowDomain
             LibriFlowCore
+            LibriFlowCoreHost
             LibriFlowDatabaseRuntime
             LibriFlowDatabaseSchema
             LibriFlowEpubParsing

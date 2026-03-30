@@ -19,6 +19,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 
 - Native code is organized as one static library per logical slice under `libs/<SliceName>/`.
 - UI applications live under `apps/`.
+- The repository now also contains the first native host executable under `apps/LibriFlow.Core.Host`.
 - Repository-level documentation lives under `docs/`.
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
@@ -119,6 +120,18 @@ Implemented slices at this point:
   - `Wait`
   - `Remove`
 - The application-facing pipe client maps protobuf DTOs back into repository application DTOs, so future UI code does not need to work with generated protobuf types directly.
+- `libs/CoreHost` now provides command-line parsing for the native host process:
+  - required `--pipe`
+  - required `--library-root`
+  - optional `--serve-one`
+  - optional `--max-sessions`
+  - optional built-in `fb2cng` converter settings
+  - optional custom converter command settings
+- `apps/LibriFlow.Core.Host` now builds the first real native host executable:
+  - ensures managed library directories exist
+  - migrates SQLite schema on startup
+  - composes parser registry, repositories, managed storage, import facade, job service, protobuf adapter, and named-pipe host
+  - serves sequential named-pipe sessions according to host options
 
 ## 5. Persistence And Storage
 
@@ -247,7 +260,7 @@ Not implemented yet, even if already planned architecturally:
 
 - trash implementation
 - full job engine with persistent job registry and streaming job state model
-- named-pipe transport host/client runtime
+- richer long-running native host lifetime management beyond the current sequential session loop
 - Avalonia UI workflow
 
 ## 13. Import Jobs
