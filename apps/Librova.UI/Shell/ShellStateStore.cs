@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace Librova.UI.Shell;
 
-internal sealed class ShellStateStore
+internal sealed class ShellStateStore : IShellStateStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

@@ -40,7 +40,6 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
-            UiLogging.Information("Requesting import job snapshot. JobId={JobId} TimeoutMs={TimeoutMs}", jobId, timeout.TotalMilliseconds);
             var response = await _client.GetSnapshotAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             return ImportJobMapper.FromProto(response);
         }
@@ -58,7 +57,6 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
-            UiLogging.Information("Requesting import job result. JobId={JobId} TimeoutMs={TimeoutMs}", jobId, timeout.TotalMilliseconds);
             var response = await _client.GetResultAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             return ImportJobMapper.FromProto(response);
         }
@@ -77,11 +75,6 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
-            UiLogging.Information(
-                "Waiting for import job completion. JobId={JobId} TimeoutMs={TimeoutMs} WaitTimeoutMs={WaitTimeoutMs}",
-                jobId,
-                timeout.TotalMilliseconds,
-                waitTimeout.TotalMilliseconds);
             var response = await _client.WaitAsync(jobId, timeout, waitTimeout, cancellationToken).ConfigureAwait(false);
             return response.Completed;
         }

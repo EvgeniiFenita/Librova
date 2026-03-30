@@ -137,35 +137,59 @@
                     RowSpacing="14">
                 <TextBlock VerticalAlignment="Center"
                            Text="Source File" />
-                <Grid Grid.Column="1"
-                      ColumnDefinitions="*,Auto"
-                      ColumnSpacing="10">
-                  <TextBox Classes="ImportField"
-                           Watermark="C:\Books\incoming\book.fb2"
-                           Text="{Binding Shell.ImportJobs.SourcePath}" />
-                  <Button Grid.Column="1"
-                          Classes="SecondaryAction"
-                          MinWidth="108"
-                          Command="{Binding Shell.ImportJobs.BrowseSourceCommand}"
-                          Content="Browse..." />
-                </Grid>
+                <StackPanel Grid.Column="1"
+                            Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                    <TextBox Classes="ImportField"
+                             Watermark="C:\Books\incoming\book.fb2"
+                             Text="{Binding Shell.ImportJobs.SourcePath}" />
+                    <Button Grid.Column="1"
+                            Classes="SecondaryAction"
+                            MinWidth="108"
+                            Command="{Binding Shell.ImportJobs.BrowseSourceCommand}"
+                            Content="Browse..." />
+                  </Grid>
+                  <TextBlock FontSize="12"
+                             Foreground="#A04628"
+                             IsVisible="{Binding Shell.ImportJobs.HasSourceValidationError}"
+                             Text="{Binding Shell.ImportJobs.SourceValidationMessage}"
+                             TextWrapping="Wrap" />
+                  <TextBlock FontSize="12"
+                             Opacity="0.64"
+                             IsVisible="{Binding Shell.ImportJobs.ShowSourceHelperText}"
+                             Text="Supported input types: .fb2, .epub, .zip"
+                             TextWrapping="Wrap" />
+                </StackPanel>
 
                 <TextBlock Grid.Row="1"
                            VerticalAlignment="Center"
                            Text="Working Directory" />
-                <Grid Grid.Row="1"
-                      Grid.Column="1"
-                      ColumnDefinitions="*,Auto"
-                      ColumnSpacing="10">
-                  <TextBox Classes="ImportField"
-                           Watermark="C:\Temp\Librova\Work"
-                           Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
-                  <Button Grid.Column="1"
-                          Classes="SecondaryAction"
-                          MinWidth="108"
-                          Command="{Binding Shell.ImportJobs.BrowseWorkingDirectoryCommand}"
-                          Content="Browse..." />
-                </Grid>
+                <StackPanel Grid.Row="1"
+                            Grid.Column="1"
+                            Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                    <TextBox Classes="ImportField"
+                             Watermark="C:\Temp\Librova\Work"
+                             Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
+                    <Button Grid.Column="1"
+                            Classes="SecondaryAction"
+                            MinWidth="108"
+                            Command="{Binding Shell.ImportJobs.BrowseWorkingDirectoryCommand}"
+                            Content="Browse..." />
+                  </Grid>
+                  <TextBlock FontSize="12"
+                             Foreground="#A04628"
+                             IsVisible="{Binding Shell.ImportJobs.HasWorkingDirectoryValidationError}"
+                             Text="{Binding Shell.ImportJobs.WorkingDirectoryValidationMessage}"
+                             TextWrapping="Wrap" />
+                  <TextBlock FontSize="12"
+                             Opacity="0.64"
+                             IsVisible="{Binding Shell.ImportJobs.ShowWorkingDirectoryHelperText}"
+                             Text="Temporary work area used for extraction and conversion."
+                             TextWrapping="Wrap" />
+                </StackPanel>
 
                 <TextBlock Grid.Row="2"
                            VerticalAlignment="Center"

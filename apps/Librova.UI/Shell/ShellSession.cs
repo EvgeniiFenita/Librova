@@ -7,14 +7,14 @@ namespace Librova.UI.Shell;
 
 internal sealed class ShellSession : IAsyncDisposable
 {
-    private readonly CoreHostProcess _coreHostProcess;
+    private readonly IAsyncDisposable _hostLifetime;
 
     public ShellSession(
-        CoreHostProcess coreHostProcess,
+        IAsyncDisposable hostLifetime,
         CoreHostLaunchOptions hostOptions,
         IImportJobsService importJobs)
     {
-        _coreHostProcess = coreHostProcess;
+        _hostLifetime = hostLifetime;
         HostOptions = hostOptions;
         ImportJobs = importJobs;
     }
@@ -22,5 +22,5 @@ internal sealed class ShellSession : IAsyncDisposable
     public CoreHostLaunchOptions HostOptions { get; }
     public IImportJobsService ImportJobs { get; }
 
-    public ValueTask DisposeAsync() => _coreHostProcess.DisposeAsync();
+    public ValueTask DisposeAsync() => _hostLifetime.DisposeAsync();
 }

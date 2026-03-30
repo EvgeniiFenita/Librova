@@ -1,4 +1,5 @@
 using Librova.UI.Desktop;
+using Librova.UI.Logging;
 using Librova.UI.ViewModels;
 using System;
 using System.Threading;
@@ -9,9 +10,9 @@ namespace Librova.UI.Shell;
 internal sealed class ShellApplication : IAsyncDisposable
 {
     private readonly ShellSession _session;
-    private readonly ShellStateStore _stateStore;
+    private readonly IShellStateStore _stateStore;
 
-    public ShellApplication(ShellSession session, ShellViewModel shellViewModel, ShellStateStore stateStore)
+    public ShellApplication(ShellSession session, ShellViewModel shellViewModel, IShellStateStore stateStore)
     {
         _session = session;
         _stateStore = stateStore;
@@ -30,7 +31,7 @@ internal sealed class ShellApplication : IAsyncDisposable
         ShellSession session,
         IPathSelectionService? pathSelectionService = null,
         ShellLaunchOptions? launchOptions = null,
-        ShellStateStore? stateStore = null)
+        IShellStateStore? stateStore = null)
     {
         var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();
         var savedState = effectiveStateStore.TryLoad();
@@ -42,7 +43,15 @@ internal sealed class ShellApplication : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _stateStore.Save(Shell.CreateStateSnapshot());
+        try
+        {
+            _stateStore.Save(Shell.CreateStateSnapshot());
+        }
+        catch (Exception error)
+        {
+            UiLogging.Error(error, "Failed to persist UI shell state during shutdown.");
+        }
+
         await _session.DisposeAsync();
     }
 }

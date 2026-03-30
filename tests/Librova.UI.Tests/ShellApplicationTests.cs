@@ -137,8 +137,47 @@ public sealed class ShellApplicationTests
         Assert.True(snapshot.AllowProbableDuplicates);
     }
 
+    [Fact]
+    public async Task DisposeAsync_StillDisposesSessionWhenStateSaveFails()
+    {
+        var hostLifetime = new FakeAsyncDisposable();
+        var session = new ShellSession(
+            hostLifetime,
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+        var application = ShellApplication.Create(session, stateStore: new ThrowingStateStore());
+
+        await application.DisposeAsync();
+
+        Assert.True(hostLifetime.DisposeCalls > 0);
+    }
+
     private static ShellStateStore CreateIsolatedStateStore() =>
         new(Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json"));
+
+    private sealed class ThrowingStateStore : IShellStateStore
+    {
+        public ShellStateSnapshot? TryLoad() => null;
+
+        public void Save(ShellStateSnapshot snapshot) =>
+            throw new IOException("simulated save failure");
+    }
+
+    private sealed class FakeAsyncDisposable : IAsyncDisposable
+    {
+        public int DisposeCalls { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCalls++;
+            return ValueTask.CompletedTask;
+        }
+    }
 
     private sealed class FakeImportJobsService : IImportJobsService
     {

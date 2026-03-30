@@ -108,6 +108,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Build: added `Run-Librova.ps1` as a one-click development entry point that performs a full build, prepares `out\\runtime`, and launches the UI with runtime logs/state redirected out of `%LOCALAPPDATA%`.
 - `2026-03-30` Feature: reworked the Avalonia import shell into a more structured desktop layout with dedicated workspace, session, summary, and warning/error panels while preserving the existing tested ViewModel flow.
 - `2026-03-30` Fix: changed the UI host-readiness probe to wait for pipe availability without opening a throwaway connection, eliminating false broken-pipe startup errors from the native host log.
+- `2026-03-30` Fix: hardened the UI import shell by removing the hardcoded 15-second auto-cancel path, making shell-state persistence best-effort during shutdown, adding local path validation for import inputs, and reducing polling-related UI log noise.
 
 ### Phase 9. Stabilization
 

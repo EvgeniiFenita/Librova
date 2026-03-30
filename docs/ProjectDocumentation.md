@@ -34,6 +34,10 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now persists import-screen state between launches in a JSON state file under `%LOCALAPPDATA%\\Librova`, including source path, working directory, and probable-duplicate override.
 - the current Avalonia shell baseline now accepts a dropped local file on the main window and applies it as the import `SourcePath`, so desktop drag-and-drop works without bypassing the ViewModel layer.
 - the current Avalonia shell baseline now uses a two-column desktop layout with an explicit import workspace, session summary, operational cards, and a visible drag-and-drop callout instead of the earlier raw form-like shell.
+- the current import shell validates `SourcePath` and `WorkingDirectory` locally before enabling `Start Import`, including file existence, supported source extensions, absolute-path expectations, and rejection of file paths in the working-directory field.
+- the current import shell no longer auto-cancels a long-running job after a hardcoded 15-second UI timeout; cancellation is now user-driven while each IPC call still uses its own bounded timeout.
+- shell shutdown now treats state persistence as best-effort: a failure to save UI shell state is logged but does not prevent disposal of the native host process.
+- high-frequency import polling no longer emits success-path info logs for every snapshot/result query, which keeps `ui.log` focused on actionable events instead of routine polling noise.
 - `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -318,6 +322,8 @@ Stable facts taken from that reference:
 - C# coverage for shell launch-argument parsing and startup source-path prefill in shell composition
 - C# coverage for persisted shell-state loading and saving across shell-application lifecycle
 - C# ViewModel coverage for source-file drag-and-drop path application
+- C# ViewModel coverage for local import-input validation and command enablement against real temporary files
+- C# shell-lifecycle coverage for disposing the native host even when UI shell-state persistence fails
 
 ## 12. Current Gaps
 

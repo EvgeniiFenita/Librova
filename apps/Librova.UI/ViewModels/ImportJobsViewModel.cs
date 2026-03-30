@@ -3,6 +3,7 @@ using Librova.UI.ImportJobs;
 using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,6 +17,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _workingDirectory = string.Empty;
     private bool _allowProbableDuplicates;
     private string _statusText = "Idle";
+    private string _sourceValidationMessage = string.Empty;
+    private string _workingDirectoryValidationMessage = string.Empty;
     private bool _isBusy;
     private ulong? _lastJobId;
     private ImportJobResultModel? _lastResult;
@@ -34,6 +37,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         RemoveJobCommand = new AsyncCommand(RemoveCurrentAsync, CanRemove, HandleCommandErrorAsync);
         BrowseSourceCommand = new AsyncCommand(BrowseSourceAsync, () => !IsBusy, HandleCommandErrorAsync);
         BrowseWorkingDirectoryCommand = new AsyncCommand(BrowseWorkingDirectoryAsync, () => !IsBusy, HandleCommandErrorAsync);
+        UpdateValidationState();
     }
 
     public string SourcePath
@@ -43,6 +47,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         {
             if (SetProperty(ref _sourcePath, value))
             {
+                UpdateValidationState();
                 StartImportCommand.RaiseCanExecuteChanged();
             }
         }
@@ -55,6 +60,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         {
             if (SetProperty(ref _workingDirectory, value))
             {
+                UpdateValidationState();
                 StartImportCommand.RaiseCanExecuteChanged();
             }
         }
@@ -65,6 +71,23 @@ internal sealed class ImportJobsViewModel : ObservableObject
         get => _statusText;
         private set => SetProperty(ref _statusText, value);
     }
+
+    public string SourceValidationMessage
+    {
+        get => _sourceValidationMessage;
+        private set => SetProperty(ref _sourceValidationMessage, value);
+    }
+
+    public string WorkingDirectoryValidationMessage
+    {
+        get => _workingDirectoryValidationMessage;
+        private set => SetProperty(ref _workingDirectoryValidationMessage, value);
+    }
+
+    public bool HasSourceValidationError => !string.IsNullOrWhiteSpace(SourceValidationMessage);
+    public bool HasWorkingDirectoryValidationError => !string.IsNullOrWhiteSpace(WorkingDirectoryValidationMessage);
+    public bool ShowSourceHelperText => !HasSourceValidationError;
+    public bool ShowWorkingDirectoryHelperText => !HasWorkingDirectoryValidationError;
 
     public bool IsBusy
     {
@@ -166,7 +189,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         StatusText = "Starting import...";
         LastResult = null;
         _activeImportCancellation?.Dispose();
-        _activeImportCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        _activeImportCancellation = new CancellationTokenSource();
 
         try
         {
@@ -340,7 +363,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private Task HandleCommandErrorAsync(Exception error)
     {
-        StatusText = error.Message.Length == 0 ? "Import failed." : error.Message;
+        StatusText = error is OperationCanceledException
+            ? "Import was cancelled."
+            : error.Message.Length == 0
+                ? "Import failed."
+                : error.Message;
         return Task.CompletedTask;
     }
 
@@ -372,11 +399,76 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool CanStartImport() =>
         !IsBusy
         && !string.IsNullOrWhiteSpace(SourcePath)
-        && !string.IsNullOrWhiteSpace(WorkingDirectory);
+        && !string.IsNullOrWhiteSpace(WorkingDirectory)
+        && !HasSourceValidationError
+        && !HasWorkingDirectoryValidationError;
 
     private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
 
     private bool CanCancel() => LastJobId.HasValue && IsBusy;
 
     private bool CanRemove() => LastJobId.HasValue && !IsBusy;
+
+    private void UpdateValidationState()
+    {
+        SourceValidationMessage = BuildSourceValidationMessage(SourcePath);
+        WorkingDirectoryValidationMessage = BuildWorkingDirectoryValidationMessage(WorkingDirectory);
+        RaisePropertyChanged(nameof(HasSourceValidationError));
+        RaisePropertyChanged(nameof(HasWorkingDirectoryValidationError));
+        RaisePropertyChanged(nameof(ShowSourceHelperText));
+        RaisePropertyChanged(nameof(ShowWorkingDirectoryHelperText));
+    }
+
+    private static string BuildSourceValidationMessage(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return string.Empty;
+        }
+
+        if (!Path.IsPathFullyQualified(sourcePath))
+        {
+            return "Use an absolute source file path.";
+        }
+
+        if (Directory.Exists(sourcePath))
+        {
+            return "Source path must point to a file, not a directory.";
+        }
+
+        if (!File.Exists(sourcePath))
+        {
+            return "Source file does not exist.";
+        }
+
+        var extension = Path.GetExtension(sourcePath);
+        if (!extension.Equals(".fb2", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Supported source types are .fb2, .epub, and .zip.";
+        }
+
+        return string.Empty;
+    }
+
+    private static string BuildWorkingDirectoryValidationMessage(string workingDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            return string.Empty;
+        }
+
+        if (!Path.IsPathFullyQualified(workingDirectory))
+        {
+            return "Use an absolute working directory path.";
+        }
+
+        if (File.Exists(workingDirectory))
+        {
+            return "Working directory must not point to a file.";
+        }
+
+        return string.Empty;
+    }
 }

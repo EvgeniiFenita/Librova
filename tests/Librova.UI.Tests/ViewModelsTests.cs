@@ -37,27 +37,64 @@ public sealed class ViewModelsTests
 
         Assert.False(viewModel.StartImportCommand.CanExecute(null));
 
-        viewModel.SourcePath = @"C:\Books\book.fb2";
-        viewModel.WorkingDirectory = @"C:\Work";
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
 
-        Assert.True(viewModel.StartImportCommand.CanExecute(null));
+        try
+        {
+            viewModel.SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2");
+            viewModel.WorkingDirectory = Path.Combine(sandboxRoot, "work");
+
+            Assert.True(viewModel.StartImportCommand.CanExecute(null));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
     public async Task ImportJobsViewModel_SetsControlledErrorStateWhenImportFails()
     {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
         var viewModel = new ImportJobsViewModel(new FailingImportJobsService())
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work"
+            SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+            WorkingDirectory = Path.Combine(sandboxRoot, "work")
         };
 
-        await viewModel.StartImportCommand.ExecuteAsyncForTests();
+        try
+        {
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
 
-        Assert.Equal("transport failed", viewModel.StatusText);
-        Assert.False(viewModel.IsBusy);
-        Assert.Null(viewModel.LastResult);
-        Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
+            Assert.Equal("transport failed", viewModel.StatusText);
+            Assert.False(viewModel.IsBusy);
+            Assert.Null(viewModel.LastResult);
+            Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -156,6 +193,127 @@ public sealed class ViewModelsTests
 
         Assert.NotNull(service.LastStartRequest);
         Assert.True(service.LastStartRequest!.AllowProbableDuplicates);
+    }
+
+    [Fact]
+    public void ImportJobsViewModel_DisablesStartForMissingSourceFile()
+    {
+        var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+        {
+            SourcePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.fb2"),
+            WorkingDirectory = @"C:\Work"
+        };
+
+        Assert.False(viewModel.StartImportCommand.CanExecute(null));
+        Assert.Equal("Source file does not exist.", viewModel.SourceValidationMessage);
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_EnablesStartForExistingSupportedSourceFile()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
+            await File.WriteAllTextAsync(sourcePath, "<fb2 />");
+
+            var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+            {
+                SourcePath = sourcePath,
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            Assert.True(viewModel.StartImportCommand.CanExecute(null));
+            Assert.Equal(string.Empty, viewModel.SourceValidationMessage);
+            Assert.Equal(string.Empty, viewModel.WorkingDirectoryValidationMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void ImportJobsViewModel_DisablesStartForUnsupportedSourceExtension()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = Path.Combine(sandboxRoot, "book.txt");
+            File.WriteAllText(sourcePath, "plain text");
+
+            var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+            {
+                SourcePath = sourcePath,
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            Assert.False(viewModel.StartImportCommand.CanExecute(null));
+            Assert.Equal("Supported source types are .fb2, .epub, and .zip.", viewModel.SourceValidationMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void ImportJobsViewModel_DisablesStartWhenWorkingDirectoryPointsToFile()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = Path.Combine(sandboxRoot, "book.epub");
+            File.WriteAllText(sourcePath, "epub");
+            var filePath = Path.Combine(sandboxRoot, "not-a-directory.tmp");
+            File.WriteAllText(filePath, "tmp");
+
+            var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+            {
+                SourcePath = sourcePath,
+                WorkingDirectory = filePath
+            };
+
+            Assert.False(viewModel.StartImportCommand.CanExecute(null));
+            Assert.Equal("Working directory must not point to a file.", viewModel.WorkingDirectoryValidationMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -372,5 +530,12 @@ public sealed class ViewModelsTests
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);
+    }
+
+    private static string CreateSupportedSourceFile(string sandboxRoot, string fileName)
+    {
+        var sourcePath = Path.Combine(sandboxRoot, fileName);
+        File.WriteAllText(sourcePath, "content");
+        return sourcePath;
     }
 }
