@@ -105,6 +105,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added shell launch-argument handling so the UI can start with a prefilled source file path, with verified C# coverage for argument parsing and shell composition.
 - `2026-03-30` Feature: added persisted UI shell state for source path, working directory, and probable-duplicate override, with verified C# coverage for JSON state-store round-trip and shell lifecycle persistence.
 - `2026-03-30` Feature: added drag-and-drop source-file support in the Avalonia shell and verified the dropped-path application behavior through C# ViewModel tests.
+- `2026-03-30` Build: added `Run-Librova.ps1` as a one-click development entry point that performs a full build, prepares `out\\runtime`, and launches the UI with runtime logs/state redirected out of `%LOCALAPPDATA%`.
 
 ### Phase 9. Stabilization
 

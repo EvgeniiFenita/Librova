@@ -2,6 +2,7 @@ using Serilog;
 using Serilog.Events;
 using System;
 using System.IO;
+using Librova.UI.Runtime;
 
 namespace Librova.UI.Logging;
 
@@ -12,11 +13,7 @@ internal static class UiLogging
     private static string? _currentLogFilePath;
 
     public static string DefaultLogFilePath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Librova",
-            "Logs",
-            "ui.log");
+        RuntimeEnvironment.GetDefaultUiLogFilePath();
 
     public static string? CurrentLogFilePath
     {

@@ -1,4 +1,5 @@
 using Librova.UI.Logging;
+using Librova.UI.Runtime;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -20,10 +21,7 @@ internal sealed class ShellStateStore
     public string FilePath { get; }
 
     public static ShellStateStore CreateDefault() =>
-        new(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Librova",
-            "ui-shell-state.json"));
+        new(RuntimeEnvironment.GetDefaultUiStateFilePath());
 
     public ShellStateSnapshot? TryLoad()
     {

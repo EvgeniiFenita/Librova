@@ -48,6 +48,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
+- the repository root now contains [Run-Librova.ps1](C:\Users\evgen\Desktop\LibriFlow\Run-Librova.ps1) as the one-click development entry point for full build and UI launch.
 
 ## 3. Application Layer
 
@@ -167,6 +168,11 @@ Implemented slices at this point:
 - `libs/Logging` now provides the first native logging facade over `spdlog`
 - the current core logging baseline writes host logs into `Logs/host.log` and mirrors the same records to `stderr`
 - the current UI logging baseline writes logs into `%LOCALAPPDATA%\\Librova\\Logs\\ui.log` and mirrors the same records to the debug sink
+- when the UI is launched through `Run-Librova.ps1`, runtime files are redirected into `out\\runtime` through explicit environment overrides:
+  - `out\\runtime\\logs\\ui.log`
+  - `out\\runtime\\ui-shell-state.json`
+  - `out\\runtime\\library\\...`
+  - `out\\runtime\\library\\Logs\\host.log`
 
 ## 5. Persistence And Storage
 
