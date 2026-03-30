@@ -105,9 +105,6 @@
           <StackPanel Spacing="14">
             <TextBlock Classes="SectionTitle"
                        Text="Managed Library Root" />
-            <TextBlock Opacity="0.74"
-                       Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
-                       TextWrapping="Wrap" />
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
               <TextBox Classes="ImportField"
@@ -136,33 +133,6 @@
                       Command="{Binding Setup.ContinueCommand}"
                       Content="Continue" />
             </WrapPanel>
-          </StackPanel>
-        </Border>
-
-        <Border Background="#FFF9F1"
-                BorderBrush="#E0CAB4"
-                BorderThickness="1"
-                CornerRadius="18"
-                Padding="18">
-          <StackPanel Spacing="10">
-            <TextBlock FontWeight="SemiBold"
-                       Text="Setup files" />
-            <Grid ColumnDefinitions="Auto,*"
-                  ColumnSpacing="10"
-                  RowDefinitions="Auto,Auto">
-              <TextBlock FontWeight="SemiBold"
-                         Text="UI log" />
-              <TextBlock Grid.Column="1"
-                         Text="{Binding UiLogFilePath}"
-                         TextWrapping="Wrap" />
-              <TextBlock Grid.Row="1"
-                         FontWeight="SemiBold"
-                         Text="Preferences" />
-              <TextBlock Grid.Row="1"
-                         Grid.Column="1"
-                         Text="{Binding UiPreferencesFilePath}"
-                         TextWrapping="Wrap" />
-            </Grid>
           </StackPanel>
         </Border>
       </StackPanel>
