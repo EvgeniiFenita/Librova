@@ -174,6 +174,7 @@ Implemented slices at this point:
   - `out\\runtime\\ui-shell-state.json`
   - `out\\runtime\\library\\...`
   - `out\\runtime\\library\\Logs\\host.log`
+- the current UI host-readiness check uses `WaitNamedPipe` and no longer creates a throwaway client connection that pollutes `host.log` with false broken-pipe startup errors
 
 ## 5. Persistence And Storage
 

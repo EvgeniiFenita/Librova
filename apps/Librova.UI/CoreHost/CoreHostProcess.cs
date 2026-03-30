@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
-using System.IO.Pipes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Librova.UI.Logging;
+using System.Runtime.InteropServices;
 
 namespace Librova.UI.CoreHost;
 
@@ -104,29 +104,15 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     private static async Task WaitForPipeReadyAsync(string pipePath, CancellationToken cancellationToken)
     {
-        var pipeName = pipePath.Replace(@"\\.\pipe\", string.Empty, StringComparison.Ordinal);
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
 
         while (DateTime.UtcNow < deadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            try
+            if (WaitNamedPipe(pipePath, 100))
             {
-                await using var pipe = new NamedPipeClientStream(
-                    ".",
-                    pipeName,
-                    PipeDirection.InOut,
-                    PipeOptions.Asynchronous);
-
-                await pipe.ConnectAsync(100, cancellationToken).ConfigureAwait(false);
                 return;
-            }
-            catch (TimeoutException)
-            {
-            }
-            catch (IOException)
-            {
             }
 
             await Task.Delay(50, cancellationToken).ConfigureAwait(false);
@@ -148,4 +134,8 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
         }
     }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WaitNamedPipe(string name, int timeout);
 }
