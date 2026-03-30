@@ -1,3 +1,4 @@
+using Librova.UI.Desktop;
 using Librova.UI.ViewModels;
 using System;
 using System.Threading;
@@ -23,8 +24,8 @@ internal sealed class ShellApplication : IAsyncDisposable
         return Create(session);
     }
 
-    public static ShellApplication Create(ShellSession session)
-        => new(session, new ShellViewModel(session));
+    public static ShellApplication Create(ShellSession session, IPathSelectionService? pathSelectionService = null)
+        => new(session, new ShellViewModel(session, pathSelectionService));
 
     public ValueTask DisposeAsync() => _session.DisposeAsync();
 }

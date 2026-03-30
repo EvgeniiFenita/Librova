@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Librova.UI.Desktop;
 using Librova.UI.Logging;
 using Librova.UI.Shell;
 using Librova.UI.Views;
@@ -27,11 +28,13 @@ internal sealed partial class App : Application
             try
             {
                 UiLogging.Information("Starting Avalonia desktop shell.");
-                _shellApplication = ShellApplication.StartDevelopmentAsync(CancellationToken.None)
+                var session = ShellBootstrap.StartDevelopmentSessionAsync(CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
-
                 var mainWindow = new MainWindow();
+                _shellApplication = ShellApplication.Create(
+                    session,
+                    new AvaloniaPathSelectionService(mainWindow));
                 ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
                 desktop.MainWindow = mainWindow;
                 UiLogging.Information("Avalonia desktop shell is ready.");
