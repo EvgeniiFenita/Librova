@@ -100,6 +100,11 @@ Implemented slices at this point:
   - structured transport statuses for invalid request, unknown method, and internal error
   - synchronous Win32 named-pipe channel wrappers with length-prefixed message exchange
   - real round-trip coverage against a live Windows named pipe
+- `libs/PipeHost` now provides the first core-side named-pipe host loop:
+  - accepts one connected pipe session
+  - reads one framed protobuf request
+  - dispatches it through `PipeRequestDispatcher`
+  - writes one framed protobuf response back to the client
 
 ## 5. Persistence And Storage
 
@@ -218,6 +223,7 @@ Stable facts taken from that reference:
 - application-level import facade routing and summary aggregation
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
+- end-to-end named-pipe host request/response loop over the import job service
 
 ## 12. Current Gaps
 
