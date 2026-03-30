@@ -12,7 +12,8 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - The MVP supports `EPUB`, `FB2`, and `ZIP` import.
 - The UI is planned as `C# / Avalonia`.
 - The core is implemented in `C++20`.
-- The system architecture is two-process and uses `gRPC + Protobuf` at the process boundary.
+- The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
+- The current MVP transport direction is `Protobuf over Windows named pipes`, not mandatory `gRPC`.
 
 ## 2. Repository Baseline
 
@@ -50,6 +51,7 @@ Implemented slices at this point:
 - `EpubParsing`
 - `Fb2Parsing`
 - `ParserRegistry`
+- `PipeTransport`
 - `ProtoContracts`
 - `ProtoMapping`
 - `ProtoServices`
@@ -90,6 +92,12 @@ Implemented slices at this point:
   - `CancelImportJob`
   - `RemoveImportJob`
 - The current adapter is transport-neutral and uses protobuf request/response types directly, but it does not yet depend on a real gRPC server runtime.
+- The repository intentionally does not require a `gRPC C++` runtime for the MVP transport path.
+- `libs/PipeTransport` now provides the first transport foundation for `Protobuf over named pipes`:
+  - binary request/response envelope framing
+  - explicit pipe method ids for `LibraryJobService`
+  - protobuf request dispatch into the transport-neutral service adapter
+  - structured transport statuses for invalid request, unknown method, and internal error
 
 ## 5. Persistence And Storage
 
@@ -204,8 +212,9 @@ Stable facts taken from that reference:
   - single-file import orchestration
   - single-file import rollback and probable-duplicate override behavior
   - review regression coverage for id reservation, cancellation cleanup, and staged-file rollback
-  - ZIP import orchestration and partial-success aggregation
-  - application-level import facade routing and summary aggregation
+- ZIP import orchestration and partial-success aggregation
+- application-level import facade routing and summary aggregation
+- protobuf pipe framing and request dispatch over the job service adapter
 
 ## 12. Current Gaps
 
@@ -213,8 +222,7 @@ Not implemented yet, even if already planned architecturally:
 
 - trash implementation
 - full job engine with persistent job registry and streaming job state model
-- protobuf contracts
-- generated gRPC runtime/services
+- named-pipe transport host/client runtime
 - Avalonia UI workflow
 
 ## 13. Import Jobs

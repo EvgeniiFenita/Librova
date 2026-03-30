@@ -17,7 +17,7 @@ Before making changes, review these documents in this order:
 
 - LibriFlow MVP targets Windows only.
 - Architecture is two-process: `LibriFlow.UI` in C# / Avalonia and `LibriFlow.Core` in C++20.
-- UI and core communicate through `gRPC + Protobuf`.
+- UI and core communicate through `Protobuf` contracts over Windows named pipes for the MVP.
 - One user, one managed library, offline-first.
 - Unicode and Cyrillic correctness are mandatory.
 - The backend must stay testable and isolated from UI concerns.
@@ -39,6 +39,7 @@ Before making changes, review these documents in this order:
 - Conversion cancellation is a distinct outcome from converter failure; cancelled conversions must not silently fall back to storing the original FB2 file.
 - Do not run `build` and `ctest` in parallel when tests depend on freshly built binaries; verification must run sequentially as `build -> test`.
 - After changing files under `proto/`, validate contracts with `scripts/ValidateProto.ps1` before considering the checkpoint verified.
+- Do not introduce `gRPC` runtime dependencies into the MVP path unless the architecture decision is explicitly revisited; the current baseline is transport-neutral protobuf adapters over named pipes.
 
 ## 4. Implementation Priorities
 

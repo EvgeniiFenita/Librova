@@ -72,3 +72,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added protobuf transport mapping between application job DTOs and generated contracts.
 - `2026-03-30` Feature: added the first protobuf service adapter over `ApplicationJobs` for `LibraryJobService` operations.
 - `2026-03-30` Build: enabled protobuf tooling through manifest `vcpkg` and added a local `protoc` validation script.
+- `2026-03-30` Docs: revised the IPC baseline from mandatory `gRPC` runtime to transport-neutral `Protobuf over Windows named pipes` for the MVP.
+- `2026-03-30` Feature: added the first pipe transport foundation with binary envelope framing and protobuf request dispatch over the job service adapter.

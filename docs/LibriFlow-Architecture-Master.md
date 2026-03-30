@@ -183,7 +183,7 @@ The UI handles presentation and user interaction. The core handles business logi
 | Build system | CMake + vcpkg manifest mode | Clean dependency management for native code |
 | Local database | SQLite | Simplest robust local database |
 | IPC contract | Protobuf | Stable, explicit schema boundary |
-| IPC implementation | gRPC over named pipes on Windows | Structured cross-process communication now, portable concept later |
+| IPC implementation | Custom request/response RPC over Windows named pipes | Pragmatic Windows-first transport without mandatory gRPC runtime |
 | XML parsing | pugixml | Practical for FB2 and EPUB metadata parsing |
 | ZIP handling | libzip | Needed for EPUB container access and ZIP import |
 | Logging | spdlog in core, Serilog in UI | Mature and practical |
@@ -195,6 +195,7 @@ Deliberate decisions:
 - no C++ Modules;
 - no C++/CLI;
 - no in-process native interop as the main architecture;
+- no mandatory gRPC runtime in the MVP transport path;
 - external converter is not bundled by architecture, it is configured by the user.
 - `fb2cng` / `fbc` is the first built-in converter profile, but converter integration must remain user-configurable through an explicit command-template contract.
 
@@ -249,7 +250,7 @@ Contains concrete implementations:
 - trash service implementation;
 - Unicode/path helpers;
 - logging;
-- gRPC host transport.
+- named-pipe host transport.
 
 ### 7.4 Presentation
 
@@ -257,10 +258,10 @@ Two presentation edges exist:
 
 Core-side presentation:
 
-- gRPC service implementation;
+- protobuf service adapter and pipe request dispatch;
 - DTO mapping;
 - transport validation;
-- progress streaming.
+- request/reply progress polling.
 
 UI-side presentation:
 
@@ -293,8 +294,8 @@ Rules:
 ### Recommended model
 
 - Protobuf for DTOs and contracts;
-- gRPC services for commands, queries, and job streams;
-- named pipes as Windows transport in MVP;
+- transport-neutral service adapters over protobuf request/response messages;
+- named pipes as the Windows transport in MVP;
 - cancellation propagated from UI to core job engine.
 
 ### Why not direct P/Invoke
@@ -308,6 +309,17 @@ Direct native interop would reduce startup complexity but creates tighter coupli
 - versioning.
 
 Because future portability matters, a service boundary is the more stable choice.
+
+### Why not mandatory gRPC runtime in MVP
+
+`gRPC` remains a valid future transport option, but it is not required for the MVP runtime boundary.
+
+Reasons:
+
+- the contract value comes from `Protobuf`, not specifically from `gRPC`;
+- current operations are unary request/reply and job-poll oriented, so streaming is not required for the first release;
+- Windows named pipes are the real transport requirement for MVP;
+- avoiding a mandatory `gRPC C++` runtime keeps the toolchain simpler and more stable on the current Windows stack.
 
 ## 10. Domain Model
 
@@ -621,8 +633,9 @@ Recommended operation set:
 - `ExportBook`
 - `DeleteBook`
 - `VerifyLibrary`
-- `StreamJobProgress`
 - `CancelJob`
+
+For the MVP runtime transport, these operations may be carried over named-pipe request/reply envelopes instead of a full `gRPC` server.
 
 The contract should return structured error codes and user-safe messages, not raw exception text.
 
@@ -640,7 +653,7 @@ Recommended UI composition:
 
 Recommended UI behavior:
 
-- shell starts core process or connects to it;
+- shell starts core process or connects to it through the named-pipe transport;
 - setup wizard runs on first launch;
 - library grid loads summary cards, not full book details;
 - details panel loads on selection;
@@ -744,7 +757,8 @@ Representative scenarios:
 
 Target:
 
-- progress streaming;
+- request dispatch;
+- protobuf serialization round-trips;
 - cancellation;
 - error mapping;
 - duplicate decision flow;
@@ -824,7 +838,7 @@ Target:
 ### Phase 7. IPC Surface
 
 - protobuf contracts;
-- gRPC services;
+- protobuf service adapters;
 - named-pipe transport;
 - generated C# client layer.
 
@@ -868,7 +882,8 @@ Mitigation:
 
 - narrow job-oriented contract;
 - contract tests before full UI integration;
-- DTOs independent from internal domain types.
+- DTOs independent from internal domain types;
+- transport-neutral protobuf service adapters below the named-pipe host.
 
 ### Search correctness
 
@@ -893,7 +908,7 @@ The recommended architecture for LibriFlow is:
 - `C++20` native core;
 - `Avalonia` UI on C#;
 - separate backend process;
-- `gRPC + Protobuf` contract;
+- `Protobuf` contract with transport-neutral service adapters;
 - `SQLite` local persistence;
 - ID-based managed storage;
 - hybrid filtering + FTS search;
@@ -931,8 +946,9 @@ This section records decisions that should be treated as fixed unless explicitly
 - `C++20` is the baseline standard.
 - `C++/CLI` is forbidden.
 - Architecture uses a separate native core process.
-- UI and core communicate through `gRPC + Protobuf`.
+- UI and core communicate through `Protobuf` messages over a transport boundary.
 - Windows transport in MVP is named pipes.
+- `gRPC` is not part of the required MVP runtime stack.
 
 ### Storage and import rules
 
