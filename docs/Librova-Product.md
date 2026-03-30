@@ -37,6 +37,10 @@ On first launch, the user chooses a library root. Under that root Librova stores
 - temporary import files;
 - trash.
 
+If the configured library root is invalid or unavailable on a later launch, Librova opens a startup recovery screen and lets the user choose a different library root before retrying startup.
+
+If the library root itself is valid but the managed library is damaged, Librova does not silently recreate the library in place. Instead, it shows startup recovery guidance and requires the user to choose a different library root or repair the damaged library manually.
+
 ### 3.2 Book Import
 
 The user can import:

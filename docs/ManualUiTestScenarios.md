@@ -43,7 +43,22 @@
 - приложение успешно стартует без ручной чистки файлов.
 - исправленный library root сохраняется для следующего запуска.
 
-## 3. Shell Navigation
+## 3. Startup Error Recovery: Corrupted Library
+
+1. Закрой приложение.
+2. Оставь валидный `PreferredLibraryRoot`, но повреди библиотеку внутри него, например испорть файл базы данных.
+3. Запусти `.\Run-Librova.ps1 -SecondRun`.
+Ожидаемое поведение:
+- показывается `Startup Error Recovery`.
+- startup error объясняет проблему открытия библиотеки заметно лучше, чем просто голый timeout.
+- в поле `Choose Another Library Root` показан текущий library root.
+- `Retry With This Library` неактивна, пока выбран тот же самый путь.
+4. Введи другой валидный library root.
+Ожидаемое поведение:
+- `Retry With This Library` становится активной.
+- приложение не пытается молча пересоздавать или чинить поврежденную библиотеку по тому же пути.
+
+## 4. Shell Navigation
 
 1. В левой навигации нажми `Library`.
 Ожидаемое поведение:
@@ -62,7 +77,7 @@
 - контент прокручивается вертикально.
 - панели не накладываются друг на друга.
 
-## 4. Import Validation
+## 5. Import Validation
 
 1. Открой раздел `Import`.
 2. Оставь `Source File` пустым.
@@ -80,7 +95,7 @@
 - validation messages исчезают.
 - `Start Import` становится активной.
 
-## 5. Import Workflow
+## 6. Import Workflow
 
 1. В `Import` выбери валидный source file и валидный working directory.
 2. Нажми `Start Import`.
@@ -98,7 +113,7 @@
 - latest job id очищается.
 - блок summary/warnings/error сбрасывается.
 
-## 6. Drag And Drop Import Source
+## 7. Drag And Drop Import Source
 
 1. Открой раздел `Import`.
 2. Перетащи локальный `.fb2`, `.epub` или `.zip` файл на главное окно.
@@ -106,7 +121,7 @@
 - `Source File` обновляется dropped path.
 - не происходит crash или дублирования UI state.
 
-## 7. Library Browser Basics
+## 8. Library Browser Basics
 
 1. Открой `Library`.
 Ожидаемое поведение:
@@ -126,7 +141,7 @@
 - page label обновляется.
 - `Previous` неактивна на первой странице.
 
-## 8. Full Details Loading
+## 9. Full Details Loading
 
 1. В `Library` выбери книгу.
 2. Нажми `Load Full Details`.
@@ -134,7 +149,7 @@
 - status обновляется во время загрузки.
 - блок extended metadata заполняется richer metadata, например publisher, ISBN, identifier, description или SHA256, если они доступны.
 
-## 9. Export Book
+## 10. Export Book
 
 1. В `Library` выбери книгу.
 2. Нажми `Export Book...`.
@@ -144,7 +159,7 @@
 - destination file появляется на диске.
 - исходный managed file не меняется.
 
-## 10. Move To Trash
+## 11. Move To Trash
 
 1. В `Library` выбери книгу.
 2. Нажми `Move To Trash`.
@@ -153,7 +168,7 @@
 - файл появляется внутри managed library в области `Trash`.
 - если у книги была cover, cover переносится согласованно.
 
-## 11. Import Updates Browser
+## 12. Import Updates Browser
 
 1. Открой `Library` и запомни текущее количество книг.
 2. Перейди в `Import` и импортируй новую валидную книгу.
@@ -162,7 +177,7 @@
 - browser обновляется автоматически после успешного импорта.
 - новая книга появляется без ручного перезапуска приложения.
 
-## 12. Settings: Preferred Library Root
+## 13. Settings: Preferred Library Root
 
 1. Открой `Settings`.
 2. В `Next Launch Settings` измени library root на другой валидный путь.
@@ -176,7 +191,7 @@
 Ожидаемое поведение:
 - приложение возвращается к default или current-session-based поведению запуска.
 
-## 13. Settings: Converter Configuration
+## 14. Settings: Converter Configuration
 
 1. Открой `Settings`.
 2. Выбери `BuiltInFb2Cng`.
@@ -195,7 +210,7 @@
 Ожидаемое поведение:
 - settings успешно сохраняются для следующего запуска.
 
-## 14. Diagnostics And Logs
+## 15. Diagnostics And Logs
 
 1. Открой `Settings`.
 2. Посмотри блок `Diagnostics`.
@@ -207,7 +222,7 @@
 - host log содержит host/runtime-side operational entries.
 - логи полезны для диагностики и не зашумлены частым polling.
 
-## 15. Relaunch State Persistence
+## 16. Relaunch State Persistence
 
 1. В `Import` задай валидные `Source File`, `Working Directory` и `Allow probable duplicates`.
 2. Нормально закрой приложение.
@@ -215,7 +230,7 @@
 Ожидаемое поведение:
 - раздел `Import` восстанавливает предыдущие source path, working directory и probable-duplicate toggle.
 
-## 16. Smoke Pass After Release Build
+## 17. Smoke Pass After Release Build
 
 1. Выполни:
    `.\Run-Tests.ps1 -Preset x64-release -Configuration Release`
