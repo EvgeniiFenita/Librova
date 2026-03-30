@@ -42,6 +42,7 @@ CSqliteConnection::CSqliteConnection(const std::filesystem::path& databasePath)
     }
 
     m_connection.reset(rawConnection);
+    Execute("PRAGMA foreign_keys = ON;");
 }
 
 void CSqliteConnection::Execute(const std::string_view sql) const

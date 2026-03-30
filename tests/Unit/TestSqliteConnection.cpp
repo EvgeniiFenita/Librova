@@ -31,3 +31,20 @@ TEST_CASE("Sqlite connection can apply schema migrations to a temporary database
 
     std::filesystem::remove(databasePath);
 }
+
+TEST_CASE("Sqlite connection enables foreign key enforcement for each new connection", "[sqlite]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-sqlite-foreign-keys.db";
+    std::filesystem::remove(databasePath);
+
+    {
+        LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
+        LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA foreign_keys;");
+
+        REQUIRE(statement.Step());
+        REQUIRE(statement.GetColumnInt(0) == 1);
+        REQUIRE_FALSE(statement.Step());
+    }
+
+    std::filesystem::remove(databasePath);
+}

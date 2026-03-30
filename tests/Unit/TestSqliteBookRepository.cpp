@@ -102,6 +102,25 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
     repository.Remove(bookId);
 
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
+
+    {
+        LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
+
+        LibriFlow::Sqlite::CSqliteStatement authorLinkStatement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM book_authors WHERE book_id = ?;");
+        authorLinkStatement.BindInt64(1, bookId.Value);
+        REQUIRE(authorLinkStatement.Step());
+        REQUIRE(authorLinkStatement.GetColumnInt(0) == 0);
+
+        LibriFlow::Sqlite::CSqliteStatement formatStatement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM formats WHERE book_id = ?;");
+        formatStatement.BindInt64(1, bookId.Value);
+        REQUIRE(formatStatement.Step());
+        REQUIRE(formatStatement.GetColumnInt(0) == 0);
+    }
+
     std::filesystem::remove(databasePath);
 }
 
