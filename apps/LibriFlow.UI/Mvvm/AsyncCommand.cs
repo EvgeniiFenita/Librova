@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using LibriFlow.UI.Logging;
 
 namespace LibriFlow.UI.Mvvm;
 
@@ -48,6 +49,7 @@ internal sealed class AsyncCommand : ICommand
         }
         catch (Exception error)
         {
+            UiLogging.Error(error, "Async command execution failed. CommandType={CommandType}", GetType().Name);
             if (_onError is not null)
             {
                 await _onError(error);

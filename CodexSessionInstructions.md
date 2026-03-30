@@ -42,6 +42,7 @@ Before making changes, review these documents in this order:
 - Do not introduce `gRPC` runtime dependencies into the MVP path unless the architecture decision is explicitly revisited; the current baseline is transport-neutral protobuf adapters over named pipes.
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup for spawned host processes instead of relying on fixed sleeps.
 - When a completed checkpoint belongs to a new roadmap phase, start that new phase explicitly in `docs/ImplementationProgress.md` instead of continuing to append entries under the previous phase.
+- Important execution paths in both C++ and C# must be covered by project logging; startup, shutdown, IPC boundaries, long-running jobs, and failure paths should emit actionable logs through the repository logging facade instead of ad hoc console output.
 
 ## 4. Implementation Priorities
 

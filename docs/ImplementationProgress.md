@@ -93,7 +93,9 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first ViewModel-ready shell and import-job state layer with observable state, async commands, and `xUnit` coverage.
 - `2026-03-30` Feature: added a shell-application composition layer that materializes a ready `ShellViewModel` from a running shell session.
 - `2026-03-30` Fix: hardened UI command and import-job state handling to avoid fire-and-forget updates, keep polling until terminal completion, and convert command failures into controlled ViewModel state.
+- `2026-03-30` Feature: added the first real Avalonia app skeleton with `App`, `MainWindow`, shell-window composition, and verified C# coverage for window-state configuration.
 
 ### Phase 9. Stabilization
 
 - `2026-03-30` Refactor: removed stale `ProtoGrpcServices` scaffolding and added the first native `spdlog`-backed logging facade with host file logging.
+- `2026-03-30` Feature: added the first UI `Serilog`-backed logging baseline with file/debug sinks, lifecycle logging across host bootstrap and import-job service calls, and `xUnit` file-output coverage.

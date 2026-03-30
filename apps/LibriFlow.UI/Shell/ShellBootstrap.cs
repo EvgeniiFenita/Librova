@@ -1,5 +1,6 @@
 using LibriFlow.UI.CoreHost;
 using LibriFlow.UI.ImportJobs;
+using LibriFlow.UI.Logging;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,16 +15,20 @@ internal static class ShellBootstrap
         CoreHostLaunchOptions hostOptions,
         CancellationToken cancellationToken)
     {
+        UiLogging.EnsureInitialized();
+        UiLogging.Information("Starting UI shell session. PipePath={PipePath}", hostOptions.PipePath);
         var process = new CoreHostProcess();
 
         try
         {
             await process.StartAsync(hostOptions, cancellationToken).ConfigureAwait(false);
             var importJobs = new ImportJobsService(hostOptions.PipePath);
+            UiLogging.Information("UI shell session is ready. PipePath={PipePath}", hostOptions.PipePath);
             return new ShellSession(process, hostOptions, importJobs);
         }
-        catch
+        catch (System.Exception error)
         {
+            UiLogging.Error(error, "Failed to start UI shell session. PipePath={PipePath}", hostOptions.PipePath);
             await process.DisposeAsync().ConfigureAwait(false);
             throw;
         }

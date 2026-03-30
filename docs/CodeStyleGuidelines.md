@@ -159,6 +159,7 @@ Logging rules:
 
 - Domain code must not depend on concrete logging frameworks.
 - Application and infrastructure code should log meaningful failures and state transitions.
+- Important execution paths in both C++ and C# must have actionable logs at startup, shutdown, IPC boundaries, long-running operations, and failure paths.
 - Do not write directly to `std::cout` or `std::cerr` from reusable library code.
 - When a project logging facade is introduced, use it consistently instead of mixing direct framework calls.
 

@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LibriFlow.UI.Logging;
 
 namespace LibriFlow.UI.CoreHost;
 
@@ -19,6 +20,12 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
             throw new InvalidOperationException("Core host process is already running.");
         }
+
+        UiLogging.Information(
+            "Starting core host process. ExecutablePath={ExecutablePath} PipePath={PipePath} LibraryRoot={LibraryRoot}",
+            options.ExecutablePath,
+            options.PipePath,
+            options.LibraryRoot);
 
         var startInfo = new ProcessStartInfo
         {
@@ -44,9 +51,14 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
             await WaitForPipeReadyAsync(options.PipePath, cancellationToken).ConfigureAwait(false);
             _process = process;
+            UiLogging.Information(
+                "Core host process is ready. ProcessId={ProcessId} PipePath={PipePath}",
+                process.Id,
+                options.PipePath);
         }
-        catch
+        catch (Exception error)
         {
+            UiLogging.Error(error, "Failed to start or initialize core host process.");
             TryTerminate(process);
             process.Dispose();
             throw;
@@ -63,8 +75,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         using var process = _process;
         _process = null;
 
+        UiLogging.Information("Stopping core host process. ProcessId={ProcessId}", process.Id);
         TryTerminate(process);
         await process.WaitForExitAsync().ConfigureAwait(false);
+        UiLogging.Information("Core host process stopped. ProcessId={ProcessId}", process.Id);
     }
 
     private static string BuildArguments(CoreHostLaunchOptions options)

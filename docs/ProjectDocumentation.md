@@ -20,6 +20,8 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `apps/LibriFlow.UI` now also contains a shell-application composition layer that turns a `ShellSession` into a ready-to-bind `ShellViewModel`.
 - the current UI ViewModel baseline now keeps import jobs in an explicit polling state until a terminal result arrives instead of dropping back to idle immediately after job creation.
 - the current `AsyncCommand` baseline captures command failures into controlled UI state instead of letting exceptions escape as unhandled command crashes.
+- `apps/LibriFlow.UI` now also contains the first UI logging baseline backed by `Serilog`, with file logging and debug output for startup, host lifecycle, IPC job calls, and command failure paths.
+- `apps/LibriFlow.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -152,6 +154,7 @@ Implemented slices at this point:
 - the current pipe client timeout is applied as an RPC deadline for waiting on the response after connect, not only as an initial connect timeout
 - `libs/Logging` now provides the first native logging facade over `spdlog`
 - the current core logging baseline writes host logs into `Logs/host.log` and mirrors the same records to `stderr`
+- the current UI logging baseline writes logs into `%LOCALAPPDATA%\\LibriFlow\\Logs\\ui.log` and mirrors the same records to the debug sink
 
 ## 5. Persistence And Storage
 
@@ -282,6 +285,8 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for import job state and command enablement
 - C# shell-application composition coverage
 - C# regression coverage for command error handling and terminal import polling behavior
+- C# logging initialization and file-output coverage
+- C# shell-window composition coverage without depending on a live Avalonia windowing platform in the test process
 
 ## 12. Current Gaps
 
@@ -291,6 +296,7 @@ Not implemented yet, even if already planned architecturally:
 - full job engine with persistent job registry and streaming job state model
 - richer long-running native host lifetime management beyond the current sequential session loop
 - Avalonia UI workflow
+- rich multi-screen Avalonia UI workflow beyond the current single-window shell
 
 ## 13. Import Jobs
 
