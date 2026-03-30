@@ -296,6 +296,8 @@ Rules:
 - Protobuf for DTOs and contracts;
 - transport-neutral service adapters over protobuf request/response messages;
 - named pipes as the Windows transport in MVP;
+- transport-level client or framing failures must be isolated to the current pipe session and must not terminate the whole host process;
+- client-side pipe calls must use a bounded RPC timeout instead of waiting indefinitely for a response;
 - cancellation propagated from UI to core job engine.
 
 ### Why not direct P/Invoke
@@ -855,7 +857,7 @@ Target:
 - drag-and-drop polish;
 - verification UI;
 - logging polish;
-- restart recovery;
+- recovery hardening;
 - portable packaging.
 
 ## 25. Risks And Mitigations

@@ -24,6 +24,7 @@ public:
     [[nodiscard]] bool IsOpen() const noexcept;
     void WriteMessage(const std::vector<std::byte>& bytes) const;
     [[nodiscard]] std::vector<std::byte> ReadMessage() const;
+    [[nodiscard]] std::vector<std::byte> ReadMessage(std::chrono::milliseconds timeout) const;
 
 private:
     explicit CNamedPipeConnection(void* nativeHandle) noexcept;

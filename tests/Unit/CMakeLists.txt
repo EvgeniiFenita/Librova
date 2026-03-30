@@ -23,7 +23,9 @@ if(BUILD_TESTING)
         TestExternalBookConverter.cpp
         TestEpubParser.cpp
         TestFb2Parser.cpp
+        TestCoreHostApp.cpp
         TestHostOptions.cpp
+        TestLibraryBootstrap.cpp
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
@@ -80,5 +82,6 @@ if(BUILD_TESTING)
     )
 
     target_compile_features(LibriFlowCoreTests PRIVATE cxx_std_20)
+    target_compile_definitions(LibriFlowCoreTests PRIVATE LIBRIFLOW_CORE_HOST_APP_NAME="LibriFlowCoreHostApp.exe")
     add_test(NAME LibriFlowCoreTests COMMAND LibriFlowCoreTests)
 endif()

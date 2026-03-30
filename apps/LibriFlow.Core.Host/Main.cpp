@@ -14,6 +14,7 @@
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "ConverterRuntime/ExternalBookConverter.hpp"
 #include "CoreHost/HostOptions.hpp"
+#include "CoreHost/LibraryBootstrap.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "Jobs/ImportJobManager.hpp"
@@ -41,17 +42,6 @@ namespace {
     return arguments;
 }
 
-void EnsureLibraryLayout(const std::filesystem::path& libraryRoot)
-{
-    const auto layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
-    std::filesystem::create_directories(layout.Root);
-    std::filesystem::create_directories(layout.DatabaseDirectory);
-    std::filesystem::create_directories(layout.BooksDirectory);
-    std::filesystem::create_directories(layout.CoversDirectory);
-    std::filesystem::create_directories(layout.TempDirectory);
-    std::filesystem::create_directories(layout.LogsDirectory);
-}
-
 [[nodiscard]] std::filesystem::path GetDatabasePath(const std::filesystem::path& libraryRoot)
 {
     return LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).DatabaseDirectory / "libriflow.db";
@@ -65,7 +55,7 @@ int main(int argc, char** argv)
     {
         const auto options = LibriFlow::CoreHost::CHostOptions::Parse(CollectArguments(argc, argv));
 
-        EnsureLibraryLayout(options.LibraryRoot);
+        LibriFlow::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot);
 
         const auto databasePath = GetDatabasePath(options.LibraryRoot);
         LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -106,9 +96,16 @@ int main(int argc, char** argv)
         std::size_t servedSessions = 0;
         while (options.MaxSessions == 0 || servedSessions < options.MaxSessions)
         {
-            LibriFlow::PipeTransport::CNamedPipeServer server(options.PipePath);
-            host.RunSingleSession(server.WaitForClient());
-            ++servedSessions;
+            try
+            {
+                LibriFlow::PipeTransport::CNamedPipeServer server(options.PipePath);
+                host.RunSingleSession(server.WaitForClient());
+                ++servedSessions;
+            }
+            catch (const std::exception& error)
+            {
+                std::cerr << "LibriFlow.Core.Host session error: " << error.what() << '\n';
+            }
         }
 
         return 0;

@@ -12,6 +12,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace LibriFlow::PipeTransport {
 namespace {
@@ -101,6 +102,47 @@ void ClosePipeHandle(void* nativeHandle) noexcept
     }
 }
 
+[[nodiscard]] std::chrono::milliseconds GetRemainingTimeout(
+    const std::chrono::steady_clock::time_point startTime,
+    const std::chrono::milliseconds timeout)
+{
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - startTime);
+
+    if (elapsed >= timeout)
+    {
+        return std::chrono::milliseconds::zero();
+    }
+
+    return timeout - elapsed;
+}
+
+void WaitForReadableBytes(const HANDLE handle, const std::size_t requiredBytes, const std::chrono::milliseconds timeout)
+{
+    const auto startTime = std::chrono::steady_clock::now();
+
+    while (true)
+    {
+        DWORD availableBytes = 0;
+        if (PeekNamedPipe(handle, nullptr, 0, nullptr, &availableBytes, nullptr) == FALSE)
+        {
+            throw std::runtime_error(BuildWindowsErrorMessage("Failed to inspect named pipe state"));
+        }
+
+        if (static_cast<std::size_t>(availableBytes) >= requiredBytes)
+        {
+            return;
+        }
+
+        if (GetRemainingTimeout(startTime, timeout) == std::chrono::milliseconds::zero())
+        {
+            throw std::runtime_error("Timed out waiting for named pipe data.");
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+}
+
 } // namespace
 
 CNamedPipeConnection::CNamedPipeConnection(void* nativeHandle) noexcept
@@ -146,6 +188,29 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage() const
     std::vector<std::byte> bytes(byteCount);
     if (byteCount != 0)
     {
+        ReadExact(handle, bytes.data(), bytes.size());
+    }
+
+    return bytes;
+}
+
+std::vector<std::byte> CNamedPipeConnection::ReadMessage(const std::chrono::milliseconds timeout) const
+{
+    if (!IsOpen())
+    {
+        throw std::runtime_error("Named pipe connection is not open.");
+    }
+
+    const HANDLE handle = static_cast<HANDLE>(m_handle.get());
+    const auto startTime = std::chrono::steady_clock::now();
+
+    WaitForReadableBytes(handle, sizeof(std::uint32_t), timeout);
+    const auto byteCount = static_cast<std::size_t>(ReadLengthPrefix(handle));
+
+    std::vector<std::byte> bytes(byteCount);
+    if (byteCount != 0)
+    {
+        WaitForReadableBytes(handle, byteCount, GetRemainingTimeout(startTime, timeout));
         ReadExact(handle, bytes.data(), bytes.size());
     }
 

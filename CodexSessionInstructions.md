@@ -40,6 +40,7 @@ Before making changes, review these documents in this order:
 - Do not run `build` and `ctest` in parallel when tests depend on freshly built binaries; verification must run sequentially as `build -> test`.
 - After changing files under `proto/`, validate contracts with `scripts/ValidateProto.ps1` before considering the checkpoint verified.
 - Do not introduce `gRPC` runtime dependencies into the MVP path unless the architecture decision is explicitly revisited; the current baseline is transport-neutral protobuf adapters over named pipes.
+- Process-level IPC tests must use explicit readiness checks and deterministic cleanup for spawned host processes instead of relying on fixed sleeps.
 
 ## 4. Implementation Priorities
 

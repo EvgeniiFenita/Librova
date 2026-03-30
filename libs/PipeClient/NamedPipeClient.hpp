@@ -39,6 +39,7 @@ public:
             throw CPipeTransportError("Failed to serialize protobuf request.");
         }
 
+        const auto startTime = std::chrono::steady_clock::now();
         auto connection = LibriFlow::PipeTransport::ConnectToNamedPipe(m_pipePath, timeout);
         const LibriFlow::PipeTransport::SPipeRequestEnvelope envelope{
             .RequestId = NextRequestId(),
@@ -48,7 +49,14 @@ public:
 
         connection.WriteMessage(LibriFlow::PipeTransport::SerializeRequestEnvelope(envelope));
 
-        const auto responseBytes = connection.ReadMessage();
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime);
+        if (elapsed >= timeout)
+        {
+            throw CPipeTransportError("Pipe call timed out.");
+        }
+
+        const auto responseBytes = connection.ReadMessage(timeout - elapsed);
         const auto parsedResponse = LibriFlow::PipeTransport::DeserializeResponseEnvelope(responseBytes);
         if (!parsedResponse.HasValue())
         {

@@ -38,10 +38,12 @@ Update it when an implementation detail becomes stable enough to be treated as c
 Implemented slices at this point:
 
 - `Application`
+- `ApplicationClient`
 - `ApplicationJobs`
 - `Jobs`
 - `Domain`
 - `Core`
+- `CoreHost`
 - `DatabaseSchema`
 - `DatabaseRuntime`
 - `Sqlite`
@@ -52,6 +54,8 @@ Implemented slices at this point:
 - `EpubParsing`
 - `Fb2Parsing`
 - `ParserRegistry`
+- `PipeClient`
+- `PipeHost`
 - `PipeTransport`
 - `ProtoContracts`
 - `ProtoMapping`
@@ -129,9 +133,12 @@ Implemented slices at this point:
   - optional custom converter command settings
 - `apps/LibriFlow.Core.Host` now builds the first real native host executable:
   - ensures managed library directories exist
+  - clears stale `Temp/` state during startup recovery
   - migrates SQLite schema on startup
   - composes parser registry, repositories, managed storage, import facade, job service, protobuf adapter, and named-pipe host
   - serves sequential named-pipe sessions according to host options
+  - treats malformed or abruptly closed pipe sessions as per-session errors instead of terminating the whole host process
+- the current pipe client timeout is applied as an RPC deadline for waiting on the response after connect, not only as an initial connect timeout
 
 ## 5. Persistence And Storage
 
@@ -253,6 +260,7 @@ Stable facts taken from that reference:
 - end-to-end named-pipe host request/response loop over the import job service
 - end-to-end typed named-pipe client calls over the import job service
 - application-facing import job RPC calls over named pipes without direct protobuf usage in the caller
+- process-level smoke coverage for the native host executable over a real named-pipe request flow
 
 ## 12. Current Gaps
 
