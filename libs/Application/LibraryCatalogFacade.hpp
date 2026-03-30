@@ -55,18 +55,45 @@ struct SBookListResult
     }
 };
 
+struct SBookDetails
+{
+    Librova::Domain::SBookId Id;
+    std::string TitleUtf8;
+    std::vector<std::string> AuthorsUtf8;
+    std::string Language;
+    std::optional<std::string> SeriesUtf8;
+    std::optional<double> SeriesIndex;
+    std::optional<std::string> PublisherUtf8;
+    std::optional<int> Year;
+    std::optional<std::string> Isbn;
+    std::vector<std::string> TagsUtf8;
+    std::optional<std::string> DescriptionUtf8;
+    std::optional<std::string> Identifier;
+    Librova::Domain::EBookFormat Format = Librova::Domain::EBookFormat::Epub;
+    std::filesystem::path ManagedPath;
+    std::optional<std::filesystem::path> CoverPath;
+    std::uintmax_t SizeBytes = 0;
+    std::string Sha256Hex;
+    std::chrono::system_clock::time_point AddedAtUtc{};
+};
+
 class CLibraryCatalogFacade final
 {
 public:
-    explicit CLibraryCatalogFacade(const Librova::Domain::IBookQueryRepository& bookQueryRepository);
+    CLibraryCatalogFacade(
+        const Librova::Domain::IBookQueryRepository& bookQueryRepository,
+        const Librova::Domain::IBookRepository* bookRepository = nullptr);
 
     [[nodiscard]] SBookListResult ListBooks(const SBookListRequest& request) const;
+    [[nodiscard]] std::optional<SBookDetails> GetBookDetails(Librova::Domain::SBookId id) const;
 
 private:
     [[nodiscard]] static Librova::Domain::SSearchQuery ToDomainQuery(const SBookListRequest& request);
     [[nodiscard]] static SBookListItem ToListItem(const Librova::Domain::SBook& book);
+    [[nodiscard]] static SBookDetails ToDetails(const Librova::Domain::SBook& book);
 
     const Librova::Domain::IBookQueryRepository& m_bookQueryRepository;
+    const Librova::Domain::IBookRepository* m_bookRepository;
 };
 
 } // namespace Librova::Application

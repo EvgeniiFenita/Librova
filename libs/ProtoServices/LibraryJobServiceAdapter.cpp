@@ -28,6 +28,14 @@ librova::v1::ListBooksResponse CLibraryJobServiceAdapter::ListBooks(
         m_libraryCatalogFacade.ListBooks(bookListRequest));
 }
 
+librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
+    const librova::v1::GetBookDetailsRequest& request) const
+{
+    const auto details = m_libraryCatalogFacade.GetBookDetails(Librova::Domain::SBookId{request.book_id()});
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        details.has_value() ? &*details : nullptr);
+}
+
 librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(
     const librova::v1::GetImportJobSnapshotRequest& request) const
 {

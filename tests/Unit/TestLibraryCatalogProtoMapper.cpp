@@ -59,3 +59,34 @@ TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "
     REQUIRE(response.items(0).cover_path() == "Covers/0000000012.jpg");
     REQUIRE(response.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
 }
+
+TEST_CASE("Library catalog proto mapper builds book details response", "[proto-mapping][catalog]")
+{
+    Librova::Application::SBookDetails details;
+    details.Id = Librova::Domain::SBookId{42};
+    details.TitleUtf8 = "Definitely Maybe";
+    details.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
+    details.Language = "en";
+    details.PublisherUtf8 = std::string{"Macmillan"};
+    details.Year = 1978;
+    details.Isbn = std::string{"978-5-17-000000-1"};
+    details.TagsUtf8 = {"classic"};
+    details.DescriptionUtf8 = std::string{"Aliens land only in one city."};
+    details.Identifier = std::string{"details-id"};
+    details.Format = Librova::Domain::EBookFormat::Fb2;
+    details.ManagedPath = std::filesystem::path(u8"Books/0000000042/DefinitelyMaybe.fb2");
+    details.CoverPath = std::filesystem::path(u8"Covers/0000000042.jpg");
+    details.SizeBytes = 8192;
+    details.Sha256Hex = "details-hash";
+    details.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+
+    const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(&details);
+
+    REQUIRE(response.has_details());
+    REQUIRE(response.details().book_id() == 42);
+    REQUIRE(response.details().publisher() == "Macmillan");
+    REQUIRE(response.details().isbn() == "978-5-17-000000-1");
+    REQUIRE(response.details().description() == "Aliens land only in one city.");
+    REQUIRE(response.details().sha256_hex() == "details-hash");
+    REQUIRE(response.details().managed_path() == "Books/0000000042/DefinitelyMaybe.fb2");
+}

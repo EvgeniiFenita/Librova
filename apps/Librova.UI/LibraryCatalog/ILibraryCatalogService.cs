@@ -11,4 +11,9 @@ internal interface ILibraryCatalogService
         BookListRequestModel request,
         TimeSpan timeout,
         CancellationToken cancellationToken);
+
+    Task<BookDetailsModel?> GetBookDetailsAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken);
 }

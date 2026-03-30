@@ -12,4 +12,10 @@ internal sealed class NullLibraryCatalogService : ILibraryCatalogService
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+
+    public Task<BookDetailsModel?> GetBookDetailsAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<BookDetailsModel?>(null);
 }

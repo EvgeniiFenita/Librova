@@ -19,6 +19,9 @@ public:
     [[nodiscard]] librova::v1::ListBooksResponse ListBooks(
         const librova::v1::ListBooksRequest& request) const;
 
+    [[nodiscard]] librova::v1::GetBookDetailsResponse GetBookDetails(
+        const librova::v1::GetBookDetailsRequest& request) const;
+
     [[nodiscard]] librova::v1::GetImportJobSnapshotResponse GetImportJobSnapshot(
         const librova::v1::GetImportJobSnapshotRequest& request) const;
 

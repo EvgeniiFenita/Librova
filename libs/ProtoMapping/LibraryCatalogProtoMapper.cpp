@@ -160,6 +160,84 @@ librova::v1::ListBooksResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     return response;
 }
 
+librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
+    const Librova::Application::SBookDetails& details)
+{
+    librova::v1::BookDetails proto;
+    proto.set_book_id(details.Id.Value);
+    proto.set_title(details.TitleUtf8);
+    proto.set_language(details.Language);
+    proto.set_format(ToProto(details.Format));
+    proto.set_managed_path(PathToUtf8(details.ManagedPath));
+    proto.set_size_bytes(details.SizeBytes);
+    proto.set_sha256_hex(details.Sha256Hex);
+    proto.set_added_at_unix_ms(ToUnixMilliseconds(details.AddedAtUtc));
+
+    for (const std::string& author : details.AuthorsUtf8)
+    {
+        proto.add_authors(author);
+    }
+
+    for (const std::string& tag : details.TagsUtf8)
+    {
+        proto.add_tags(tag);
+    }
+
+    if (details.SeriesUtf8.has_value())
+    {
+        proto.set_series(*details.SeriesUtf8);
+    }
+
+    if (details.SeriesIndex.has_value())
+    {
+        proto.set_series_index(*details.SeriesIndex);
+    }
+
+    if (details.PublisherUtf8.has_value())
+    {
+        proto.set_publisher(*details.PublisherUtf8);
+    }
+
+    if (details.Year.has_value())
+    {
+        proto.set_year(*details.Year);
+    }
+
+    if (details.Isbn.has_value())
+    {
+        proto.set_isbn(*details.Isbn);
+    }
+
+    if (details.DescriptionUtf8.has_value())
+    {
+        proto.set_description(*details.DescriptionUtf8);
+    }
+
+    if (details.Identifier.has_value())
+    {
+        proto.set_identifier(*details.Identifier);
+    }
+
+    if (details.CoverPath.has_value())
+    {
+        proto.set_cover_path(PathToUtf8(*details.CoverPath));
+    }
+
+    return proto;
+}
+
+librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
+    const Librova::Application::SBookDetails* details)
+{
+    librova::v1::GetBookDetailsResponse response;
+    if (details != nullptr)
+    {
+        *response.mutable_details() = ToProto(*details);
+    }
+
+    return response;
+}
+
 std::string CLibraryCatalogProtoMapper::PathToUtf8(const std::filesystem::path& path)
 {
     return ToUtf8String(path.generic_u8string());

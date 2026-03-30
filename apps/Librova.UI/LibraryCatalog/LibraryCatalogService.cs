@@ -40,4 +40,21 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
             throw;
         }
     }
+
+    public async Task<BookDetailsModel?> GetBookDetailsAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _client.GetBookDetailsAsync(bookId, timeout, cancellationToken).ConfigureAwait(false);
+            return LibraryCatalogMapper.FromProto(response);
+        }
+        catch (Exception error)
+        {
+            UiLogging.Error(error, "Failed to load book details. BookId={BookId}", bookId);
+            throw;
+        }
+    }
 }

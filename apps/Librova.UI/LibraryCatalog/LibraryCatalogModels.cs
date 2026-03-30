@@ -52,3 +52,25 @@ internal sealed class BookListItemModel
     public string TagsText => Tags.Count == 0 ? "No tags" : string.Join(", ", Tags);
     public string FormatText => Format.ToString().ToUpperInvariant();
 }
+
+internal sealed class BookDetailsModel
+{
+    public long BookId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public IReadOnlyList<string> Authors { get; init; } = [];
+    public string Language { get; init; } = string.Empty;
+    public string? Series { get; init; }
+    public double? SeriesIndex { get; init; }
+    public string? Publisher { get; init; }
+    public int? Year { get; init; }
+    public string? Isbn { get; init; }
+    public IReadOnlyList<string> Tags { get; init; } = [];
+    public string? Description { get; init; }
+    public string? Identifier { get; init; }
+    public BookFormatModel Format { get; init; }
+    public string ManagedPath { get; init; } = string.Empty;
+    public string? CoverPath { get; init; }
+    public ulong SizeBytes { get; init; }
+    public string Sha256Hex { get; init; } = string.Empty;
+    public DateTimeOffset AddedAtUtc { get; init; }
+}

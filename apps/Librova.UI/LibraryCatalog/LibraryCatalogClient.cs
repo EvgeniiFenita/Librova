@@ -25,4 +25,15 @@ internal sealed class LibraryCatalogClient
             ListBooksResponse.Parser,
             timeout,
             cancellationToken);
+
+    public Task<GetBookDetailsResponse> GetBookDetailsAsync(
+        long bookId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        _pipeClient.CallAsync(
+            PipeMethod.GetBookDetails,
+            new GetBookDetailsRequest { BookId = bookId },
+            GetBookDetailsResponse.Parser,
+            timeout,
+            cancellationToken);
 }

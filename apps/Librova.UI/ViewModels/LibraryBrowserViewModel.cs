@@ -23,6 +23,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private int _currentPage = 1;
     private bool _hasMoreResults;
     private BookListItemModel? _selectedBook;
+    private BookDetailsModel? _selectedBookDetails;
 
     public LibraryBrowserViewModel(ILibraryCatalogService? libraryCatalogService = null)
     {
@@ -30,12 +31,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         NextPageCommand = new AsyncCommand(NextPageAsync, () => !IsBusy && HasMoreResults, HandleCommandErrorAsync);
         PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
+        LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand NextPageCommand { get; }
     public AsyncCommand PreviousPageCommand { get; }
+    public AsyncCommand LoadDetailsCommand { get; }
     public IReadOnlyList<string> AvailableFormatFilters { get; } = ["All", "EPUB", "FB2"];
     public IReadOnlyList<BookSortModel> AvailableSortOptions { get; } = Enum.GetValues<BookSortModel>();
 
@@ -116,10 +119,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedBook, value))
             {
+                _selectedBookDetails = null;
                 RaisePropertyChanged(nameof(HasSelectedBook));
                 RaisePropertyChanged(nameof(SelectedBookTitle));
                 RaisePropertyChanged(nameof(SelectedBookDetailsText));
+                RaisePropertyChanged(nameof(SelectedBookExtendedDetailsText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
+                LoadDetailsCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -140,6 +146,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RefreshCommand.RaiseCanExecuteChanged();
                 NextPageCommand.RaiseCanExecuteChanged();
                 PreviousPageCommand.RaiseCanExecuteChanged();
+                LoadDetailsCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -155,7 +162,22 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         SelectedBook is null
             ? "Select a book from the library snapshot to inspect its metadata."
             : BuildSelectedBookDetailsText(SelectedBook);
+    public string SelectedBookExtendedDetailsText =>
+        SelectedBookDetails is null
+            ? "Use 'Load Full Details' to query extended metadata from the native library catalog."
+            : BuildSelectedBookExtendedDetailsText(SelectedBookDetails);
     public string SelectedBookPathText => SelectedBook?.ManagedPath ?? "No managed file path available.";
+    public BookDetailsModel? SelectedBookDetails
+    {
+        get => _selectedBookDetails;
+        private set
+        {
+            if (SetProperty(ref _selectedBookDetails, value))
+            {
+                RaisePropertyChanged(nameof(SelectedBookExtendedDetailsText));
+            }
+        }
+    }
 
     public async Task RefreshAsync()
     {
@@ -180,6 +202,33 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
 
         await RefreshPageAsync(CurrentPage - 1);
+    }
+
+    public async Task LoadSelectedBookDetailsAsync()
+    {
+        if (SelectedBook is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = $"Loading full details for '{SelectedBook.Title}'...";
+
+        try
+        {
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            SelectedBookDetails = await _libraryCatalogService.GetBookDetailsAsync(
+                SelectedBook.BookId,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            StatusText = SelectedBookDetails is null
+                ? "Book details were not found."
+                : $"Loaded full details for '{SelectedBookDetails.Title}'.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private async Task RefreshPageAsync(int pageNumber)
@@ -269,5 +318,37 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         parts.Add($"Size: {item.SizeBytes} bytes");
         parts.Add($"Added: {item.AddedAtUtc:yyyy-MM-dd HH:mm} UTC");
         return string.Join(Environment.NewLine, parts);
+    }
+
+    private static string BuildSelectedBookExtendedDetailsText(BookDetailsModel item)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(item.Publisher))
+        {
+            parts.Add($"Publisher: {item.Publisher}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Isbn))
+        {
+            parts.Add($"ISBN: {item.Isbn}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Identifier))
+        {
+            parts.Add($"Identifier: {item.Identifier}");
+        }
+
+        parts.Add($"SHA256: {(string.IsNullOrWhiteSpace(item.Sha256Hex) ? "n/a" : item.Sha256Hex)}");
+
+        if (!string.IsNullOrWhiteSpace(item.Description))
+        {
+            parts.Add(string.Empty);
+            parts.Add(item.Description);
+        }
+
+        return parts.Count == 0
+            ? "No extended metadata available."
+            : string.Join(Environment.NewLine, parts);
     }
 }

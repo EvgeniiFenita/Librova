@@ -60,6 +60,9 @@ internal static class LibraryCatalogMapper
     public static IReadOnlyList<BookListItemModel> FromProto(ListBooksResponse response) =>
         response.Items.Select(FromProto).ToArray();
 
+    public static BookDetailsModel? FromProto(GetBookDetailsResponse response) =>
+        response.Details is null ? null : FromProto(response.Details);
+
     public static BookListItemModel FromProto(BookListItem item) =>
         new()
         {
@@ -79,6 +82,33 @@ internal static class LibraryCatalogMapper
             ManagedPath = item.ManagedPath,
             CoverPath = item.HasCoverPath ? item.CoverPath : null,
             SizeBytes = item.SizeBytes,
+            AddedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(item.AddedAtUnixMs)
+        };
+
+    public static BookDetailsModel FromProto(BookDetails item) =>
+        new()
+        {
+            BookId = item.BookId,
+            Title = item.Title,
+            Authors = item.Authors.ToArray(),
+            Language = item.Language,
+            Series = item.HasSeries ? item.Series : null,
+            SeriesIndex = item.HasSeriesIndex ? item.SeriesIndex : null,
+            Publisher = item.HasPublisher ? item.Publisher : null,
+            Year = item.HasYear ? item.Year : null,
+            Isbn = item.HasIsbn ? item.Isbn : null,
+            Tags = item.Tags.ToArray(),
+            Description = item.HasDescription ? item.Description : null,
+            Identifier = item.HasIdentifier ? item.Identifier : null,
+            Format = item.Format switch
+            {
+                BookFormat.Fb2 => BookFormatModel.Fb2,
+                _ => BookFormatModel.Epub
+            },
+            ManagedPath = item.ManagedPath,
+            CoverPath = item.HasCoverPath ? item.CoverPath : null,
+            SizeBytes = item.SizeBytes,
+            Sha256Hex = item.Sha256Hex,
             AddedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(item.AddedAtUnixMs)
         };
 }

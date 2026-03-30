@@ -112,12 +112,41 @@ message BookListItem {
   int64 added_at_unix_ms = 13;
 }
 
+message BookDetails {
+  int64 book_id = 1;
+  string title = 2;
+  repeated string authors = 3;
+  string language = 4;
+  optional string series = 5;
+  optional double series_index = 6;
+  optional string publisher = 7;
+  optional int32 year = 8;
+  optional string isbn = 9;
+  repeated string tags = 10;
+  optional string description = 11;
+  optional string identifier = 12;
+  BookFormat format = 13;
+  string managed_path = 14;
+  optional string cover_path = 15;
+  uint64 size_bytes = 16;
+  string sha256_hex = 17;
+  int64 added_at_unix_ms = 18;
+}
+
 message ListBooksRequest {
   BookListRequest query = 1;
 }
 
 message ListBooksResponse {
   repeated BookListItem items = 1;
+}
+
+message GetBookDetailsRequest {
+  int64 book_id = 1;
+}
+
+message GetBookDetailsResponse {
+  optional BookDetails details = 1;
 }
 
 message StartImportRequest {
@@ -172,6 +201,7 @@ message RemoveImportJobResponse {
 service LibraryJobService {
   rpc StartImport(StartImportRequest) returns (StartImportResponse);
   rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
+  rpc GetBookDetails(GetBookDetailsRequest) returns (GetBookDetailsResponse);
   rpc GetImportJobSnapshot(GetImportJobSnapshotRequest) returns (GetImportJobSnapshotResponse);
   rpc GetImportJobResult(GetImportJobResultRequest) returns (GetImportJobResultResponse);
   rpc WaitImportJob(WaitImportJobRequest) returns (WaitImportJobResponse);

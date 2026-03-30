@@ -20,6 +20,12 @@ public:
     [[nodiscard]] static librova::v1::ListBooksResponse ToProtoResponse(
         const Librova::Application::SBookListResult& result);
 
+    [[nodiscard]] static librova::v1::BookDetails ToProto(
+        const Librova::Application::SBookDetails& details);
+
+    [[nodiscard]] static librova::v1::GetBookDetailsResponse ToProtoResponse(
+        const Librova::Application::SBookDetails* details);
+
 private:
     [[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);
     [[nodiscard]] static std::filesystem::path PathFromUtf8(const std::string& value);

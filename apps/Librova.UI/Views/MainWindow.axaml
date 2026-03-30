@@ -420,6 +420,21 @@
                                Text="{Binding Shell.LibraryBrowser.SelectedBookTitle}" />
                     <TextBlock Text="{Binding Shell.LibraryBrowser.SelectedBookDetailsText}"
                                TextWrapping="Wrap" />
+                    <Button Classes="SecondaryAction"
+                            Width="160"
+                            Command="{Binding Shell.LibraryBrowser.LoadDetailsCommand}"
+                            Content="Load Full Details" />
+                    <Border Background="#EFE5D8"
+                            CornerRadius="12"
+                            Padding="12">
+                      <StackPanel Spacing="6">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Extended Metadata" />
+                        <TextBlock FontSize="12"
+                                   Text="{Binding Shell.LibraryBrowser.SelectedBookExtendedDetailsText}"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
                     <Border Background="#EFE5D8"
                             CornerRadius="12"
                             Padding="12">

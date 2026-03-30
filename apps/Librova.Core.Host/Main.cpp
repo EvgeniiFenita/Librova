@@ -95,7 +95,7 @@ int main(int argc, char** argv)
             converterPtr);
         const Librova::ZipImporting::CZipImportCoordinator zipImportCoordinator(singleFileImporter);
         const Librova::Application::CLibraryImportFacade importFacade(singleFileImporter, zipImportCoordinator);
-        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);
         Librova::ApplicationJobs::CImportJobService jobService(jobManager);

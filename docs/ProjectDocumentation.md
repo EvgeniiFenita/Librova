@@ -61,6 +61,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 
 - A first application-facing import facade is implemented.
 - A first application-facing catalog facade is implemented for read-side book listing.
+- The application-facing catalog facade now also supports richer book-details lookup by `BookId`.
 - The facade dispatches between:
   - single-file import
   - ZIP archive import
@@ -116,6 +117,7 @@ Implemented slices at this point:
   - import job result DTO
   - `LibraryJobService` RPC surface for start/get/wait/cancel/remove
 - The shared contract now also exposes `ListBooks` for read-side catalog queries over the same named-pipe/protobuf boundary.
+- The shared contract now also exposes `GetBookDetails` for richer read-side metadata lookup over the same named-pipe/protobuf boundary.
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 - `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
@@ -130,6 +132,7 @@ Implemented slices at this point:
 - `libs/ProtoServices` provides the first service adapter over protobuf messages:
   - `StartImport`
   - `ListBooks`
+  - `GetBookDetails`
   - `GetImportJobSnapshot`
   - `GetImportJobResult`
   - `WaitImportJob`
@@ -145,7 +148,7 @@ Implemented slices at this point:
   - structured transport statuses for invalid request, unknown method, and internal error
   - synchronous Win32 named-pipe channel wrappers with length-prefixed message exchange
   - real round-trip coverage against a live Windows named pipe
-- The current named-pipe method set now covers both import-job operations and read-side `ListBooks` queries.
+- The current named-pipe method set now covers import-job operations, read-side `ListBooks` queries, and `GetBookDetails`.
 - `libs/PipeHost` now provides the first core-side named-pipe host loop:
   - accepts one connected pipe session
   - reads one framed protobuf request
@@ -197,6 +200,7 @@ Implemented slices at this point:
 - `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
+- the current `Library Snapshot` panel now also supports explicit full-details loading for the selected book, including publisher, ISBN, identifier, description, and SHA256 metadata from the native host.
 - the current library browser uses lookahead pagination (`limit = page size + 1`) so `HasMoreResults` is based on a real extra row instead of a false `count == page size` heuristic.
 - the current browser `PageSize` is clamped to a valid positive value instead of accepting zero or negative sizes.
 - the current shell now preloads the library browser on startup and refreshes it automatically after a successful import, so the read-side view no longer requires a manual refresh to reflect new books.
@@ -317,7 +321,9 @@ Stable facts taken from that reference:
 - ZIP import orchestration and partial-success aggregation
 - application-level import facade routing and summary aggregation
 - application-level catalog facade mapping and pagination/filter integration over the real SQLite read side
+- application-level catalog details lookup over the real SQLite repository path
 - protobuf catalog mapping and `ListBooks` adapter/dispatcher coverage over the real SQLite read side
+- protobuf catalog mapping and `GetBookDetails` adapter/dispatcher coverage over the real SQLite read side
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
@@ -328,6 +334,7 @@ Stable facts taken from that reference:
 - C# pipe protocol round-trip and corruption-rejection coverage
 - C# end-to-end import-job client coverage against the real native host process
 - C# end-to-end library-catalog client coverage against the real native host process
+- C# end-to-end library-details client coverage against the real native host process
 - C# mapping and service-layer coverage for UI-facing import job DTOs
 - C# mapping and service-layer coverage for UI-facing library-catalog DTOs
 - C# shell bootstrap/session coverage over a real host-backed import flow
@@ -355,6 +362,7 @@ Stable facts taken from that reference:
 - C# startup-error-state coverage for diagnostics-path and guidance exposure
 - C# ViewModel coverage for the first UI-side library browser refresh flow
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
+- C# ViewModel coverage for explicit full-details loading from the selected library item
 - C# regression coverage for exact-full-page pagination, clamped page size, and import-command happy paths with real validated source files
 - C# shell-level coverage for startup browser preload and post-import browser refresh
 - C# strong host-backed integration coverage for:

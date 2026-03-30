@@ -161,3 +161,45 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
         }),
         std::invalid_argument);
 }
+
+TEST_CASE("Library catalog facade returns full book details by id", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-details.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book = MakeBook(
+        "Definitely Maybe",
+        {"Arkady Strugatsky", "Boris Strugatsky"},
+        "en",
+        Librova::Domain::EBookFormat::Fb2,
+        "Books/0000001201/book.fb2",
+        "details-hash-1",
+        std::chrono::sys_days{std::chrono::March / 30 / 2026});
+    book.Metadata.PublisherUtf8 = std::string{"Macmillan"};
+    book.Metadata.Year = 1978;
+    book.Metadata.Isbn = std::string{"978-5-17-000000-1"};
+    book.Metadata.DescriptionUtf8 = std::string{"Aliens land only in one city."};
+    book.Metadata.Identifier = std::string{"details-id-1"};
+    book.Metadata.TagsUtf8 = {"classic", "first-contact"};
+    book.CoverPath = std::filesystem::path("Covers/0000001201.jpg");
+    const auto addedId = writeRepository.Add(book);
+
+    const Librova::Application::CLibraryCatalogFacade facade(queryRepository, &writeRepository);
+    const auto details = facade.GetBookDetails(addedId);
+
+    REQUIRE(details.has_value());
+    REQUIRE(details->Id.Value == addedId.Value);
+    REQUIRE(details->TitleUtf8 == "Definitely Maybe");
+    REQUIRE(details->PublisherUtf8 == std::optional<std::string>{"Macmillan"});
+    REQUIRE(details->Isbn == std::optional<std::string>{"9785170000001"});
+    REQUIRE(details->DescriptionUtf8 == std::optional<std::string>{"Aliens land only in one city."});
+    REQUIRE(details->Identifier == std::optional<std::string>{"details-id-1"});
+    REQUIRE(details->Sha256Hex == "details-hash-1");
+    REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Covers/0000001201.jpg")});
+
+    std::filesystem::remove(databasePath);
+}

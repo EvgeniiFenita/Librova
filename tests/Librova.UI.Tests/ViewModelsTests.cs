@@ -449,6 +449,7 @@ public sealed class ViewModelsTests
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
         Assert.NotNull(viewModel.SelectedBook);
         Assert.Contains("Arkady Strugatsky", viewModel.SelectedBookDetailsText, StringComparison.Ordinal);
+        Assert.Contains("Load Full Details", viewModel.SelectedBookExtendedDetailsText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -527,6 +528,22 @@ public sealed class ViewModelsTests
         Assert.Equal("Page 1", viewModel.PageLabelText);
         Assert.False(viewModel.NextPageCommand.CanExecute(null));
         Assert.Equal(3UL, service.LastRequest!.Limit);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_LoadsExtendedDetailsForSelectedBook()
+    {
+        var service = new FakeLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        Assert.NotNull(viewModel.SelectedBook);
+
+        await viewModel.LoadDetailsCommand.ExecuteAsyncForTests();
+
+        Assert.NotNull(viewModel.SelectedBookDetails);
+        Assert.Contains("Macmillan", viewModel.SelectedBookExtendedDetailsText, StringComparison.Ordinal);
+        Assert.Contains("Aliens land only in one city.", viewModel.SelectedBookExtendedDetailsText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -801,12 +818,35 @@ public sealed class ViewModelsTests
                     AddedAtUtc = DateTimeOffset.UtcNow
                 }
             ]);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
+            {
+                BookId = bookId,
+                Title = "Roadside Picnic",
+                Authors = ["Arkady Strugatsky"],
+                Language = "en",
+                Publisher = "Macmillan",
+                Year = 1972,
+                Isbn = "978-5-17-000000-1",
+                Tags = ["sci-fi"],
+                Description = "Aliens land only in one city.",
+                Identifier = "details-id",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/book.epub",
+                SizeBytes = 4096,
+                Sha256Hex = "details-hash",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            });
     }
 
     private sealed class EmptyLibraryCatalogService : ILibraryCatalogService
     {
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
@@ -818,6 +858,9 @@ public sealed class ViewModelsTests
             LastRequest = request;
             return Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
         }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
@@ -873,6 +916,9 @@ public sealed class ViewModelsTests
                 }
             ]);
         }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 
     private sealed class ExactPageLibraryCatalogService : ILibraryCatalogService
@@ -905,5 +951,8 @@ public sealed class ViewModelsTests
                 }
             ]);
         }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 }

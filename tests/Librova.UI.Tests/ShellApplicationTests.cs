@@ -488,6 +488,9 @@ public sealed class ShellApplicationTests
             ListCalls++;
             return Task.FromResult(Items);
         }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 
     private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
@@ -511,6 +514,9 @@ public sealed class ShellApplicationTests
 
             return Task.FromResult(_responses.Dequeue());
         }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService
