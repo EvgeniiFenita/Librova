@@ -34,3 +34,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added first SQLite book repository with transactional add/get/remove behavior and round-trip coverage.
 - `2026-03-30` Feature: added SQLite query repository with structured search filters and duplicate classification.
 - `2026-03-30` Feature: added managed file storage with staging, commit, and rollback coverage for book and cover files.
+
+### Phase 3. Parsers
+
+- `2026-03-30` Feature: added EPUB parser with metadata and cover extraction backed by `libzip` and `pugixml`.
