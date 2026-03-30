@@ -19,6 +19,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Native code is organized as one static library per logical slice under `libs/<SliceName>/`.
 - UI applications live under `apps/`.
 - Repository-level documentation lives under `docs/`.
+- Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
 
@@ -55,6 +56,19 @@ Implemented slices at this point:
 - `ConverterRuntime`
 - `ImportConversion`
 - `Importing`
+
+## 4.1 Shared Contracts
+
+- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\LibriFlow\proto\import_jobs.proto).
+- Protobuf package baseline is `libriflow.v1`.
+- `.proto` file naming is now fixed as `snake_case`.
+- The first contract covers:
+  - import request DTO
+  - import summary DTO
+  - import job snapshot DTO
+  - import job result DTO
+  - `LibraryJobService` RPC surface for start/get/wait/cancel/remove
+- Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 
 ## 5. Persistence And Storage
 
@@ -179,7 +193,7 @@ Not implemented yet, even if already planned architecturally:
 - trash implementation
 - full job engine with persistent job registry and streaming job state model
 - protobuf contracts
-- gRPC services
+- generated gRPC runtime/services
 - Avalonia UI workflow
 
 ## 13. Import Jobs

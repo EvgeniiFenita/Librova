@@ -202,7 +202,7 @@ Logging rules:
 - Project-specific source files use `PascalCase`.
 - Standard ecosystem files keep their canonical names, for example `CMakeLists.txt`, `.gitignore`, `Directory.Build.props`.
 - Documentation files use `PascalCase` without underscores.
-- `.proto` files use `snake_case` only if required by the existing protobuf layout; otherwise prefer consistent project naming and document the choice once it exists.
+- `.proto` files use `snake_case`.
 
 ## 15. Comments and Documentation
 
