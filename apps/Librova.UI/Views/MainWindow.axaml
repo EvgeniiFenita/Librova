@@ -275,6 +275,52 @@
             </StackPanel>
           </Border>
 
+          <Border Classes="SurfaceCard">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="SectionTitle"
+                         Text="Next Launch Settings" />
+              <TextBlock Opacity="0.72"
+                         Text="These preferences are applied the next time the app starts. The current session keeps using the library root it already launched with."
+                         TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="10">
+                <TextBox Classes="ImportField"
+                         Watermark="C:\Libraries\Librova"
+                         Text="{Binding Shell.PreferredLibraryRoot}" />
+                <Button Grid.Column="1"
+                        Classes="SecondaryAction"
+                        MinWidth="108"
+                        Command="{Binding Shell.BrowsePreferredLibraryRootCommand}"
+                        Content="Browse..." />
+              </Grid>
+              <TextBlock FontSize="12"
+                         Foreground="#A04628"
+                         IsVisible="{Binding Shell.HasPreferredLibraryRootValidationError}"
+                         Text="{Binding Shell.PreferredLibraryRootValidationMessage}"
+                         TextWrapping="Wrap" />
+              <TextBlock FontSize="12"
+                         Opacity="0.64"
+                         IsVisible="{Binding Shell.ShowPreferredLibraryRootHelperText}"
+                         Text="Use this when you want future launches to point at a different managed library."
+                         TextWrapping="Wrap" />
+              <WrapPanel ItemWidth="138"
+                         ItemHeight="42">
+                <Button Classes="SecondaryAction"
+                        Width="138"
+                        Command="{Binding Shell.SavePreferencesCommand}"
+                        Content="Save" />
+                <Button Classes="SecondaryAction"
+                        Width="138"
+                        Command="{Binding Shell.ResetPreferencesCommand}"
+                        Content="Reset" />
+              </WrapPanel>
+              <TextBlock FontSize="12"
+                         Opacity="0.78"
+                         Text="{Binding Shell.PreferencesStatusText}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
           <Border Classes="TintedCard"
                   Background="#F0E9DD"
                   BorderBrush="#D4C8B8">

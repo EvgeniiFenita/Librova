@@ -31,13 +31,16 @@ internal sealed class ShellApplication : IAsyncDisposable
         ShellSession session,
         IPathSelectionService? pathSelectionService = null,
         ShellLaunchOptions? launchOptions = null,
-        IShellStateStore? stateStore = null)
+        IShellStateStore? stateStore = null,
+        IUiPreferencesStore? preferencesStore = null)
     {
         var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();
+        var effectivePreferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         var savedState = effectiveStateStore.TryLoad();
+        var savedPreferences = effectivePreferencesStore.TryLoad();
         return new(
             session,
-            new ShellViewModel(session, pathSelectionService, launchOptions, savedState),
+            new ShellViewModel(session, pathSelectionService, launchOptions, savedState, effectivePreferencesStore, savedPreferences),
             effectiveStateStore);
     }
 

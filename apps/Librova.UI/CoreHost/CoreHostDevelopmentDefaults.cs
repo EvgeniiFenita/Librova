@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Librova.UI.Runtime;
+using Librova.UI.Shell;
 
 namespace Librova.UI.CoreHost;
 
@@ -9,6 +10,11 @@ internal static class CoreHostDevelopmentDefaults
     public static CoreHostLaunchOptions Create(string? baseDirectory = null)
     {
         var libraryRoot = RuntimeEnvironment.GetLibraryRootOverride();
+        if (string.IsNullOrWhiteSpace(libraryRoot))
+        {
+            libraryRoot = UiPreferencesStore.CreateDefault().TryLoad()?.PreferredLibraryRoot;
+        }
+
         if (string.IsNullOrWhiteSpace(libraryRoot))
         {
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);

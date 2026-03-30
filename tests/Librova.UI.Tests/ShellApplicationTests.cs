@@ -21,7 +21,10 @@ public sealed class ShellApplicationTests
             },
             new FakeImportJobsService());
 
-        var application = ShellApplication.Create(session, stateStore: CreateIsolatedStateStore());
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
 
         Assert.Equal(@"C:\Libraries\Librova", application.Shell.LibraryRoot);
         Assert.Equal(@"\\.\pipe\Librova.ShellApplication.Test", application.Shell.PipePath);
@@ -50,7 +53,8 @@ public sealed class ShellApplicationTests
                 SelectedSourcePath = @"C:\Incoming\book.fb2",
                 SelectedWorkingDirectory = @"C:\Temp\Librova\Work"
             },
-            stateStore: CreateIsolatedStateStore());
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
 
         await application.Shell.ImportJobs.BrowseSourceAsync();
         await application.Shell.ImportJobs.BrowseWorkingDirectoryAsync();
@@ -78,7 +82,8 @@ public sealed class ShellApplicationTests
             {
                 InitialSourcePath = @"C:\Incoming\opened.fb2"
             },
-            stateStore: CreateIsolatedStateStore());
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
 
         Assert.Equal(@"C:\Incoming\opened.fb2", application.Shell.ImportJobs.SourcePath);
     }
@@ -103,7 +108,10 @@ public sealed class ShellApplicationTests
             },
             new FakeImportJobsService());
 
-        var application = ShellApplication.Create(session, stateStore: stateStore);
+        var application = ShellApplication.Create(
+            session,
+            stateStore: stateStore,
+            preferencesStore: new FakePreferencesStore());
 
         Assert.Equal(@"C:\Saved\previous.fb2", application.Shell.ImportJobs.SourcePath);
         Assert.Equal(@"C:\Saved\Work", application.Shell.ImportJobs.WorkingDirectory);
@@ -123,7 +131,10 @@ public sealed class ShellApplicationTests
                 LibraryRoot = @"C:\Libraries\Librova"
             },
             new FakeImportJobsService());
-        var application = ShellApplication.Create(session, stateStore: stateStore);
+        var application = ShellApplication.Create(
+            session,
+            stateStore: stateStore,
+            preferencesStore: new FakePreferencesStore());
         application.Shell.ImportJobs.SourcePath = @"C:\Incoming\persist.fb2";
         application.Shell.ImportJobs.WorkingDirectory = @"C:\Temp\Persisted";
         application.Shell.ImportJobs.AllowProbableDuplicates = true;
@@ -150,11 +161,75 @@ public sealed class ShellApplicationTests
                 LibraryRoot = @"C:\Libraries\Librova"
             },
             new FakeImportJobsService());
-        var application = ShellApplication.Create(session, stateStore: new ThrowingStateStore());
+        var application = ShellApplication.Create(
+            session,
+            stateStore: new ThrowingStateStore(),
+            preferencesStore: new FakePreferencesStore());
 
         await application.DisposeAsync();
 
         Assert.True(hostLifetime.DisposeCalls > 0);
+    }
+
+    [Fact]
+    public void Create_WithSavedPreferences_LoadsPreferredLibraryRoot()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore
+            {
+                Snapshot = new UiPreferencesSnapshot
+                {
+                    PreferredLibraryRoot = @"D:\Librova\SecondLibrary"
+                }
+            });
+
+        Assert.Equal(@"D:\Librova\SecondLibrary", application.Shell.PreferredLibraryRoot);
+    }
+
+    [Fact]
+    public async Task ShellSettings_CanSaveAndResetPreferredLibraryRoot()
+    {
+        var preferencesStore = new FakePreferencesStore();
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+        var application = ShellApplication.Create(
+            session,
+            new FakePathSelectionService
+            {
+                SelectedWorkingDirectory = @"D:\Librova\Preferred"
+            },
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: preferencesStore);
+
+        await application.Shell.BrowsePreferredLibraryRootCommand.ExecuteAsyncForTests();
+        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(@"D:\Librova\Preferred", preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
+        Assert.Contains("Next app launch", application.Shell.PreferencesStatusText, StringComparison.OrdinalIgnoreCase);
+
+        await application.Shell.ResetPreferencesCommand.ExecuteAsyncForTests();
+
+        Assert.True(preferencesStore.Cleared);
+        Assert.Equal(@"C:\Libraries\Librova", application.Shell.PreferredLibraryRoot);
     }
 
     private static ShellStateStore CreateIsolatedStateStore() =>
@@ -166,6 +241,25 @@ public sealed class ShellApplicationTests
 
         public void Save(ShellStateSnapshot snapshot) =>
             throw new IOException("simulated save failure");
+    }
+
+    private sealed class FakePreferencesStore : IUiPreferencesStore
+    {
+        public UiPreferencesSnapshot? Snapshot { get; init; }
+        public UiPreferencesSnapshot? LastSavedSnapshot { get; private set; }
+        public bool Cleared { get; private set; }
+
+        public UiPreferencesSnapshot? TryLoad() => Snapshot;
+
+        public void Save(UiPreferencesSnapshot snapshot)
+        {
+            LastSavedSnapshot = snapshot;
+        }
+
+        public void Clear()
+        {
+            Cleared = true;
+        }
     }
 
     private sealed class FakeAsyncDisposable : IAsyncDisposable

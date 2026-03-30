@@ -176,9 +176,11 @@ Implemented slices at this point:
 - when the UI is launched through `Run-Librova.ps1`, runtime files are redirected into `out\\runtime` through explicit environment overrides:
   - `out\\runtime\\logs\\ui.log`
   - `out\\runtime\\ui-shell-state.json`
+  - `out\\runtime\\ui-preferences.json`
   - `out\\runtime\\library\\...`
   - `out\\runtime\\library\\Logs\\host.log`
 - the current UI host-readiness check uses `WaitNamedPipe` and no longer creates a throwaway client connection that pollutes `host.log` with false broken-pipe startup errors
+- the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
 
 ## 5. Persistence And Storage
 
@@ -324,6 +326,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for source-file drag-and-drop path application
 - C# ViewModel coverage for local import-input validation and command enablement against real temporary files
 - C# shell-lifecycle coverage for disposing the native host even when UI shell-state persistence fails
+- C# coverage for persisted UI preferences and next-launch library-root settings behavior
 
 ## 12. Current Gaps
 

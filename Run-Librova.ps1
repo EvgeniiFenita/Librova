@@ -12,6 +12,7 @@ $runtimeLogs = Join-Path $runtimeRoot "logs"
 $libraryRoot = Join-Path $runtimeRoot "library"
 $uiLogFile = Join-Path $runtimeLogs "ui.log"
 $uiStateFile = Join-Path $runtimeRoot "ui-shell-state.json"
+$uiPreferencesFile = Join-Path $runtimeRoot "ui-preferences.json"
 $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\$Configuration\LibrovaCoreHostApp.exe"
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
 
@@ -37,12 +38,14 @@ if (-not (Test-Path -LiteralPath $uiExecutable)) {
 
 $env:LIBROVA_UI_LOG_FILE = $uiLogFile
 $env:LIBROVA_UI_STATE_FILE = $uiStateFile
+$env:LIBROVA_UI_PREFERENCES_FILE = $uiPreferencesFile
 $env:LIBROVA_LIBRARY_ROOT = $libraryRoot
 $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExecutable
 
 Write-Host "==> Launching Librova UI"
 Write-Host "    UI log:      $uiLogFile"
 Write-Host "    UI state:    $uiStateFile"
+Write-Host "    UI prefs:    $uiPreferencesFile"
 Write-Host "    Library root:$libraryRoot"
 Write-Host "    Host exe:    $hostExecutable"
 
