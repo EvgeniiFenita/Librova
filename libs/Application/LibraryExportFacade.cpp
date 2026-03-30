@@ -1,5 +1,6 @@
 #include "Application/LibraryExportFacade.hpp"
 
+#include <system_error>
 #include <stdexcept>
 
 namespace Librova::Application {
@@ -50,6 +51,18 @@ namespace {
     return true;
 }
 
+[[nodiscard]] std::filesystem::path CanonicalizeExistingPath(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const auto canonicalPath = std::filesystem::weakly_canonical(path, errorCode);
+    if (errorCode)
+    {
+        throw std::runtime_error("Managed source path could not be canonicalized.");
+    }
+
+    return canonicalPath.lexically_normal();
+}
+
 } // namespace
 
 CLibraryExportFacade::CLibraryExportFacade(
@@ -86,10 +99,6 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
     }
 
     const auto sourcePath = ResolveManagedSourcePath(book->File.ManagedPath);
-    if (!std::filesystem::exists(sourcePath))
-    {
-        throw std::runtime_error("Managed source file does not exist.");
-    }
 
     if (std::filesystem::is_directory(destinationPath))
     {
@@ -112,22 +121,35 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
 std::filesystem::path CLibraryExportFacade::ResolveManagedSourcePath(const std::filesystem::path& managedPath) const
 {
     const auto normalizedManagedPath = managedPath.lexically_normal();
+    std::filesystem::path candidatePath;
+
     if (normalizedManagedPath.is_absolute())
     {
-        if (!IsPathWithinRoot(m_libraryRoot, normalizedManagedPath))
+        candidatePath = normalizedManagedPath;
+    }
+    else
+    {
+        if (!IsSafeRelativeManagedPath(normalizedManagedPath))
         {
             throw std::runtime_error("Managed source path is unsafe.");
         }
 
-        return normalizedManagedPath;
+        candidatePath = (m_libraryRoot / normalizedManagedPath).lexically_normal();
     }
 
-    if (!IsSafeRelativeManagedPath(normalizedManagedPath))
+    if (!std::filesystem::exists(candidatePath))
+    {
+        throw std::runtime_error("Managed source file does not exist.");
+    }
+
+    const auto canonicalRoot = CanonicalizeExistingPath(m_libraryRoot);
+    const auto canonicalCandidate = CanonicalizeExistingPath(candidatePath);
+    if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
     {
         throw std::runtime_error("Managed source path is unsafe.");
     }
 
-    return (m_libraryRoot / normalizedManagedPath).lexically_normal();
+    return canonicalCandidate;
 }
 
 } // namespace Librova::Application

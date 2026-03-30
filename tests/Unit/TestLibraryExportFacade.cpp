@@ -41,6 +41,13 @@ std::string ReadAllText(const std::filesystem::path& path)
     return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
+bool TryCreateDirectorySymlink(const std::filesystem::path& target, const std::filesystem::path& linkPath)
+{
+    std::error_code errorCode;
+    std::filesystem::create_directory_symlink(target, linkPath, errorCode);
+    return !errorCode;
+}
+
 Librova::Domain::SBook CreateBook(
     const Librova::Domain::SBookId id,
     const std::filesystem::path& managedPath)
@@ -114,4 +121,38 @@ TEST_CASE("LibraryExportFacade accepts absolute managed path under library root"
 
     REQUIRE(exportedPath.has_value());
     REQUIRE(ReadAllText(destinationPath) == "fb2-contents");
+}
+
+TEST_CASE("LibraryExportFacade rejects symlinked managed path escaping library root", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-symlink");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto outsideRoot = sandbox.GetPath() / "Outside";
+    const auto linkPath = libraryRoot / "Books/0000000003";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
+
+    std::filesystem::create_directories(outsideRoot);
+    std::filesystem::create_directories(linkPath.parent_path());
+    std::ofstream(outsideRoot / "book.epub", std::ios::binary) << "outside-contents";
+
+    if (!TryCreateDirectorySymlink(outsideRoot, linkPath))
+    {
+        SKIP("Directory symlinks are not available in this environment.");
+    }
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-symlink.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    const auto bookId = repository.Add(CreateBook({3}, "Books/0000000003/book.epub"));
+
+    const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot);
+    try
+    {
+        (void)facade.ExportBook(bookId, destinationPath);
+        FAIL("Expected export to reject symlinked managed path.");
+    }
+    catch (const std::exception& error)
+    {
+        REQUIRE(std::string{error.what()}.find("unsafe") != std::string::npos);
+    }
 }

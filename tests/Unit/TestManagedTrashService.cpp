@@ -1,9 +1,21 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <filesystem>
 #include <fstream>
 
 #include "ManagedTrash/ManagedTrashService.hpp"
+
+namespace {
+
+bool TryCreateDirectorySymlink(const std::filesystem::path& target, const std::filesystem::path& linkPath)
+{
+    std::error_code errorCode;
+    std::filesystem::create_directory_symlink(target, linkPath, errorCode);
+    return !errorCode;
+}
+
+} // namespace
 
 TEST_CASE("Managed trash service moves managed file under library trash while preserving relative path", "[managed-trash]")
 {
@@ -52,6 +64,28 @@ TEST_CASE("Managed trash service rejects paths outside library root", "[managed-
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
 
     REQUIRE_THROWS(service.MoveToTrash(sandbox / "Outside" / "book.epub"));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Managed trash service rejects symlinked managed path escaping library root", "[managed-trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-symlink";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books");
+    std::filesystem::create_directories(sandbox / "Outside");
+    std::ofstream(sandbox / "Outside/book.epub", std::ios::binary) << "epub";
+
+    if (!TryCreateDirectorySymlink(sandbox / "Outside", sandbox / "Library/Books/0000000002"))
+    {
+        std::filesystem::remove_all(sandbox);
+        SKIP("Directory symlinks are not available in this environment.");
+    }
+
+    Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
+    REQUIRE_THROWS_WITH(
+        service.MoveToTrash(sandbox / "Library/Books/0000000002/book.epub"),
+        Catch::Matchers::ContainsSubstring("unsafe"));
 
     std::filesystem::remove_all(sandbox);
 }

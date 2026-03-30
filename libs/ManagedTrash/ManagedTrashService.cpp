@@ -1,5 +1,6 @@
 #include "ManagedTrash/ManagedTrashService.hpp"
 
+#include <system_error>
 #include <stdexcept>
 #include <string>
 
@@ -51,6 +52,18 @@ namespace {
     }
 
     return true;
+}
+
+[[nodiscard]] std::filesystem::path CanonicalizeExistingPath(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const auto canonicalPath = std::filesystem::weakly_canonical(path, errorCode);
+    if (errorCode)
+    {
+        throw std::runtime_error("Managed trash path could not be canonicalized.");
+    }
+
+    return canonicalPath.lexically_normal();
 }
 
 void EnsureDirectory(const std::filesystem::path& path)
@@ -150,22 +163,35 @@ void CManagedTrashService::RestoreFromTrash(
 std::filesystem::path CManagedTrashService::ResolveManagedPath(const std::filesystem::path& path) const
 {
     const auto normalizedPath = path.lexically_normal();
+    std::filesystem::path candidatePath;
+
     if (normalizedPath.is_absolute())
     {
-        if (!IsPathWithinRoot(m_libraryRoot, normalizedPath))
+        candidatePath = normalizedPath;
+    }
+    else
+    {
+        if (!IsSafeRelativeManagedPath(normalizedPath))
         {
             throw std::runtime_error("Managed trash path is unsafe.");
         }
 
-        return normalizedPath;
+        candidatePath = (m_libraryRoot / normalizedPath).lexically_normal();
     }
 
-    if (!IsSafeRelativeManagedPath(normalizedPath))
+    if (!std::filesystem::exists(candidatePath))
+    {
+        throw std::runtime_error("Managed source path does not exist.");
+    }
+
+    const auto canonicalRoot = CanonicalizeExistingPath(m_libraryRoot);
+    const auto canonicalCandidate = CanonicalizeExistingPath(candidatePath);
+    if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
     {
         throw std::runtime_error("Managed trash path is unsafe.");
     }
 
-    return (m_libraryRoot / normalizedPath).lexically_normal();
+    return canonicalCandidate;
 }
 
 std::filesystem::path CManagedTrashService::BuildTrashDestination(const std::filesystem::path& sourcePath) const
