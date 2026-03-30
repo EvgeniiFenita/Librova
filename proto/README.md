@@ -17,6 +17,7 @@ Current files:
 Notes:
 
 - contracts are transport-oriented and intentionally do not expose internal repository or managed-storage layout details
+- protobuf C++ code generation is now wired into the native build through `libs/ProtoContracts`
 - gRPC runtime/code generation wiring is not added yet in this checkpoint
 - `protoc` is expected to come from the repository `vcpkg` toolchain via the `protobuf` package
 - current project-local `protoc` path for preset `x64-debug`:

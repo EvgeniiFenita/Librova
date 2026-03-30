@@ -50,6 +50,7 @@ Implemented slices at this point:
 - `EpubParsing`
 - `Fb2Parsing`
 - `ParserRegistry`
+- `ProtoContracts`
 - `SearchIndex`
 - `ConverterCommand`
 - `ConverterConfiguration`
@@ -71,6 +72,8 @@ Implemented slices at this point:
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 - `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
+- `import_jobs.proto` is now compiled into a native C++ target through `libs/ProtoContracts`.
+- The repository already has round-trip protobuf tests against generated C++ message classes.
 
 ## 5. Persistence And Storage
 
