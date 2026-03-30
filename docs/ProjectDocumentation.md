@@ -12,6 +12,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - The MVP supports `EPUB`, `FB2`, and `ZIP` import.
 - The UI is planned as `C# / Avalonia`.
 - `apps/LibriFlow.UI` now also contains the first non-visual UI infrastructure for resolving and launching the native core host process during development.
+- `apps/LibriFlow.UI` now also generates C# protobuf contracts from `proto/import_jobs.proto` and contains the first managed implementation of the named-pipe framing protocol.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -267,6 +268,7 @@ Stable facts taken from that reference:
 - application-facing import job RPC calls over named pipes without direct protobuf usage in the caller
 - process-level smoke coverage for the native host executable over a real named-pipe request flow
 - native logging initialization and file output coverage
+- C# pipe protocol round-trip and corruption-rejection coverage
 
 ## 12. Current Gaps
 

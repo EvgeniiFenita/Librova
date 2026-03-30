@@ -86,6 +86,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 
 - `2026-03-30` Feature: added the first `LibriFlow.UI` infrastructure for development-time core host path resolution, launch option modeling, and host process startup with named-pipe readiness checks.
 - `2026-03-30` Test: added the first C# `xUnit` coverage for UI-side core host launch options, path resolution, and process startup readiness.
+- `2026-03-30` Feature: added generated C# protobuf contracts and the first managed named-pipe framing implementation with `xUnit` coverage.
 
 ### Phase 9. Stabilization
 
