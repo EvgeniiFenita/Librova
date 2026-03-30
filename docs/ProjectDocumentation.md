@@ -111,6 +111,14 @@ Implemented slices at this point:
   - validates request/response correlation through request ids
   - translates invalid framing or non-`Ok` transport status into transport exceptions
   - parses typed protobuf responses for callers
+- `libs/ApplicationClient` now provides an application-facing import job client above the raw pipe helper:
+  - `Start`
+  - `TryGetSnapshot`
+  - `TryGetResult`
+  - `Cancel`
+  - `Wait`
+  - `Remove`
+- The application-facing pipe client maps protobuf DTOs back into repository application DTOs, so future UI code does not need to work with generated protobuf types directly.
 
 ## 5. Persistence And Storage
 
@@ -231,6 +239,7 @@ Stable facts taken from that reference:
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
 - end-to-end typed named-pipe client calls over the import job service
+- application-facing import job RPC calls over named pipes without direct protobuf usage in the caller
 
 ## 12. Current Gaps
 

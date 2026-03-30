@@ -10,6 +10,7 @@ include(CTest)
 
 add_subdirectory(libs/Domain)
 add_subdirectory(libs/Application)
+add_subdirectory(libs/ApplicationClient)
 add_subdirectory(libs/ApplicationJobs)
 add_subdirectory(libs/Core)
 add_subdirectory(libs/BookDatabase)

@@ -4,6 +4,7 @@ if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
     add_executable(LibriFlowCoreTests
+        TestImportJobClient.cpp
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
         TestLibraryJobServiceAdapter.cpp
@@ -47,6 +48,7 @@ if(BUILD_TESTING)
         PRIVATE
             Catch2::Catch2WithMain
             LibriFlowApplication
+            LibriFlowApplicationClient
             LibriFlowApplicationJobs
             LibriFlowBookDatabase
             LibriFlowConverterCommand

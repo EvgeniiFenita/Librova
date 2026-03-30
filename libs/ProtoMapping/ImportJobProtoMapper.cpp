@@ -28,6 +28,59 @@ LibriFlow::Application::SImportRequest CImportJobProtoMapper::FromProto(const li
     };
 }
 
+LibriFlow::Domain::SDomainError CImportJobProtoMapper::FromProto(const libriflow::v1::DomainError& error)
+{
+    return {
+        .Code = FromProto(error.code()),
+        .Message = error.message()
+    };
+}
+
+LibriFlow::Application::SImportSummary CImportJobProtoMapper::FromProto(const libriflow::v1::ImportSummary& summary)
+{
+    LibriFlow::Application::SImportSummary result;
+    result.Mode = FromProto(summary.mode());
+    result.TotalEntries = summary.total_entries();
+    result.ImportedEntries = summary.imported_entries();
+    result.FailedEntries = summary.failed_entries();
+    result.SkippedEntries = summary.skipped_entries();
+    result.Warnings.assign(summary.warnings().begin(), summary.warnings().end());
+    return result;
+}
+
+LibriFlow::ApplicationJobs::SImportJobSnapshot CImportJobProtoMapper::FromProto(
+    const libriflow::v1::ImportJobSnapshot& snapshot)
+{
+    LibriFlow::ApplicationJobs::SImportJobSnapshot result;
+    result.JobId = snapshot.job_id();
+    result.Status = FromProto(snapshot.status());
+    result.Percent = snapshot.percent();
+    result.Message = snapshot.message();
+    result.Warnings.assign(snapshot.warnings().begin(), snapshot.warnings().end());
+    return result;
+}
+
+LibriFlow::ApplicationJobs::SImportJobResult CImportJobProtoMapper::FromProto(
+    const libriflow::v1::ImportJobResult& result)
+{
+    LibriFlow::ApplicationJobs::SImportJobResult mapped;
+    mapped.Snapshot = FromProto(result.snapshot());
+
+    if (result.has_summary())
+    {
+        LibriFlow::Application::SImportResult importResult;
+        importResult.Summary = FromProto(result.summary());
+        mapped.ImportResult = std::move(importResult);
+    }
+
+    if (result.has_error())
+    {
+        mapped.Error = FromProto(result.error());
+    }
+
+    return mapped;
+}
+
 libriflow::v1::ImportRequest CImportJobProtoMapper::ToProto(const LibriFlow::Application::SImportRequest& request)
 {
     libriflow::v1::ImportRequest message;
@@ -146,6 +199,76 @@ std::string CImportJobProtoMapper::PathToUtf8(const std::filesystem::path& path)
 std::filesystem::path CImportJobProtoMapper::PathFromUtf8(const std::string& value)
 {
     return std::filesystem::path{ToUtf8StringView(value)};
+}
+
+LibriFlow::Application::EImportMode CImportJobProtoMapper::FromProto(const libriflow::v1::ImportMode mode) noexcept
+{
+    switch (mode)
+    {
+    case libriflow::v1::IMPORT_MODE_SINGLE_FILE:
+        return LibriFlow::Application::EImportMode::SingleFile;
+    case libriflow::v1::IMPORT_MODE_ZIP_ARCHIVE:
+        return LibriFlow::Application::EImportMode::ZipArchive;
+    case libriflow::v1::IMPORT_MODE_UNSPECIFIED:
+        break;
+    }
+
+    return LibriFlow::Application::EImportMode::SingleFile;
+}
+
+LibriFlow::ApplicationJobs::EImportJobStatus CImportJobProtoMapper::FromProto(
+    const libriflow::v1::ImportJobStatus status) noexcept
+{
+    switch (status)
+    {
+    case libriflow::v1::IMPORT_JOB_STATUS_PENDING:
+        return LibriFlow::ApplicationJobs::EImportJobStatus::Pending;
+    case libriflow::v1::IMPORT_JOB_STATUS_RUNNING:
+        return LibriFlow::ApplicationJobs::EImportJobStatus::Running;
+    case libriflow::v1::IMPORT_JOB_STATUS_COMPLETED:
+        return LibriFlow::ApplicationJobs::EImportJobStatus::Completed;
+    case libriflow::v1::IMPORT_JOB_STATUS_FAILED:
+        return LibriFlow::ApplicationJobs::EImportJobStatus::Failed;
+    case libriflow::v1::IMPORT_JOB_STATUS_CANCELLED:
+        return LibriFlow::ApplicationJobs::EImportJobStatus::Cancelled;
+    case libriflow::v1::IMPORT_JOB_STATUS_UNSPECIFIED:
+        break;
+    }
+
+    return LibriFlow::ApplicationJobs::EImportJobStatus::Failed;
+}
+
+LibriFlow::Domain::EDomainErrorCode CImportJobProtoMapper::FromProto(const libriflow::v1::ErrorCode code) noexcept
+{
+    switch (code)
+    {
+    case libriflow::v1::ERROR_CODE_VALIDATION:
+        return LibriFlow::Domain::EDomainErrorCode::Validation;
+    case libriflow::v1::ERROR_CODE_UNSUPPORTED_FORMAT:
+        return LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat;
+    case libriflow::v1::ERROR_CODE_DUPLICATE_REJECTED:
+        return LibriFlow::Domain::EDomainErrorCode::DuplicateRejected;
+    case libriflow::v1::ERROR_CODE_DUPLICATE_DECISION_REQUIRED:
+        return LibriFlow::Domain::EDomainErrorCode::DuplicateDecisionRequired;
+    case libriflow::v1::ERROR_CODE_PARSER_FAILURE:
+        return LibriFlow::Domain::EDomainErrorCode::ParserFailure;
+    case libriflow::v1::ERROR_CODE_CONVERTER_UNAVAILABLE:
+        return LibriFlow::Domain::EDomainErrorCode::ConverterUnavailable;
+    case libriflow::v1::ERROR_CODE_CONVERTER_FAILED:
+        return LibriFlow::Domain::EDomainErrorCode::ConverterFailed;
+    case libriflow::v1::ERROR_CODE_STORAGE_FAILURE:
+        return LibriFlow::Domain::EDomainErrorCode::StorageFailure;
+    case libriflow::v1::ERROR_CODE_DATABASE_FAILURE:
+        return LibriFlow::Domain::EDomainErrorCode::DatabaseFailure;
+    case libriflow::v1::ERROR_CODE_CANCELLATION:
+        return LibriFlow::Domain::EDomainErrorCode::Cancellation;
+    case libriflow::v1::ERROR_CODE_INTEGRITY_ISSUE:
+        return LibriFlow::Domain::EDomainErrorCode::IntegrityIssue;
+    case libriflow::v1::ERROR_CODE_UNSPECIFIED:
+        break;
+    }
+
+    return LibriFlow::Domain::EDomainErrorCode::IntegrityIssue;
 }
 
 libriflow::v1::ImportMode CImportJobProtoMapper::ToProto(const LibriFlow::Application::EImportMode mode) noexcept

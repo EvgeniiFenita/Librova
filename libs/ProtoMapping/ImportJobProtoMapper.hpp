@@ -13,6 +13,18 @@ public:
     [[nodiscard]] static LibriFlow::Application::SImportRequest FromProto(
         const libriflow::v1::ImportRequest& request);
 
+    [[nodiscard]] static LibriFlow::Domain::SDomainError FromProto(
+        const libriflow::v1::DomainError& error);
+
+    [[nodiscard]] static LibriFlow::Application::SImportSummary FromProto(
+        const libriflow::v1::ImportSummary& summary);
+
+    [[nodiscard]] static LibriFlow::ApplicationJobs::SImportJobSnapshot FromProto(
+        const libriflow::v1::ImportJobSnapshot& snapshot);
+
+    [[nodiscard]] static LibriFlow::ApplicationJobs::SImportJobResult FromProto(
+        const libriflow::v1::ImportJobResult& result);
+
     [[nodiscard]] static libriflow::v1::ImportRequest ToProto(
         const LibriFlow::Application::SImportRequest& request);
 
@@ -40,6 +52,11 @@ public:
 private:
     [[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);
     [[nodiscard]] static std::filesystem::path PathFromUtf8(const std::string& value);
+    [[nodiscard]] static LibriFlow::Application::EImportMode FromProto(libriflow::v1::ImportMode mode) noexcept;
+    [[nodiscard]] static LibriFlow::ApplicationJobs::EImportJobStatus FromProto(
+        libriflow::v1::ImportJobStatus status) noexcept;
+    [[nodiscard]] static LibriFlow::Domain::EDomainErrorCode FromProto(
+        libriflow::v1::ErrorCode code) noexcept;
     [[nodiscard]] static libriflow::v1::ImportMode ToProto(LibriFlow::Application::EImportMode mode) noexcept;
     [[nodiscard]] static libriflow::v1::ImportJobStatus ToProto(
         LibriFlow::ApplicationJobs::EImportJobStatus status) noexcept;
