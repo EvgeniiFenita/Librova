@@ -141,21 +141,57 @@ void CManagedFileStorage::CommitImport(const LibriFlow::Domain::SPreparedStorage
         throw std::invalid_argument("Prepared storage must contain a staged book.");
     }
 
-    EnsureDirectory(preparedStorage.FinalBookPath.parent_path());
-    MoveFile(preparedStorage.StagedBookPath, preparedStorage.FinalBookPath);
+    bool movedBook = false;
+    bool movedCover = false;
 
-    if (preparedStorage.StagedCoverPath.has_value())
+    try
     {
-        if (!preparedStorage.FinalCoverPath.has_value())
+        EnsureDirectory(preparedStorage.FinalBookPath.parent_path());
+        MoveFile(preparedStorage.StagedBookPath, preparedStorage.FinalBookPath);
+        movedBook = true;
+
+        if (preparedStorage.StagedCoverPath.has_value())
         {
-            throw std::invalid_argument("Prepared storage must contain a final cover path when a cover is staged.");
+            if (!preparedStorage.FinalCoverPath.has_value())
+            {
+                throw std::invalid_argument("Prepared storage must contain a final cover path when a cover is staged.");
+            }
+
+            EnsureDirectory(preparedStorage.FinalCoverPath->parent_path());
+            MoveFile(*preparedStorage.StagedCoverPath, *preparedStorage.FinalCoverPath);
+            movedCover = true;
         }
 
-        EnsureDirectory(preparedStorage.FinalCoverPath->parent_path());
-        MoveFile(*preparedStorage.StagedCoverPath, *preparedStorage.FinalCoverPath);
+        RemovePathNoThrow(preparedStorage.StagedBookPath.parent_path());
     }
+    catch (...)
+    {
+        if (movedCover && preparedStorage.StagedCoverPath.has_value() && preparedStorage.FinalCoverPath.has_value())
+        {
+            try
+            {
+                EnsureDirectory(preparedStorage.StagedCoverPath->parent_path());
+                MoveFile(*preparedStorage.FinalCoverPath, *preparedStorage.StagedCoverPath);
+            }
+            catch (...)
+            {
+            }
+        }
 
-    RemovePathNoThrow(preparedStorage.StagedBookPath.parent_path());
+        if (movedBook)
+        {
+            try
+            {
+                EnsureDirectory(preparedStorage.StagedBookPath.parent_path());
+                MoveFile(preparedStorage.FinalBookPath, preparedStorage.StagedBookPath);
+            }
+            catch (...)
+            {
+            }
+        }
+
+        throw;
+    }
 }
 
 void CManagedFileStorage::RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept

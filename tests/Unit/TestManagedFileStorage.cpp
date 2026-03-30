@@ -125,3 +125,34 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath.parent_path()));
     REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
 }
+
+TEST_CASE("Managed file storage restores staging state when commit fails after moving the book", "[managed-storage]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-managed-storage-commit-failure");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+    const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
+
+    WriteTextFile(sourceBookPath, "book-content");
+    WriteTextFile(sourceCoverPath, "cover-content");
+
+    LibriFlow::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {55},
+        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath,
+        .CoverSourcePath = sourceCoverPath
+    });
+
+    REQUIRE(prepared.FinalCoverPath.has_value());
+    std::filesystem::create_directories(*prepared.FinalCoverPath);
+
+    REQUIRE_THROWS(storage.CommitImport(prepared));
+
+    REQUIRE(std::filesystem::exists(prepared.StagedBookPath));
+    REQUIRE(prepared.StagedCoverPath.has_value());
+    REQUIRE(std::filesystem::exists(*prepared.StagedCoverPath));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
+    REQUIRE(std::filesystem::is_directory(*prepared.FinalCoverPath));
+    REQUIRE(ReadTextFile(prepared.StagedBookPath) == "book-content");
+    REQUIRE(ReadTextFile(*prepared.StagedCoverPath) == "cover-content");
+}
