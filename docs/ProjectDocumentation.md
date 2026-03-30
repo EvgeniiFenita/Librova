@@ -69,6 +69,8 @@ Implemented slices at this point:
   - import job result DTO
   - `LibraryJobService` RPC surface for start/get/wait/cancel/remove
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
+- `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
+- The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
 
 ## 5. Persistence And Storage
 

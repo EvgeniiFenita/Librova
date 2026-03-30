@@ -5,6 +5,7 @@
   "dependencies": [
     "catch2",
     "libzip",
+    "protobuf",
     "pugixml",
     {
       "name": "sqlite3",

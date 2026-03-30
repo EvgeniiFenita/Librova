@@ -52,6 +52,9 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added external converter runtime execution with process cancellation support and output relocation for directory-based converters.
 - `2026-03-30` Feature: added explicit conversion result statuses and a separate import conversion policy with tested fallback and cancellation behavior.
 - `2026-03-30` Feature: added explicit converter configuration modes for disabled, built-in `fb2cng`, and custom command profiles.
+
+### Phase 6. Use Cases And Job Engine
+
 - `2026-03-30` Feature: added reserved book id allocation and first single-file import orchestration with tested duplicate handling, conversion, storage staging, and repository write flow.
 - `2026-03-30` Feature: strengthened single-file import with explicit probable-duplicate override flow and rollback coverage for repository/storage failures.
 - `2026-03-30` Fix: closed review findings around book id reservation collisions, transactional repository removal, coordinator cancellation cleanup, and weak staged-file rollback tests.
@@ -61,4 +64,8 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first in-memory import job manager with background execution, live snapshots, cancellation, and result lookup.
 - `2026-03-30` Feature: added an application-facing import job service with dedicated DTOs above the in-memory job manager.
 - `2026-03-30` Fix: hardened ZIP import paths, empty-import job semantics, progress callback isolation, and completed-job cleanup APIs.
+
+### Phase 7. IPC Surface
+
 - `2026-03-30` Feature: added the first shared protobuf contract for import jobs and `LibraryJobService`.
+- `2026-03-30` Build: enabled protobuf tooling through manifest `vcpkg` and added a local `protoc` validation script.

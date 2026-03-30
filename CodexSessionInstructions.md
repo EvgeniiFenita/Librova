@@ -38,6 +38,7 @@ Before making changes, review these documents in this order:
 - External converter integration should stay user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive dependency.
 - Conversion cancellation is a distinct outcome from converter failure; cancelled conversions must not silently fall back to storing the original FB2 file.
 - Do not run `build` and `ctest` in parallel when tests depend on freshly built binaries; verification must run sequentially as `build -> test`.
+- After changing files under `proto/`, validate contracts with `scripts/ValidateProto.ps1` before considering the checkpoint verified.
 
 ## 4. Implementation Priorities
 

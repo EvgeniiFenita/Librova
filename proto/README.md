@@ -18,3 +18,8 @@ Notes:
 
 - contracts are transport-oriented and intentionally do not expose internal repository or managed-storage layout details
 - gRPC runtime/code generation wiring is not added yet in this checkpoint
+- `protoc` is expected to come from the repository `vcpkg` toolchain via the `protobuf` package
+- current project-local `protoc` path for preset `x64-debug`:
+  `out/build/x64-debug/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`
+- validation helper:
+  `pwsh -File scripts/ValidateProto.ps1`
