@@ -280,12 +280,20 @@
             <Border Background="#FFF8EF"
                     CornerRadius="18"
                     Padding="16">
-              <StackPanel Spacing="6">
+              <StackPanel Spacing="10">
                 <TextBlock FontWeight="SemiBold"
                            Text="Current Library" />
                 <TextBlock FontSize="12"
                            Text="{Binding Shell.LibraryRoot}"
                            TextWrapping="Wrap" />
+                <Button Classes="SecondaryAction"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding Shell.OpenLibraryCommand}"
+                        Content="Open Library..." />
+                <Button Classes="SecondaryAction"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding Shell.CreateLibraryCommand}"
+                        Content="Create Library..." />
               </StackPanel>
             </Border>
           </StackPanel>

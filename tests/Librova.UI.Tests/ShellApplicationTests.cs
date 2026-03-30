@@ -248,7 +248,6 @@ public sealed class ShellApplicationTests
             preferencesStore: new FakePreferencesStore());
 
         Assert.Equal(@"C:\Incoming\opened.fb2", application.Shell.ImportJobs.SourcePath);
-        Assert.Contains("launch arguments", application.Shell.OperationalWarningsText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -338,36 +337,6 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
-    public void Create_WithSavedPreferences_LoadsPreferredLibraryRoot()
-    {
-        var session = new ShellSession(
-            new CoreHostProcess(),
-            new CoreHostLaunchOptions
-            {
-                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
-                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
-                LibraryRoot = @"C:\Libraries\Librova"
-            },
-            new FakeImportJobsService(),
-            new FakeLibraryCatalogService());
-
-        var application = ShellApplication.Create(
-            session,
-            stateStore: CreateIsolatedStateStore(),
-            preferencesStore: new FakePreferencesStore
-            {
-                Snapshot = new UiPreferencesSnapshot
-                {
-                    PreferredLibraryRoot = @"D:\Librova\SecondLibrary"
-                }
-            });
-
-        Assert.Equal(@"D:\Librova\SecondLibrary", application.Shell.PreferredLibraryRoot);
-        Assert.True(application.Shell.HasOperationalWarnings);
-        Assert.Contains("Restart the app", application.Shell.OperationalWarningsText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
     public async Task ShellSettings_CanSaveCustomConverterPreferences()
     {
         var preferencesStore = new FakePreferencesStore();
@@ -395,6 +364,7 @@ public sealed class ShellApplicationTests
         await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
         Assert.Equal(UiConverterMode.CustomCommand, preferencesStore.LastSavedSnapshot?.ConverterMode);
+        Assert.Equal(@"C:\Libraries\Librova", preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
         Assert.Equal(@"D:\Tools\custom.exe", preferencesStore.LastSavedSnapshot?.CustomConverterExecutablePath);
         Assert.NotNull(preferencesStore.LastSavedSnapshot?.CustomConverterArguments);
         Assert.Equal(["--input", "{source}"], preferencesStore.LastSavedSnapshot!.CustomConverterArguments);
@@ -426,39 +396,9 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
-    public void Create_WithoutLaunchOrPreferenceMismatch_HasNoOperationalWarnings()
+    public async Task Shell_CanRequestOpeningDifferentLibrary()
     {
-        var session = new ShellSession(
-            new CoreHostProcess(),
-            new CoreHostLaunchOptions
-            {
-                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
-                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
-                LibraryRoot = @"C:\Libraries\Librova"
-            },
-            new FakeImportJobsService(),
-            new FakeLibraryCatalogService());
-
-        var application = ShellApplication.Create(
-            session,
-            stateStore: CreateIsolatedStateStore(),
-            preferencesStore: new FakePreferencesStore
-            {
-                Snapshot = new UiPreferencesSnapshot
-                {
-                    PreferredLibraryRoot = @"C:\Libraries\Librova"
-                }
-            });
-
-        Assert.False(application.Shell.HasOperationalWarnings);
-        Assert.Equal(string.Empty, application.Shell.OperationalWarningsText);
-    }
-
-    [Fact]
-    public async Task ShellSettings_CanSaveAndResetPreferredLibraryRoot()
-    {
-        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "preferred-root", Guid.NewGuid().ToString("N"));
-        var preferencesStore = new FakePreferencesStore();
+        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "open-library", Guid.NewGuid().ToString("N"));
         var session = new ShellSession(
             new CoreHostProcess(),
             new CoreHostLaunchOptions
@@ -468,6 +408,7 @@ public sealed class ShellApplicationTests
                 LibraryRoot = @"C:\Libraries\Librova"
             },
             new FakeImportJobsService());
+        string? switchedTo = null;
         var application = ShellApplication.Create(
             session,
             new FakePathSelectionService
@@ -475,18 +416,49 @@ public sealed class ShellApplicationTests
                 SelectedWorkingDirectory = selectedPath
             },
             stateStore: CreateIsolatedStateStore(),
-            preferencesStore: preferencesStore);
+            preferencesStore: new FakePreferencesStore(),
+            switchLibraryAsync: path =>
+            {
+                switchedTo = path;
+                return Task.CompletedTask;
+            });
 
-        await application.Shell.BrowsePreferredLibraryRootCommand.ExecuteAsyncForTests();
-        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
+        await application.Shell.OpenLibraryCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(selectedPath, preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
-        Assert.Contains("Next app launch", application.Shell.PreferencesStatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(selectedPath, switchedTo);
+    }
 
-        await application.Shell.ResetPreferencesCommand.ExecuteAsyncForTests();
+    [Fact]
+    public async Task Shell_CanRequestCreatingDifferentLibrary()
+    {
+        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "create-library", Guid.NewGuid().ToString("N"));
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+        string? switchedTo = null;
+        var application = ShellApplication.Create(
+            session,
+            new FakePathSelectionService
+            {
+                SelectedWorkingDirectory = selectedPath
+            },
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore(),
+            switchLibraryAsync: path =>
+            {
+                switchedTo = path;
+                return Task.CompletedTask;
+            });
 
-        Assert.True(preferencesStore.Cleared);
-        Assert.Equal(@"C:\Libraries\Librova", application.Shell.PreferredLibraryRoot);
+        await application.Shell.CreateLibraryCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(selectedPath, switchedTo);
     }
 
     private static ShellStateStore CreateIsolatedStateStore() =>

@@ -19,9 +19,7 @@ internal sealed class ShellViewModel : ObservableObject
     private readonly ShellSession _session;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly IUiPreferencesStore _preferencesStore;
-    private string _preferredLibraryRoot = string.Empty;
-    private string _preferencesStatusText = "Using current shell defaults.";
-    private string _preferredLibraryRootValidationMessage = string.Empty;
+    private readonly Func<string, Task>? _switchLibraryAsync;
     private UiConverterMode _selectedConverterMode;
     private string _fb2CngExecutablePath = string.Empty;
     private string _fb2CngConfigPath = string.Empty;
@@ -29,7 +27,6 @@ internal sealed class ShellViewModel : ObservableObject
     private string _customConverterArgumentsText = string.Empty;
     private UiConverterOutputMode _selectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
     private string _converterValidationMessage = string.Empty;
-    private readonly string _launchPrefillNotice;
     private ShellSection _currentSection = ShellSection.Library;
 
     public ShellViewModel(
@@ -38,11 +35,13 @@ internal sealed class ShellViewModel : ObservableObject
         ShellLaunchOptions? launchOptions = null,
         ShellStateSnapshot? savedState = null,
         IUiPreferencesStore? preferencesStore = null,
-        UiPreferencesSnapshot? savedPreferences = null)
+        UiPreferencesSnapshot? savedPreferences = null,
+        Func<string, Task>? switchLibraryAsync = null)
     {
         _session = session;
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
+        _switchLibraryAsync = switchLibraryAsync;
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
         LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
@@ -51,7 +50,6 @@ internal sealed class ShellViewModel : ObservableObject
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
         ImportJobs.AllowProbableDuplicates = savedState?.AllowProbableDuplicates ?? false;
-        _preferredLibraryRoot = savedPreferences?.PreferredLibraryRoot ?? session.HostOptions.LibraryRoot;
         _selectedConverterMode = savedPreferences?.ConverterMode ?? UiConverterMode.Disabled;
         _fb2CngExecutablePath = savedPreferences?.Fb2CngExecutablePath ?? string.Empty;
         _fb2CngConfigPath = savedPreferences?.Fb2CngConfigPath ?? string.Empty;
@@ -62,17 +60,13 @@ internal sealed class ShellViewModel : ObservableObject
         _selectedCustomConverterOutputMode = savedPreferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath;
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
-        ResetPreferencesCommand = new AsyncCommand(ResetPreferencesAsync, () => true);
-        BrowsePreferredLibraryRootCommand = new AsyncCommand(BrowsePreferredLibraryRootAsync, () => true);
+        OpenLibraryCommand = new AsyncCommand(OpenLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
+        CreateLibraryCommand = new AsyncCommand(CreateLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Library);
         ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Import);
         ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Settings);
 
-        UpdatePreferredLibraryRootValidation();
         UpdateConverterValidation();
-        _launchPrefillNotice = string.IsNullOrWhiteSpace(launchOptions?.InitialSourcePath)
-            ? string.Empty
-            : "Source path was prefilled from launch arguments for this session.";
 
         if (!string.IsNullOrWhiteSpace(launchOptions?.InitialSourcePath))
         {
@@ -89,30 +83,11 @@ internal sealed class ShellViewModel : ObservableObject
     public ImportJobsViewModel ImportJobs { get; }
     public LibraryBrowserViewModel LibraryBrowser { get; }
     public AsyncCommand SavePreferencesCommand { get; }
-    public AsyncCommand ResetPreferencesCommand { get; }
-    public AsyncCommand BrowsePreferredLibraryRootCommand { get; }
+    public AsyncCommand OpenLibraryCommand { get; }
+    public AsyncCommand CreateLibraryCommand { get; }
     public AsyncCommand ShowLibrarySectionCommand { get; }
     public AsyncCommand ShowImportSectionCommand { get; }
     public AsyncCommand ShowSettingsSectionCommand { get; }
-
-    public string PreferredLibraryRoot
-    {
-        get => _preferredLibraryRoot;
-        set
-        {
-            if (SetProperty(ref _preferredLibraryRoot, value))
-            {
-                UpdatePreferredLibraryRootValidation();
-                SavePreferencesCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
-    public string PreferencesStatusText
-    {
-        get => _preferencesStatusText;
-        private set => SetProperty(ref _preferencesStatusText, value);
-    }
 
     public UiConverterMode SelectedConverterMode
     {
@@ -211,26 +186,19 @@ internal sealed class ShellViewModel : ObservableObject
         }
     }
 
-    public string PreferredLibraryRootValidationMessage
-    {
-        get => _preferredLibraryRootValidationMessage;
-        private set => SetProperty(ref _preferredLibraryRootValidationMessage, value);
-    }
-
     public string ConverterValidationMessage
     {
         get => _converterValidationMessage;
         private set => SetProperty(ref _converterValidationMessage, value);
     }
 
-    public bool HasPreferredLibraryRootValidationError => !string.IsNullOrWhiteSpace(PreferredLibraryRootValidationMessage);
-    public bool ShowPreferredLibraryRootHelperText => !HasPreferredLibraryRootValidationError;
     public bool HasConverterValidationError => !string.IsNullOrWhiteSpace(ConverterValidationMessage);
     public bool ShowConverterHelperText => !HasConverterValidationError;
     public bool IsLibrarySectionActive => CurrentSection is ShellSection.Library;
     public bool IsImportSectionActive => CurrentSection is ShellSection.Import;
     public bool IsSettingsSectionActive => CurrentSection is ShellSection.Settings;
     public bool IsImportInProgress => ImportJobs.IsBusy;
+    public bool CanSwitchLibrary => !IsImportInProgress && _switchLibraryAsync is not null;
     public bool IsConverterDisabled => SelectedConverterMode is UiConverterMode.Disabled;
     public bool IsBuiltInConverterSelected => SelectedConverterMode is UiConverterMode.BuiltInFb2Cng;
     public bool IsCustomConverterSelected => SelectedConverterMode is UiConverterMode.CustomCommand;
@@ -256,9 +224,7 @@ internal sealed class ShellViewModel : ObservableObject
     public string HostExecutablePath => _session.HostOptions.ExecutablePath;
     public string HostLogFilePath => Path.Combine(LibraryRoot, "Logs", "host.log");
     public string DiagnosticsHintText =>
-        "If startup or import flow looks suspicious, inspect the UI log first, then the host log. The current session keeps using the library root shown under Session, while the settings card only affects the next launch.";
-    public string OperationalWarningsText => BuildOperationalWarningsText();
-    public bool HasOperationalWarnings => !string.IsNullOrWhiteSpace(OperationalWarningsText);
+        "If startup or import flow looks suspicious, inspect the UI log first, then the host log.";
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
@@ -288,12 +254,21 @@ internal sealed class ShellViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private async Task BrowsePreferredLibraryRootAsync()
+    private async Task OpenLibraryAsync()
     {
         var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
-        if (!string.IsNullOrWhiteSpace(selectedPath))
+        if (!string.IsNullOrWhiteSpace(selectedPath) && _switchLibraryAsync is not null)
         {
-            PreferredLibraryRoot = selectedPath;
+            await _switchLibraryAsync(selectedPath);
+        }
+    }
+
+    private async Task CreateLibraryAsync()
+    {
+        var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
+        if (!string.IsNullOrWhiteSpace(selectedPath) && _switchLibraryAsync is not null)
+        {
+            await _switchLibraryAsync(selectedPath);
         }
     }
 
@@ -301,7 +276,7 @@ internal sealed class ShellViewModel : ObservableObject
     {
         _preferencesStore.Save(new UiPreferencesSnapshot
         {
-            PreferredLibraryRoot = PreferredLibraryRoot,
+            PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
             ConverterMode = SelectedConverterMode,
             Fb2CngExecutablePath = IsBuiltInConverterSelected ? Fb2CngExecutablePath : null,
             Fb2CngConfigPath = IsBuiltInConverterSelected && !string.IsNullOrWhiteSpace(Fb2CngConfigPath) ? Fb2CngConfigPath : null,
@@ -309,39 +284,12 @@ internal sealed class ShellViewModel : ObservableObject
             CustomConverterArguments = IsCustomConverterSelected ? ParseCustomConverterArguments() : null,
             CustomConverterOutputMode = SelectedCustomConverterOutputMode
         });
-        PreferencesStatusText = "Saved. Next app launch will use these library and converter settings.";
-        UiLogging.Information("Saved preferred library root for next launch. PreferredLibraryRoot={PreferredLibraryRoot}", PreferredLibraryRoot);
-        return Task.CompletedTask;
-    }
-
-    private Task ResetPreferencesAsync()
-    {
-        _preferencesStore.Clear();
-        PreferredLibraryRoot = _session.HostOptions.LibraryRoot;
-        SelectedConverterMode = UiConverterMode.Disabled;
-        Fb2CngExecutablePath = string.Empty;
-        Fb2CngConfigPath = string.Empty;
-        CustomConverterExecutablePath = string.Empty;
-        CustomConverterArgumentsText = string.Empty;
-        SelectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
-        PreferencesStatusText = "Reset. Next app launch will use the default library root.";
-        UiLogging.Information("Cleared preferred library root override.");
+        UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
         return Task.CompletedTask;
     }
 
     private bool CanSavePreferences() =>
-        !HasPreferredLibraryRootValidationError
-        && !HasConverterValidationError
-        && !string.IsNullOrWhiteSpace(PreferredLibraryRoot);
-
-    private void UpdatePreferredLibraryRootValidation()
-    {
-        PreferredLibraryRootValidationMessage = LibraryRootValidation.BuildValidationMessage(PreferredLibraryRoot);
-        RaisePropertyChanged(nameof(HasPreferredLibraryRootValidationError));
-        RaisePropertyChanged(nameof(ShowPreferredLibraryRootHelperText));
-        RaisePropertyChanged(nameof(OperationalWarningsText));
-        RaisePropertyChanged(nameof(HasOperationalWarnings));
-    }
+        !HasConverterValidationError;
 
     private void UpdateConverterValidation()
     {
@@ -415,27 +363,6 @@ internal sealed class ShellViewModel : ObservableObject
     {
         var messages = new List<string>();
 
-        if (_launchPrefillNotice.Length > 0)
-        {
-            messages.Add(_launchPrefillNotice);
-        }
-
-        if (!string.Equals(PreferredLibraryRoot, LibraryRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            messages.Add("Saved next-launch library root differs from the current session. Restart the app to switch the active library.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(RuntimeEnvironment.GetLibraryRootOverride()))
-        {
-            messages.Add("Library root is currently forced by environment override. Saved preferences will not affect this launch.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(RuntimeEnvironment.GetDefaultUiLogFilePath())
-            && RuntimeEnvironment.GetDefaultUiLogFilePath().Contains(@"\out\runtime\", StringComparison.OrdinalIgnoreCase))
-        {
-            messages.Add("Runtime files are redirected into the repository out directory for this launch.");
-        }
-
         return messages.Count == 0
             ? string.Empty
             : string.Join(Environment.NewLine, messages);
@@ -454,11 +381,14 @@ internal sealed class ShellViewModel : ObservableObject
         }
 
         RaisePropertyChanged(nameof(IsImportInProgress));
+        RaisePropertyChanged(nameof(CanSwitchLibrary));
         if (ImportJobs.IsBusy && CurrentSection is not ShellSection.Import)
         {
             CurrentSection = ShellSection.Import;
         }
 
+        OpenLibraryCommand.RaiseCanExecuteChanged();
+        CreateLibraryCommand.RaiseCanExecuteChanged();
         ShowLibrarySectionCommand.RaiseCanExecuteChanged();
         ShowImportSectionCommand.RaiseCanExecuteChanged();
         ShowSettingsSectionCommand.RaiseCanExecuteChanged();

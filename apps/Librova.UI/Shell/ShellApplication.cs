@@ -35,7 +35,8 @@ internal sealed class ShellApplication : IAsyncDisposable
         ShellLaunchOptions? launchOptions = null,
         IShellStateStore? stateStore = null,
         IUiPreferencesStore? preferencesStore = null,
-        UiPreferencesSnapshot? savedPreferencesOverride = null)
+        UiPreferencesSnapshot? savedPreferencesOverride = null,
+        Func<string, Task>? switchLibraryAsync = null)
     {
         var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();
         var effectivePreferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
@@ -43,7 +44,7 @@ internal sealed class ShellApplication : IAsyncDisposable
         var savedPreferences = savedPreferencesOverride ?? effectivePreferencesStore.TryLoad();
         return new(
             session,
-            new ShellViewModel(session, pathSelectionService, launchOptions, savedState, effectivePreferencesStore, savedPreferences),
+            new ShellViewModel(session, pathSelectionService, launchOptions, savedState, effectivePreferencesStore, savedPreferences, switchLibraryAsync),
             effectiveStateStore);
     }
 

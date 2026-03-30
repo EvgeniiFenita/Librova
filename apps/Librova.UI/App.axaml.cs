@@ -146,7 +146,14 @@ internal sealed partial class App : Application
                 pathSelectionService,
                 launchOptions,
                 preferencesStore: preferencesStore,
-                savedPreferencesOverride: savedPreferencesOverride);
+                savedPreferencesOverride: savedPreferencesOverride,
+                switchLibraryAsync: libraryRoot => SwitchLibraryRootAsync(
+                    mainWindow,
+                    pathSelectionService,
+                    preferencesStore,
+                    launchOptions,
+                    libraryRoot,
+                    cancellationToken));
             await _shellApplication.InitializeAsync();
             ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
             UiLogging.Information("Avalonia desktop shell is ready.");
@@ -190,6 +197,40 @@ internal sealed partial class App : Application
                 libraryRoot,
                 cancellationToken),
             requireDifferentLibraryRoot);
+
+    private async Task SwitchLibraryRootAsync(
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore,
+        ShellLaunchOptions launchOptions,
+        string libraryRoot,
+        CancellationToken cancellationToken)
+    {
+        UiLogging.Information("Switching active library. LibraryRoot={LibraryRoot}", libraryRoot);
+        ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
+
+        var previousApplication = _shellApplication;
+        _shellApplication = null;
+        if (previousApplication is not null)
+        {
+            await previousApplication.DisposeAsync();
+        }
+
+        await StartShellWithLibraryRootAsync(
+            mainWindow,
+            pathSelectionService,
+            preferencesStore,
+            launchOptions,
+            libraryRoot,
+            cancellationToken);
+
+        if (_shellApplication is not null)
+        {
+            preferencesStore.Save(UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
+                preferencesStore.TryLoad(),
+                libraryRoot));
+        }
+    }
 
     private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
