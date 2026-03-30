@@ -34,25 +34,11 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="TintedCard"
-                Background="#FAF4EC"
-                BorderBrush="#E0D4C4">
-          <StackPanel Spacing="8">
-            <TextBlock FontWeight="SemiBold"
-                       Text="Selected Source" />
-            <TextBlock FontSize="16"
-                       FontWeight="SemiBold"
-                       Text="{Binding ImportJobs.SelectedSourceLabel}" />
-            <TextBlock Opacity="0.78"
-                       Text="{Binding ImportJobs.SelectedSourcePathText}"
-                       TextWrapping="Wrap" />
-            <TextBlock FontSize="12"
-                       Foreground="#A04628"
-                       IsVisible="{Binding ImportJobs.HasSourceValidationError}"
-                       Text="{Binding ImportJobs.SourceValidationMessage}"
-                       TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
+        <TextBlock FontSize="12"
+                   Foreground="#A04628"
+                   IsVisible="{Binding ImportJobs.HasSourceValidationError}"
+                   Text="{Binding ImportJobs.SourceValidationMessage}"
+                   TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 
@@ -64,6 +50,9 @@
         <TextBlock FontSize="16"
                    FontWeight="SemiBold"
                    Text="{Binding ImportJobs.StatusText}" />
+        <TextBlock Opacity="0.78"
+                   Text="{Binding ImportJobs.SelectedSourcePathText}"
+                   TextWrapping="Wrap" />
         <TextBlock Opacity="0.78"
                    Text="The import pipeline is running. Navigation and other actions stay locked until the import finishes or is cancelled."
                    TextWrapping="Wrap" />
@@ -84,6 +73,12 @@
         <TextBlock FontSize="16"
                    FontWeight="SemiBold"
                    Text="{Binding ImportJobs.StatusText}" />
+        <StackPanel Spacing="6">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Imported Source" />
+          <TextBlock Text="{Binding ImportJobs.SelectedSourcePathText}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
         <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
                    TextWrapping="Wrap" />
 
