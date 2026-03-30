@@ -5,6 +5,7 @@ if(BUILD_TESTING)
 
     add_executable(LibriFlowCoreTests
         TestImportJobService.cpp
+        TestImportJobProtoMapper.cpp
         TestProtoContracts.cpp
         TestLibraryImportFacade.cpp
         TestBook.cpp
@@ -57,6 +58,7 @@ if(BUILD_TESTING)
             LibriFlowManagedStorage
             LibriFlowParserRegistry
             LibriFlowProtoContracts
+            LibriFlowProtoMapping
             LibriFlowSearchIndex
             LibriFlowSqlite
             LibriFlowStoragePlanning

@@ -51,6 +51,7 @@ Implemented slices at this point:
 - `Fb2Parsing`
 - `ParserRegistry`
 - `ProtoContracts`
+- `ProtoMapping`
 - `SearchIndex`
 - `ConverterCommand`
 - `ConverterConfiguration`
@@ -74,6 +75,12 @@ Implemented slices at this point:
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
 - `import_jobs.proto` is now compiled into a native C++ target through `libs/ProtoContracts`.
 - The repository already has round-trip protobuf tests against generated C++ message classes.
+- `libs/ProtoMapping` converts between:
+  - `Application::SImportRequest` and `ImportRequest`
+  - `ApplicationJobs::SImportJobSnapshot` and `ImportJobSnapshot`
+  - `ApplicationJobs::SImportJobResult` and `ImportJobResult`
+  - domain errors and transport `ErrorCode`
+- Path mapping in the protobuf transport layer uses UTF-8 conversion instead of locale-dependent narrow path handling.
 
 ## 5. Persistence And Storage
 
