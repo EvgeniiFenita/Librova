@@ -1,5 +1,6 @@
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
+using Librova.UI.LibraryCatalog;
 using Librova.UI.ViewModels;
 using Xunit;
 
@@ -339,6 +340,31 @@ public sealed class ViewModelsTests
         Assert.Equal(@"C:\Incoming\existing.fb2", viewModel.SourcePath);
     }
 
+    [Fact]
+    public async Task LibraryBrowserViewModel_LoadsBooksFromCatalogService()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+        viewModel.SearchText = "road";
+
+        await viewModel.RefreshAsync();
+
+        Assert.True(viewModel.HasBooks);
+        Assert.Equal("Loaded 1 book(s).", viewModel.StatusText);
+        Assert.Single(viewModel.Books);
+        Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ReportsEmptySearchResult()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.False(viewModel.HasBooks);
+        Assert.Equal("No books found for the current filter.", viewModel.StatusText);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }
@@ -537,5 +563,28 @@ public sealed class ViewModelsTests
         var sourcePath = Path.Combine(sandboxRoot, fileName);
         File.WriteAllText(sourcePath, "content");
         return sourcePath;
+    }
+
+    private sealed class FakeLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 1,
+                    Title = "Roadside Picnic",
+                    Authors = ["Arkady Strugatsky"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000001/book.epub",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+    }
+
+    private sealed class EmptyLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
     }
 }

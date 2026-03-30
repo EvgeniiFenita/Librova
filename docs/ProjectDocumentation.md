@@ -192,6 +192,8 @@ Implemented slices at this point:
 - the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 - the current UI shell now exposes an `Operational Notes` panel that surfaces launch-argument prefill, next-launch library-root mismatch, and runtime-redirection hints directly in the running shell instead of leaving them implicit
 - the current startup-error screen now includes actionable guidance and the current UI log/state/preferences file paths, so bootstrap failures can be diagnosed without leaving the error screen
+- `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
+- the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 
 ## 5. Persistence And Storage
 
@@ -319,7 +321,9 @@ Stable facts taken from that reference:
 - native logging initialization and file output coverage
 - C# pipe protocol round-trip and corruption-rejection coverage
 - C# end-to-end import-job client coverage against the real native host process
+- C# end-to-end library-catalog client coverage against the real native host process
 - C# mapping and service-layer coverage for UI-facing import job DTOs
+- C# mapping and service-layer coverage for UI-facing library-catalog DTOs
 - C# shell bootstrap/session coverage over a real host-backed import flow
 - C# ViewModel coverage for import job state and command enablement
 - C# shell-application composition coverage
@@ -343,6 +347,7 @@ Stable facts taken from that reference:
 - C# shell composition coverage for diagnostics-path exposure in the running session
 - C# shell composition coverage for operational-warning visibility in the running session
 - C# startup-error-state coverage for diagnostics-path and guidance exposure
+- C# ViewModel coverage for the first UI-side library browser refresh flow
 
 ## 12. Current Gaps
 

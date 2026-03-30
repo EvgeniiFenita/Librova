@@ -60,3 +60,20 @@ TEST_CASE("Pipe protocol rejects corrupted method values", "[pipe]")
     const auto parsed = Librova::PipeTransport::DeserializeRequestEnvelope(bytes);
     REQUIRE_FALSE(parsed.HasValue());
 }
+
+TEST_CASE("Pipe protocol recognizes list books method in request framing", "[pipe]")
+{
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
+        .RequestId = 88,
+        .Method = Librova::PipeTransport::EPipeMethod::ListBooks,
+        .Payload = "catalog"
+    };
+
+    const auto bytes = Librova::PipeTransport::SerializeRequestEnvelope(request);
+    const auto parsed = Librova::PipeTransport::DeserializeRequestEnvelope(bytes);
+
+    REQUIRE(parsed.HasValue());
+    REQUIRE(parsed.Value->RequestId == request.RequestId);
+    REQUIRE(parsed.Value->Method == Librova::PipeTransport::EPipeMethod::ListBooks);
+    REQUIRE(parsed.Value->Payload == "catalog");
+}

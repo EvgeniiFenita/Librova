@@ -1,5 +1,6 @@
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
+using Librova.UI.LibraryCatalog;
 using Librova.UI.Logging;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,8 +24,9 @@ internal static class ShellBootstrap
         {
             await process.StartAsync(hostOptions, cancellationToken).ConfigureAwait(false);
             var importJobs = new ImportJobsService(hostOptions.PipePath);
+            var libraryCatalog = new LibraryCatalogService(hostOptions.PipePath);
             UiLogging.Information("UI shell session is ready. PipePath={PipePath}", hostOptions.PipePath);
-            return new ShellSession(process, hostOptions, importJobs);
+            return new ShellSession(process, hostOptions, importJobs, libraryCatalog);
         }
         catch (System.Exception error)
         {

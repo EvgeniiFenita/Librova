@@ -102,6 +102,7 @@ template <typename TEnum>
     switch (static_cast<TEnum>(value))
     {
     case TEnum::StartImport:
+    case TEnum::ListBooks:
     case TEnum::GetImportJobSnapshot:
     case TEnum::GetImportJobResult:
     case TEnum::WaitImportJob:

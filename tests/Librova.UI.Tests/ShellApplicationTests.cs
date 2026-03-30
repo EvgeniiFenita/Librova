@@ -1,6 +1,7 @@
 using Librova.UI.CoreHost;
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
+using Librova.UI.LibraryCatalog;
 using Librova.UI.Shell;
 using Xunit;
 
@@ -19,7 +20,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -29,6 +31,7 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"C:\Libraries\Librova", application.Shell.LibraryRoot);
         Assert.Equal(@"\\.\pipe\Librova.ShellApplication.Test", application.Shell.PipePath);
         Assert.NotNull(application.Shell.ImportJobs);
+        Assert.NotNull(application.Shell.LibraryBrowser);
         Assert.Equal(
             Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
             application.Shell.ImportJobs.WorkingDirectory);
@@ -45,7 +48,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
         var application = ShellApplication.Create(
             session,
             new FakePathSelectionService
@@ -74,7 +78,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -107,7 +112,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -131,7 +137,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
         var application = ShellApplication.Create(
             session,
             stateStore: stateStore,
@@ -161,7 +168,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
         var application = ShellApplication.Create(
             session,
             stateStore: new ThrowingStateStore(),
@@ -183,7 +191,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -212,7 +221,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -236,7 +246,8 @@ public sealed class ShellApplicationTests
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova"
             },
-            new FakeImportJobsService());
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
 
         var application = ShellApplication.Create(
             session,
@@ -347,6 +358,12 @@ public sealed class ShellApplicationTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+    }
+
+    private sealed class FakeLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService

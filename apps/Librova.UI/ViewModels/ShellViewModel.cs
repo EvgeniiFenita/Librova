@@ -1,5 +1,6 @@
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
+using Librova.UI.LibraryCatalog;
 using Librova.UI.Logging;
 using Librova.UI.Shell;
 using Librova.UI.Mvvm;
@@ -33,6 +34,7 @@ internal sealed class ShellViewModel : ObservableObject
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
+        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog);
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
@@ -60,6 +62,7 @@ internal sealed class ShellViewModel : ObservableObject
     public string LibraryRoot => _session.HostOptions.LibraryRoot;
     public string PipePath => _session.HostOptions.PipePath;
     public ImportJobsViewModel ImportJobs { get; }
+    public LibraryBrowserViewModel LibraryBrowser { get; }
     public AsyncCommand SavePreferencesCommand { get; }
     public AsyncCommand ResetPreferencesCommand { get; }
     public AsyncCommand BrowsePreferredLibraryRootCommand { get; }

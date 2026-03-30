@@ -1,19 +1,18 @@
 using Librova.UI.CoreHost;
-using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
-using Librova.UI.Shell;
+using Librova.UI.ImportJobs;
 using Xunit;
 
 namespace Librova.UI.Tests;
 
-public sealed class ShellBootstrapTests
+public sealed class LibraryCatalogClientTests
 {
     [Fact]
-    public async Task ShellBootstrap_StartsSessionAndProvidesUiFacingImportService()
+    public async Task LibraryCatalogClient_ListsImportedBooksThroughNativeHost()
     {
         var sandboxRoot = Path.Combine(
             Path.GetTempPath(),
-            "librova-ui-shell-bootstrap",
+            "librova-ui-library-client",
             Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(sandboxRoot);
 
@@ -27,17 +26,9 @@ public sealed class ShellBootstrapTests
                     "..",
                     "..",
                     "..")),
-                PipePath = $@"\\.\pipe\Librova.UI.ShellTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                PipePath = $@"\\.\pipe\Librova.UI.LibraryClientTests.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryRoot = Path.Combine(sandboxRoot, "Library")
             };
-
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
-
-            Assert.Equal(options.PipePath, session.HostOptions.PipePath);
-            Assert.NotNull(session.ImportJobs);
-            Assert.NotNull(session.LibraryCatalog);
-            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Logs")));
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
             await File.WriteAllTextAsync(sourcePath,
@@ -46,12 +37,12 @@ public sealed class ShellBootstrapTests
                 <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
                   <description>
                     <title-info>
-                      <book-title>Хищные вещи века</book-title>
+                      <book-title>Roadside Picnic</book-title>
                       <author>
-                        <first-name>Аркадий</first-name>
-                        <last-name>Стругацкий</last-name>
+                        <first-name>Arkady</first-name>
+                        <last-name>Strugatsky</last-name>
                       </author>
-                      <lang>ru</lang>
+                      <lang>en</lang>
                     </title-info>
                   </description>
                   <body>
@@ -60,7 +51,12 @@ public sealed class ShellBootstrapTests
                 </FictionBook>
                 """);
 
-            var jobId = await session.ImportJobs.StartAsync(
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var importService = new ImportJobsService(options.PipePath);
+            var jobId = await importService.StartAsync(
                 new StartImportRequestModel
                 {
                     SourcePath = sourcePath,
@@ -69,27 +65,25 @@ public sealed class ShellBootstrapTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.True(await session.ImportJobs.WaitAsync(
+            Assert.True(await importService.WaitAsync(
                 jobId,
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromSeconds(2),
                 cancellation.Token));
 
-            var result = await session.ImportJobs.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
-            Assert.NotNull(result);
-            Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
-
-            var books = await session.LibraryCatalog.ListBooksAsync(
-                new BookListRequestModel
+            var client = new LibraryCatalogClient(options.PipePath);
+            var response = await client.ListBooksAsync(
+                LibraryCatalogMapper.ToProto(new BookListRequestModel
                 {
-                    Text = "века",
+                    Text = "road",
                     Limit = 10
-                },
+                }),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(books);
-            Assert.Equal("Хищные вещи века", books[0].Title);
+            Assert.Single(response.Items);
+            Assert.Equal("Roadside Picnic", response.Items[0].Title);
+            Assert.Equal("Arkady Strugatsky", response.Items[0].Authors[0]);
         }
         finally
         {
