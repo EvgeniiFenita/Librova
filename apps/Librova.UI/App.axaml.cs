@@ -85,7 +85,9 @@ internal sealed partial class App : Application
             pathSelectionService,
             preferencesStore,
             launchOptions,
-            CoreHostDevelopmentDefaults.CreateForLibraryRoot(libraryRoot));
+            CoreHostDevelopmentDefaults.CreateForLibraryRoot(
+                libraryRoot,
+                preferencesStore.TryLoad()));
     }
 
     private async Task StartShellWithLaunchOptionsAsync(

@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="using:Librova.UI.ViewModels"
+        xmlns:views="using:Librova.UI.Views"
         x:Class="Librova.UI.Views.MainWindow"
         x:DataType="viewModels:ShellWindowViewModel"
         Width="1240"
@@ -150,7 +151,6 @@
               <TextBlock Grid.Column="1"
                          Text="{Binding UiLogFilePath}"
                          TextWrapping="Wrap" />
-
               <TextBlock Grid.Row="1"
                          FontWeight="SemiBold"
                          Text="Preferences" />
@@ -180,7 +180,7 @@
         <TextBlock MaxWidth="760"
                    FontSize="15"
                    Text="{Binding StartupError}"
-                    TextWrapping="Wrap" />
+                   TextWrapping="Wrap" />
         <Border Background="#FFF9F1"
                 BorderBrush="#E0CAB4"
                 BorderThickness="1"
@@ -199,7 +199,6 @@
               <TextBlock Grid.Column="1"
                          Text="{Binding UiLogFilePath}"
                          TextWrapping="Wrap" />
-
               <TextBlock Grid.Row="1"
                          FontWeight="SemiBold"
                          Text="UI state" />
@@ -207,7 +206,6 @@
                          Grid.Column="1"
                          Text="{Binding UiStateFilePath}"
                          TextWrapping="Wrap" />
-
               <TextBlock Grid.Row="2"
                          FontWeight="SemiBold"
                          Text="Preferences" />
@@ -222,510 +220,100 @@
     </Border>
 
     <Grid IsVisible="{Binding HasShell}"
-          RowDefinitions="Auto,*"
-          RowSpacing="20">
-      <Border Background="#E0D1BF"
+          ColumnDefinitions="250,*"
+          ColumnSpacing="20">
+      <Border Grid.Column="0"
+              Background="#DCCBB8"
               CornerRadius="28"
-              Padding="28">
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="24">
-          <StackPanel Spacing="10">
-            <TextBlock FontSize="38"
+              Padding="22">
+        <StackPanel Spacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontSize="34"
                        FontWeight="Bold"
                        Text="Librova" />
-            <TextBlock MaxWidth="700"
-                       FontSize="16"
-                       Opacity="0.82"
-                       Text="A focused import workspace over the native library core. Drag a book into the window or point the shell at a source file and let the host do the heavy work." 
+            <TextBlock Opacity="0.78"
+                       Text="A focused desktop library manager over the native core."
                        TextWrapping="Wrap" />
           </StackPanel>
 
-          <Border Grid.Column="1"
-                  Background="#FFF8EF"
+          <StackPanel Spacing="10">
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowLibrarySectionCommand}"
+                    Content="Library" />
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowImportSectionCommand}"
+                    Content="Import" />
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowSettingsSectionCommand}"
+                    Content="Settings" />
+          </StackPanel>
+
+          <Border Background="#FFF8EF"
                   CornerRadius="18"
-                  Padding="16"
-                  HorizontalAlignment="Right">
+                  Padding="16">
             <StackPanel Spacing="6">
               <TextBlock FontWeight="SemiBold"
+                         Text="Current Library" />
+              <TextBlock FontSize="12"
+                         Text="{Binding Shell.LibraryRoot}"
+                         TextWrapping="Wrap" />
+              <TextBlock Margin="0,8,0,0"
+                         FontWeight="SemiBold"
                          Text="Host Status" />
-              <TextBlock Text="{Binding StatusText}" />
+              <TextBlock FontSize="12"
+                         Text="{Binding Shell.ImportJobs.StatusText}"
+                         TextWrapping="Wrap" />
             </StackPanel>
           </Border>
-        </Grid>
+        </StackPanel>
       </Border>
 
-      <Grid Grid.Row="1"
-            ColumnDefinitions="1.35*,0.95*"
-            ColumnSpacing="20">
-        <StackPanel Spacing="18">
-          <Border Classes="SurfaceCard">
-            <StackPanel Spacing="18">
-              <StackPanel Spacing="6">
-                <TextBlock Classes="SectionTitle"
-                           Text="Import Workspace" />
-                <TextBlock Opacity="0.72"
-                           Text="This shell is optimized for direct single-file and ZIP imports. Drop a book anywhere on the window or fill the fields below." 
-                           TextWrapping="Wrap" />
-              </StackPanel>
-
-              <Border Classes="TintedCard"
-                      Background="#F6E8D7"
-                      BorderBrush="#D9BE98">
-                <StackPanel Spacing="8">
-                  <TextBlock FontWeight="SemiBold"
-                             Text="Quick drop zone" />
-                  <TextBlock Opacity="0.82"
-                             Text="Drop `.fb2`, `.epub`, or `.zip` here to immediately populate the source path."
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </Border>
-
-              <Grid RowDefinitions="Auto,Auto,Auto"
-                    ColumnDefinitions="Auto,*"
-                    ColumnSpacing="16"
-                    RowSpacing="14">
-                <TextBlock VerticalAlignment="Center"
-                           Text="Source File" />
-                <StackPanel Grid.Column="1"
-                            Spacing="6">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="10">
-                    <TextBox Classes="ImportField"
-                             Watermark="C:\Books\incoming\book.fb2"
-                             Text="{Binding Shell.ImportJobs.SourcePath}" />
-                    <Button Grid.Column="1"
-                            Classes="SecondaryAction"
-                            MinWidth="108"
-                            Command="{Binding Shell.ImportJobs.BrowseSourceCommand}"
-                            Content="Browse..." />
-                  </Grid>
-                  <TextBlock FontSize="12"
-                             Foreground="#A04628"
-                             IsVisible="{Binding Shell.ImportJobs.HasSourceValidationError}"
-                             Text="{Binding Shell.ImportJobs.SourceValidationMessage}"
-                             TextWrapping="Wrap" />
-                  <TextBlock FontSize="12"
-                             Opacity="0.64"
-                             IsVisible="{Binding Shell.ImportJobs.ShowSourceHelperText}"
-                             Text="Supported input types: .fb2, .epub, .zip"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-
-                <TextBlock Grid.Row="1"
-                           VerticalAlignment="Center"
-                           Text="Working Directory" />
-                <StackPanel Grid.Row="1"
-                            Grid.Column="1"
-                            Spacing="6">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="10">
-                    <TextBox Classes="ImportField"
-                             Watermark="C:\Temp\Librova\Work"
-                             Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
-                    <Button Grid.Column="1"
-                            Classes="SecondaryAction"
-                            MinWidth="108"
-                            Command="{Binding Shell.ImportJobs.BrowseWorkingDirectoryCommand}"
-                            Content="Browse..." />
-                  </Grid>
-                  <TextBlock FontSize="12"
-                             Foreground="#A04628"
-                             IsVisible="{Binding Shell.ImportJobs.HasWorkingDirectoryValidationError}"
-                             Text="{Binding Shell.ImportJobs.WorkingDirectoryValidationMessage}"
-                             TextWrapping="Wrap" />
-                  <TextBlock FontSize="12"
-                             Opacity="0.64"
-                             IsVisible="{Binding Shell.ImportJobs.ShowWorkingDirectoryHelperText}"
-                             Text="Temporary work area used for extraction and conversion."
-                             TextWrapping="Wrap" />
-                </StackPanel>
-
-                <TextBlock Grid.Row="2"
-                           VerticalAlignment="Center"
-                           Text="Duplicate Policy" />
-                <Border Grid.Row="2"
-                        Grid.Column="1"
-                        Background="#FAF4EC"
-                        BorderBrush="#E0D4C4"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="14">
-                  <CheckBox Content="Allow import when only probable duplicates are found"
-                            IsChecked="{Binding Shell.ImportJobs.AllowProbableDuplicates}" />
-                </Border>
-              </Grid>
-
-              <WrapPanel ItemWidth="150"
-                         ItemHeight="44"
-                         Orientation="Horizontal">
-                <Button Classes="PrimaryAction"
-                        Width="190"
-                        Command="{Binding Shell.ImportJobs.StartImportCommand}"
-                        Content="Start Import" />
-                <Button Classes="SecondaryAction"
-                        Width="140"
-                        Command="{Binding Shell.ImportJobs.RefreshCommand}"
-                        Content="Refresh" />
-                <Button Classes="SecondaryAction"
-                        Width="140"
-                        Command="{Binding Shell.ImportJobs.CancelImportCommand}"
-                        Content="Cancel" />
-                <Button Classes="SecondaryAction"
-                        Width="150"
-                        Command="{Binding Shell.ImportJobs.RemoveJobCommand}"
-                        Content="Remove Job" />
-              </WrapPanel>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="TintedCard"
-                  Background="#E6EEF0"
-                  BorderBrush="#C5D2D8">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="SectionTitle"
-                         Text="Import Summary" />
-              <TextBlock Text="{Binding Shell.ImportJobs.ResultSummaryText}"
+      <Grid Grid.Column="1"
+            RowDefinitions="Auto,*"
+            RowSpacing="18">
+        <Border Background="#E0D1BF"
+                CornerRadius="28"
+                Padding="24">
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="18">
+            <StackPanel Spacing="8">
+              <TextBlock FontSize="34"
+                         FontWeight="Bold"
+                         Text="{Binding Shell.CurrentSectionTitle}" />
+              <TextBlock MaxWidth="720"
+                         FontSize="15"
+                         Opacity="0.82"
+                         Text="{Binding Shell.CurrentSectionDescription}"
                          TextWrapping="Wrap" />
             </StackPanel>
-          </Border>
 
-          <Border Classes="SurfaceCard">
-            <StackPanel Spacing="14">
-              <Grid ColumnDefinitions="*,Auto"
-                    ColumnSpacing="12">
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="SectionTitle"
-                             Text="Library Snapshot" />
-                  <TextBlock Opacity="0.72"
-                             Text="{Binding Shell.LibraryBrowser.StatusText}"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-                <Button Grid.Column="1"
-                        Classes="SecondaryAction"
-                        Width="140"
-                        Command="{Binding Shell.LibraryBrowser.RefreshCommand}"
-                        Content="Refresh List" />
-              </Grid>
-
-              <Grid ColumnDefinitions="*,Auto,Auto"
-                    ColumnSpacing="10">
-                <TextBox Classes="ImportField"
-                         Watermark="Search imported books"
-                         Text="{Binding Shell.LibraryBrowser.SearchText}" />
-                <Button Grid.Column="1"
-                        Classes="SecondaryAction"
-                        Width="120"
-                        Command="{Binding Shell.LibraryBrowser.PreviousPageCommand}"
-                        Content="Previous" />
-                <Button Grid.Column="2"
-                        Classes="SecondaryAction"
-                        Width="120"
-                        Command="{Binding Shell.LibraryBrowser.NextPageCommand}"
-                        Content="Next" />
-              </Grid>
-
-              <Grid ColumnDefinitions="1.2*,1.1*,0.7*,0.6*,Auto"
-                    ColumnSpacing="10">
-                <TextBox Classes="ImportField"
-                         Watermark="Author filter"
-                         Text="{Binding Shell.LibraryBrowser.AuthorFilter}" />
-                <TextBox Grid.Column="1"
-                         Classes="ImportField"
-                         Watermark="Language filter"
-                         Text="{Binding Shell.LibraryBrowser.LanguageFilter}" />
-                <ComboBox Grid.Column="2"
-                          MinHeight="44"
-                          SelectedItem="{Binding Shell.LibraryBrowser.SelectedFormatFilter}"
-                          ItemsSource="{Binding Shell.LibraryBrowser.AvailableFormatFilters}" />
-                <ComboBox Grid.Column="3"
-                          MinHeight="44"
-                          SelectedItem="{Binding Shell.LibraryBrowser.SelectedSort}"
-                          ItemsSource="{Binding Shell.LibraryBrowser.AvailableSortOptions}" />
-                <Border Grid.Column="4"
-                        Background="#EFE3D5"
-                        CornerRadius="14"
-                        Padding="14,10">
-                  <StackPanel Spacing="2">
-                    <TextBlock HorizontalAlignment="Center"
-                               Text="{Binding Shell.LibraryBrowser.BookCountText}" />
-                    <TextBlock HorizontalAlignment="Center"
-                               FontSize="11"
-                               Opacity="0.74"
-                               Text="{Binding Shell.LibraryBrowser.PageLabelText}" />
-                  </StackPanel>
-                </Border>
-              </Grid>
-
-              <Grid ColumnDefinitions="1.05*,0.95*"
-                    ColumnSpacing="14">
-                <ListBox ItemsSource="{Binding Shell.LibraryBrowser.Books}"
-                         SelectedItem="{Binding Shell.LibraryBrowser.SelectedBook}"
-                         BorderThickness="0"
-                         Background="Transparent">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Border Background="#FAF6F0"
-                              BorderBrush="#E3D8CA"
-                              BorderThickness="1"
-                              CornerRadius="16"
-                              Padding="14"
-                              Margin="0,0,0,8">
-                        <StackPanel Spacing="6">
-                          <TextBlock FontSize="16"
-                                     FontWeight="SemiBold"
-                                     Text="{Binding Title}" />
-                          <TextBlock Opacity="0.82"
-                                     Text="{Binding AuthorsText}"
-                                     TextWrapping="Wrap" />
-                          <WrapPanel ItemHeight="28">
-                            <Border Background="#E8DED0"
-                                    CornerRadius="10"
-                                    Padding="8,4"
-                                    Margin="0,0,8,0">
-                              <TextBlock Text="{Binding FormatText}" />
-                            </Border>
-                            <TextBlock VerticalAlignment="Center"
-                                       Opacity="0.72"
-                                       Text="{Binding Language, StringFormat='Language: {0}'}" />
-                          </WrapPanel>
-                          <TextBlock FontSize="12"
-                                     Opacity="0.64"
-                                     Text="{Binding ManagedPath}"
-                                     TextWrapping="Wrap" />
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-
-                <Border Grid.Column="1"
-                        Background="#F5EFE7"
-                        BorderBrush="#E3D7C8"
-                        BorderThickness="1"
-                        CornerRadius="18"
-                        Padding="16">
-                  <StackPanel Spacing="10">
-                    <TextBlock Classes="SectionTitle"
-                               Text="Selection Details" />
-                    <TextBlock FontSize="16"
-                               FontWeight="SemiBold"
-                               Text="{Binding Shell.LibraryBrowser.SelectedBookTitle}" />
-                    <TextBlock Text="{Binding Shell.LibraryBrowser.SelectedBookDetailsText}"
-                               TextWrapping="Wrap" />
-                    <Button Classes="SecondaryAction"
-                            Width="160"
-                            Command="{Binding Shell.LibraryBrowser.LoadDetailsCommand}"
-                            Content="Load Full Details" />
-                    <Button Classes="SecondaryAction"
-                            Width="160"
-                            Command="{Binding Shell.LibraryBrowser.ExportSelectedBookCommand}"
-                            Content="Export Book..." />
-                    <Button Classes="SecondaryAction"
-                            Width="160"
-                            Command="{Binding Shell.LibraryBrowser.MoveSelectedBookToTrashCommand}"
-                            Content="Move To Trash" />
-                    <Border Background="#EFE5D8"
-                            CornerRadius="12"
-                            Padding="12">
-                      <StackPanel Spacing="6">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Extended Metadata" />
-                        <TextBlock FontSize="12"
-                                   Text="{Binding Shell.LibraryBrowser.SelectedBookExtendedDetailsText}"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                    </Border>
-                    <Border Background="#EFE5D8"
-                            CornerRadius="12"
-                            Padding="12">
-                      <StackPanel Spacing="6">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Managed Path" />
-                        <TextBlock FontSize="12"
-                                   Text="{Binding Shell.LibraryBrowser.SelectedBookPathText}"
-                                   TextWrapping="Wrap" />
-                      </StackPanel>
-                    </Border>
-                  </StackPanel>
-                </Border>
-              </Grid>
-            </StackPanel>
-          </Border>
-        </StackPanel>
-
-        <StackPanel Grid.Column="1"
-                    Spacing="18">
-          <Border Classes="SurfaceCard">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="SectionTitle"
-                         Text="Session" />
-              <Grid ColumnDefinitions="Auto,*"
-                    ColumnSpacing="12"
-                    RowDefinitions="Auto,Auto,Auto">
+            <Border Grid.Column="1"
+                    Background="#FFF8EF"
+                    CornerRadius="18"
+                    Padding="16"
+                    HorizontalAlignment="Right">
+              <StackPanel Spacing="6">
                 <TextBlock FontWeight="SemiBold"
-                           Text="Library Root" />
-                <TextBlock Grid.Column="1"
-                           Text="{Binding Shell.LibraryRoot}"
-                           TextWrapping="Wrap" />
-
-                <TextBlock Grid.Row="1"
-                           FontWeight="SemiBold"
-                           Text="Pipe" />
-                <TextBlock Grid.Row="1"
-                           Grid.Column="1"
+                           Text="Native Session" />
+                <TextBlock FontSize="12"
                            Text="{Binding Shell.PipePath}"
                            TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Border>
 
-                <TextBlock Grid.Row="2"
-                           FontWeight="SemiBold"
-                           Text="Status" />
-                <TextBlock Grid.Row="2"
-                           Grid.Column="1"
-                           Text="{Binding Shell.ImportJobs.StatusText}"
-                           TextWrapping="Wrap" />
-              </Grid>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="TintedCard"
-                  Background="#F8E6CE"
-                  BorderBrush="#DFBD8B"
-                  IsVisible="{Binding Shell.HasOperationalWarnings}">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="SectionTitle"
-                         Text="Operational Notes" />
-              <TextBlock Text="{Binding Shell.OperationalWarningsText}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="SurfaceCard">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="SectionTitle"
-                         Text="Next Launch Settings" />
-              <TextBlock Opacity="0.72"
-                         Text="These preferences are applied the next time the app starts. The current session keeps using the library root it already launched with."
-                         TextWrapping="Wrap" />
-              <Grid ColumnDefinitions="*,Auto"
-                    ColumnSpacing="10">
-                <TextBox Classes="ImportField"
-                         Watermark="C:\Libraries\Librova"
-                         Text="{Binding Shell.PreferredLibraryRoot}" />
-                <Button Grid.Column="1"
-                        Classes="SecondaryAction"
-                        MinWidth="108"
-                        Command="{Binding Shell.BrowsePreferredLibraryRootCommand}"
-                        Content="Browse..." />
-              </Grid>
-              <TextBlock FontSize="12"
-                         Foreground="#A04628"
-                         IsVisible="{Binding Shell.HasPreferredLibraryRootValidationError}"
-                         Text="{Binding Shell.PreferredLibraryRootValidationMessage}"
-                         TextWrapping="Wrap" />
-              <TextBlock FontSize="12"
-                         Opacity="0.64"
-                         IsVisible="{Binding Shell.ShowPreferredLibraryRootHelperText}"
-                         Text="Use this when you want future launches to point at a different managed library."
-                         TextWrapping="Wrap" />
-              <WrapPanel ItemWidth="138"
-                         ItemHeight="42">
-                <Button Classes="SecondaryAction"
-                        Width="138"
-                        Command="{Binding Shell.SavePreferencesCommand}"
-                        Content="Save" />
-                <Button Classes="SecondaryAction"
-                        Width="138"
-                        Command="{Binding Shell.ResetPreferencesCommand}"
-                        Content="Reset" />
-              </WrapPanel>
-              <TextBlock FontSize="12"
-                         Opacity="0.78"
-                         Text="{Binding Shell.PreferencesStatusText}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="TintedCard"
-                  Background="#F0E9DD"
-                  BorderBrush="#D4C8B8">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="SectionTitle"
-                         Text="Latest Job State" />
-              <TextBlock Text="{Binding Shell.ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
-              <TextBlock Text="{Binding Shell.ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
-              <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Status, StringFormat='Result status: {0}'}" />
-              <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="TintedCard"
-                  Background="#E7ECE6"
-                  BorderBrush="#C6D3C1">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="SectionTitle"
-                         Text="Diagnostics" />
-              <TextBlock Opacity="0.74"
-                         Text="{Binding Shell.DiagnosticsHintText}"
-                         TextWrapping="Wrap" />
-              <Grid ColumnDefinitions="Auto,*"
-                    ColumnSpacing="10"
-                    RowDefinitions="Auto,Auto,Auto,Auto">
-                <TextBlock FontWeight="SemiBold"
-                           Text="UI log" />
-                <TextBlock Grid.Column="1"
-                           Text="{Binding Shell.UiLogFilePath}"
-                           TextWrapping="Wrap" />
-
-                <TextBlock Grid.Row="1"
-                           FontWeight="SemiBold"
-                           Text="Host log" />
-                <TextBlock Grid.Row="1"
-                           Grid.Column="1"
-                           Text="{Binding Shell.HostLogFilePath}"
-                           TextWrapping="Wrap" />
-
-                <TextBlock Grid.Row="2"
-                           FontWeight="SemiBold"
-                           Text="UI state" />
-                <TextBlock Grid.Row="2"
-                           Grid.Column="1"
-                           Text="{Binding Shell.UiStateFilePath}"
-                           TextWrapping="Wrap" />
-
-                <TextBlock Grid.Row="3"
-                           FontWeight="SemiBold"
-                           Text="Preferences" />
-                <TextBlock Grid.Row="3"
-                           Grid.Column="1"
-                           Text="{Binding Shell.UiPreferencesFilePath}"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <TextBlock FontWeight="SemiBold"
-                         Text="Host executable" />
-              <TextBlock Text="{Binding Shell.HostExecutablePath}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="TintedCard"
-                  Background="#F5E8DB"
-                  BorderBrush="#DEC5A9">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="SectionTitle"
-                         Text="Warnings and Errors" />
-              <TextBlock FontWeight="SemiBold"
-                         Text="Warnings" />
-              <TextBlock Text="{Binding Shell.ImportJobs.WarningsText}"
-                         TextWrapping="Wrap" />
-              <TextBlock Margin="0,6,0,0"
-                         FontWeight="SemiBold"
-                         Text="Error" />
-              <TextBlock Text="{Binding Shell.ImportJobs.ErrorText}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+        <Grid Grid.Row="1">
+          <views:LibraryView IsVisible="{Binding Shell.IsLibrarySectionActive}"
+                             DataContext="{Binding Shell}" />
+          <views:ImportView IsVisible="{Binding Shell.IsImportSectionActive}"
+                            DataContext="{Binding Shell}" />
+          <views:SettingsView IsVisible="{Binding Shell.IsSettingsSectionActive}"
+                              DataContext="{Binding Shell}" />
+        </Grid>
       </Grid>
     </Grid>
   </Grid>

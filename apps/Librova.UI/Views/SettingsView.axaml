@@ -1,0 +1,208 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="using:Librova.UI.ViewModels"
+             x:Class="Librova.UI.Views.SettingsView"
+             x:DataType="viewModels:ShellViewModel"
+             mc:Ignorable="d">
+  <StackPanel Spacing="18">
+    <Border Classes="SurfaceCard">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="SectionTitle"
+                   Text="Next Launch Settings" />
+        <TextBlock Opacity="0.72"
+                   Text="These preferences are applied the next time the app starts. The current session keeps using the library root it already launched with."
+                   TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="10">
+          <TextBox Classes="ImportField"
+                   Watermark="C:\Libraries\Librova"
+                   Text="{Binding PreferredLibraryRoot}" />
+          <Button Grid.Column="1"
+                  Classes="SecondaryAction"
+                  MinWidth="108"
+                  Command="{Binding BrowsePreferredLibraryRootCommand}"
+                  Content="Browse..." />
+        </Grid>
+        <TextBlock FontSize="12"
+                   Foreground="#A04628"
+                   IsVisible="{Binding HasPreferredLibraryRootValidationError}"
+                   Text="{Binding PreferredLibraryRootValidationMessage}"
+                   TextWrapping="Wrap" />
+        <TextBlock FontSize="12"
+                   Opacity="0.64"
+                   IsVisible="{Binding ShowPreferredLibraryRootHelperText}"
+                   Text="Use this when you want future launches to point at a different managed library."
+                   TextWrapping="Wrap" />
+        <WrapPanel ItemWidth="138"
+                   ItemHeight="42">
+          <Button Classes="SecondaryAction"
+                  Width="138"
+                  Command="{Binding SavePreferencesCommand}"
+                  Content="Save" />
+          <Button Classes="SecondaryAction"
+                  Width="138"
+                  Command="{Binding ResetPreferencesCommand}"
+                  Content="Reset" />
+        </WrapPanel>
+        <TextBlock FontSize="12"
+                   Opacity="0.78"
+                   Text="{Binding PreferencesStatusText}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="SurfaceCard">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="SectionTitle"
+                   Text="Converter" />
+        <TextBlock Opacity="0.72"
+                   Text="Converter settings are applied on the next app launch. Disable conversion to keep imported FB2 files as FB2 when fallback rules allow it."
+                   TextWrapping="Wrap" />
+
+        <ComboBox MinHeight="44"
+                  SelectedItem="{Binding SelectedConverterMode}"
+                  ItemsSource="{Binding AvailableConverterModes}" />
+
+        <StackPanel IsVisible="{Binding IsBuiltInConverterSelected}"
+                    Spacing="10">
+          <TextBox Classes="ImportField"
+                   Watermark="C:\Tools\fbc.exe"
+                   Text="{Binding Fb2CngExecutablePath}" />
+          <TextBox Classes="ImportField"
+                   Watermark="Optional: C:\Tools\fbc.yaml"
+                   Text="{Binding Fb2CngConfigPath}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsCustomConverterSelected}"
+                    Spacing="10">
+          <TextBox Classes="ImportField"
+                   Watermark="C:\Tools\custom-converter.exe"
+                   Text="{Binding CustomConverterExecutablePath}" />
+          <ComboBox MinHeight="44"
+                    SelectedItem="{Binding SelectedCustomConverterOutputMode}"
+                    ItemsSource="{Binding AvailableConverterOutputModes}" />
+          <TextBox AcceptsReturn="True"
+                   MinHeight="120"
+                   TextWrapping="Wrap"
+                   Watermark="One argument template per line, for example:&#10;--input&#10;{source}&#10;--output-dir&#10;{destination_dir}"
+                   Text="{Binding CustomConverterArgumentsText}" />
+        </StackPanel>
+
+        <TextBlock FontSize="12"
+                   Foreground="#A04628"
+                   IsVisible="{Binding HasConverterValidationError}"
+                   Text="{Binding ConverterValidationMessage}"
+                   TextWrapping="Wrap" />
+        <TextBlock FontSize="12"
+                   Opacity="0.64"
+                   IsVisible="{Binding ShowConverterHelperText}"
+                   Text="Built-in mode targets fb2cng. Custom mode expects the same placeholder-based argument contract used by the native converter runtime."
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="TintedCard"
+            Background="#F8E6CE"
+            BorderBrush="#DFBD8B"
+            IsVisible="{Binding HasOperationalWarnings}">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="SectionTitle"
+                   Text="Operational Notes" />
+        <TextBlock Text="{Binding OperationalWarningsText}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="SurfaceCard">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="SectionTitle"
+                   Text="Session" />
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="12"
+              RowDefinitions="Auto,Auto,Auto">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Library Root" />
+          <TextBlock Grid.Column="1"
+                     Text="{Binding LibraryRoot}"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="1"
+                     FontWeight="SemiBold"
+                     Text="Pipe" />
+          <TextBlock Grid.Row="1"
+                     Grid.Column="1"
+                     Text="{Binding PipePath}"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="2"
+                     FontWeight="SemiBold"
+                     Text="Status" />
+          <TextBlock Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding ImportJobs.StatusText}"
+                     TextWrapping="Wrap" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Classes="TintedCard"
+            Background="#E7ECE6"
+            BorderBrush="#C6D3C1">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="SectionTitle"
+                   Text="Diagnostics" />
+        <TextBlock Opacity="0.74"
+                   Text="{Binding DiagnosticsHintText}"
+                   TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="10"
+              RowDefinitions="Auto,Auto,Auto,Auto">
+          <TextBlock FontWeight="SemiBold"
+                     Text="UI log" />
+          <TextBlock Grid.Column="1"
+                     Text="{Binding UiLogFilePath}"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="1"
+                     FontWeight="SemiBold"
+                     Text="Host log" />
+          <TextBlock Grid.Row="1"
+                     Grid.Column="1"
+                     Text="{Binding HostLogFilePath}"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="2"
+                     FontWeight="SemiBold"
+                     Text="UI state" />
+          <TextBlock Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding UiStateFilePath}"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="3"
+                     FontWeight="SemiBold"
+                     Text="Preferences" />
+          <TextBlock Grid.Row="3"
+                     Grid.Column="1"
+                     Text="{Binding UiPreferencesFilePath}"
+                     TextWrapping="Wrap" />
+        </Grid>
+        <TextBlock FontWeight="SemiBold"
+                   Text="Host executable" />
+        <TextBlock Text="{Binding HostExecutablePath}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="TintedCard"
+            Background="#F0E9DD"
+            BorderBrush="#D4C8B8">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="SectionTitle"
+                   Text="Latest Job State" />
+        <TextBlock Text="{Binding ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
+        <TextBlock Text="{Binding ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
+        <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Status, StringFormat='Result status: {0}'}" />
+        <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -1,3 +1,4 @@
+using Librova.UI.CoreHost;
 using Librova.UI.Shell;
 using Xunit;
 
@@ -20,6 +21,29 @@ public sealed class UiPreferencesStoreTests
 
         Assert.NotNull(actual);
         Assert.Equal(expected.PreferredLibraryRoot, actual!.PreferredLibraryRoot);
+    }
+
+    [Fact]
+    public void SaveAndLoad_RoundTripsConverterPreferences()
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-preferences.json");
+        var store = new UiPreferencesStore(filePath);
+        var expected = new UiPreferencesSnapshot
+        {
+            ConverterMode = UiConverterMode.CustomCommand,
+            CustomConverterExecutablePath = @"C:\Tools\custom.exe",
+            CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
+            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+        };
+
+        store.Save(expected);
+        var actual = store.TryLoad();
+
+        Assert.NotNull(actual);
+        Assert.Equal(expected.ConverterMode, actual!.ConverterMode);
+        Assert.Equal(expected.CustomConverterExecutablePath, actual.CustomConverterExecutablePath);
+        Assert.Equal(expected.CustomConverterArguments, actual.CustomConverterArguments);
+        Assert.Equal(expected.CustomConverterOutputMode, actual.CustomConverterOutputMode);
     }
 
     [Fact]

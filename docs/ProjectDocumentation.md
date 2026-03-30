@@ -34,7 +34,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now accepts an initial source-file path from application launch arguments and pre-fills the import screen with that path on startup.
 - the current Avalonia shell baseline now persists import-screen state between launches in a JSON state file under `%LOCALAPPDATA%\\Librova`, including source path, working directory, and probable-duplicate override.
 - the current Avalonia shell baseline now accepts a dropped local file on the main window and applies it as the import `SourcePath`, so desktop drag-and-drop works without bypassing the ViewModel layer.
-- the current Avalonia shell baseline now uses a two-column desktop layout with an explicit import workspace, session summary, operational cards, and a visible drag-and-drop callout instead of the earlier raw form-like shell.
+- the current Avalonia shell baseline now uses a proper app-shell structure with left-side navigation and separate `Library`, `Import`, and `Settings` sections instead of accumulating all user flows in one dashboard-like surface.
 - the current import shell validates `SourcePath` and `WorkingDirectory` locally before enabling `Start Import`, including file existence, supported source extensions, absolute-path expectations, and rejection of file paths in the working-directory field.
 - the current import shell no longer auto-cancels a long-running job after a hardcoded 15-second UI timeout; cancellation is now user-driven while each IPC call still uses its own bounded timeout.
 - shell shutdown now treats state persistence as best-effort: a failure to save UI shell state is logged but does not prevent disposal of the native host process.
@@ -205,6 +205,7 @@ Implemented slices at this point:
   - `out\\runtime\\library\\Logs\\host.log`
 - the current UI host-readiness check uses `WaitNamedPipe` and no longer creates a throwaway client connection that pollutes `host.log` with false broken-pipe startup errors
 - the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
+- the current UI settings section now also supports next-launch converter configuration for `Disabled`, built-in `fb2cng`, and custom external-command modes, including persistence in UI preferences and propagation into native host launch arguments on the next app start
 - the current Avalonia shell now includes a dedicated first-run setup state before host startup; when no library-root override or saved preference exists, the user must choose a managed library root before the native host session is launched
 - the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 - the current UI shell now exposes an `Operational Notes` panel that surfaces launch-argument prefill, next-launch library-root mismatch, and runtime-redirection hints directly in the running shell instead of leaving them implicit
@@ -407,7 +408,6 @@ Stable facts taken from that reference:
 
 Not implemented yet, but still on the active MVP path:
 
-- richer settings UI for converter configuration and runtime preferences
 - packaging-oriented release validation and startup sanity outside the development layout
 
 ## 13. Deferred Beyond The Current MVP

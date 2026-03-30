@@ -33,9 +33,42 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"\\.\pipe\Librova.ShellApplication.Test", application.Shell.PipePath);
         Assert.NotNull(application.Shell.ImportJobs);
         Assert.NotNull(application.Shell.LibraryBrowser);
+        Assert.True(application.Shell.IsLibrarySectionActive);
+        Assert.Equal("Library", application.Shell.CurrentSectionTitle);
         Assert.Equal(
             Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
             application.Shell.ImportJobs.WorkingDirectory);
+    }
+
+    [Fact]
+    public async Task Shell_CanSwitchBetweenLibraryImportAndSettingsSections()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        await application.Shell.ShowImportSectionCommand.ExecuteAsyncForTests();
+        Assert.True(application.Shell.IsImportSectionActive);
+        Assert.Equal("Import", application.Shell.CurrentSectionTitle);
+
+        await application.Shell.ShowSettingsSectionCommand.ExecuteAsyncForTests();
+        Assert.True(application.Shell.IsSettingsSectionActive);
+        Assert.Equal("Settings", application.Shell.CurrentSectionTitle);
+
+        await application.Shell.ShowLibrarySectionCommand.ExecuteAsyncForTests();
+        Assert.True(application.Shell.IsLibrarySectionActive);
+        Assert.Equal("Library", application.Shell.CurrentSectionTitle);
     }
 
     [Fact]
@@ -295,6 +328,39 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"D:\Librova\SecondLibrary", application.Shell.PreferredLibraryRoot);
         Assert.True(application.Shell.HasOperationalWarnings);
         Assert.Contains("Restart the app", application.Shell.OperationalWarningsText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ShellSettings_CanSaveCustomConverterPreferences()
+    {
+        var preferencesStore = new FakePreferencesStore();
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: preferencesStore);
+        application.Shell.SelectedConverterMode = UiConverterMode.CustomCommand;
+        application.Shell.CustomConverterExecutablePath = @"D:\Tools\custom.exe";
+        application.Shell.CustomConverterArgumentsText = "--input" + Environment.NewLine + "{source}";
+        application.Shell.SelectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
+
+        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(UiConverterMode.CustomCommand, preferencesStore.LastSavedSnapshot?.ConverterMode);
+        Assert.Equal(@"D:\Tools\custom.exe", preferencesStore.LastSavedSnapshot?.CustomConverterExecutablePath);
+        Assert.NotNull(preferencesStore.LastSavedSnapshot?.CustomConverterArguments);
+        Assert.Equal(["--input", "{source}"], preferencesStore.LastSavedSnapshot!.CustomConverterArguments);
     }
 
     [Fact]

@@ -128,7 +128,7 @@ Details belong in `docs/ProjectDocumentation.md`, not here.
 
 The UI shell is no longer just an import placeholder. The current remaining Phase 8 work should stay focused on product-critical user flows:
 
-- richer settings flow for converter configuration and runtime preferences
+- current Phase 8 UI baseline is functionally complete for MVP and should only take targeted cleanup tied to stabilization
 
 ### Phase 9. Stabilization
 
@@ -143,7 +143,6 @@ Still expected before MVP completion:
 
 Important planned capabilities that are not yet implemented end-to-end:
 
-- richer settings and converter configuration UI
 - packaging-oriented release validation
 
 ## 6. Working Rule For This Document

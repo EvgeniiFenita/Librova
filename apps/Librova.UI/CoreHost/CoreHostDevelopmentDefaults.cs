@@ -22,6 +22,15 @@ internal static class CoreHostDevelopmentDefaults
 
     public static CoreHostLaunchOptions CreateForLibraryRoot(string libraryRoot, string? baseDirectory = null)
     {
+        var preferences = UiPreferencesStore.CreateDefault().TryLoad();
+        return CreateForLibraryRoot(libraryRoot, preferences, baseDirectory);
+    }
+
+    public static CoreHostLaunchOptions CreateForLibraryRoot(
+        string libraryRoot,
+        UiPreferencesSnapshot? preferences,
+        string? baseDirectory = null)
+    {
         var executablePath = RuntimeEnvironment.GetCoreHostExecutableOverride()
             ?? CoreHostPathResolver.ResolveDevelopmentExecutablePath(baseDirectory);
         var pipePath = $@"\\.\pipe\Librova.UI.{Environment.ProcessId}.{Environment.TickCount64}";
@@ -30,7 +39,13 @@ internal static class CoreHostDevelopmentDefaults
         {
             ExecutablePath = executablePath,
             PipePath = pipePath,
-            LibraryRoot = libraryRoot
+            LibraryRoot = libraryRoot,
+            ConverterMode = preferences?.ConverterMode ?? UiConverterMode.Disabled,
+            Fb2CngExecutablePath = preferences?.Fb2CngExecutablePath,
+            Fb2CngConfigPath = preferences?.Fb2CngConfigPath,
+            CustomConverterExecutablePath = preferences?.CustomConverterExecutablePath,
+            CustomConverterArguments = preferences?.CustomConverterArguments ?? [],
+            CustomConverterOutputMode = preferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath
         };
     }
 

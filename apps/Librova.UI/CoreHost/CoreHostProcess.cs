@@ -81,7 +81,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         UiLogging.Information("Core host process stopped. ProcessId={ProcessId}", process.Id);
     }
 
-    private static string BuildArguments(CoreHostLaunchOptions options)
+    internal static string BuildArguments(CoreHostLaunchOptions options)
     {
         var builder = new StringBuilder();
         builder.Append("--pipe ").Append(Quote(options.PipePath));
@@ -95,6 +95,30 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         if (options.MaxSessions.HasValue)
         {
             builder.Append(" --max-sessions ").Append(options.MaxSessions.Value);
+        }
+
+        switch (options.ConverterMode)
+        {
+            case UiConverterMode.BuiltInFb2Cng:
+                builder.Append(" --fb2cng-exe ").Append(Quote(options.Fb2CngExecutablePath!));
+                if (!string.IsNullOrWhiteSpace(options.Fb2CngConfigPath))
+                {
+                    builder.Append(" --fb2cng-config ").Append(Quote(options.Fb2CngConfigPath));
+                }
+                break;
+
+            case UiConverterMode.CustomCommand:
+                builder.Append(" --converter-exe ").Append(Quote(options.CustomConverterExecutablePath!));
+                foreach (var argument in options.CustomConverterArguments)
+                {
+                    builder.Append(" --converter-arg ").Append(Quote(argument));
+                }
+
+                builder.Append(" --converter-output ")
+                    .Append(options.CustomConverterOutputMode is UiConverterOutputMode.SingleFileInDestinationDirectory
+                        ? "directory"
+                        : "exact");
+                break;
         }
 
         return builder.ToString();
