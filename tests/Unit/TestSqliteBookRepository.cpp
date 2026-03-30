@@ -3,6 +3,7 @@
 #include <chrono>
 #include <filesystem>
 
+#include "BookDatabase/SqliteBookQueryRepository.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Sqlite/SqliteConnection.hpp"
@@ -101,5 +102,111 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
     repository.Remove(bookId);
 
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository applies structured filters", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-query-search.db";
+    std::filesystem::remove(databasePath);
+    LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    LibriFlow::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    LibriFlow::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    LibriFlow::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Пикник на обочине";
+    firstBook.Metadata.AuthorsUtf8 = {"Аркадий Стругацкий", "Борис Стругацкий"};
+    firstBook.Metadata.Language = "ru";
+    firstBook.Metadata.TagsUtf8 = {"classic", "sci-fi"};
+    firstBook.File.Format = LibriFlow::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000101/book.epub";
+    firstBook.File.SizeBytes = 2048;
+    firstBook.File.Sha256Hex = "hash-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    LibriFlow::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Roadside Picnic";
+    secondBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    secondBook.Metadata.Language = "en";
+    secondBook.Metadata.TagsUtf8 = {"sci-fi"};
+    secondBook.File.Format = LibriFlow::Domain::EBookFormat::Fb2;
+    secondBook.File.ManagedPath = "Books/0000000102/book.fb2";
+    secondBook.File.SizeBytes = 1024;
+    secondBook.File.Sha256Hex = "hash-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    const LibriFlow::Domain::SSearchQuery query{
+        .AuthorUtf8 = std::string{"Борис Стругацкий"},
+        .Language = std::string{"ru"},
+        .TagsUtf8 = {"classic"},
+        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .SortBy = LibriFlow::Domain::EBookSort::Title
+    };
+
+    const std::vector<LibriFlow::Domain::SBook> books = queryRepository.Search(query);
+
+    REQUIRE(books.size() == 1);
+    REQUIRE(books.front().Metadata.TitleUtf8 == "Пикник на обочине");
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-book-query-duplicates.db";
+    std::filesystem::remove(databasePath);
+    LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    LibriFlow::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    LibriFlow::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    LibriFlow::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Ёжик в тумане";
+    book.Metadata.AuthorsUtf8 = {"Юрий Норштейн", "Франческа Ярбусова"};
+    book.Metadata.Language = "ru";
+    book.Metadata.Isbn = std::string{"978-5-17-090334-4"};
+    book.File.Format = LibriFlow::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000201/book.epub";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "same-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+
+    const LibriFlow::Domain::SBookId storedId = writeRepository.Add(book);
+
+    const LibriFlow::Domain::SCandidateBook strictCandidate{
+        .Metadata = {
+            .TitleUtf8 = "Different Title",
+            .AuthorsUtf8 = {"Another Author"},
+            .Language = "ru",
+            .Isbn = std::string{"9785170903344"}
+        },
+        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Sha256Hex = std::string{"same-hash"}
+    };
+
+    const std::vector<LibriFlow::Domain::SDuplicateMatch> strictMatches = queryRepository.FindDuplicates(strictCandidate);
+
+    REQUIRE(strictMatches.size() == 1);
+    REQUIRE(strictMatches.front().Severity == LibriFlow::Domain::EDuplicateSeverity::Strict);
+    REQUIRE(strictMatches.front().ExistingBookId.Value == storedId.Value);
+
+    const LibriFlow::Domain::SCandidateBook probableCandidate{
+        .Metadata = {
+            .TitleUtf8 = "Ежик   в тумане",
+            .AuthorsUtf8 = {"Франческа Ярбусова", "Юрий Норштейн"},
+            .Language = "ru"
+        },
+        .Format = LibriFlow::Domain::EBookFormat::Epub
+    };
+
+    const std::vector<LibriFlow::Domain::SDuplicateMatch> probableMatches = queryRepository.FindDuplicates(probableCandidate);
+
+    REQUIRE(probableMatches.size() == 1);
+    REQUIRE(probableMatches.front().Severity == LibriFlow::Domain::EDuplicateSeverity::Probable);
+    REQUIRE(probableMatches.front().Reason == LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
+    REQUIRE(probableMatches.front().ExistingBookId.Value == storedId.Value);
+
     std::filesystem::remove(databasePath);
 }

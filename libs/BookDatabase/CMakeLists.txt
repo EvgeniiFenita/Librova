@@ -1,4 +1,5 @@
 add_library(LibriFlowBookDatabase STATIC
+    SqliteBookQueryRepository.cpp
     SqliteBookRepository.cpp
 )
 
