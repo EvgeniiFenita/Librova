@@ -58,6 +58,29 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"C:\Temp\Librova\Work", application.Shell.ImportJobs.WorkingDirectory);
     }
 
+    [Fact]
+    public void Create_WithInitialSourcePath_PrefillsImportShell()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+
+        var application = ShellApplication.Create(
+            session,
+            launchOptions: new ShellLaunchOptions
+            {
+                InitialSourcePath = @"C:\Incoming\opened.fb2"
+            });
+
+        Assert.Equal(@"C:\Incoming\opened.fb2", application.Shell.ImportJobs.SourcePath);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)

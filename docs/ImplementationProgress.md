@@ -102,6 +102,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: wired a real Avalonia path-selection adapter into shell composition so browse commands can use the desktop storage provider while remaining testable.
 - `2026-03-30` Feature: added deterministic default import working-directory initialization under the managed library temp area, with verified shell-composition coverage.
 - `2026-03-30` Feature: exposed probable-duplicate override in the UI import shell and verified that the flag is propagated through the ViewModel request model.
+- `2026-03-30` Feature: added shell launch-argument handling so the UI can start with a prefilled source file path, with verified C# coverage for argument parsing and shell composition.
 
 ### Phase 9. Stabilization
 

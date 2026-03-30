@@ -30,6 +30,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now includes a real Avalonia-backed path-selection adapter wired into shell composition, so `Browse...` actions can use the desktop storage provider while the ViewModel stays dialog-agnostic.
 - the current shell composition now pre-populates the import `WorkingDirectory` with a deterministic path under `<LibraryRoot>/Temp/UiImport`, so the import screen is usable without manual temp-path entry.
 - the current Avalonia shell baseline now exposes an explicit `AllowProbableDuplicates` toggle, so probable-duplicate override can be chosen from the UI instead of only through backend contracts.
+- the current Avalonia shell baseline now accepts an initial source-file path from application launch arguments and pre-fills the import screen with that path on startup.
 - `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -304,6 +305,7 @@ Stable facts taken from that reference:
 - C# shell composition coverage for injecting a desktop path-selection service into the running shell
 - C# shell composition coverage for default import working-directory initialization
 - C# ViewModel coverage for passing the probable-duplicate override flag through the UI import request
+- C# coverage for shell launch-argument parsing and startup source-path prefill in shell composition
 
 ## 12. Current Gaps
 

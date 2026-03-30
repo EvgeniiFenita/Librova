@@ -24,8 +24,11 @@ internal sealed class ShellApplication : IAsyncDisposable
         return Create(session);
     }
 
-    public static ShellApplication Create(ShellSession session, IPathSelectionService? pathSelectionService = null)
-        => new(session, new ShellViewModel(session, pathSelectionService));
+    public static ShellApplication Create(
+        ShellSession session,
+        IPathSelectionService? pathSelectionService = null,
+        ShellLaunchOptions? launchOptions = null)
+        => new(session, new ShellViewModel(session, pathSelectionService, launchOptions));
 
     public ValueTask DisposeAsync() => _session.DisposeAsync();
 }
