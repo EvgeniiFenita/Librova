@@ -59,13 +59,36 @@ namespace {
     return std::string{value.substr(start, end - start)};
 }
 
+[[nodiscard]] bool MatchesLocalName(const pugi::xml_node& node, const std::string_view localName)
+{
+    const std::string_view qualifiedName = node.name();
+    const std::size_t separatorIndex = qualifiedName.find(':');
+    const std::string_view currentLocalName = separatorIndex == std::string_view::npos
+        ? qualifiedName
+        : qualifiedName.substr(separatorIndex + 1);
+    return currentLocalName == localName;
+}
+
+[[nodiscard]] pugi::xml_node FindFirstChildByLocalName(const pugi::xml_node& parent, const std::string_view localName)
+{
+    for (const pugi::xml_node childNode : parent.children())
+    {
+        if (MatchesLocalName(childNode, localName))
+        {
+            return childNode;
+        }
+    }
+
+    return {};
+}
+
 [[nodiscard]] std::string JoinAuthorName(const pugi::xml_node& authorNode)
 {
     std::vector<std::string> parts;
 
     for (const char* partName : {"first-name", "middle-name", "last-name", "nickname"})
     {
-        const std::string value = Trim(authorNode.child(partName).text().as_string());
+        const std::string value = Trim(FindFirstChildByLocalName(authorNode, partName).text().as_string());
 
         if (!value.empty())
         {
@@ -90,7 +113,19 @@ namespace {
 
 [[nodiscard]] std::optional<std::string> TryReadTextChild(const pugi::xml_node& parent, const char* childName)
 {
-    const pugi::xml_node node = parent.child(childName);
+    const pugi::xml_node node = FindFirstChildByLocalName(parent, childName);
+    const std::string value = Trim(node.text().as_string());
+
+    if (value.empty())
+    {
+        return std::nullopt;
+    }
+
+    return value;
+}
+
+[[nodiscard]] std::optional<std::string> TryReadNodeText(const pugi::xml_node& node)
+{
     const std::string value = Trim(node.text().as_string());
 
     if (value.empty())
@@ -119,6 +154,11 @@ namespace {
 
     for (const pugi::xml_node childNode : annotationNode.children())
     {
+        if (childNode.type() != pugi::node_element)
+        {
+            continue;
+        }
+
         const std::string text = Trim(childNode.text().as_string());
 
         if (text.empty())
@@ -257,7 +297,7 @@ namespace {
 
 [[nodiscard]] std::optional<std::string> TryGetCoverBinaryId(const pugi::xml_node& titleInfoNode)
 {
-    const pugi::xml_node imageNode = titleInfoNode.child("coverpage").child("image");
+    const pugi::xml_node imageNode = FindFirstChildByLocalName(FindFirstChildByLocalName(titleInfoNode, "coverpage"), "image");
 
     if (!imageNode)
     {
@@ -289,9 +329,9 @@ namespace {
 
 [[nodiscard]] const pugi::xml_node FindBinaryById(const pugi::xml_node& rootNode, const std::string_view id)
 {
-    for (const pugi::xml_node binaryNode : rootNode.children("binary"))
+    for (const pugi::xml_node binaryNode : rootNode.children())
     {
-        if (std::string_view{binaryNode.attribute("id").as_string()} == id)
+        if (MatchesLocalName(binaryNode, "binary") && std::string_view{binaryNode.attribute("id").as_string()} == id)
         {
             return binaryNode;
         }
@@ -310,8 +350,9 @@ bool CFb2Parser::CanParse(const LibriFlow::Domain::EBookFormat format) const
 LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& filePath) const
 {
     const pugi::xml_document document = ParseXml(ReadTextFile(filePath), filePath);
-    const pugi::xml_node rootNode = document.child("FictionBook");
-    const pugi::xml_node titleInfoNode = rootNode.child("description").child("title-info");
+    const pugi::xml_node rootNode = FindFirstChildByLocalName(document, "FictionBook");
+    const pugi::xml_node descriptionNode = FindFirstChildByLocalName(rootNode, "description");
+    const pugi::xml_node titleInfoNode = FindFirstChildByLocalName(descriptionNode, "title-info");
 
     if (!rootNode || !titleInfoNode)
     {
@@ -320,11 +361,23 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
 
     LibriFlow::Domain::SParsedBook parsedBook;
     parsedBook.SourceFormat = LibriFlow::Domain::EBookFormat::Fb2;
-    parsedBook.Metadata.TitleUtf8 = RequireTextChild(titleInfoNode.child("book-title"), ".", "book-title");
+    const std::optional<std::string> title = TryReadNodeText(FindFirstChildByLocalName(titleInfoNode, "book-title"));
+
+    if (!title.has_value())
+    {
+        throw std::runtime_error("Missing required FB2 node: book-title");
+    }
+
+    parsedBook.Metadata.TitleUtf8 = *title;
     parsedBook.Metadata.Language = RequireTextChild(titleInfoNode, "lang", "lang");
 
-    for (const pugi::xml_node authorNode : titleInfoNode.children("author"))
+    for (const pugi::xml_node authorNode : titleInfoNode.children())
     {
+        if (!MatchesLocalName(authorNode, "author"))
+        {
+            continue;
+        }
+
         const std::string author = JoinAuthorName(authorNode);
 
         if (!author.empty())
@@ -342,12 +395,12 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
     {
         parsedBook.Metadata.SeriesUtf8 = sequenceName;
     }
-    else if (const char* sequenceValue = titleInfoNode.child("sequence").attribute("name").as_string(); sequenceValue != nullptr && sequenceValue[0] != '\0')
+    else if (const char* sequenceValue = FindFirstChildByLocalName(titleInfoNode, "sequence").attribute("name").as_string(); sequenceValue != nullptr && sequenceValue[0] != '\0')
     {
         parsedBook.Metadata.SeriesUtf8 = std::string{sequenceValue};
     }
 
-    if (const char* sequenceNumber = titleInfoNode.child("sequence").attribute("number").as_string(); sequenceNumber != nullptr && sequenceNumber[0] != '\0')
+    if (const char* sequenceNumber = FindFirstChildByLocalName(titleInfoNode, "sequence").attribute("number").as_string(); sequenceNumber != nullptr && sequenceNumber[0] != '\0')
     {
         try
         {
@@ -359,7 +412,7 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
         }
     }
 
-    if (const pugi::xml_node annotationNode = titleInfoNode.child("annotation"))
+    if (const pugi::xml_node annotationNode = FindFirstChildByLocalName(titleInfoNode, "annotation"))
     {
         const std::string description = ReadAnnotationText(annotationNode);
 
@@ -369,7 +422,7 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
         }
     }
 
-    if (const pugi::xml_node publishInfoNode = rootNode.child("description").child("publish-info"))
+    if (const pugi::xml_node publishInfoNode = FindFirstChildByLocalName(descriptionNode, "publish-info"))
     {
         if (const std::optional<std::string> isbn = TryReadTextChild(publishInfoNode, "isbn"))
         {
@@ -394,7 +447,7 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
         }
     }
 
-    if (const pugi::xml_node documentInfoNode = rootNode.child("description").child("document-info"))
+    if (const pugi::xml_node documentInfoNode = FindFirstChildByLocalName(descriptionNode, "document-info"))
     {
         if (const std::optional<std::string> identifier = TryReadTextChild(documentInfoNode, "id"))
         {

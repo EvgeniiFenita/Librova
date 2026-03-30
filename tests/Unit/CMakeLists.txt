@@ -15,6 +15,7 @@ if(BUILD_TESTING)
         TestDatabaseSchema.cpp
         TestManagedFileStorage.cpp
         TestMetadataNormalization.cpp
+        TestParserRegistry.cpp
         TestSearchQuery.cpp
         TestServiceContracts.cpp
         TestManagedLibraryLayout.cpp
@@ -35,6 +36,7 @@ if(BUILD_TESTING)
             LibriFlowEpubParsing
             LibriFlowFb2Parsing
             LibriFlowManagedStorage
+            LibriFlowParserRegistry
             LibriFlowSqlite
             LibriFlowStoragePlanning
     )
