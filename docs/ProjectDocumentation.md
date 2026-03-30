@@ -356,6 +356,10 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
 - C# regression coverage for exact-full-page pagination, clamped page size, and import-command happy paths with real validated source files
 - C# shell-level coverage for startup browser preload and post-import browser refresh
+- C# strong host-backed integration coverage for:
+  - shell startup with real browser preload through the native host
+  - real import-command execution followed by automatic browser refresh
+  - real browser pagination against the native host and SQLite-backed library catalog
 
 ## 12. Current Gaps
 

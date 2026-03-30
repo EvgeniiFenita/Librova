@@ -118,6 +118,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first UI-side library catalog client/service, wired it into shell sessions, and exposed a refreshable library snapshot panel with host-backed C# coverage and browser ViewModel tests.
 - `2026-03-30` Feature: expanded the UI library snapshot into a real browser slice with filters, sort selection, page navigation, and selected-book details while keeping the flow covered by C# ViewModel tests.
 - `2026-03-30` Feature: linked import and browser flows so the library view preloads on shell startup and refreshes automatically after successful imports, with C# shell/viewmodel coverage for both paths.
+- `2026-03-30` Test: added strong host-backed UI integration coverage for shell preload, real import-to-browser refresh, and browser pagination through the native host and SQLite catalog path.
 - `2026-03-30` Fix: hardened the UI shell by making Avalonia startup/shutdown non-blocking, adding an explicit loading state, switching browser pagination to lookahead-based `HasMoreResults`, clamping invalid page sizes, and replacing optimistic import ViewModel tests with validated command-path coverage.
 
 ### Phase 9. Stabilization
