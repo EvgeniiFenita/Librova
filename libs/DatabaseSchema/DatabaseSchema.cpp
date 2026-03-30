@@ -23,6 +23,19 @@ CREATE TABLE IF NOT EXISTS books (
     added_at_utc TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS book_id_sequence (
+    singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+    next_id INTEGER NOT NULL
+);
+
+INSERT INTO book_id_sequence(singleton, next_id)
+VALUES (1, COALESCE((SELECT MAX(id) + 1 FROM books), 1))
+ON CONFLICT(singleton) DO UPDATE SET
+    next_id = CASE
+        WHEN excluded.next_id > next_id THEN excluded.next_id
+        ELSE next_id
+    END;
+
 CREATE TABLE IF NOT EXISTS authors (
     id INTEGER PRIMARY KEY,
     normalized_name TEXT NOT NULL UNIQUE,

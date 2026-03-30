@@ -50,6 +50,7 @@ Implemented slices at this point:
 - The schema includes `books`, `authors`, `book_authors`, `tags`, `book_tags`, `formats`, and `search_index`.
 - SQLite connections enable `foreign_keys` per connection.
 - Book ids can be reserved before persistence so managed storage planning can use stable `BookId`-based paths before the final repository insert.
+- Reserved book ids are allocated through a dedicated SQLite sequence row instead of `MAX(id) + 1`, so sequential reservations from different repository instances do not collide.
 - Managed storage uses stable `BookId`-based paths under `Books/`, `Covers/`, and `Temp/`.
 - Managed file import is staged first, then committed, with rollback logic for partial commit failures.
 
@@ -105,6 +106,8 @@ Implemented slices at this point:
   - managed storage preparation and commit
   - repository write and cleanup
   - rollback of prepared storage and repository state when late import steps fail
+  - cleanup of temporary converter output when import finishes in cancellation
+  - coordinator-level cancellation checks before late storage and persistence steps
 
 ## 8. External Converter Reference
 
@@ -140,6 +143,7 @@ Stable facts taken from that reference:
   - converter configuration model
   - single-file import orchestration
   - single-file import rollback and probable-duplicate override behavior
+  - review regression coverage for id reservation, cancellation cleanup, and staged-file rollback
 
 ## 10. Current Gaps
 

@@ -84,6 +84,13 @@ bool HasProbableDuplicate(const std::vector<LibriFlow::Domain::SDuplicateMatch>&
     return false;
 }
 
+bool IsCancellationRequested(
+    const std::stop_token stopToken,
+    const LibriFlow::Domain::IProgressSink& progressSink)
+{
+    return stopToken.stop_requested() || progressSink.IsCancellationRequested();
+}
+
 } // namespace
 
 namespace LibriFlow::Importing {
@@ -130,9 +137,33 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
     std::optional<std::filesystem::path> temporaryConvertedPath;
     std::optional<LibriFlow::Domain::SPreparedStorage> preparedStorage;
     std::optional<LibriFlow::Domain::SBookId> addedBookId;
+    const auto buildCancelledResult =
+        [&](const std::optional<LibriFlow::Domain::EBookFormat> storedFormat,
+            const std::vector<LibriFlow::Domain::SDuplicateMatch>& duplicates,
+            std::vector<std::string> warnings) {
+            if (preparedStorage.has_value())
+            {
+                m_managedStorage.RollbackImport(*preparedStorage);
+            }
+
+            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+
+            return SSingleFileImportResult{
+                .Status = ESingleFileImportStatus::Cancelled,
+                .StoredFormat = storedFormat,
+                .DuplicateMatches = duplicates,
+                .Warnings = std::move(warnings)
+            };
+        };
 
     try
     {
+        if (IsCancellationRequested(stopToken, progressSink))
+        {
+            return buildCancelledResult(std::nullopt, {}, {});
+        }
+
         progressSink.ReportValue(5, "Detecting source format");
         const std::optional<LibriFlow::Domain::EBookFormat> detectedFormat =
             LibriFlow::ParserRegistry::CBookParserRegistry::TryDetectFormat(request.SourcePath);
@@ -148,6 +179,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         progressSink.ReportValue(15, "Parsing source book");
         const LibriFlow::Domain::SParsedBook parsedBook = m_parserRegistry.Parse(request.SourcePath);
         const auto duplicates = m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, request.Sha256Hex));
+
+        if (IsCancellationRequested(stopToken, progressSink))
+        {
+            return buildCancelledResult(parsedBook.SourceFormat, duplicates, {});
+        }
 
         if (HasStrictDuplicate(duplicates))
         {
@@ -210,12 +246,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 conversionOutcome.Warnings.begin(),
                 conversionOutcome.Warnings.end());
 
-            return {
-                .Status = ESingleFileImportStatus::Cancelled,
-                .StoredFormat = parsedBook.SourceFormat,
-                .DuplicateMatches = duplicates,
-                .Warnings = importWarnings
-            };
+            return buildCancelledResult(parsedBook.SourceFormat, duplicates, std::move(importWarnings));
         }
 
         if (parsedBook.HasCover())
@@ -227,6 +258,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 parsedBook.CoverBytes);
         }
 
+        if (IsCancellationRequested(stopToken, progressSink))
+        {
+            return buildCancelledResult(conversionOutcome.Format, duplicates, std::move(importWarnings));
+        }
+
         progressSink.ReportValue(70, "Preparing managed storage");
         preparedStorage = m_managedStorage.PrepareImport({
             .BookId = reservedBookId,
@@ -234,6 +270,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             .SourcePath = conversionOutcome.SourcePath,
             .CoverSourcePath = temporaryCoverPath
         });
+
+        if (IsCancellationRequested(stopToken, progressSink))
+        {
+            return buildCancelledResult(conversionOutcome.Format, duplicates, std::move(importWarnings));
+        }
 
         LibriFlow::Domain::SBook book{
             .Id = reservedBookId,

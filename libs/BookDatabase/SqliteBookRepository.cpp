@@ -256,6 +256,37 @@ std::vector<std::string> ReadTags(const LibriFlow::Sqlite::CSqliteConnection& co
     return tags;
 }
 
+std::optional<LibriFlow::Domain::SBookMetadata> ReadStoredMetadata(
+    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const LibriFlow::Domain::SBookId id)
+{
+    LibriFlow::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT title, language, series, series_index, publisher, year, isbn, description, identifier "
+        "FROM books WHERE id = ?;");
+    statement.BindInt64(1, id.Value);
+
+    if (!statement.Step())
+    {
+        return std::nullopt;
+    }
+
+    LibriFlow::Domain::SBookMetadata metadata;
+    metadata.TitleUtf8 = statement.GetColumnText(0);
+    metadata.Language = statement.GetColumnText(1);
+    metadata.SeriesUtf8 = statement.IsColumnNull(2) ? std::nullopt : std::make_optional(statement.GetColumnText(2));
+    metadata.SeriesIndex = statement.IsColumnNull(3) ? std::nullopt : std::make_optional(statement.GetColumnDouble(3));
+    metadata.PublisherUtf8 = statement.IsColumnNull(4) ? std::nullopt : std::make_optional(statement.GetColumnText(4));
+    metadata.Year = statement.IsColumnNull(5) ? std::nullopt : std::make_optional(statement.GetColumnInt(5));
+    metadata.Isbn = statement.IsColumnNull(6) ? std::nullopt : std::make_optional(statement.GetColumnText(6));
+    metadata.DescriptionUtf8 = statement.IsColumnNull(7) ? std::nullopt : std::make_optional(statement.GetColumnText(7));
+    metadata.Identifier = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
+    metadata.AuthorsUtf8 = ReadAuthors(connection, id.Value);
+    metadata.TagsUtf8 = ReadTags(connection, id.Value);
+
+    return metadata;
+}
+
 } // namespace
 
 CSqliteBookRepository::CSqliteBookRepository(std::filesystem::path databasePath)
@@ -340,16 +371,22 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
 LibriFlow::Domain::SBookId CSqliteBookRepository::ReserveId()
 {
     LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    CSqliteTransaction transaction(connection);
     LibriFlow::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
-        "SELECT COALESCE(MAX(id), 0) + 1 FROM books;");
+        "UPDATE book_id_sequence "
+        "SET next_id = next_id + 1 "
+        "WHERE singleton = 1 "
+        "RETURNING next_id - 1;");
 
     if (!statement.Step())
     {
         throw std::runtime_error("Failed to reserve next book id.");
     }
 
-    return LibriFlow::Domain::SBookId{statement.GetColumnInt64(0)};
+    const LibriFlow::Domain::SBookId reservedId{statement.GetColumnInt64(0)};
+    transaction.Commit();
+    return reservedId;
 }
 
 std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const LibriFlow::Domain::SBookId id) const
@@ -399,16 +436,18 @@ std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const Lib
 void CSqliteBookRepository::Remove(const LibriFlow::Domain::SBookId id)
 {
     LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
-    const std::optional<LibriFlow::Domain::SBook> existingBook = GetById(id);
+    CSqliteTransaction transaction(connection);
+    const std::optional<LibriFlow::Domain::SBookMetadata> existingMetadata = ReadStoredMetadata(connection, id);
 
-    if (existingBook.has_value())
+    if (existingMetadata.has_value())
     {
-        LibriFlow::SearchIndex::CSearchIndexMaintenance::RemoveBook(connection, id.Value, existingBook->Metadata);
+        LibriFlow::SearchIndex::CSearchIndexMaintenance::RemoveBook(connection, id.Value, *existingMetadata);
     }
 
     LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "DELETE FROM books WHERE id = ?;");
     statement.BindInt64(1, id.Value);
     static_cast<void>(statement.Step());
+    transaction.Commit();
 }
 
 } // namespace LibriFlow::BookDatabase

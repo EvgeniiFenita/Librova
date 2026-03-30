@@ -86,9 +86,13 @@ TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database
     LibriFlow::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
     LibriFlow::BookDatabase::CSqliteBookRepository repository(databasePath);
+    LibriFlow::BookDatabase::CSqliteBookRepository secondRepository(databasePath);
     const LibriFlow::Domain::SBookId firstReservedId = repository.ReserveId();
     REQUIRE(firstReservedId.IsValid());
     REQUIRE(firstReservedId.Value == 1);
+
+    const LibriFlow::Domain::SBookId secondReservedId = secondRepository.ReserveId();
+    REQUIRE(secondReservedId.Value == firstReservedId.Value + 1);
 
     LibriFlow::Domain::SBook book;
     book.Id = firstReservedId;
@@ -101,8 +105,8 @@ TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     REQUIRE(repository.Add(book).Value == firstReservedId.Value);
 
-    const LibriFlow::Domain::SBookId secondReservedId = repository.ReserveId();
-    REQUIRE(secondReservedId.Value == firstReservedId.Value + 1);
+    const LibriFlow::Domain::SBookId thirdReservedId = repository.ReserveId();
+    REQUIRE(thirdReservedId.Value == secondReservedId.Value + 1);
 
     std::filesystem::remove(databasePath);
 }

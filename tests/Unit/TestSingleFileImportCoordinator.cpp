@@ -3,11 +3,13 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "Domain/BookRepository.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
+#include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 
 namespace {
@@ -42,12 +44,6 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     output << text;
-}
-
-std::string ReadTextFile(const std::filesystem::path& path)
-{
-    std::ifstream input(path, std::ios::binary);
-    return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
 std::filesystem::path CreateFb2Fixture(const std::filesystem::path& outputPath)
@@ -95,11 +91,12 @@ public:
 
     bool IsCancellationRequested() const override
     {
-        return false;
+        return CancellationRequested;
     }
 
     int LastPercent = 0;
     std::string LastMessage;
+    bool CancellationRequested = false;
 };
 
 class CStubBookRepository final : public LibriFlow::Domain::IBookRepository
@@ -166,16 +163,40 @@ public:
     [[nodiscard]] LibriFlow::Domain::SPreparedStorage PrepareImport(const LibriFlow::Domain::SStoragePlan& plan) override
     {
         LastPlan = plan;
+        const auto layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(Root);
+        std::filesystem::create_directories(layout.TempDirectory);
+        std::filesystem::create_directories(layout.BooksDirectory);
+        std::filesystem::create_directories(layout.CoversDirectory);
+
+        const std::filesystem::path stagingDirectory =
+            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(Root, plan.BookId);
+        std::filesystem::remove_all(stagingDirectory);
+        std::filesystem::create_directories(stagingDirectory);
+
+        const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
+        std::filesystem::copy_file(plan.SourcePath, stagedBookPath, std::filesystem::copy_options::overwrite_existing);
+
         const std::filesystem::path finalBookPath =
-            Root / "Books" / std::to_string(plan.BookId.Value)
-            / std::filesystem::path{"book"}.replace_extension(
-                plan.Format == LibriFlow::Domain::EBookFormat::Epub ? ".epub" : ".fb2");
+            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format);
+
+        std::optional<std::filesystem::path> stagedCoverPath;
+        std::optional<std::filesystem::path> finalCoverPath;
+
+        if (plan.CoverSourcePath.has_value())
+        {
+            stagedCoverPath = stagingDirectory / plan.CoverSourcePath->filename();
+            std::filesystem::copy_file(
+                *plan.CoverSourcePath,
+                *stagedCoverPath,
+                std::filesystem::copy_options::overwrite_existing);
+            finalCoverPath = Root / "Covers" / std::to_string(plan.BookId.Value) / "cover.jpg";
+        }
 
         return {
-            .StagedBookPath = Root / "Temp" / "book.tmp",
-            .StagedCoverPath = plan.CoverSourcePath,
+            .StagedBookPath = stagedBookPath,
+            .StagedCoverPath = stagedCoverPath,
             .FinalBookPath = finalBookPath,
-            .FinalCoverPath = plan.CoverSourcePath.has_value() ? std::make_optional(Root / "Covers" / std::to_string(plan.BookId.Value) / "cover.jpg") : std::nullopt
+            .FinalCoverPath = finalCoverPath
         };
     }
 
@@ -187,12 +208,37 @@ public:
         }
 
         LastPreparedStorage = preparedStorage;
+        std::filesystem::create_directories(preparedStorage.FinalBookPath.parent_path());
+        std::filesystem::copy_file(
+            preparedStorage.StagedBookPath,
+            preparedStorage.FinalBookPath,
+            std::filesystem::copy_options::overwrite_existing);
+        std::filesystem::remove(preparedStorage.StagedBookPath);
+
+        if (preparedStorage.StagedCoverPath.has_value() && preparedStorage.FinalCoverPath.has_value())
+        {
+            std::filesystem::create_directories(preparedStorage.FinalCoverPath->parent_path());
+            std::filesystem::copy_file(
+                *preparedStorage.StagedCoverPath,
+                *preparedStorage.FinalCoverPath,
+                std::filesystem::copy_options::overwrite_existing);
+            std::filesystem::remove(*preparedStorage.StagedCoverPath);
+        }
+
         CommitCalled = true;
     }
 
     void RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept override
     {
         LastPreparedStorage = preparedStorage;
+        std::error_code errorCode;
+        std::filesystem::remove(preparedStorage.StagedBookPath, errorCode);
+
+        if (preparedStorage.StagedCoverPath.has_value())
+        {
+            std::filesystem::remove(*preparedStorage.StagedCoverPath, errorCode);
+        }
+
         RollbackCalled = true;
     }
 
@@ -424,6 +470,73 @@ TEST_CASE("Single file import can continue after probable duplicate when explici
     REQUIRE(managedStorage.CommitCalled);
 }
 
+TEST_CASE("Single file import removes temporary converter output on cancellation", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-cancel-cleanup");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+    const auto convertedPath = sandbox.GetPath() / "work" / "converted.epub";
+    WriteTextFile(convertedPath, "partial-output");
+
+    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubBookConverter converter;
+    converter.Enabled = true;
+    converter.Result = {
+        .Status = LibriFlow::Domain::EConversionStatus::Cancelled,
+        .OutputPath = convertedPath,
+        .Warnings = {"Conversion cancelled."}
+    };
+    CTestProgressSink progressSink;
+
+    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        &converter);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Cancelled);
+    REQUIRE_FALSE(std::filesystem::exists(convertedPath));
+    REQUIRE_FALSE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+}
+
+TEST_CASE("Single file import stops on cancellation before storage prepare", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-early-cancel");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+    progressSink.CancellationRequested = true;
+
+    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Cancelled);
+    REQUIRE_FALSE(bookRepository.ReservedId.has_value());
+    REQUIRE_FALSE(managedStorage.LastPlan.has_value());
+}
+
 TEST_CASE("Single file import rolls back prepared storage when repository add fails", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-add-failure");
@@ -451,6 +564,8 @@ TEST_CASE("Single file import rolls back prepared storage when repository add fa
     REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
     REQUIRE(result.Error == "Repository add failed.");
     REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE(managedStorage.LastPreparedStorage.has_value());
+    REQUIRE_FALSE(std::filesystem::exists(managedStorage.LastPreparedStorage->StagedBookPath));
     REQUIRE(bookRepository.RemovedIds.empty());
 }
 
@@ -481,6 +596,8 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
     REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
     REQUIRE(result.Error == "Storage commit failed.");
     REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE(managedStorage.LastPreparedStorage.has_value());
+    REQUIRE_FALSE(std::filesystem::exists(managedStorage.LastPreparedStorage->StagedBookPath));
     REQUIRE(bookRepository.RemovedIds.size() == 1);
     REQUIRE(bookRepository.RemovedIds.front().Value == 1);
 }
