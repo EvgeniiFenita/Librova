@@ -39,18 +39,9 @@ internal sealed partial class App : Application
             catch (Exception error)
             {
                 UiLogging.Error(error, "Failed to initialize Avalonia desktop shell.");
-                desktop.MainWindow = new MainWindow
-                {
-                    Title = "LibriFlow Startup Error",
-                    Content = new Avalonia.Controls.TextBlock
-                    {
-                        Margin = new Thickness(24),
-                        Text = error.Message.Length == 0
-                            ? "Failed to start LibriFlow."
-                            : error.Message,
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                    }
-                };
+                var mainWindow = new MainWindow();
+                ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message);
+                desktop.MainWindow = mainWindow;
             }
         }
 

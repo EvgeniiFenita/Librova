@@ -95,6 +95,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Fix: hardened UI command and import-job state handling to avoid fire-and-forget updates, keep polling until terminal completion, and convert command failures into controlled ViewModel state.
 - `2026-03-30` Feature: added the first real Avalonia app skeleton with `App`, `MainWindow`, shell-window composition, and verified C# coverage for window-state configuration.
 - `2026-03-30` Feature: expanded the UI shell with explicit refresh and cancel import-job actions in the ViewModel and bound Avalonia window controls, with `xUnit` coverage for both behaviors.
+- `2026-03-30` Feature: added an explicit shell-window startup state model for both running and startup-error modes, with verified C# coverage for both compositions.
 
 ### Phase 9. Stabilization
 

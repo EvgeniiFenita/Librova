@@ -23,6 +23,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `apps/LibriFlow.UI` now also contains the first UI logging baseline backed by `Serilog`, with file logging and debug output for startup, host lifecycle, IPC job calls, and command failure paths.
 - `apps/LibriFlow.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
 - the current Avalonia shell baseline now exposes explicit `Start`, `Refresh`, and `Cancel` import-job actions through the `ImportJobsViewModel` and bound window controls.
+- the current Avalonia shell baseline now has an explicit startup window state model with separate running and startup-error modes instead of ad hoc exception text rendering in `App`.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -289,6 +290,7 @@ Stable facts taken from that reference:
 - C# logging initialization and file-output coverage
 - C# shell-window composition coverage without depending on a live Avalonia windowing platform in the test process
 - C# ViewModel coverage for refresh and cancellation actions in the UI import shell
+- C# shell-window state coverage for both normal startup composition and startup-error composition
 
 ## 12. Current Gaps
 

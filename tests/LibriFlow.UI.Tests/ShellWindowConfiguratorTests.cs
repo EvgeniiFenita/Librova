@@ -23,8 +23,21 @@ public sealed class ShellWindowConfiguratorTests
 
         var state = ShellWindowConfigurator.CreateState(application);
 
-        Assert.Equal("LibriFlow", state.Title);
-        Assert.Same(application.Shell, state.DataContext);
+        Assert.Equal("LibriFlow", state.ViewModel.Title);
+        Assert.True(state.ViewModel.HasShell);
+        Assert.False(state.ViewModel.HasStartupError);
+        Assert.Same(application.Shell, state.ViewModel.Shell);
+    }
+
+    [Fact]
+    public void CreateStartupErrorState_ProducesStartupErrorViewModel()
+    {
+        var state = ShellWindowConfigurator.CreateStartupErrorState("pipe startup failed");
+
+        Assert.Equal("LibriFlow Startup Error", state.ViewModel.Title);
+        Assert.False(state.ViewModel.HasShell);
+        Assert.True(state.ViewModel.HasStartupError);
+        Assert.Equal("pipe startup failed", state.ViewModel.StartupError);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService

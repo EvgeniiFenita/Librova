@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="using:LibriFlow.UI.ViewModels"
         x:Class="LibriFlow.UI.Views.MainWindow"
-        x:DataType="viewModels:ShellViewModel"
+        x:DataType="viewModels:ShellWindowViewModel"
         Width="1100"
         Height="760"
         MinWidth="920"
@@ -12,7 +12,26 @@
         Background="#F3F1EA"
         Foreground="#1F1B16"
         mc:Ignorable="d">
-  <Grid RowDefinitions="Auto,*" Margin="28">
+  <Grid Margin="28">
+    <Border Background="#FFF4E8"
+            BorderBrush="#D49061"
+            BorderThickness="1"
+            CornerRadius="20"
+            Padding="28"
+            IsVisible="{Binding HasStartupError}">
+      <StackPanel Spacing="12">
+        <TextBlock FontSize="30"
+                   FontWeight="SemiBold"
+                   Text="LibriFlow Startup Error" />
+        <TextBlock FontWeight="SemiBold"
+                   Text="{Binding StatusText}" />
+        <TextBlock Text="{Binding StartupError}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Grid RowDefinitions="Auto,*"
+          IsVisible="{Binding HasShell}">
     <Border Background="#D9E3D4"
             CornerRadius="20"
             Padding="24"
@@ -31,13 +50,13 @@
           <TextBlock FontWeight="SemiBold"
                      Text="Library Root" />
           <TextBlock MaxWidth="360"
-                     Text="{Binding LibraryRoot}"
+                     Text="{Binding Shell.LibraryRoot}"
                      TextWrapping="Wrap" />
           <TextBlock Margin="0,10,0,0"
                      FontWeight="SemiBold"
                      Text="Pipe" />
           <TextBlock MaxWidth="360"
-                     Text="{Binding PipePath}"
+                     Text="{Binding Shell.PipePath}"
                      TextWrapping="Wrap" />
         </StackPanel>
       </Grid>
@@ -64,7 +83,7 @@
         <TextBox Grid.Row="1"
                  Grid.Column="1"
                  Watermark="C:\Books\incoming\book.fb2"
-                 Text="{Binding ImportJobs.SourcePath}" />
+                 Text="{Binding Shell.ImportJobs.SourcePath}" />
 
         <TextBlock Grid.Row="2"
                    VerticalAlignment="Center"
@@ -72,24 +91,24 @@
         <TextBox Grid.Row="2"
                  Grid.Column="1"
                  Watermark="C:\Temp\LibriFlow\Work"
-                 Text="{Binding ImportJobs.WorkingDirectory}" />
+                 Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
 
         <StackPanel Grid.Row="3"
                     Grid.ColumnSpan="2"
                     Orientation="Horizontal"
                     Spacing="12">
           <Button MinWidth="180"
-                  Command="{Binding ImportJobs.StartImportCommand}"
+                  Command="{Binding Shell.ImportJobs.StartImportCommand}"
                   Content="Start Import" />
           <Button MinWidth="140"
-                  Command="{Binding ImportJobs.RefreshCommand}"
+                  Command="{Binding Shell.ImportJobs.RefreshCommand}"
                   Content="Refresh" />
           <Button MinWidth="140"
-                  Command="{Binding ImportJobs.CancelImportCommand}"
+                  Command="{Binding Shell.ImportJobs.CancelImportCommand}"
                   Content="Cancel" />
           <TextBlock VerticalAlignment="Center"
                      FontWeight="SemiBold"
-                     Text="{Binding ImportJobs.StatusText}" />
+                     Text="{Binding Shell.ImportJobs.StatusText}" />
         </StackPanel>
 
         <Border Grid.Row="4"
@@ -100,14 +119,15 @@
           <StackPanel Spacing="10">
             <TextBlock FontWeight="SemiBold"
                        Text="Latest Job State" />
-            <TextBlock Text="{Binding ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
-            <TextBlock Text="{Binding ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
-            <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Status, StringFormat='Status: {0}'}" />
-            <TextBlock Text="{Binding ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
+            <TextBlock Text="{Binding Shell.ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Status, StringFormat='Status: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
                        TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </Grid>
     </Border>
+    </Grid>
   </Grid>
 </Window>
