@@ -136,6 +136,7 @@ Still expected before MVP completion:
 
 - broad review passes on runtime behavior, crash safety, and tests
 - polish of logging coverage and error surfaces
+- maintenance of a current manual UI test checklist for release-candidate validation
 - cleanup of docs and remaining architectural drift
 - final release-candidate review and targeted fix pass
 

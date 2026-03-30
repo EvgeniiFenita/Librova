@@ -40,7 +40,7 @@ public sealed class FirstRunSetupViewModelTests
     }
 
     [Fact]
-    public async Task ContinueCommand_SavesPreferenceAndInvokesCallback()
+    public async Task ContinueCommand_SavesPreferenceAfterSuccessfulCallback()
     {
         var preferences = new FakePreferencesStore();
         string? continuedWith = null;
@@ -60,6 +60,22 @@ public sealed class FirstRunSetupViewModelTests
         Assert.Equal(@"D:\Librova\Data", continuedWith);
     }
 
+    [Fact]
+    public async Task ContinueCommand_DoesNotSavePreferenceWhenCallbackFails()
+    {
+        var preferences = new FakePreferencesStore();
+        var viewModel = new FirstRunSetupViewModel(
+            @"D:\Librova\Data",
+            new FakePathSelectionService(),
+            preferences,
+            _ => throw new InvalidOperationException("startup failed"));
+
+        await viewModel.ContinueCommand.ExecuteAsyncForTests();
+
+        Assert.Null(preferences.LastSavedSnapshot);
+        Assert.Contains("startup failed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class FakePathSelectionService : IPathSelectionService
     {
         public string? SelectedWorkingDirectory { get; init; }
@@ -76,9 +92,10 @@ public sealed class FirstRunSetupViewModelTests
 
     private sealed class FakePreferencesStore : IUiPreferencesStore
     {
+        public UiPreferencesSnapshot? Snapshot { get; init; }
         public UiPreferencesSnapshot? LastSavedSnapshot { get; private set; }
 
-        public UiPreferencesSnapshot? TryLoad() => null;
+        public UiPreferencesSnapshot? TryLoad() => Snapshot;
 
         public void Save(UiPreferencesSnapshot snapshot)
         {

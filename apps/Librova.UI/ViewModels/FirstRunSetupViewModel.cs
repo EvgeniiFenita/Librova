@@ -91,15 +91,23 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
     {
         IsBusy = true;
         StatusText = "Saving setup and starting the native core host...";
-        UiLogging.Information("Saving first-run library root. LibraryRoot={LibraryRoot}", LibraryRoot);
+        UiLogging.Information("Continuing first-run setup with selected library root. LibraryRoot={LibraryRoot}", LibraryRoot);
 
         try
         {
+            await _continueAsync(LibraryRoot);
+            var existing = _preferencesStore.TryLoad();
             _preferencesStore.Save(new UiPreferencesSnapshot
             {
-                PreferredLibraryRoot = LibraryRoot
+                PreferredLibraryRoot = LibraryRoot,
+                ConverterMode = existing?.ConverterMode ?? CoreHost.UiConverterMode.Disabled,
+                Fb2CngExecutablePath = existing?.Fb2CngExecutablePath,
+                Fb2CngConfigPath = existing?.Fb2CngConfigPath,
+                CustomConverterExecutablePath = existing?.CustomConverterExecutablePath,
+                CustomConverterArguments = existing?.CustomConverterArguments,
+                CustomConverterOutputMode = existing?.CustomConverterOutputMode ?? CoreHost.UiConverterOutputMode.ExactDestinationPath
             });
-            await _continueAsync(LibraryRoot);
+            UiLogging.Information("Saved first-run library root after successful shell startup. LibraryRoot={LibraryRoot}", LibraryRoot);
         }
         finally
         {

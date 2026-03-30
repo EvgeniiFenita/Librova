@@ -50,16 +50,12 @@ internal sealed partial class App : Application
         if (FirstRunSetupPolicy.RequiresSetup(preferencesStore))
         {
             UiLogging.Information("Showing first-run setup before host startup.");
-            var setup = new FirstRunSetupViewModel(
-                CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
+            var setup = CreateRecoverySetupViewModel(
+                mainWindow,
                 pathSelectionService,
                 preferencesStore,
-                libraryRoot => StartShellWithLibraryRootAsync(
-                    mainWindow,
-                    pathSelectionService,
-                    preferencesStore,
-                    launchOptions,
-                    libraryRoot));
+                launchOptions,
+                CoreHostDevelopmentDefaults.GetFallbackLibraryRoot());
             ShellWindowConfigurator.ConfigureFirstRunSetup(mainWindow, setup);
             return;
         }
@@ -113,9 +109,32 @@ internal sealed partial class App : Application
         catch (Exception error)
         {
             UiLogging.Error(error, "Failed to initialize Avalonia desktop shell.");
-            ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message);
+            var recoverySetup = CreateRecoverySetupViewModel(
+                mainWindow,
+                pathSelectionService,
+                preferencesStore,
+                launchOptions,
+                hostOptions.LibraryRoot);
+            ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message, recoverySetup);
         }
     }
+
+    private FirstRunSetupViewModel CreateRecoverySetupViewModel(
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore,
+        ShellLaunchOptions launchOptions,
+        string suggestedLibraryRoot) =>
+        new(
+            suggestedLibraryRoot,
+            pathSelectionService,
+            preferencesStore,
+            libraryRoot => StartShellWithLibraryRootAsync(
+                mainWindow,
+                pathSelectionService,
+                preferencesStore,
+                launchOptions,
+                libraryRoot));
 
     private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {

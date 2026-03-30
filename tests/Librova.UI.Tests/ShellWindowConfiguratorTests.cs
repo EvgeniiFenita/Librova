@@ -60,6 +60,22 @@ public sealed class ShellWindowConfiguratorTests
     }
 
     [Fact]
+    public void CreateStartupErrorState_WithRecoverySetup_ExposesRecoverySetup()
+    {
+        var setup = new FirstRunSetupViewModel(
+            @"C:\Libraries\Librova",
+            null,
+            null,
+            _ => Task.CompletedTask);
+
+        var state = ShellWindowConfigurator.CreateStartupErrorState("pipe startup failed", setup);
+
+        Assert.True(state.ViewModel.HasStartupError);
+        Assert.True(state.ViewModel.HasStartupRecoverySetup);
+        Assert.Same(setup, state.ViewModel.Setup);
+    }
+
+    [Fact]
     public void CreateFirstRunSetupState_ProducesSetupViewModel()
     {
         var setup = new FirstRunSetupViewModel(

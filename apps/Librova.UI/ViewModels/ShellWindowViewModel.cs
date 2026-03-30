@@ -39,6 +39,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
     public bool HasShell => Shell is not null;
     public bool HasSetup => Setup is not null;
     public bool HasStartupError => !string.IsNullOrWhiteSpace(StartupError);
+    public bool HasStartupRecoverySetup => HasStartupError && Setup is not null;
     public bool IsStartingUp => !HasShell && !HasStartupError && !HasSetup;
 
     public static ShellWindowViewModel CreateStartingUp() =>
@@ -77,15 +78,17 @@ internal sealed class ShellWindowViewModel : ObservableObject
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
             "Librova stores the managed library, database, covers, logs, temporary import files, and trash under the selected root. You can change this again later in the running shell settings.");
 
-    public static ShellWindowViewModel CreateStartupError(string message) =>
+    public static ShellWindowViewModel CreateStartupError(string message, FirstRunSetupViewModel? recoverySetup = null) =>
         new(
             "Librova Startup Error",
             null,
-            null,
+            recoverySetup,
             "Startup failed.",
             string.IsNullOrWhiteSpace(message) ? "Failed to start Librova." : message,
             RuntimeEnvironment.GetDefaultUiLogFilePath(),
             RuntimeEnvironment.GetDefaultUiStateFilePath(),
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
-            "Check the UI log first. If the issue is related to library bootstrap or host startup, verify the configured library root and then retry the app.");
+            recoverySetup is null
+                ? "Check the UI log first. If the issue is related to library bootstrap or host startup, verify the configured library root and then retry the app."
+                : "Check the UI log first. You can immediately choose a different library root below and retry startup without leaving the app.");
 }

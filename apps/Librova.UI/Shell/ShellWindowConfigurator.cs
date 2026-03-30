@@ -14,8 +14,8 @@ internal static class ShellWindowConfigurator
     public static ShellWindowState CreateFirstRunSetupState(FirstRunSetupViewModel setup) =>
         new(ShellWindowViewModel.CreateFirstRunSetup(setup));
 
-    public static ShellWindowState CreateStartupErrorState(string message) =>
-        new(ShellWindowViewModel.CreateStartupError(message));
+    public static ShellWindowState CreateStartupErrorState(string message, FirstRunSetupViewModel? recoverySetup = null) =>
+        new(ShellWindowViewModel.CreateStartupError(message, recoverySetup));
 
     public static void Configure(MainWindow window, ShellApplication application)
     {
@@ -26,8 +26,8 @@ internal static class ShellWindowConfigurator
     public static void ConfigureFirstRunSetup(MainWindow window, FirstRunSetupViewModel setup) =>
         Apply(window, CreateFirstRunSetupState(setup));
 
-    public static void ConfigureStartupError(MainWindow window, string message) =>
-        Apply(window, CreateStartupErrorState(message));
+    public static void ConfigureStartupError(MainWindow window, string message, FirstRunSetupViewModel? recoverySetup = null) =>
+        Apply(window, CreateStartupErrorState(message, recoverySetup));
 
     public static void ConfigureStartingUp(MainWindow window) =>
         Apply(window, CreateStartingUpState());

@@ -1,4 +1,5 @@
 using Librova.UI.CoreHost;
+using Librova.UI.Shell;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -80,5 +81,44 @@ public sealed class CoreHostLaunchOptionsTests
         };
 
         options.Validate();
+    }
+
+    [Fact]
+    public void CreateDevelopmentDefaults_UsesProvidedPreferencesStoreForConverterSettings()
+    {
+        var options = CoreHostDevelopmentDefaults.Create(
+            baseDirectory: AppContext.BaseDirectory,
+            preferencesStore: new FakePreferencesStore
+            {
+                Snapshot = new UiPreferencesSnapshot
+                {
+                    PreferredLibraryRoot = @"D:\Librova\Data",
+                    ConverterMode = UiConverterMode.CustomCommand,
+                    CustomConverterExecutablePath = @"D:\Tools\custom.exe",
+                    CustomConverterArguments = ["--input", "{source}"],
+                    CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+                }
+            });
+
+        Assert.Equal(@"D:\Librova\Data", options.LibraryRoot);
+        Assert.Equal(UiConverterMode.CustomCommand, options.ConverterMode);
+        Assert.Equal(@"D:\Tools\custom.exe", options.CustomConverterExecutablePath);
+        Assert.Equal(["--input", "{source}"], options.CustomConverterArguments);
+        Assert.Equal(UiConverterOutputMode.SingleFileInDestinationDirectory, options.CustomConverterOutputMode);
+    }
+
+    private sealed class FakePreferencesStore : IUiPreferencesStore
+    {
+        public UiPreferencesSnapshot? Snapshot { get; init; }
+
+        public UiPreferencesSnapshot? TryLoad() => Snapshot;
+
+        public void Save(UiPreferencesSnapshot snapshot)
+        {
+        }
+
+        public void Clear()
+        {
+        }
     }
 }

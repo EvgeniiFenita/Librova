@@ -52,6 +52,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Repository-level documentation lives under `docs/`.
 - `docs/Librova-Architecture-Master.md` is now the concise active architecture summary, while the original long-form planning document lives in `docs/archive/Librova-Architecture-Full.md`.
 - the repository now also contains workflow guard documents under `docs/` for MVP scope, vertical-slice playbooks, test strategy, transport invariants, and review checklists.
+- the repository now also contains [docs/ManualUiTestScenarios.md](C:\Users\evgen\Desktop\Librova\docs\ManualUiTestScenarios.md) as the current manual desktop validation checklist for MVP shell workflows.
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
@@ -212,9 +213,11 @@ Implemented slices at this point:
 - the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
 - the current UI settings section now also supports next-launch converter configuration for `Disabled`, built-in `fb2cng`, and custom external-command modes, including persistence in UI preferences and propagation into native host launch arguments on the next app start
 - the current Avalonia shell now includes a dedicated first-run setup state before host startup; when no library-root override or saved preference exists, the user must choose a managed library root before the native host session is launched
+- first-run setup now persists the selected `PreferredLibraryRoot` only after successful shell startup, so a failed startup does not lock future launches into a bad saved root
 - the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 - the current UI shell now exposes an `Operational Notes` panel that surfaces launch-argument prefill, next-launch library-root mismatch, and runtime-redirection hints directly in the running shell instead of leaving them implicit
 - the current startup-error screen now includes actionable guidance and the current UI log/state/preferences file paths, so bootstrap failures can be diagnosed without leaving the error screen
+- the current startup-error screen now also embeds a recovery setup path that lets the user choose another library root and retry startup without manually editing preferences files
 - `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
@@ -405,6 +408,7 @@ Stable facts taken from that reference:
   - real browser pagination against the native host and SQLite-backed library catalog
   - real selected-book export through the native host and managed library
   - real selected-book delete-to-trash through the native host and managed library
+- the stabilization baseline now also includes a maintained manual desktop validation checklist in [docs/ManualUiTestScenarios.md](C:\Users\evgen\Desktop\Librova\docs\ManualUiTestScenarios.md) for startup, shell navigation, import, browser, settings, diagnostics, and release-build smoke checks
 - the UI-side core-host path resolver now supports:
   - explicit `LIBROVA_CORE_HOST_EXECUTABLE` override
   - fallback probing of both `x64-debug/Debug` and `x64-release/Release` repository build layouts
