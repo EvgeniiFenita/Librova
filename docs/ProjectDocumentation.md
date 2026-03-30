@@ -181,6 +181,7 @@ Implemented slices at this point:
   - `out\\runtime\\library\\Logs\\host.log`
 - the current UI host-readiness check uses `WaitNamedPipe` and no longer creates a throwaway client connection that pollutes `host.log` with false broken-pipe startup errors
 - the current UI shell contains the first explicit next-launch settings flow for `PreferredLibraryRoot`; users can browse, save, and reset the library root that future app launches should use
+- the current UI shell now exposes a dedicated diagnostics panel with the active UI log path, host log path, UI state file, preferences file, and host executable path, so runtime inspection no longer requires guessing the current file locations
 
 ## 5. Persistence And Storage
 
@@ -327,6 +328,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for local import-input validation and command enablement against real temporary files
 - C# shell-lifecycle coverage for disposing the native host even when UI shell-state persistence fails
 - C# coverage for persisted UI preferences and next-launch library-root settings behavior
+- C# shell composition coverage for diagnostics-path exposure in the running session
 
 ## 12. Current Gaps
 

@@ -199,6 +199,30 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public void Create_ExposesDiagnosticsPathsForCurrentSession()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        Assert.Equal(@"C:\Tools\LibrovaCoreHostApp.exe", application.Shell.HostExecutablePath);
+        Assert.Equal(Path.Combine(@"C:\Libraries\Librova", "Logs", "host.log"), application.Shell.HostLogFilePath);
+        Assert.Contains("UI log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("host log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ShellSettings_CanSaveAndResetPreferredLibraryRoot()
     {
         var preferencesStore = new FakePreferencesStore();

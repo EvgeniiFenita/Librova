@@ -3,6 +3,7 @@ using Librova.UI.ImportJobs;
 using Librova.UI.Logging;
 using Librova.UI.Shell;
 using Librova.UI.Mvvm;
+using Librova.UI.Runtime;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -85,6 +86,13 @@ internal sealed class ShellViewModel : ObservableObject
 
     public bool HasPreferredLibraryRootValidationError => !string.IsNullOrWhiteSpace(PreferredLibraryRootValidationMessage);
     public bool ShowPreferredLibraryRootHelperText => !HasPreferredLibraryRootValidationError;
+    public string UiLogFilePath => RuntimeEnvironment.GetDefaultUiLogFilePath();
+    public string UiStateFilePath => ShellStateStore.CreateDefault().FilePath;
+    public string UiPreferencesFilePath => UiPreferencesStore.CreateDefault().FilePath;
+    public string HostExecutablePath => _session.HostOptions.ExecutablePath;
+    public string HostLogFilePath => Path.Combine(LibraryRoot, "Logs", "host.log");
+    public string DiagnosticsHintText =>
+        "If startup or import flow looks suspicious, inspect the UI log first, then the host log. The current session keeps using the library root shown under Session, while the settings card only affects the next launch.";
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 

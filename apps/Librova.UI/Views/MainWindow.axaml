@@ -336,6 +336,55 @@
           </Border>
 
           <Border Classes="TintedCard"
+                  Background="#E7ECE6"
+                  BorderBrush="#C6D3C1">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="SectionTitle"
+                         Text="Diagnostics" />
+              <TextBlock Opacity="0.74"
+                         Text="{Binding Shell.DiagnosticsHintText}"
+                         TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="Auto,*"
+                    ColumnSpacing="10"
+                    RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock FontWeight="SemiBold"
+                           Text="UI log" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Shell.UiLogFilePath}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="1"
+                           FontWeight="SemiBold"
+                           Text="Host log" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Text="{Binding Shell.HostLogFilePath}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="2"
+                           FontWeight="SemiBold"
+                           Text="UI state" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="1"
+                           Text="{Binding Shell.UiStateFilePath}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="3"
+                           FontWeight="SemiBold"
+                           Text="Preferences" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Text="{Binding Shell.UiPreferencesFilePath}"
+                           TextWrapping="Wrap" />
+              </Grid>
+              <TextBlock FontWeight="SemiBold"
+                         Text="Host executable" />
+              <TextBlock Text="{Binding Shell.HostExecutablePath}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="TintedCard"
                   Background="#F5E8DB"
                   BorderBrush="#DEC5A9">
             <StackPanel Spacing="10">
