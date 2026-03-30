@@ -101,6 +101,9 @@
           <StackPanel Spacing="14">
             <TextBlock Classes="SectionTitle"
                        Text="Managed Library Root" />
+            <TextBlock Opacity="0.74"
+                       Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
+                       TextWrapping="Wrap" />
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
               <TextBox Classes="ImportField"
