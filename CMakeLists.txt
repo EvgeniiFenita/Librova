@@ -8,5 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
+add_subdirectory(libs/Domain)
 add_subdirectory(libs/Core)
 add_subdirectory(tests/Unit)
