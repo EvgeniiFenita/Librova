@@ -36,4 +36,20 @@ internal sealed class LibraryCatalogClient
             GetBookDetailsResponse.Parser,
             timeout,
             cancellationToken);
+
+    public Task<ExportBookResponse> ExportBookAsync(
+        long bookId,
+        string destinationPath,
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        _pipeClient.CallAsync(
+            PipeMethod.ExportBook,
+            new ExportBookRequest
+            {
+                BookId = bookId,
+                DestinationPath = destinationPath
+            },
+            ExportBookResponse.Parser,
+            timeout,
+            cancellationToken);
 }

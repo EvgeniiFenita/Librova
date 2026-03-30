@@ -34,7 +34,7 @@ internal sealed class ShellViewModel : ObservableObject
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
-        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog);
+        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)

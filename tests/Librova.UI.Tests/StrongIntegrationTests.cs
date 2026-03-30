@@ -115,6 +115,39 @@ public sealed class StrongIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task LibraryBrowserViewModel_ExportsSelectedBookAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-export");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserExport");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            await ImportBookAsync(session.ImportJobs, sandboxRoot, "export.fb2", "Exported Book", "Arkady", "Strugatsky", cancellation.Token);
+
+            var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportedBook.fb2");
+            var viewModel = new LibraryBrowserViewModel(
+                session.LibraryCatalog,
+                new FakeExportSelectionService(exportPath));
+
+            await viewModel.RefreshAsync();
+            Assert.NotNull(viewModel.SelectedBook);
+
+            await viewModel.ExportSelectedBookAsync();
+
+            Assert.True(File.Exists(exportPath));
+            Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static ShellApplication CreateApplication(ShellSession session, string sandboxRoot) =>
         ShellApplication.Create(
             session,
@@ -214,5 +247,17 @@ public sealed class StrongIntegrationTests
         catch (UnauthorizedAccessException)
         {
         }
+    }
+
+    private sealed class FakeExportSelectionService(string exportPath) : Desktop.IPathSelectionService
+    {
+        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(exportPath);
     }
 }

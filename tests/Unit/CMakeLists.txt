@@ -16,6 +16,7 @@ if(BUILD_TESTING)
         TestPipeRequestDispatcher.cpp
         TestProtoContracts.cpp
         TestLibraryCatalogFacade.cpp
+        TestLibraryExportFacade.cpp
         TestLibraryImportFacade.cpp
         TestBook.cpp
         TestSqliteBookRepository.cpp

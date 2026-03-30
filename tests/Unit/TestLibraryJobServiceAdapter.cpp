@@ -2,11 +2,13 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <stop_token>
 #include <thread>
 
 #include "Application/LibraryCatalogFacade.hpp"
+#include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
@@ -90,6 +92,29 @@ public:
     }
 };
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
 } // namespace
 
 TEST_CASE("Library job service adapter starts jobs and returns protobuf results", "[proto-service]")
@@ -99,10 +124,12 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const CEmptyQueryRepository queryRepository;
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
 
     librova::v1::StartImportRequest startRequest;
     auto* import = startRequest.mutable_import();
@@ -136,10 +163,12 @@ TEST_CASE("Library job service adapter exposes snapshot cancellation and removal
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const CEmptyQueryRepository queryRepository;
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
 
     librova::v1::StartImportRequest startRequest;
     startRequest.mutable_import()->set_source_path("C:/books/book.fb2");
@@ -194,11 +223,12 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
 
     librova::v1::ListBooksRequest request;
     request.mutable_query()->set_text("road");
@@ -211,4 +241,49 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
     REQUIRE(response.items(0).managed_path() == "Books/0000000201/book.epub");
 
     std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Library job service adapter exports managed book file over protobuf", "[proto-service][catalog]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000202");
+
+    const std::filesystem::path databasePath = sandbox / "librova-proto-service-export.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000202/book.epub";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "export-adapter-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto bookId = writeRepository.Add(book);
+    std::ofstream(sandbox / "Library/Books/0000000202/book.epub", std::ios::binary) << "epub-export";
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox / "Library");
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
+
+    librova::v1::ExportBookRequest request;
+    request.set_book_id(bookId.Value);
+    request.set_destination_path((sandbox / "Exports" / "RoadsidePicnic.epub").string());
+
+    const auto response = adapter.ExportBook(request);
+    REQUIRE(response.has_exported_path());
+    REQUIRE(std::filesystem::exists(response.exported_path()));
+
+    std::filesystem::remove_all(sandbox);
 }

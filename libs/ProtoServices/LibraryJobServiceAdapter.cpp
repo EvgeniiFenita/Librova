@@ -1,15 +1,39 @@
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 
+#include "Logging/Logging.hpp"
 #include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
 
 namespace Librova::ProtoServices {
+namespace {
+
+template <typename... TArgs>
+void LogInfoIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Info(format, std::forward<TArgs>(args)...);
+    }
+}
+
+template <typename... TArgs>
+void LogWarnIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Warn(format, std::forward<TArgs>(args)...);
+    }
+}
+
+} // namespace
 
 CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
     Librova::ApplicationJobs::CImportJobService& importJobService,
-    const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade)
+    const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade,
+    const Librova::Application::CLibraryExportFacade& libraryExportFacade)
     : m_importJobService(importJobService)
     , m_libraryCatalogFacade(libraryCatalogFacade)
+    , m_libraryExportFacade(libraryExportFacade)
 {
 }
 
@@ -34,6 +58,36 @@ librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
     const auto details = m_libraryCatalogFacade.GetBookDetails(Librova::Domain::SBookId{request.book_id()});
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
         details.has_value() ? &*details : nullptr);
+}
+
+librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
+    const librova::v1::ExportBookRequest& request) const
+{
+    LogInfoIfInitialized(
+        "ExportBook requested for book {} to '{}'.",
+        request.book_id(),
+        request.destination_path());
+
+    const auto exportedPath = m_libraryExportFacade.ExportBook(
+        Librova::Domain::SBookId{request.book_id()},
+        std::filesystem::path{std::u8string{
+            reinterpret_cast<const char8_t*>(request.destination_path().data()),
+            reinterpret_cast<const char8_t*>(request.destination_path().data() + request.destination_path().size())}});
+
+    if (exportedPath.has_value())
+    {
+        LogInfoIfInitialized(
+            "ExportBook completed for book {} to '{}'.",
+            request.book_id(),
+            exportedPath->string());
+    }
+    else
+    {
+        LogWarnIfInitialized("ExportBook requested unknown book {}.", request.book_id());
+    }
+
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        exportedPath.has_value() ? &*exportedPath : nullptr);
 }
 
 librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(

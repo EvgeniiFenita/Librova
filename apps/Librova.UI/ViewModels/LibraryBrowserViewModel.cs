@@ -1,9 +1,11 @@
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Mvvm;
+using Librova.UI.Desktop;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +14,7 @@ namespace Librova.UI.ViewModels;
 internal sealed class LibraryBrowserViewModel : ObservableObject
 {
     private readonly ILibraryCatalogService _libraryCatalogService;
+    private readonly IPathSelectionService _pathSelectionService;
     private string _searchText = string.Empty;
     private string _authorFilter = string.Empty;
     private string _languageFilter = string.Empty;
@@ -25,13 +28,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private BookListItemModel? _selectedBook;
     private BookDetailsModel? _selectedBookDetails;
 
-    public LibraryBrowserViewModel(ILibraryCatalogService? libraryCatalogService = null)
+    public LibraryBrowserViewModel(
+        ILibraryCatalogService? libraryCatalogService = null,
+        IPathSelectionService? pathSelectionService = null)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
+        _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         NextPageCommand = new AsyncCommand(NextPageAsync, () => !IsBusy && HasMoreResults, HandleCommandErrorAsync);
         PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
@@ -39,6 +46,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public AsyncCommand NextPageCommand { get; }
     public AsyncCommand PreviousPageCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
+    public AsyncCommand ExportSelectedBookCommand { get; }
     public IReadOnlyList<string> AvailableFormatFilters { get; } = ["All", "EPUB", "FB2"];
     public IReadOnlyList<BookSortModel> AvailableSortOptions { get; } = Enum.GetValues<BookSortModel>();
 
@@ -126,6 +134,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookExtendedDetailsText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
                 LoadDetailsCommand.RaiseCanExecuteChanged();
+                ExportSelectedBookCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -147,6 +156,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 NextPageCommand.RaiseCanExecuteChanged();
                 PreviousPageCommand.RaiseCanExecuteChanged();
                 LoadDetailsCommand.RaiseCanExecuteChanged();
+                ExportSelectedBookCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -224,6 +234,49 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             StatusText = SelectedBookDetails is null
                 ? "Book details were not found."
                 : $"Loaded full details for '{SelectedBookDetails.Title}'.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ExportSelectedBookAsync()
+    {
+        if (SelectedBook is null)
+        {
+            return;
+        }
+
+        const string defaultFileName = "book.epub";
+        var suggestedFileName = Path.GetFileName(SelectedBook.ManagedPath);
+        if (string.IsNullOrWhiteSpace(suggestedFileName))
+        {
+            suggestedFileName = defaultFileName;
+        }
+
+        var destinationPath = await _pathSelectionService.PickExportDestinationAsync(suggestedFileName, default);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            StatusText = "Export was cancelled before a destination was chosen.";
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = $"Exporting '{SelectedBook.Title}'...";
+
+        try
+        {
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var exportedPath = await _libraryCatalogService.ExportBookAsync(
+                SelectedBook.BookId,
+                destinationPath,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            StatusText = string.IsNullOrWhiteSpace(exportedPath)
+                ? "Selected book could not be exported."
+                : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
         }
         finally
         {

@@ -10,11 +10,12 @@ internal enum PipeMethod : uint
     StartImport = 1,
     ListBooks = 2,
     GetBookDetails = 3,
-    GetImportJobSnapshot = 4,
-    GetImportJobResult = 5,
-    WaitImportJob = 6,
-    CancelImportJob = 7,
-    RemoveImportJob = 8
+    ExportBook = 4,
+    GetImportJobSnapshot = 5,
+    GetImportJobResult = 6,
+    WaitImportJob = 7,
+    CancelImportJob = 8,
+    RemoveImportJob = 9
 }
 
 internal enum PipeResponseStatus : uint

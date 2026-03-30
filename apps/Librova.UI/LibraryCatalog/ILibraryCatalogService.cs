@@ -16,4 +16,10 @@ internal interface ILibraryCatalogService
         long bookId,
         TimeSpan timeout,
         CancellationToken cancellationToken);
+
+    Task<string?> ExportBookAsync(
+        long bookId,
+        string destinationPath,
+        TimeSpan timeout,
+        CancellationToken cancellationToken);
 }

@@ -68,6 +68,28 @@ internal sealed class AvaloniaPathSelectionService : IPathSelectionService
         return path;
     }
 
+    public async Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
+    {
+        var storageProvider = _ownerWindow.StorageProvider;
+        if (storageProvider is null)
+        {
+            UiLogging.Warning("Export destination selection requested, but no Avalonia storage provider is available.");
+            return null;
+        }
+
+        var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export selected book",
+            SuggestedFileName = string.IsNullOrWhiteSpace(suggestedFileName) ? "book.epub" : suggestedFileName
+        });
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = file is null ? null : GetLocalPath(file);
+        UiLogging.Information("Export destination selection completed. HasPath={HasPath}", !string.IsNullOrWhiteSpace(path));
+        return path;
+    }
+
     private static string? GetLocalPath(IStorageItem storageItem)
     {
         if (storageItem is null)

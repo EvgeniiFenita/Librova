@@ -7,4 +7,5 @@ internal interface IPathSelectionService
 {
     Task<string?> PickSourceFileAsync(CancellationToken cancellationToken);
     Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken);
+    Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken);
 }

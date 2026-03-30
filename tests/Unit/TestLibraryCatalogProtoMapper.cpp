@@ -90,3 +90,12 @@ TEST_CASE("Library catalog proto mapper builds book details response", "[proto-m
     REQUIRE(response.details().sha256_hex() == "details-hash");
     REQUIRE(response.details().managed_path() == "Books/0000000042/DefinitelyMaybe.fb2");
 }
+
+TEST_CASE("Library catalog proto mapper builds export response", "[proto-mapping][catalog]")
+{
+    const auto exportedPath = std::filesystem::path(u8"C:/Exports/DefinitelyMaybe.fb2");
+    const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(&exportedPath);
+
+    REQUIRE(response.has_exported_path());
+    REQUIRE(response.exported_path() == "C:/Exports/DefinitelyMaybe.fb2");
+}

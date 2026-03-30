@@ -104,6 +104,7 @@ template <typename TEnum>
     case TEnum::StartImport:
     case TEnum::ListBooks:
     case TEnum::GetBookDetails:
+    case TEnum::ExportBook:
     case TEnum::GetImportJobSnapshot:
     case TEnum::GetImportJobResult:
     case TEnum::WaitImportJob:

@@ -238,6 +238,18 @@ librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     return response;
 }
 
+librova::v1::ExportBookResponse CLibraryCatalogProtoMapper::ToProtoResponse(
+    const std::filesystem::path* exportedPath)
+{
+    librova::v1::ExportBookResponse response;
+    if (exportedPath != nullptr)
+    {
+        response.set_exported_path(PathToUtf8(*exportedPath));
+    }
+
+    return response;
+}
+
 std::string CLibraryCatalogProtoMapper::PathToUtf8(const std::filesystem::path& path)
 {
     return ToUtf8String(path.generic_u8string());

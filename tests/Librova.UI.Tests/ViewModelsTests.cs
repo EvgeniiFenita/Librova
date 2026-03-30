@@ -547,6 +547,26 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ExportsSelectedBookThroughPathSelectionService()
+    {
+        var service = new FakeLibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\alpha.epub"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService);
+
+        await viewModel.RefreshAsync();
+        Assert.NotNull(viewModel.SelectedBook);
+
+        await viewModel.ExportSelectedBookAsync();
+
+        Assert.Equal(viewModel.SelectedBook!.BookId, service.LastExportBookId);
+        Assert.Equal(@"C:\Exports\alpha.epub", service.LastExportPath);
+        Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_ClampsInvalidPageSize()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
@@ -788,12 +808,16 @@ public sealed class ViewModelsTests
     {
         public string? SelectedSourcePath { get; init; }
         public string? SelectedWorkingDirectory { get; init; }
+        public string? SelectedExportPath { get; init; }
 
         public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedSourcePath);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);
+
+        public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
+            => Task.FromResult(SelectedExportPath);
     }
 
     private static string CreateSupportedSourceFile(string sandboxRoot, string fileName)
@@ -805,6 +829,9 @@ public sealed class ViewModelsTests
 
     private sealed class FakeLibraryCatalogService : ILibraryCatalogService
     {
+        public long? LastExportBookId { get; private set; }
+        public string? LastExportPath { get; private set; }
+
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([
                 new BookListItemModel
@@ -838,6 +865,13 @@ public sealed class ViewModelsTests
                 Sha256Hex = "details-hash",
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastExportBookId = bookId;
+            LastExportPath = destinationPath;
+            return Task.FromResult<string?>(destinationPath);
+        }
     }
 
     private sealed class EmptyLibraryCatalogService : ILibraryCatalogService
@@ -847,11 +881,15 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
     }
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
     {
         public BookListRequestModel? LastRequest { get; private set; }
+        public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -861,6 +899,12 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastExportRequest = (bookId, destinationPath);
+            return Task.FromResult<string?>(destinationPath);
+        }
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
@@ -919,6 +963,9 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
     }
 
     private sealed class ExactPageLibraryCatalogService : ILibraryCatalogService
@@ -954,5 +1001,8 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
     }
 }

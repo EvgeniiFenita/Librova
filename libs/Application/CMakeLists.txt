@@ -1,6 +1,8 @@
 add_library(LibrovaApplication STATIC
     LibraryCatalogFacade.cpp
     LibraryCatalogFacade.hpp
+    LibraryExportFacade.cpp
+    LibraryExportFacade.hpp
     LibraryImportFacade.cpp
     LibraryImportFacade.hpp
 )

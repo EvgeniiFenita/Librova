@@ -63,6 +63,9 @@ internal static class LibraryCatalogMapper
     public static BookDetailsModel? FromProto(GetBookDetailsResponse response) =>
         response.Details is null ? null : FromProto(response.Details);
 
+    public static string? FromProto(ExportBookResponse response) =>
+        response.HasExportedPath ? response.ExportedPath : null;
+
     public static BookListItemModel FromProto(BookListItem item) =>
         new()
         {

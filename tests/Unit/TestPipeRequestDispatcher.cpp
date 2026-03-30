@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "Application/LibraryCatalogFacade.hpp"
+#include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryImportFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
@@ -55,10 +56,19 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
         }
     } queryRepository;
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+    {
+    public:
+        [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
+        [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
+        void Remove(const Librova::Domain::SBookId) override {}
+    } bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::StartImportRequest typedRequest;
@@ -104,10 +114,19 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
         }
     } queryRepository;
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+    {
+    public:
+        [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
+        [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
+        void Remove(const Librova::Domain::SBookId) override {}
+    } bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     const Librova::PipeTransport::SPipeRequestEnvelope request{
@@ -144,11 +163,12 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::ListBooksRequest typedRequest;

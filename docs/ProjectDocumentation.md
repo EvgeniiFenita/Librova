@@ -54,14 +54,15 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
 - `CMake` is the canonical native build system.
-- the repository root now contains [Run-Librova.ps1](C:\Users\evgen\Desktop\LibriFlow\Run-Librova.ps1) as the one-click development entry point for full build and UI launch.
-- the repository root now also contains [Run-Tests.ps1](C:\Users\evgen\Desktop\LibriFlow\Run-Tests.ps1) as the one-click local verification entry point for sequential native build/test plus managed UI build/test.
+- the repository root now contains [Run-Librova.ps1](C:\Users\evgen\Desktop\Librova\Run-Librova.ps1) as the one-click development entry point for full build and UI launch.
+- the repository root now also contains [Run-Tests.ps1](C:\Users\evgen\Desktop\Librova\Run-Tests.ps1) as the one-click local verification entry point for sequential native build/test plus managed UI build/test.
 
 ## 3. Application Layer
 
 - A first application-facing import facade is implemented.
 - A first application-facing catalog facade is implemented for read-side book listing.
 - The application-facing catalog facade now also supports richer book-details lookup by `BookId`.
+- The application-facing catalog facade now also supports exporting a managed book file to a user-selected destination path.
 - The facade dispatches between:
   - single-file import
   - ZIP archive import
@@ -105,7 +106,7 @@ Implemented slices at this point:
 
 ## 4.1 Shared Contracts
 
-- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\LibriFlow\proto\import_jobs.proto).
+- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\Librova\proto\import_jobs.proto).
 - Protobuf package baseline is `librova.v1`.
 - `.proto` file naming is now fixed as `snake_case`.
 - The first contract covers:
@@ -118,6 +119,7 @@ Implemented slices at this point:
   - `LibraryJobService` RPC surface for start/get/wait/cancel/remove
 - The shared contract now also exposes `ListBooks` for read-side catalog queries over the same named-pipe/protobuf boundary.
 - The shared contract now also exposes `GetBookDetails` for richer read-side metadata lookup over the same named-pipe/protobuf boundary.
+- The shared contract now also exposes `ExportBook` for exporting a selected managed book to a user-chosen destination path over the same named-pipe/protobuf boundary.
 - Current protobuf contracts are transport-oriented and do not expose internal storage layout or low-level duplicate internals.
 - `protobuf` is now part of the repository `vcpkg` manifest, and `protoc` is available from the project-local manifest toolchain under `out/build/<preset>/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`.
 - The repository contains a PowerShell helper for schema validation: `scripts/ValidateProto.ps1`.
@@ -133,6 +135,7 @@ Implemented slices at this point:
   - `StartImport`
   - `ListBooks`
   - `GetBookDetails`
+  - `ExportBook`
   - `GetImportJobSnapshot`
   - `GetImportJobResult`
   - `WaitImportJob`
@@ -149,6 +152,7 @@ Implemented slices at this point:
   - synchronous Win32 named-pipe channel wrappers with length-prefixed message exchange
   - real round-trip coverage against a live Windows named pipe
 - The current named-pipe method set now covers import-job operations, read-side `ListBooks` queries, and `GetBookDetails`.
+- The current named-pipe method set now also covers `ExportBook`.
 - `libs/PipeHost` now provides the first core-side named-pipe host loop:
   - accepts one connected pipe session
   - reads one framed protobuf request
@@ -201,6 +205,7 @@ Implemented slices at this point:
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
 - the current `Library Snapshot` panel now also supports explicit full-details loading for the selected book, including publisher, ISBN, identifier, description, and SHA256 metadata from the native host.
+- the current `Library Snapshot` panel now also supports exporting the selected managed book into a user-chosen destination path through the real `UI -> named pipes -> C++ host` flow.
 - the current library browser uses lookahead pagination (`limit = page size + 1`) so `HasMoreResults` is based on a real extra row instead of a false `count == page size` heuristic.
 - the current browser `PageSize` is clamped to a valid positive value instead of accepting zero or negative sizes.
 - the current shell now preloads the library browser on startup and refreshes it automatically after a successful import, so the read-side view no longer requires a manual refresh to reflect new books.
@@ -322,8 +327,10 @@ Stable facts taken from that reference:
 - application-level import facade routing and summary aggregation
 - application-level catalog facade mapping and pagination/filter integration over the real SQLite read side
 - application-level catalog details lookup over the real SQLite repository path
+- application-level catalog export flow with managed-path safety checks and destination copy behavior
 - protobuf catalog mapping and `ListBooks` adapter/dispatcher coverage over the real SQLite read side
 - protobuf catalog mapping and `GetBookDetails` adapter/dispatcher coverage over the real SQLite read side
+- protobuf catalog mapping and `ExportBook` adapter/dispatcher coverage over the real SQLite repository path
 - protobuf pipe framing and request dispatch over the job service adapter
 - Win32 named-pipe message exchange over a live pipe
 - end-to-end named-pipe host request/response loop over the import job service
@@ -335,6 +342,7 @@ Stable facts taken from that reference:
 - C# end-to-end import-job client coverage against the real native host process
 - C# end-to-end library-catalog client coverage against the real native host process
 - C# end-to-end library-details client coverage against the real native host process
+- C# end-to-end library-export client coverage against the real native host process
 - C# mapping and service-layer coverage for UI-facing import job DTOs
 - C# mapping and service-layer coverage for UI-facing library-catalog DTOs
 - C# shell bootstrap/session coverage over a real host-backed import flow
@@ -363,12 +371,14 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for the first UI-side library browser refresh flow
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
 - C# ViewModel coverage for explicit full-details loading from the selected library item
+- C# ViewModel coverage for exporting the selected library item through the desktop path-selection abstraction
 - C# regression coverage for exact-full-page pagination, clamped page size, and import-command happy paths with real validated source files
 - C# shell-level coverage for startup browser preload and post-import browser refresh
 - C# strong host-backed integration coverage for:
   - shell startup with real browser preload through the native host
   - real import-command execution followed by automatic browser refresh
   - real browser pagination against the native host and SQLite-backed library catalog
+  - real selected-book export through the native host and managed library
 - the UI-side core-host path resolver now supports:
   - explicit `LIBROVA_CORE_HOST_EXECUTABLE` override
   - fallback probing of both `x64-debug/Debug` and `x64-release/Release` repository build layouts
@@ -377,7 +387,6 @@ Stable facts taken from that reference:
 
 Not implemented yet, but still on the active MVP path:
 
-- export flow from the managed library back to a user-chosen destination
 - delete-to-trash flow with explicit managed-file, cover, and database-row policy
 - first-run setup flow for choosing and validating the library root before normal shell startup
 - richer settings UI for converter configuration and runtime preferences

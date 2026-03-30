@@ -491,6 +491,9 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
     }
 
     private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
@@ -517,18 +520,25 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService
     {
         public string? SelectedSourcePath { get; init; }
         public string? SelectedWorkingDirectory { get; init; }
+        public string? SelectedExportPath { get; init; }
 
         public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedSourcePath);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);
+
+        public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
+            => Task.FromResult(SelectedExportPath);
     }
 
     private static string CreateTempFile(string extension)

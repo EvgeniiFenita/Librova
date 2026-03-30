@@ -424,6 +424,10 @@
                             Width="160"
                             Command="{Binding Shell.LibraryBrowser.LoadDetailsCommand}"
                             Content="Load Full Details" />
+                    <Button Classes="SecondaryAction"
+                            Width="160"
+                            Command="{Binding Shell.LibraryBrowser.ExportSelectedBookCommand}"
+                            Content="Export Book..." />
                     <Border Background="#EFE5D8"
                             CornerRadius="12"
                             Padding="12">
