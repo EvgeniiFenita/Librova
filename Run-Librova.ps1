@@ -1,7 +1,8 @@
 param(
     [string]$Preset = "x64-debug",
     [string]$Configuration = "Debug",
-    [switch]$NoLaunch
+    [switch]$NoLaunch,
+    [switch]$FirstRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,7 +18,9 @@ $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
 
 New-Item -ItemType Directory -Force -Path $runtimeLogs | Out-Null
-New-Item -ItemType Directory -Force -Path $libraryRoot | Out-Null
+if (-not $FirstRun) {
+    New-Item -ItemType Directory -Force -Path $libraryRoot | Out-Null
+}
 
 Write-Host "==> Configuring native build ($Preset)"
 cmake --preset $Preset
@@ -39,14 +42,33 @@ if (-not (Test-Path -LiteralPath $uiExecutable)) {
 $env:LIBROVA_UI_LOG_FILE = $uiLogFile
 $env:LIBROVA_UI_STATE_FILE = $uiStateFile
 $env:LIBROVA_UI_PREFERENCES_FILE = $uiPreferencesFile
-$env:LIBROVA_LIBRARY_ROOT = $libraryRoot
 $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExecutable
+
+if ($FirstRun) {
+    if (Test-Path -LiteralPath $uiStateFile) {
+        Remove-Item -LiteralPath $uiStateFile -Force
+    }
+
+    if (Test-Path -LiteralPath $uiPreferencesFile) {
+        Remove-Item -LiteralPath $uiPreferencesFile -Force
+    }
+
+    Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
+}
+else {
+    $env:LIBROVA_LIBRARY_ROOT = $libraryRoot
+}
 
 Write-Host "==> Launching Librova UI"
 Write-Host "    UI log:      $uiLogFile"
 Write-Host "    UI state:    $uiStateFile"
 Write-Host "    UI prefs:    $uiPreferencesFile"
-Write-Host "    Library root:$libraryRoot"
+if ($FirstRun) {
+    Write-Host "    Library root:(not preset; first-run setup should appear)"
+}
+else {
+    Write-Host "    Library root:$libraryRoot"
+}
 Write-Host "    Host exe:    $hostExecutable"
 
 if ($NoLaunch) {

@@ -16,7 +16,7 @@
 ## 1. First Run Setup
 
 1. Удали `out\runtime\ui-preferences.json` и `out\runtime\ui-shell-state.json`.
-2. Запусти `.\Run-Librova.ps1`.
+2. Запусти `.\Run-Librova.ps1 -FirstRun`.
 3. Убедись, что в стартовом окне показан экран `Set up your Librova library`.
 4. Нажми `Continue`, указав невалидный относительный путь.
 Ожидаемое поведение:
