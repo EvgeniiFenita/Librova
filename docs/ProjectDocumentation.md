@@ -57,6 +57,11 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `CMake` is the canonical native build system.
 - the repository root now contains [Run-Librova.ps1](C:\Users\evgen\Desktop\Librova\Run-Librova.ps1) as the one-click development entry point for full build and UI launch.
 - the repository root now also contains [Run-Tests.ps1](C:\Users\evgen\Desktop\Librova\Run-Tests.ps1) as the one-click local verification entry point for sequential native build/test plus managed UI build/test.
+- release validation has been verified against `x64-release`, including:
+  - native `Release` build and `ctest`
+  - managed UI `Release` build and tests
+  - `Run-Librova.ps1 -Preset x64-release -Configuration Release -NoLaunch`
+  - host resolution and runtime redirection under `out/runtime`
 
 ## 3. Application Layer
 
@@ -406,9 +411,7 @@ Stable facts taken from that reference:
 
 ## 12. Current MVP Gaps
 
-Not implemented yet, but still on the active MVP path:
-
-- packaging-oriented release validation and startup sanity outside the development layout
+There are no major functional MVP gaps left. Remaining work is stabilization, review, and release-candidate hardening.
 
 ## 13. Deferred Beyond The Current MVP
 

@@ -135,3 +135,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Docs: archived the original long-form architecture plan and reduced `docs/Librova-Architecture-Master.md` to a concise active architecture summary with only frozen decisions and the remaining roadmap.
 - `2026-03-30` Docs: resynchronized the active roadmap, stable project documentation, and session rules so only the real remaining MVP gaps stay on the forward path.
 - `2026-03-30` Docs: added permanent MVP scope, feature-playbook, test-strategy, transport-invariant, and review-checklist documents to standardize future vertical slices and reduce roadmap drift.
+- `2026-03-30` Fix: corrected the restructured UI shell so section switching affects the main content area correctly and the running-shell workspace uses vertical scrolling instead of overlapping views.
+- `2026-03-30` Build: validated the full `x64-release` path, fixed the native process-level host test to work outside `Debug`, hardened `Run-Tests.ps1` to stop on failing external commands, and verified `Run-Librova.ps1` against `Release` runtime paths without launching the UI.

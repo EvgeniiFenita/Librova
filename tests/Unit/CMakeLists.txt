@@ -90,6 +90,9 @@ if(BUILD_TESTING)
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)
-    target_compile_definitions(LibrovaCoreTests PRIVATE LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe")
+    target_compile_definitions(LibrovaCoreTests PRIVATE
+        LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe"
+        LIBROVA_TEST_CONFIGURATION="$<CONFIG>"
+    )
     add_test(NAME LibrovaCoreTests COMMAND LibrovaCoreTests)
 endif()

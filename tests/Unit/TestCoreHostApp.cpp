@@ -82,7 +82,7 @@ std::filesystem::path GetHostAppPath()
     return testExePath.parent_path().parent_path().parent_path().parent_path()
         / "apps"
         / "Librova.Core.Host"
-        / "Debug"
+        / LIBROVA_TEST_CONFIGURATION
         / LIBROVA_CORE_HOST_APP_NAME;
 }
 

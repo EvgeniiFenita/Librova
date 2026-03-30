@@ -137,13 +137,12 @@ Still expected before MVP completion:
 - broad review passes on runtime behavior, crash safety, and tests
 - polish of logging coverage and error surfaces
 - cleanup of docs and remaining architectural drift
-- packaging-oriented validation and startup sanity checks
+- final release-candidate review and targeted fix pass
 
 ### Functional MVP Gaps Still Not Done
 
 Important planned capabilities that are not yet implemented end-to-end:
-
-- packaging-oriented release validation
+- no major functional MVP gaps remain; remaining work is stabilization and release-candidate hardening
 
 ## 6. Working Rule For This Document
 
