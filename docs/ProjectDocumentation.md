@@ -98,6 +98,8 @@ Implemented slices at this point:
   - explicit pipe method ids for `LibraryJobService`
   - protobuf request dispatch into the transport-neutral service adapter
   - structured transport statuses for invalid request, unknown method, and internal error
+  - synchronous Win32 named-pipe channel wrappers with length-prefixed message exchange
+  - real round-trip coverage against a live Windows named pipe
 
 ## 5. Persistence And Storage
 
@@ -215,6 +217,7 @@ Stable facts taken from that reference:
 - ZIP import orchestration and partial-success aggregation
 - application-level import facade routing and summary aggregation
 - protobuf pipe framing and request dispatch over the job service adapter
+- Win32 named-pipe message exchange over a live pipe
 
 ## 12. Current Gaps
 
@@ -257,6 +260,7 @@ Not implemented yet, even if already planned architecturally:
   - `cancel`
   - `wait`
   - `remove` for completed jobs so finished records do not need to stay in memory forever
+- `ImportJobManager` joins outstanding worker threads during destruction, so shutdown and test teardown do not leave background jobs running against destroyed dependencies.
 - `ApplicationJobs` provides an application-facing service above the in-memory job manager:
   - start import job
   - query snapshot by job id

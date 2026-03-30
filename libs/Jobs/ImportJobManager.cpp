@@ -30,6 +30,7 @@ CImportJobManager::~CImportJobManager()
         if (record->Worker.joinable())
         {
             record->Worker.request_stop();
+            record->Worker.join();
         }
     }
 }
@@ -50,7 +51,9 @@ SImportJobHandle CImportJobManager::Start(const LibriFlow::Application::SImportR
         m_jobs.emplace(jobId, record);
     }
 
-    record->Worker = std::jthread([this, record, request](const std::stop_token stopToken) {
+    const auto* jobRunner = &m_jobRunner;
+
+    record->Worker = std::jthread([jobRunner, record, request](const std::stop_token stopToken) {
         const auto publishSnapshot = [record](const SJobProgressSnapshot& snapshot) {
             {
                 const std::scoped_lock lock(record->Mutex);
@@ -65,7 +68,7 @@ SImportJobHandle CImportJobManager::Start(const LibriFlow::Application::SImportR
             .Message = "Starting import job"
         });
 
-        SImportJobResult result = m_jobRunner.Run(request, stopToken, publishSnapshot);
+        SImportJobResult result = jobRunner->Run(request, stopToken, publishSnapshot);
 
         {
             const std::scoped_lock lock(record->Mutex);

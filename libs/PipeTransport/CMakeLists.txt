@@ -1,4 +1,6 @@
 add_library(LibriFlowPipeTransport STATIC
+    NamedPipeChannel.cpp
+    NamedPipeChannel.hpp
     PipeProtocol.cpp
     PipeProtocol.hpp
     PipeRequestDispatcher.cpp

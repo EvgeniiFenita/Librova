@@ -7,6 +7,7 @@ if(BUILD_TESTING)
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
         TestLibraryJobServiceAdapter.cpp
+        TestNamedPipeChannel.cpp
         TestPipeProtocol.cpp
         TestPipeRequestDispatcher.cpp
         TestProtoContracts.cpp

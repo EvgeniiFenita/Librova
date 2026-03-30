@@ -74,3 +74,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Build: enabled protobuf tooling through manifest `vcpkg` and added a local `protoc` validation script.
 - `2026-03-30` Docs: revised the IPC baseline from mandatory `gRPC` runtime to transport-neutral `Protobuf over Windows named pipes` for the MVP.
 - `2026-03-30` Feature: added the first pipe transport foundation with binary envelope framing and protobuf request dispatch over the job service adapter.
+- `2026-03-30` Feature: added the first Win32 named-pipe channel with real message round-trip coverage.
+- `2026-03-30` Fix: hardened import job manager teardown by joining worker threads and removed nondeterministic test-process crashes during shutdown.
