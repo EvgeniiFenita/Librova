@@ -18,6 +18,8 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `apps/LibriFlow.UI` now also contains the first shell bootstrap/session layer that owns native host lifetime and exposes UI-facing services.
 - `apps/LibriFlow.UI` now also contains the first ViewModel-ready shell and import-jobs state layer with observable state and async command support.
 - `apps/LibriFlow.UI` now also contains a shell-application composition layer that turns a `ShellSession` into a ready-to-bind `ShellViewModel`.
+- the current UI ViewModel baseline now keeps import jobs in an explicit polling state until a terminal result arrives instead of dropping back to idle immediately after job creation.
+- the current `AsyncCommand` baseline captures command failures into controlled UI state instead of letting exceptions escape as unhandled command crashes.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -279,6 +281,7 @@ Stable facts taken from that reference:
 - C# shell bootstrap/session coverage over a real host-backed import flow
 - C# ViewModel coverage for import job state and command enablement
 - C# shell-application composition coverage
+- C# regression coverage for command error handling and terminal import polling behavior
 
 ## 12. Current Gaps
 

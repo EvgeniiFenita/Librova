@@ -19,7 +19,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public ImportJobsViewModel(IImportJobsService importJobsService)
     {
         _importJobsService = importJobsService;
-        StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport);
+        StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport, HandleCommandErrorAsync);
     }
 
     public string SourcePath
@@ -95,12 +95,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     WorkingDirectory = WorkingDirectory
                 },
                 TimeSpan.FromSeconds(5),
-                cancellation.Token).ConfigureAwait(false);
+                cancellation.Token);
 
             LastJobId = jobId;
             StatusText = $"Import job {jobId} started.";
-
-            _ = Task.Run(() => RefreshAsync(jobId), CancellationToken.None);
+            await PollUntilCompletedAsync(jobId, cancellation.Token);
         }
         finally
         {
@@ -120,7 +119,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         var result = await _importJobsService.TryGetResultAsync(
             effectiveJobId.Value,
             TimeSpan.FromSeconds(5),
-            cancellation.Token).ConfigureAwait(false);
+            cancellation.Token);
 
         if (result is not null)
         {
@@ -134,7 +133,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         var snapshot = await _importJobsService.TryGetSnapshotAsync(
             effectiveJobId.Value,
             TimeSpan.FromSeconds(5),
-            cancellation.Token).ConfigureAwait(false);
+            cancellation.Token);
 
         if (snapshot is not null)
         {
@@ -142,6 +141,48 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 ? snapshot.Status.ToString()
                 : snapshot.Message;
         }
+    }
+
+    private async Task PollUntilCompletedAsync(ulong jobId, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await _importJobsService.TryGetResultAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                cancellationToken);
+
+            if (result is not null)
+            {
+                LastResult = result;
+                StatusText = result.Snapshot.Message.Length == 0
+                    ? result.Snapshot.Status.ToString()
+                    : result.Snapshot.Message;
+                return;
+            }
+
+            var snapshot = await _importJobsService.TryGetSnapshotAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                cancellationToken);
+
+            if (snapshot is not null)
+            {
+                StatusText = snapshot.Message.Length == 0
+                    ? snapshot.Status.ToString()
+                    : snapshot.Message;
+            }
+
+            await Task.Delay(200, cancellationToken);
+        }
+    }
+
+    private Task HandleCommandErrorAsync(Exception error)
+    {
+        StatusText = error.Message.Length == 0 ? "Import failed." : error.Message;
+        return Task.CompletedTask;
     }
 
     private bool CanStartImport() =>

@@ -92,6 +92,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first shell bootstrap/session layer for UI-side native host lifetime ownership with host-backed `xUnit` coverage.
 - `2026-03-30` Feature: added the first ViewModel-ready shell and import-job state layer with observable state, async commands, and `xUnit` coverage.
 - `2026-03-30` Feature: added a shell-application composition layer that materializes a ready `ShellViewModel` from a running shell session.
+- `2026-03-30` Fix: hardened UI command and import-job state handling to avoid fire-and-forget updates, keep polling until terminal completion, and convert command failures into controlled ViewModel state.
 
 ### Phase 9. Stabilization
 
