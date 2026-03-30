@@ -9,6 +9,7 @@ if(BUILD_TESTING)
         TestBookFormat.cpp
         TestBookId.cpp
         TestSearchQuery.cpp
+        TestServiceContracts.cpp
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp

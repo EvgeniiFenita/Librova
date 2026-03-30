@@ -22,3 +22,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` `b46c725` Feature: added `BookMetadata`, `BookFileInfo`, and `Book` aggregate skeleton.
 - `2026-03-30` Feature: added domain error model with explicit error codes and classification helpers.
 - `2026-03-30` Feature: added initial domain query types and repository ports.
+- `2026-03-30` Feature: added remaining domain service contracts for parser, converter, storage, trash, cover, and progress reporting.
