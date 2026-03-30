@@ -1,16 +1,16 @@
-add_library(LibriFlowImportConversion STATIC
+add_library(LibrovaImportConversion STATIC
     ImportConversionPolicy.cpp
     ImportConversionPolicy.hpp
 )
 
-target_include_directories(LibriFlowImportConversion
+target_include_directories(LibrovaImportConversion
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowImportConversion
+target_link_libraries(LibrovaImportConversion
     PUBLIC
-        LibriFlowDomain
+        LibrovaDomain
 )
 
-target_compile_features(LibriFlowImportConversion PUBLIC cxx_std_20)
+target_compile_features(LibrovaImportConversion PUBLIC cxx_std_20)

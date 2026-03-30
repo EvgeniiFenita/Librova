@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 enum class EDomainErrorCode
 {
@@ -44,4 +44,4 @@ struct SDomainError
 
 [[nodiscard]] std::string_view ToString(EDomainErrorCode code) noexcept;
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

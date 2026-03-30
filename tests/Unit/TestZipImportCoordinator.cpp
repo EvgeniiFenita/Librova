@@ -40,7 +40,7 @@ private:
     std::filesystem::path m_path;
 };
 
-class CTestProgressSink final : public LibriFlow::Domain::IProgressSink
+class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
 public:
     void ReportValue(const int percent, std::string_view message) override
@@ -58,12 +58,12 @@ public:
     std::string LastMessage;
 };
 
-class CStubSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest& request,
-        LibriFlow::Domain::IProgressSink&,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
         Calls.push_back(request);
@@ -71,18 +71,18 @@ public:
         if (request.SourcePath.filename() == "second.fb2")
         {
             return {
-                .Status = LibriFlow::Importing::ESingleFileImportStatus::RejectedDuplicate,
+                .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
                 .Warnings = {"Duplicate"}
             };
         }
 
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
         };
     }
 
-    mutable std::vector<LibriFlow::Importing::SSingleFileImportRequest> Calls;
+    mutable std::vector<Librova::Importing::SSingleFileImportRequest> Calls;
 };
 
 void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string& text)
@@ -158,12 +158,12 @@ std::filesystem::path CreateUnsafeZipFixture(const std::filesystem::path& output
 
 TEST_CASE("ZIP import coordinator imports supported entries and keeps partial success", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-zip-import");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
 
-    const LibriFlow::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
     const auto result = coordinator.Run({
         .ZipPath = zipPath,
         .WorkingDirectory = sandbox.GetPath() / "work",
@@ -179,15 +179,15 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
     REQUIRE(result.ImportedCount() == 1);
 
     REQUIRE(result.Entries[0].ArchivePath == std::filesystem::path("folder/first.fb2"));
-    REQUIRE(result.Entries[0].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::Imported);
+    REQUIRE(result.Entries[0].Status == Librova::ZipImporting::EZipEntryImportStatus::Imported);
     REQUIRE(result.Entries[1].ArchivePath == std::filesystem::path("second.fb2"));
-    REQUIRE(result.Entries[1].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::Failed);
+    REQUIRE(result.Entries[1].Status == Librova::ZipImporting::EZipEntryImportStatus::Failed);
     REQUIRE(result.Entries[1].SingleFileResult.has_value());
-    REQUIRE(result.Entries[1].SingleFileResult->Status == LibriFlow::Importing::ESingleFileImportStatus::RejectedDuplicate);
+    REQUIRE(result.Entries[1].SingleFileResult->Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(result.Entries[2].ArchivePath == std::filesystem::path("notes.txt"));
-    REQUIRE(result.Entries[2].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::UnsupportedEntry);
+    REQUIRE(result.Entries[2].Status == Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry);
     REQUIRE(result.Entries[3].ArchivePath == std::filesystem::path("nested/archive.zip"));
-    REQUIRE(result.Entries[3].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped);
+    REQUIRE(result.Entries[3].Status == Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped);
 
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "folder" / "first.fb2"));
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "second.fb2"));
@@ -195,12 +195,12 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
 
 TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-zip-import-unsafe");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-unsafe");
     const std::filesystem::path zipPath = CreateUnsafeZipFixture(sandbox.GetPath() / "unsafe.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
 
-    const LibriFlow::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
     const auto result = coordinator.Run({
         .ZipPath = zipPath,
         .WorkingDirectory = sandbox.GetPath() / "work"
@@ -208,9 +208,9 @@ TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-imp
 
     REQUIRE(result.Entries.size() == 2);
     REQUIRE(result.Entries[0].ArchivePath == std::filesystem::path("../outside.fb2"));
-    REQUIRE(result.Entries[0].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::UnsupportedEntry);
+    REQUIRE(result.Entries[0].Status == Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry);
     REQUIRE(result.Entries[0].Error == "Unsafe ZIP entry path.");
-    REQUIRE(result.Entries[1].Status == LibriFlow::ZipImporting::EZipEntryImportStatus::Imported);
+    REQUIRE(result.Entries[1].Status == Librova::ZipImporting::EZipEntryImportStatus::Imported);
     REQUIRE(importer.Calls.size() == 1);
     REQUIRE(importer.Calls[0].SourcePath.filename() == "inside.fb2");
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "outside.fb2"));

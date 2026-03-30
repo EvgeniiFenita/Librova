@@ -4,11 +4,11 @@
 
 TEST_CASE("Converter command builder creates default fb2cng command profile", "[converter-command]")
 {
-    const auto profile = LibriFlow::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile("tools/fbc.exe");
+    const auto profile = Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile("tools/fbc.exe");
 
     REQUIRE(profile.IsValid());
     REQUIRE(profile.ExecutablePath == std::filesystem::path{"tools/fbc.exe"});
-    REQUIRE(profile.OutputMode == LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
+    REQUIRE(profile.OutputMode == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
     REQUIRE(profile.ArgumentTemplate == std::vector<std::string>({
         "convert",
         "--to",
@@ -21,7 +21,7 @@ TEST_CASE("Converter command builder creates default fb2cng command profile", "[
 
 TEST_CASE("Converter command builder includes optional fb2cng config file when requested", "[converter-command]")
 {
-    const auto profile = LibriFlow::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
+    const auto profile = Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
         "tools/fbc.exe",
         std::filesystem::path{"config/fb2cng.yaml"});
 
@@ -39,20 +39,20 @@ TEST_CASE("Converter command builder includes optional fb2cng config file when r
 
 TEST_CASE("Converter command builder resolves placeholders for generic templates", "[converter-command]")
 {
-    const LibriFlow::ConverterCommand::SConverterCommandProfile profile{
+    const Librova::ConverterCommand::SConverterCommandProfile profile{
         .ExecutablePath = "tools/custom-converter.exe",
         .ArgumentTemplate = {"--input", "{source}", "--output", "{destination}", "--format", "{output_format}"},
-        .OutputMode = LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath
+        .OutputMode = Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath
     };
 
-    const LibriFlow::Domain::SConversionRequest request{
+    const Librova::Domain::SConversionRequest request{
         .SourcePath = "Import/source.fb2",
         .DestinationPath = "Temp/book.epub",
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     };
 
-    const auto command = LibriFlow::ConverterCommand::CConverterCommandBuilder::Build(profile, request);
+    const auto command = Librova::ConverterCommand::CConverterCommandBuilder::Build(profile, request);
 
     REQUIRE(command.IsValid());
     REQUIRE(command.ExecutablePath == std::filesystem::path{"tools/custom-converter.exe"});
@@ -70,17 +70,17 @@ TEST_CASE("Converter command builder resolves placeholders for generic templates
 
 TEST_CASE("Converter command builder resolves fb2cng output directory contract", "[converter-command]")
 {
-    const auto profile = LibriFlow::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile("tools/fbc.exe");
-    const LibriFlow::Domain::SConversionRequest request{
+    const auto profile = Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile("tools/fbc.exe");
+    const Librova::Domain::SConversionRequest request{
         .SourcePath = "Import/book.fb2",
         .DestinationPath = "Temp/converted/book.epub",
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     };
 
-    const auto command = LibriFlow::ConverterCommand::CConverterCommandBuilder::Build(profile, request);
+    const auto command = Librova::ConverterCommand::CConverterCommandBuilder::Build(profile, request);
 
-    REQUIRE(command.OutputMode == LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
+    REQUIRE(command.OutputMode == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
     REQUIRE(command.Arguments == std::vector<std::string>({
         "convert",
         "--to",

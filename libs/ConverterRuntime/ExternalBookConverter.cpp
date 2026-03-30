@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace LibriFlow::ConverterRuntime {
+namespace Librova::ConverterRuntime {
 namespace {
 
 std::wstring PathToWide(const std::filesystem::path& path)
@@ -89,7 +89,7 @@ std::wstring QuoteWindowsArgument(const std::wstring& argument)
     return quoted;
 }
 
-std::wstring BuildCommandLine(const LibriFlow::ConverterCommand::SResolvedConverterCommand& command)
+std::wstring BuildCommandLine(const Librova::ConverterCommand::SResolvedConverterCommand& command)
 {
     std::wstring commandLine = QuoteWindowsArgument(PathToWide(command.ExecutablePath));
 
@@ -262,7 +262,7 @@ void EnsureDirectory(const std::filesystem::path& path)
 
 DWORD WaitForProcessWithCancellation(
     const HANDLE processHandle,
-    LibriFlow::Domain::IProgressSink& progressSink,
+    Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken,
     const std::chrono::milliseconds pollInterval)
 {
@@ -296,18 +296,18 @@ DWORD WaitForProcessWithCancellation(
     }
 }
 
-LibriFlow::Domain::SConversionResult BuildCancelledResult()
+Librova::Domain::SConversionResult BuildCancelledResult()
 {
     return {
-        .Status = LibriFlow::Domain::EConversionStatus::Cancelled,
+        .Status = Librova::Domain::EConversionStatus::Cancelled,
         .Warnings = {"Conversion cancelled."}
     };
 }
 
-LibriFlow::Domain::SConversionResult BuildFailedResult(const std::string& warning)
+Librova::Domain::SConversionResult BuildFailedResult(const std::string& warning)
 {
     return {
-        .Status = LibriFlow::Domain::EConversionStatus::Failed,
+        .Status = Librova::Domain::EConversionStatus::Failed,
         .Warnings = {warning}
     };
 }
@@ -324,16 +324,16 @@ CExternalBookConverter::CExternalBookConverter(SExternalConverterSettings settin
 }
 
 bool CExternalBookConverter::CanConvert(
-    const LibriFlow::Domain::EBookFormat sourceFormat,
-    const LibriFlow::Domain::EBookFormat destinationFormat) const
+    const Librova::Domain::EBookFormat sourceFormat,
+    const Librova::Domain::EBookFormat destinationFormat) const
 {
-    return sourceFormat == LibriFlow::Domain::EBookFormat::Fb2
-        && destinationFormat == LibriFlow::Domain::EBookFormat::Epub;
+    return sourceFormat == Librova::Domain::EBookFormat::Fb2
+        && destinationFormat == Librova::Domain::EBookFormat::Epub;
 }
 
-LibriFlow::Domain::SConversionResult CExternalBookConverter::Convert(
-    const LibriFlow::Domain::SConversionRequest& request,
-    LibriFlow::Domain::IProgressSink& progressSink,
+Librova::Domain::SConversionResult CExternalBookConverter::Convert(
+    const Librova::Domain::SConversionRequest& request,
+    Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken) const
 {
     if (!CanConvert(request.SourceFormat, request.DestinationFormat))
@@ -341,8 +341,8 @@ LibriFlow::Domain::SConversionResult CExternalBookConverter::Convert(
         return BuildFailedResult("Requested conversion direction is not supported.");
     }
 
-    const LibriFlow::ConverterCommand::SResolvedConverterCommand command =
-        LibriFlow::ConverterCommand::CConverterCommandBuilder::Build(m_settings.CommandProfile, request);
+    const Librova::ConverterCommand::SResolvedConverterCommand command =
+        Librova::ConverterCommand::CConverterCommandBuilder::Build(m_settings.CommandProfile, request);
 
     EnsureDirectory(command.ExpectedOutputDirectory);
     std::filesystem::remove(command.ExpectedOutputPath);
@@ -388,7 +388,7 @@ LibriFlow::Domain::SConversionResult CExternalBookConverter::Convert(
 
     std::filesystem::path resolvedOutputPath = command.ExpectedOutputPath;
 
-    if (command.OutputMode == LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory)
+    if (command.OutputMode == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory)
     {
         const std::optional<std::filesystem::path> producedFile =
             ResolveSingleProducedFile(command.ExpectedOutputDirectory, outputSnapshot, command.ExpectedOutputPath);
@@ -414,9 +414,9 @@ LibriFlow::Domain::SConversionResult CExternalBookConverter::Convert(
     progressSink.ReportValue(100, "Converter process completed");
 
     return {
-        .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
+        .Status = Librova::Domain::EConversionStatus::Succeeded,
         .OutputPath = resolvedOutputPath
     };
 }
 
-} // namespace LibriFlow::ConverterRuntime
+} // namespace Librova::ConverterRuntime

@@ -6,24 +6,24 @@
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
-namespace LibriFlow::DatabaseRuntime {
+namespace Librova::DatabaseRuntime {
 
 void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
+    Librova::Sqlite::CSqliteConnection connection(databasePath);
 
-    for (const std::string_view statement : LibriFlow::DatabaseSchema::CDatabaseSchema::GetMigrationStatements())
+    for (const std::string_view statement : Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements())
     {
         connection.Execute(statement);
     }
 
-    connection.Execute(std::format("PRAGMA user_version = {};", LibriFlow::DatabaseSchema::CDatabaseSchema::GetCurrentVersion()));
+    connection.Execute(std::format("PRAGMA user_version = {};", Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion()));
 }
 
 int CSchemaMigrator::ReadUserVersion(const std::filesystem::path& databasePath)
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
-    LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA user_version;");
+    Librova::Sqlite::CSqliteConnection connection(databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA user_version;");
 
     if (!statement.Step())
     {
@@ -33,4 +33,4 @@ int CSchemaMigrator::ReadUserVersion(const std::filesystem::path& databasePath)
     return statement.GetColumnInt(0);
 }
 
-} // namespace LibriFlow::DatabaseRuntime
+} // namespace Librova::DatabaseRuntime

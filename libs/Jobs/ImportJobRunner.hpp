@@ -10,7 +10,7 @@
 #include "Domain/DomainError.hpp"
 #include "Domain/ServiceContracts.hpp"
 
-namespace LibriFlow::Jobs {
+namespace Librova::Jobs {
 
 enum class EJobStatus
 {
@@ -39,8 +39,8 @@ struct SJobProgressSnapshot
 struct SImportJobResult
 {
     SJobProgressSnapshot Snapshot;
-    std::optional<LibriFlow::Application::SImportResult> ImportResult;
-    std::optional<LibriFlow::Domain::SDomainError> Error;
+    std::optional<Librova::Application::SImportResult> ImportResult;
+    std::optional<Librova::Domain::SDomainError> Error;
 };
 
 class CImportJobRunner final
@@ -48,21 +48,21 @@ class CImportJobRunner final
 public:
     using TProgressCallback = std::function<void(const SJobProgressSnapshot&)>;
 
-    explicit CImportJobRunner(const LibriFlow::Application::CLibraryImportFacade& importFacade);
+    explicit CImportJobRunner(const Librova::Application::CLibraryImportFacade& importFacade);
 
     [[nodiscard]] SImportJobResult Run(
-        const LibriFlow::Application::SImportRequest& request,
+        const Librova::Application::SImportRequest& request,
         std::stop_token stopToken) const;
 
     [[nodiscard]] SImportJobResult Run(
-        const LibriFlow::Application::SImportRequest& request,
+        const Librova::Application::SImportRequest& request,
         std::stop_token stopToken,
         TProgressCallback progressCallback) const;
 
 private:
-    [[nodiscard]] static bool HasNoSuccessfulImports(const LibriFlow::Application::SImportResult& importResult) noexcept;
+    [[nodiscard]] static bool HasNoSuccessfulImports(const Librova::Application::SImportResult& importResult) noexcept;
 
-    class CJobProgressSink final : public LibriFlow::Domain::IProgressSink
+    class CJobProgressSink final : public Librova::Domain::IProgressSink
     {
     public:
         explicit CJobProgressSink(std::stop_token stopToken, TProgressCallback progressCallback);
@@ -86,10 +86,10 @@ private:
         };
     };
 
-    [[nodiscard]] static std::optional<LibriFlow::Domain::SDomainError> TryMapError(
-        const LibriFlow::Application::SImportResult& importResult);
+    [[nodiscard]] static std::optional<Librova::Domain::SDomainError> TryMapError(
+        const Librova::Application::SImportResult& importResult);
 
-    const LibriFlow::Application::CLibraryImportFacade& m_importFacade;
+    const Librova::Application::CLibraryImportFacade& m_importFacade;
 };
 
-} // namespace LibriFlow::Jobs
+} // namespace Librova::Jobs

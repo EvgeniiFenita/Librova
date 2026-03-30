@@ -3,7 +3,7 @@ include(CTest)
 if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
-    add_executable(LibriFlowCoreTests
+    add_executable(LibrovaCoreTests
         TestImportJobClient.cpp
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
@@ -48,42 +48,42 @@ if(BUILD_TESTING)
         TestZipImportCoordinator.cpp
     )
 
-    target_link_libraries(LibriFlowCoreTests
+    target_link_libraries(LibrovaCoreTests
         PRIVATE
             Catch2::Catch2WithMain
-            LibriFlowApplication
-            LibriFlowApplicationClient
-            LibriFlowApplicationJobs
-            LibriFlowBookDatabase
-            LibriFlowConverterCommand
-            LibriFlowConverterConfiguration
-            LibriFlowConverterRuntime
-            LibriFlowDomain
-            LibriFlowCore
-            LibriFlowCoreHost
-            LibriFlowDatabaseRuntime
-            LibriFlowDatabaseSchema
-            LibriFlowEpubParsing
-            LibriFlowFb2Parsing
-            LibriFlowImportConversion
-            LibriFlowImporting
-            LibriFlowJobs
-            LibriFlowLogging
-            LibriFlowManagedStorage
-            LibriFlowParserRegistry
-            LibriFlowPipeClient
-            LibriFlowPipeHost
-            LibriFlowPipeTransport
-            LibriFlowProtoContracts
-            LibriFlowProtoMapping
-            LibriFlowProtoServices
-            LibriFlowSearchIndex
-            LibriFlowSqlite
-            LibriFlowStoragePlanning
-            LibriFlowZipImporting
+            LibrovaApplication
+            LibrovaApplicationClient
+            LibrovaApplicationJobs
+            LibrovaBookDatabase
+            LibrovaConverterCommand
+            LibrovaConverterConfiguration
+            LibrovaConverterRuntime
+            LibrovaDomain
+            LibrovaCore
+            LibrovaCoreHost
+            LibrovaDatabaseRuntime
+            LibrovaDatabaseSchema
+            LibrovaEpubParsing
+            LibrovaFb2Parsing
+            LibrovaImportConversion
+            LibrovaImporting
+            LibrovaJobs
+            LibrovaLogging
+            LibrovaManagedStorage
+            LibrovaParserRegistry
+            LibrovaPipeClient
+            LibrovaPipeHost
+            LibrovaPipeTransport
+            LibrovaProtoContracts
+            LibrovaProtoMapping
+            LibrovaProtoServices
+            LibrovaSearchIndex
+            LibrovaSqlite
+            LibrovaStoragePlanning
+            LibrovaZipImporting
     )
 
-    target_compile_features(LibriFlowCoreTests PRIVATE cxx_std_20)
-    target_compile_definitions(LibriFlowCoreTests PRIVATE LIBRIFLOW_CORE_HOST_APP_NAME="LibriFlowCoreHostApp.exe")
-    add_test(NAME LibriFlowCoreTests COMMAND LibriFlowCoreTests)
+    target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)
+    target_compile_definitions(LibrovaCoreTests PRIVATE LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe")
+    add_test(NAME LibrovaCoreTests COMMAND LibrovaCoreTests)
 endif()

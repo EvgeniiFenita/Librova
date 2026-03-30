@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-namespace LibriFlow::DatabaseSchema {
+namespace Librova::DatabaseSchema {
 
 class CDatabaseSchema
 {
@@ -13,4 +13,4 @@ public:
     [[nodiscard]] static std::string_view GetCreateSchemaScript() noexcept;
 };
 
-} // namespace LibriFlow::DatabaseSchema
+} // namespace Librova::DatabaseSchema

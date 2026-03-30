@@ -4,22 +4,22 @@
 
 namespace {
 
-class CInMemoryBookRepository final : public LibriFlow::Domain::IBookRepository
+class CInMemoryBookRepository final : public Librova::Domain::IBookRepository
 {
 public:
-    LibriFlow::Domain::SBookId ReserveId() override
+    Librova::Domain::SBookId ReserveId() override
     {
         return {1};
     }
 
-    LibriFlow::Domain::SBookId Add(const LibriFlow::Domain::SBook& book) override
+    Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
     {
         m_book = book;
         m_book.Id = {1};
         return m_book.Id;
     }
 
-    std::optional<LibriFlow::Domain::SBook> GetById(const LibriFlow::Domain::SBookId id) const override
+    std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId id) const override
     {
         if (id.Value == m_book.Id.Value)
         {
@@ -29,7 +29,7 @@ public:
         return std::nullopt;
     }
 
-    void Remove(const LibriFlow::Domain::SBookId id) override
+    void Remove(const Librova::Domain::SBookId id) override
     {
         if (id.Value == m_book.Id.Value)
         {
@@ -38,13 +38,13 @@ public:
     }
 
 private:
-    LibriFlow::Domain::SBook m_book;
+    Librova::Domain::SBook m_book;
 };
 
-class CInMemoryBookQueryRepository final : public LibriFlow::Domain::IBookQueryRepository
+class CInMemoryBookQueryRepository final : public Librova::Domain::IBookQueryRepository
 {
 public:
-    std::vector<LibriFlow::Domain::SBook> Search(const LibriFlow::Domain::SSearchQuery& query) const override
+    std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery& query) const override
     {
         if (query.HasText() || query.HasStructuredFilters())
         {
@@ -54,13 +54,13 @@ public:
         return {};
     }
 
-    std::vector<LibriFlow::Domain::SDuplicateMatch> FindDuplicates(const LibriFlow::Domain::SCandidateBook& candidate) const override
+    std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const override
     {
         if (candidate.HasHash())
         {
             return {{
-                .Severity = LibriFlow::Domain::EDuplicateSeverity::Strict,
-                .Reason = LibriFlow::Domain::EDuplicateReason::SameHash,
+                .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+                .Reason = Librova::Domain::EDuplicateReason::SameHash,
                 .ExistingBookId = {1}
             }};
         }
@@ -68,10 +68,10 @@ public:
         return {};
     }
 
-    LibriFlow::Domain::SBook m_book{
+    Librova::Domain::SBook m_book{
         .Id = {1},
         .Metadata = {.TitleUtf8 = "Roadside Picnic", .AuthorsUtf8 = {"Arkady Strugatsky"}},
-        .File = {.Format = LibriFlow::Domain::EBookFormat::Epub}
+        .File = {.Format = Librova::Domain::EBookFormat::Epub}
     };
 };
 
@@ -80,12 +80,12 @@ public:
 TEST_CASE("Book repository port supports aggregate roundtrip through fake implementation", "[domain][ports]")
 {
     CInMemoryBookRepository repository;
-    LibriFlow::Domain::SBook book{
+    Librova::Domain::SBook book{
         .Metadata = {.TitleUtf8 = "Roadside Picnic", .AuthorsUtf8 = {"Arkady Strugatsky"}},
-        .File = {.Format = LibriFlow::Domain::EBookFormat::Epub}
+        .File = {.Format = Librova::Domain::EBookFormat::Epub}
     };
 
-    const LibriFlow::Domain::SBookId addedId = repository.Add(book);
+    const Librova::Domain::SBookId addedId = repository.Add(book);
 
     REQUIRE(addedId.IsValid());
     REQUIRE(repository.GetById(addedId).has_value());
@@ -99,13 +99,13 @@ TEST_CASE("Book query repository port supports search and duplicate lookup throu
 {
     const CInMemoryBookQueryRepository repository;
 
-    const LibriFlow::Domain::SSearchQuery query{
+    const Librova::Domain::SSearchQuery query{
         .TextUtf8 = "Roadside"
     };
 
-    const LibriFlow::Domain::SCandidateBook candidate{
+    const Librova::Domain::SCandidateBook candidate{
         .Metadata = {.TitleUtf8 = "Roadside Picnic", .AuthorsUtf8 = {"Arkady Strugatsky"}},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .Sha256Hex = "deadbeef"
     };
 

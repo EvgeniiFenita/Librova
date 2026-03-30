@@ -1,13 +1,13 @@
 #include "ApplicationJobs/ImportJobService.hpp"
 
-namespace LibriFlow::ApplicationJobs {
+namespace Librova::ApplicationJobs {
 
-CImportJobService::CImportJobService(LibriFlow::Jobs::CImportJobManager& jobManager)
+CImportJobService::CImportJobService(Librova::Jobs::CImportJobManager& jobManager)
     : m_jobManager(jobManager)
 {
 }
 
-TImportJobId CImportJobService::Start(const LibriFlow::Application::SImportRequest& request) const
+TImportJobId CImportJobService::Start(const Librova::Application::SImportRequest& request) const
 {
     return m_jobManager.Start(request).Id;
 }
@@ -39,19 +39,19 @@ bool CImportJobService::Remove(const TImportJobId jobId) const
     return m_jobManager.Remove(jobId);
 }
 
-EImportJobStatus CImportJobService::MapStatus(const LibriFlow::Jobs::EJobStatus status) noexcept
+EImportJobStatus CImportJobService::MapStatus(const Librova::Jobs::EJobStatus status) noexcept
 {
     switch (status)
     {
-    case LibriFlow::Jobs::EJobStatus::Pending:
+    case Librova::Jobs::EJobStatus::Pending:
         return EImportJobStatus::Pending;
-    case LibriFlow::Jobs::EJobStatus::Running:
+    case Librova::Jobs::EJobStatus::Running:
         return EImportJobStatus::Running;
-    case LibriFlow::Jobs::EJobStatus::Completed:
+    case Librova::Jobs::EJobStatus::Completed:
         return EImportJobStatus::Completed;
-    case LibriFlow::Jobs::EJobStatus::Failed:
+    case Librova::Jobs::EJobStatus::Failed:
         return EImportJobStatus::Failed;
-    case LibriFlow::Jobs::EJobStatus::Cancelled:
+    case Librova::Jobs::EJobStatus::Cancelled:
         return EImportJobStatus::Cancelled;
     }
 
@@ -60,7 +60,7 @@ EImportJobStatus CImportJobService::MapStatus(const LibriFlow::Jobs::EJobStatus 
 
 SImportJobSnapshot CImportJobService::MapSnapshot(
     const TImportJobId jobId,
-    const LibriFlow::Jobs::SJobProgressSnapshot& snapshot)
+    const Librova::Jobs::SJobProgressSnapshot& snapshot)
 {
     return {
         .JobId = jobId,
@@ -73,7 +73,7 @@ SImportJobSnapshot CImportJobService::MapSnapshot(
 
 SImportJobResult CImportJobService::MapResult(
     const TImportJobId jobId,
-    const LibriFlow::Jobs::SImportJobResult& result)
+    const Librova::Jobs::SImportJobResult& result)
 {
     return {
         .Snapshot = MapSnapshot(jobId, result.Snapshot),
@@ -82,4 +82,4 @@ SImportJobResult CImportJobService::MapResult(
     };
 }
 
-} // namespace LibriFlow::ApplicationJobs
+} // namespace Librova::ApplicationJobs

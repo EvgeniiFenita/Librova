@@ -5,7 +5,7 @@
 
 #include "Domain/Book.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 struct SCandidateBook
 {
@@ -24,4 +24,4 @@ struct SCandidateBook
     }
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

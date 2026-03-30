@@ -7,7 +7,7 @@
 
 namespace {
 
-class CTestProgressSink final : public LibriFlow::Domain::IProgressSink
+class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
 public:
     void ReportValue(int, std::string_view) override
@@ -20,20 +20,20 @@ public:
     }
 };
 
-class CStubSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest& request,
-        LibriFlow::Domain::IProgressSink&,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
         LastRequest = request;
         return Result;
     }
 
-    mutable std::optional<LibriFlow::Importing::SSingleFileImportRequest> LastRequest;
-    LibriFlow::Importing::SSingleFileImportResult Result;
+    mutable std::optional<Librova::Importing::SSingleFileImportRequest> LastRequest;
+    Librova::Importing::SSingleFileImportResult Result;
 };
 
 } // namespace
@@ -42,13 +42,13 @@ TEST_CASE("Library import facade routes regular files into single-file importer"
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-        .ImportedBookId = LibriFlow::Domain::SBookId{7}
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
     };
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const auto result = facade.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work",
@@ -56,7 +56,7 @@ TEST_CASE("Library import facade routes regular files into single-file importer"
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
-    REQUIRE(result.Summary.Mode == LibriFlow::Application::EImportMode::SingleFile);
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::SingleFile);
     REQUIRE(result.Summary.TotalEntries == 1);
     REQUIRE(result.Summary.ImportedEntries == 1);
     REQUIRE(result.IsSuccess());
@@ -70,14 +70,14 @@ TEST_CASE("Library import facade aggregates single-file failures into summary wa
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = LibriFlow::Importing::ESingleFileImportStatus::Failed,
+        .Status = Librova::Importing::ESingleFileImportStatus::Failed,
         .Warnings = {"warn"},
         .Error = "broken"
     };
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const auto result = facade.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work"

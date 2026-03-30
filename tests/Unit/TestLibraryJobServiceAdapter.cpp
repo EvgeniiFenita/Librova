@@ -14,28 +14,28 @@
 
 namespace {
 
-class CImmediateSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(20, "Parsing");
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{12}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{12}
         };
     }
 };
 
-class CBlockingSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CBlockingSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const override
     {
         progressSink.ReportValue(25, "Blocking import");
@@ -53,7 +53,7 @@ public:
         }
 
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Cancelled,
+            .Status = Librova::Importing::ESingleFileImportStatus::Cancelled,
             .Warnings = {"Cancelled by adapter test"}
         };
     }
@@ -77,14 +77,14 @@ private:
 TEST_CASE("Library job service adapter starts jobs and returns protobuf results", "[proto-service]")
 {
     CImmediateSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
-    LibriFlow::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
 
-    libriflow::v1::StartImportRequest startRequest;
+    librova::v1::StartImportRequest startRequest;
     auto* import = startRequest.mutable_import();
     import->set_source_path("C:/books/book.fb2");
     import->set_working_directory("C:/work");
@@ -93,14 +93,14 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
     const auto startResponse = adapter.StartImport(startRequest);
     REQUIRE(startResponse.job_id() != 0);
 
-    libriflow::v1::WaitImportJobRequest waitRequest;
+    librova::v1::WaitImportJobRequest waitRequest;
     waitRequest.set_job_id(startResponse.job_id());
     waitRequest.set_timeout_ms(1000);
 
     const auto waitResponse = adapter.WaitImportJob(waitRequest);
     REQUIRE(waitResponse.completed());
 
-    libriflow::v1::GetImportJobResultRequest resultRequest;
+    librova::v1::GetImportJobResultRequest resultRequest;
     resultRequest.set_job_id(startResponse.job_id());
 
     const auto resultResponse = adapter.GetImportJobResult(resultRequest);
@@ -112,37 +112,37 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
 TEST_CASE("Library job service adapter exposes snapshot cancellation and removal", "[proto-service]")
 {
     CBlockingSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
-    LibriFlow::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
 
-    libriflow::v1::StartImportRequest startRequest;
+    librova::v1::StartImportRequest startRequest;
     startRequest.mutable_import()->set_source_path("C:/books/book.fb2");
     startRequest.mutable_import()->set_working_directory("C:/work");
 
     const auto startResponse = adapter.StartImport(startRequest);
     REQUIRE(importer.WaitUntilStarted(std::chrono::seconds(1)));
 
-    libriflow::v1::GetImportJobSnapshotRequest snapshotRequest;
+    librova::v1::GetImportJobSnapshotRequest snapshotRequest;
     snapshotRequest.set_job_id(startResponse.job_id());
 
     const auto snapshotResponse = adapter.GetImportJobSnapshot(snapshotRequest);
     REQUIRE(snapshotResponse.has_snapshot());
-    REQUIRE(snapshotResponse.snapshot().status() == libriflow::v1::IMPORT_JOB_STATUS_RUNNING);
+    REQUIRE(snapshotResponse.snapshot().status() == librova::v1::IMPORT_JOB_STATUS_RUNNING);
 
-    libriflow::v1::CancelImportJobRequest cancelRequest;
+    librova::v1::CancelImportJobRequest cancelRequest;
     cancelRequest.set_job_id(startResponse.job_id());
     REQUIRE(adapter.CancelImportJob(cancelRequest).accepted());
 
-    libriflow::v1::WaitImportJobRequest waitRequest;
+    librova::v1::WaitImportJobRequest waitRequest;
     waitRequest.set_job_id(startResponse.job_id());
     waitRequest.set_timeout_ms(1000);
     REQUIRE(adapter.WaitImportJob(waitRequest).completed());
 
-    libriflow::v1::RemoveImportJobRequest removeRequest;
+    librova::v1::RemoveImportJobRequest removeRequest;
     removeRequest.set_job_id(startResponse.job_id());
     REQUIRE(adapter.RemoveImportJob(removeRequest).removed());
     REQUIRE_FALSE(adapter.GetImportJobSnapshot(snapshotRequest).has_snapshot());

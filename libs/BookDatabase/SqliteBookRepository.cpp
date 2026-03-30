@@ -19,7 +19,7 @@
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
-namespace LibriFlow::BookDatabase {
+namespace Librova::BookDatabase {
 namespace {
 
 std::string PathToUtf8(const std::filesystem::path& path)
@@ -56,7 +56,7 @@ std::chrono::system_clock::time_point ParseTimePoint(const std::string_view valu
 class CSqliteTransaction final
 {
 public:
-    explicit CSqliteTransaction(const LibriFlow::Sqlite::CSqliteConnection& connection)
+    explicit CSqliteTransaction(const Librova::Sqlite::CSqliteConnection& connection)
         : m_connection(connection)
     {
         m_connection.Execute("BEGIN IMMEDIATE;");
@@ -83,17 +83,17 @@ public:
     }
 
 private:
-    const LibriFlow::Sqlite::CSqliteConnection& m_connection;
+    const Librova::Sqlite::CSqliteConnection& m_connection;
     bool m_completed = false;
 };
 
 std::int64_t ResolveAuthorId(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::string_view normalizedName,
     const std::string_view displayName)
 {
     {
-        LibriFlow::Sqlite::CSqliteStatement insertStatement(
+        Librova::Sqlite::CSqliteStatement insertStatement(
             connection.GetNativeHandle(),
             "INSERT INTO authors (normalized_name, display_name) VALUES (?, ?) "
             "ON CONFLICT(normalized_name) DO NOTHING;");
@@ -102,7 +102,7 @@ std::int64_t ResolveAuthorId(
         static_cast<void>(insertStatement.Step());
     }
 
-    LibriFlow::Sqlite::CSqliteStatement selectStatement(
+    Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
         "SELECT id FROM authors WHERE normalized_name = ?;");
     selectStatement.BindText(1, normalizedName);
@@ -116,12 +116,12 @@ std::int64_t ResolveAuthorId(
 }
 
 std::int64_t ResolveTagId(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::string_view normalizedName,
     const std::string_view displayName)
 {
     {
-        LibriFlow::Sqlite::CSqliteStatement insertStatement(
+        Librova::Sqlite::CSqliteStatement insertStatement(
             connection.GetNativeHandle(),
             "INSERT INTO tags (normalized_name, display_name) VALUES (?, ?) "
             "ON CONFLICT(normalized_name) DO NOTHING;");
@@ -130,7 +130,7 @@ std::int64_t ResolveTagId(
         static_cast<void>(insertStatement.Step());
     }
 
-    LibriFlow::Sqlite::CSqliteStatement selectStatement(
+    Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
         "SELECT id FROM tags WHERE normalized_name = ?;");
     selectStatement.BindText(1, normalizedName);
@@ -144,7 +144,7 @@ std::int64_t ResolveTagId(
 }
 
 void InsertAuthors(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
     const std::vector<std::string>& authors)
 {
@@ -152,7 +152,7 @@ void InsertAuthors(
 
     for (std::size_t index = 0; index < authors.size(); ++index)
     {
-        const std::string normalizedAuthor = LibriFlow::Domain::NormalizeText(authors[index]);
+        const std::string normalizedAuthor = Librova::Domain::NormalizeText(authors[index]);
 
         if (normalizedAuthor.empty() || !insertedAuthors.insert(normalizedAuthor).second)
         {
@@ -161,7 +161,7 @@ void InsertAuthors(
 
         const std::int64_t authorId = ResolveAuthorId(connection, normalizedAuthor, authors[index]);
 
-        LibriFlow::Sqlite::CSqliteStatement linkStatement(
+        Librova::Sqlite::CSqliteStatement linkStatement(
             connection.GetNativeHandle(),
             "INSERT INTO book_authors (book_id, author_id, author_order) VALUES (?, ?, ?);");
         linkStatement.BindInt64(1, bookId);
@@ -172,7 +172,7 @@ void InsertAuthors(
 }
 
 void InsertTags(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
     const std::vector<std::string>& tags)
 {
@@ -180,7 +180,7 @@ void InsertTags(
 
     for (const std::string& tag : tags)
     {
-        const std::string normalizedTag = LibriFlow::Domain::NormalizeText(tag);
+        const std::string normalizedTag = Librova::Domain::NormalizeText(tag);
 
         if (normalizedTag.empty() || !insertedTags.insert(normalizedTag).second)
         {
@@ -189,7 +189,7 @@ void InsertTags(
 
         const std::int64_t tagId = ResolveTagId(connection, normalizedTag, tag);
 
-        LibriFlow::Sqlite::CSqliteStatement linkStatement(
+        Librova::Sqlite::CSqliteStatement linkStatement(
             connection.GetNativeHandle(),
             "INSERT INTO book_tags (book_id, tag_id) VALUES (?, ?);");
         linkStatement.BindInt64(1, bookId);
@@ -199,24 +199,24 @@ void InsertTags(
 }
 
 void InsertFormatRow(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
-    const LibriFlow::Domain::SBookFileInfo& fileInfo)
+    const Librova::Domain::SBookFileInfo& fileInfo)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "INSERT INTO formats (book_id, format, managed_path, file_size_bytes, sha256_hex) VALUES (?, ?, ?, ?, ?);");
     statement.BindInt64(1, bookId);
-    statement.BindText(2, LibriFlow::Domain::ToString(fileInfo.Format));
+    statement.BindText(2, Librova::Domain::ToString(fileInfo.Format));
     statement.BindText(3, PathToUtf8(fileInfo.ManagedPath));
     statement.BindInt64(4, static_cast<std::int64_t>(fileInfo.SizeBytes));
     statement.BindText(5, fileInfo.Sha256Hex);
     static_cast<void>(statement.Step());
 }
 
-std::vector<std::string> ReadAuthors(const LibriFlow::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
+std::vector<std::string> ReadAuthors(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT a.display_name "
         "FROM book_authors ba "
@@ -235,9 +235,9 @@ std::vector<std::string> ReadAuthors(const LibriFlow::Sqlite::CSqliteConnection&
     return authors;
 }
 
-std::vector<std::string> ReadTags(const LibriFlow::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
+std::vector<std::string> ReadTags(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT t.display_name "
         "FROM book_tags bt "
@@ -256,11 +256,11 @@ std::vector<std::string> ReadTags(const LibriFlow::Sqlite::CSqliteConnection& co
     return tags;
 }
 
-std::optional<LibriFlow::Domain::SBookMetadata> ReadStoredMetadata(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
-    const LibriFlow::Domain::SBookId id)
+std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const Librova::Domain::SBookId id)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT title, language, series, series_index, publisher, year, isbn, description, identifier "
         "FROM books WHERE id = ?;");
@@ -271,7 +271,7 @@ std::optional<LibriFlow::Domain::SBookMetadata> ReadStoredMetadata(
         return std::nullopt;
     }
 
-    LibriFlow::Domain::SBookMetadata metadata;
+    Librova::Domain::SBookMetadata metadata;
     metadata.TitleUtf8 = statement.GetColumnText(0);
     metadata.Language = statement.GetColumnText(1);
     metadata.SeriesUtf8 = statement.IsColumnNull(2) ? std::nullopt : std::make_optional(statement.GetColumnText(2));
@@ -294,12 +294,12 @@ CSqliteBookRepository::CSqliteBookRepository(std::filesystem::path databasePath)
 {
 }
 
-LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::SBook& book)
+Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook& book)
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     CSqliteTransaction transaction(connection);
 
-    const std::optional<std::string> normalizedIsbn = LibriFlow::Domain::NormalizeIsbn(book.Metadata.Isbn);
+    const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(book.Metadata.Isbn);
     const std::string addedAtUtc = SerializeTimePoint(book.AddedAtUtc);
     const std::string managedPath = PathToUtf8(book.File.ManagedPath);
     const std::optional<std::string> coverPath = book.CoverPath.has_value()
@@ -310,7 +310,7 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
 
     if (book.Id.IsValid())
     {
-        LibriFlow::Sqlite::CSqliteStatement statement(
+        Librova::Sqlite::CSqliteStatement statement(
             connection.GetNativeHandle(),
             "INSERT INTO books "
             "(id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
@@ -325,7 +325,7 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
         normalizedIsbn.has_value() ? statement.BindText(8, *normalizedIsbn) : statement.BindNull(8);
         book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(9, *book.Metadata.DescriptionUtf8) : statement.BindNull(9);
         book.Metadata.Identifier.has_value() ? statement.BindText(10, *book.Metadata.Identifier) : statement.BindNull(10);
-        statement.BindText(11, LibriFlow::Domain::ToString(book.File.Format));
+        statement.BindText(11, Librova::Domain::ToString(book.File.Format));
         statement.BindText(12, managedPath);
         coverPath.has_value() ? statement.BindText(13, *coverPath) : statement.BindNull(13);
         statement.BindInt64(14, static_cast<std::int64_t>(book.File.SizeBytes));
@@ -335,7 +335,7 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
     }
     else
     {
-        LibriFlow::Sqlite::CSqliteStatement statement(
+        Librova::Sqlite::CSqliteStatement statement(
             connection.GetNativeHandle(),
             "INSERT INTO books "
             "(title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
@@ -349,7 +349,7 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
         normalizedIsbn.has_value() ? statement.BindText(7, *normalizedIsbn) : statement.BindNull(7);
         book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(8, *book.Metadata.DescriptionUtf8) : statement.BindNull(8);
         book.Metadata.Identifier.has_value() ? statement.BindText(9, *book.Metadata.Identifier) : statement.BindNull(9);
-        statement.BindText(10, LibriFlow::Domain::ToString(book.File.Format));
+        statement.BindText(10, Librova::Domain::ToString(book.File.Format));
         statement.BindText(11, managedPath);
         coverPath.has_value() ? statement.BindText(12, *coverPath) : statement.BindNull(12);
         statement.BindInt64(13, static_cast<std::int64_t>(book.File.SizeBytes));
@@ -362,17 +362,17 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::Add(const LibriFlow::Domain::S
     InsertAuthors(connection, bookId, book.Metadata.AuthorsUtf8);
     InsertTags(connection, bookId, book.Metadata.TagsUtf8);
     InsertFormatRow(connection, bookId, book.File);
-    LibriFlow::SearchIndex::CSearchIndexMaintenance::UpsertBook(connection, bookId, book.Metadata);
+    Librova::SearchIndex::CSearchIndexMaintenance::UpsertBook(connection, bookId, book.Metadata);
 
     transaction.Commit();
-    return LibriFlow::Domain::SBookId{bookId};
+    return Librova::Domain::SBookId{bookId};
 }
 
-LibriFlow::Domain::SBookId CSqliteBookRepository::ReserveId()
+Librova::Domain::SBookId CSqliteBookRepository::ReserveId()
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     CSqliteTransaction transaction(connection);
-    LibriFlow::Sqlite::CSqliteStatement selectStatement(
+    Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
         "SELECT next_id FROM book_id_sequence WHERE singleton = 1;");
 
@@ -383,20 +383,20 @@ LibriFlow::Domain::SBookId CSqliteBookRepository::ReserveId()
 
     const std::int64_t nextId = selectStatement.GetColumnInt64(0);
 
-    LibriFlow::Sqlite::CSqliteStatement updateStatement(
+    Librova::Sqlite::CSqliteStatement updateStatement(
         connection.GetNativeHandle(),
         "UPDATE book_id_sequence SET next_id = ? WHERE singleton = 1;");
     updateStatement.BindInt64(1, nextId + 1);
     static_cast<void>(updateStatement.Step());
 
     transaction.Commit();
-    return LibriFlow::Domain::SBookId{nextId};
+    return Librova::Domain::SBookId{nextId};
 }
 
-std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const LibriFlow::Domain::SBookId id) const
+std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Librova::Domain::SBookId id) const
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
         "FROM books WHERE id = ?;");
@@ -407,15 +407,15 @@ std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const Lib
         return std::nullopt;
     }
 
-    const std::optional<LibriFlow::Domain::EBookFormat> format = LibriFlow::Domain::TryParseBookFormat(statement.GetColumnText(10));
+    const std::optional<Librova::Domain::EBookFormat> format = Librova::Domain::TryParseBookFormat(statement.GetColumnText(10));
 
     if (!format.has_value())
     {
         throw std::runtime_error("Failed to parse stored book format.");
     }
 
-    LibriFlow::Domain::SBook book;
-    book.Id = LibriFlow::Domain::SBookId{statement.GetColumnInt64(0)};
+    Librova::Domain::SBook book;
+    book.Id = Librova::Domain::SBookId{statement.GetColumnInt64(0)};
     book.Metadata.TitleUtf8 = statement.GetColumnText(1);
     book.Metadata.Language = statement.GetColumnText(2);
     book.Metadata.SeriesUtf8 = statement.IsColumnNull(3) ? std::nullopt : std::make_optional(statement.GetColumnText(3));
@@ -437,21 +437,21 @@ std::optional<LibriFlow::Domain::SBook> CSqliteBookRepository::GetById(const Lib
     return book;
 }
 
-void CSqliteBookRepository::Remove(const LibriFlow::Domain::SBookId id)
+void CSqliteBookRepository::Remove(const Librova::Domain::SBookId id)
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     CSqliteTransaction transaction(connection);
-    const std::optional<LibriFlow::Domain::SBookMetadata> existingMetadata = ReadStoredMetadata(connection, id);
+    const std::optional<Librova::Domain::SBookMetadata> existingMetadata = ReadStoredMetadata(connection, id);
 
     if (existingMetadata.has_value())
     {
-        LibriFlow::SearchIndex::CSearchIndexMaintenance::RemoveBook(connection, id.Value, *existingMetadata);
+        Librova::SearchIndex::CSearchIndexMaintenance::RemoveBook(connection, id.Value, *existingMetadata);
     }
 
-    LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "DELETE FROM books WHERE id = ?;");
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "DELETE FROM books WHERE id = ?;");
     statement.BindInt64(1, id.Value);
     static_cast<void>(statement.Step());
     transaction.Commit();
 }
 
-} // namespace LibriFlow::BookDatabase
+} // namespace Librova::BookDatabase

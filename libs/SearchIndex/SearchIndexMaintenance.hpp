@@ -5,20 +5,20 @@
 #include "Domain/Book.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 
-namespace LibriFlow::SearchIndex {
+namespace Librova::SearchIndex {
 
 class CSearchIndexMaintenance final
 {
 public:
     static void UpsertBook(
-        const LibriFlow::Sqlite::CSqliteConnection& connection,
+        const Librova::Sqlite::CSqliteConnection& connection,
         std::int64_t bookId,
-        const LibriFlow::Domain::SBookMetadata& metadata);
+        const Librova::Domain::SBookMetadata& metadata);
 
     static void RemoveBook(
-        const LibriFlow::Sqlite::CSqliteConnection& connection,
+        const Librova::Sqlite::CSqliteConnection& connection,
         std::int64_t bookId,
-        const LibriFlow::Domain::SBookMetadata& metadata);
+        const Librova::Domain::SBookMetadata& metadata);
 };
 
-} // namespace LibriFlow::SearchIndex
+} // namespace Librova::SearchIndex

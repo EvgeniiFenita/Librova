@@ -8,7 +8,7 @@
 struct sqlite3;
 struct sqlite3_stmt;
 
-namespace LibriFlow::Sqlite {
+namespace Librova::Sqlite {
 
 class CSqliteStatement
 {
@@ -37,4 +37,4 @@ private:
     std::unique_ptr<sqlite3_stmt, SStatementFinalizer> m_statement;
 };
 
-} // namespace LibriFlow::Sqlite
+} // namespace Librova::Sqlite

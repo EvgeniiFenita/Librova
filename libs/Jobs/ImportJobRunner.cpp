@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace LibriFlow::Jobs {
+namespace Librova::Jobs {
 
 CImportJobRunner::CJobProgressSink::CJobProgressSink(
     const std::stop_token stopToken,
@@ -73,13 +73,13 @@ void CImportJobRunner::CJobProgressSink::PublishSnapshot() const
     }
 }
 
-CImportJobRunner::CImportJobRunner(const LibriFlow::Application::CLibraryImportFacade& importFacade)
+CImportJobRunner::CImportJobRunner(const Librova::Application::CLibraryImportFacade& importFacade)
     : m_importFacade(importFacade)
 {
 }
 
-std::optional<LibriFlow::Domain::SDomainError> CImportJobRunner::TryMapError(
-    const LibriFlow::Application::SImportResult& importResult)
+std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
+    const Librova::Application::SImportResult& importResult)
 {
     if (importResult.SingleFileResult.has_value())
     {
@@ -87,40 +87,40 @@ std::optional<LibriFlow::Domain::SDomainError> CImportJobRunner::TryMapError(
 
         switch (single.Status)
         {
-        case LibriFlow::Importing::ESingleFileImportStatus::RejectedDuplicate:
-            return LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::DuplicateRejected,
+        case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::DuplicateRejected,
                 .Message = "Import rejected because a strict duplicate already exists."
             };
-        case LibriFlow::Importing::ESingleFileImportStatus::DecisionRequired:
-            return LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::DuplicateDecisionRequired,
+        case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired,
                 .Message = "Import requires user confirmation for a probable duplicate."
             };
-        case LibriFlow::Importing::ESingleFileImportStatus::Cancelled:
-            return LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::Cancellation,
+        case Librova::Importing::ESingleFileImportStatus::Cancelled:
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::Cancellation,
                 .Message = "Import was cancelled."
             };
-        case LibriFlow::Importing::ESingleFileImportStatus::UnsupportedFormat:
-            return LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat,
+        case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::UnsupportedFormat,
                 .Message = "Unsupported input format."
             };
-        case LibriFlow::Importing::ESingleFileImportStatus::Failed:
-            return LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::IntegrityIssue,
+        case Librova::Importing::ESingleFileImportStatus::Failed:
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::IntegrityIssue,
                 .Message = single.Error.empty() ? "Import failed." : single.Error
             };
-        case LibriFlow::Importing::ESingleFileImportStatus::Imported:
+        case Librova::Importing::ESingleFileImportStatus::Imported:
             return std::nullopt;
         }
     }
 
     if (importResult.Summary.ImportedEntries == 0 && importResult.Summary.FailedEntries > 0)
     {
-        return LibriFlow::Domain::SDomainError{
-            .Code = LibriFlow::Domain::EDomainErrorCode::IntegrityIssue,
+        return Librova::Domain::SDomainError{
+            .Code = Librova::Domain::EDomainErrorCode::IntegrityIssue,
             .Message = "Import completed without successful entries."
         };
     }
@@ -128,7 +128,7 @@ std::optional<LibriFlow::Domain::SDomainError> CImportJobRunner::TryMapError(
     return std::nullopt;
 }
 
-bool CImportJobRunner::HasNoSuccessfulImports(const LibriFlow::Application::SImportResult& importResult) noexcept
+bool CImportJobRunner::HasNoSuccessfulImports(const Librova::Application::SImportResult& importResult) noexcept
 {
     return importResult.Summary.ImportedEntries == 0
         && importResult.Summary.FailedEntries == 0
@@ -136,14 +136,14 @@ bool CImportJobRunner::HasNoSuccessfulImports(const LibriFlow::Application::SImp
 }
 
 SImportJobResult CImportJobRunner::Run(
-    const LibriFlow::Application::SImportRequest& request,
+    const Librova::Application::SImportRequest& request,
     const std::stop_token stopToken) const
 {
     return Run(request, stopToken, {});
 }
 
 SImportJobResult CImportJobRunner::Run(
-    const LibriFlow::Application::SImportRequest& request,
+    const Librova::Application::SImportRequest& request,
     const std::stop_token stopToken,
     TProgressCallback progressCallback) const
 {
@@ -151,14 +151,14 @@ SImportJobResult CImportJobRunner::Run(
 
     try
     {
-        const LibriFlow::Application::SImportResult importResult =
+        const Librova::Application::SImportResult importResult =
             m_importFacade.Run(request, progressSink, stopToken);
 
         progressSink.SetWarnings(importResult.Summary.Warnings);
 
         if (const auto mappedError = TryMapError(importResult); mappedError.has_value())
         {
-            if (mappedError->Code == LibriFlow::Domain::EDomainErrorCode::Cancellation)
+            if (mappedError->Code == Librova::Domain::EDomainErrorCode::Cancellation)
             {
                 progressSink.Cancel(mappedError->Message);
             }
@@ -180,8 +180,8 @@ SImportJobResult CImportJobRunner::Run(
             return {
                 .Snapshot = progressSink.GetSnapshot(),
                 .ImportResult = importResult,
-                .Error = LibriFlow::Domain::SDomainError{
-                    .Code = LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat,
+                .Error = Librova::Domain::SDomainError{
+                    .Code = Librova::Domain::EDomainErrorCode::UnsupportedFormat,
                     .Message = "Import completed without importing any supported books."
                 }
             };
@@ -206,12 +206,12 @@ SImportJobResult CImportJobRunner::Run(
         progressSink.Fail(error.what());
         return {
             .Snapshot = progressSink.GetSnapshot(),
-            .Error = LibriFlow::Domain::SDomainError{
-                .Code = LibriFlow::Domain::EDomainErrorCode::IntegrityIssue,
+            .Error = Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::IntegrityIssue,
                 .Message = error.what()
             }
         };
     }
 }
 
-} // namespace LibriFlow::Jobs
+} // namespace Librova::Jobs

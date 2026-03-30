@@ -26,7 +26,7 @@ void EnsureDirectory(const std::filesystem::path& path)
 
 std::filesystem::path WriteCoverTempFile(
     const std::filesystem::path& workingDirectory,
-    const LibriFlow::Domain::SBookId bookId,
+    const Librova::Domain::SBookId bookId,
     const std::string& extension,
     const std::vector<std::byte>& bytes)
 {
@@ -58,7 +58,7 @@ void RemovePathNoThrow(const std::filesystem::path& path) noexcept
     std::filesystem::remove_all(path, errorCode);
 }
 
-bool HasStrictDuplicate(const std::vector<LibriFlow::Domain::SDuplicateMatch>& duplicates)
+bool HasStrictDuplicate(const std::vector<Librova::Domain::SDuplicateMatch>& duplicates)
 {
     for (const auto& duplicate : duplicates)
     {
@@ -71,7 +71,7 @@ bool HasStrictDuplicate(const std::vector<LibriFlow::Domain::SDuplicateMatch>& d
     return false;
 }
 
-bool HasProbableDuplicate(const std::vector<LibriFlow::Domain::SDuplicateMatch>& duplicates)
+bool HasProbableDuplicate(const std::vector<Librova::Domain::SDuplicateMatch>& duplicates)
 {
     for (const auto& duplicate : duplicates)
     {
@@ -86,21 +86,21 @@ bool HasProbableDuplicate(const std::vector<LibriFlow::Domain::SDuplicateMatch>&
 
 bool IsCancellationRequested(
     const std::stop_token stopToken,
-    const LibriFlow::Domain::IProgressSink& progressSink)
+    const Librova::Domain::IProgressSink& progressSink)
 {
     return stopToken.stop_requested() || progressSink.IsCancellationRequested();
 }
 
 } // namespace
 
-namespace LibriFlow::Importing {
+namespace Librova::Importing {
 
 CSingleFileImportCoordinator::CSingleFileImportCoordinator(
-    const LibriFlow::ParserRegistry::CBookParserRegistry& parserRegistry,
-    LibriFlow::Domain::IBookRepository& bookRepository,
-    const LibriFlow::Domain::IBookQueryRepository& queryRepository,
-    LibriFlow::Domain::IManagedStorage& managedStorage,
-    const LibriFlow::Domain::IBookConverter* converter)
+    const Librova::ParserRegistry::CBookParserRegistry& parserRegistry,
+    Librova::Domain::IBookRepository& bookRepository,
+    const Librova::Domain::IBookQueryRepository& queryRepository,
+    Librova::Domain::IManagedStorage& managedStorage,
+    const Librova::Domain::IBookConverter* converter)
     : m_parserRegistry(parserRegistry)
     , m_bookRepository(bookRepository)
     , m_queryRepository(queryRepository)
@@ -109,8 +109,8 @@ CSingleFileImportCoordinator::CSingleFileImportCoordinator(
 {
 }
 
-LibriFlow::Domain::SCandidateBook CSingleFileImportCoordinator::BuildCandidateBook(
-    const LibriFlow::Domain::SParsedBook& parsedBook,
+Librova::Domain::SCandidateBook CSingleFileImportCoordinator::BuildCandidateBook(
+    const Librova::Domain::SParsedBook& parsedBook,
     const std::optional<std::string>& sha256Hex)
 {
     return {
@@ -122,7 +122,7 @@ LibriFlow::Domain::SCandidateBook CSingleFileImportCoordinator::BuildCandidateBo
 
 SSingleFileImportResult CSingleFileImportCoordinator::Run(
     const SSingleFileImportRequest& request,
-    LibriFlow::Domain::IProgressSink& progressSink,
+    Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken) const
 {
     if (!request.IsValid())
@@ -135,11 +135,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
     std::optional<std::filesystem::path> temporaryCoverPath;
     std::optional<std::filesystem::path> temporaryConvertedPath;
-    std::optional<LibriFlow::Domain::SPreparedStorage> preparedStorage;
-    std::optional<LibriFlow::Domain::SBookId> addedBookId;
+    std::optional<Librova::Domain::SPreparedStorage> preparedStorage;
+    std::optional<Librova::Domain::SBookId> addedBookId;
     const auto buildCancelledResult =
-        [&](const std::optional<LibriFlow::Domain::EBookFormat> storedFormat,
-            const std::vector<LibriFlow::Domain::SDuplicateMatch>& duplicates,
+        [&](const std::optional<Librova::Domain::EBookFormat> storedFormat,
+            const std::vector<Librova::Domain::SDuplicateMatch>& duplicates,
             std::vector<std::string> warnings) {
             if (preparedStorage.has_value())
             {
@@ -165,8 +165,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         progressSink.ReportValue(5, "Detecting source format");
-        const std::optional<LibriFlow::Domain::EBookFormat> detectedFormat =
-            LibriFlow::ParserRegistry::CBookParserRegistry::TryDetectFormat(request.SourcePath);
+        const std::optional<Librova::Domain::EBookFormat> detectedFormat =
+            Librova::ParserRegistry::CBookParserRegistry::TryDetectFormat(request.SourcePath);
 
         if (!detectedFormat.has_value())
         {
@@ -177,7 +177,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         progressSink.ReportValue(15, "Parsing source book");
-        const LibriFlow::Domain::SParsedBook parsedBook = m_parserRegistry.Parse(request.SourcePath);
+        const Librova::Domain::SParsedBook parsedBook = m_parserRegistry.Parse(request.SourcePath);
         const auto duplicates = m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, request.Sha256Hex));
 
         if (IsCancellationRequested(stopToken, progressSink))
@@ -205,7 +205,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             };
         }
 
-        const LibriFlow::Domain::SBookId reservedBookId = m_bookRepository.ReserveId();
+        const Librova::Domain::SBookId reservedBookId = m_bookRepository.ReserveId();
         progressSink.ReportValue(30, "Planning conversion");
 
         std::vector<std::string> importWarnings;
@@ -217,13 +217,13 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         const std::filesystem::path convertedDestinationPath =
             request.WorkingDirectory / ("converted-" + std::to_string(reservedBookId.Value) + ".epub");
-        const auto conversionPlan = LibriFlow::ImportConversion::PlanImportConversion(
+        const auto conversionPlan = Librova::ImportConversion::PlanImportConversion(
             request.SourcePath,
             parsedBook.SourceFormat,
             convertedDestinationPath,
             m_converter);
 
-        std::optional<LibriFlow::Domain::SConversionResult> conversionResult;
+        std::optional<Librova::Domain::SConversionResult> conversionResult;
 
         if (conversionPlan.Request.has_value())
         {
@@ -237,9 +237,9 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         const auto conversionOutcome =
-            LibriFlow::ImportConversion::ResolveImportConversion(conversionPlan, conversionResult);
+            Librova::ImportConversion::ResolveImportConversion(conversionPlan, conversionResult);
 
-        if (conversionOutcome.Decision == LibriFlow::ImportConversion::EImportConversionDecision::CancelImport)
+        if (conversionOutcome.Decision == Librova::ImportConversion::EImportConversionDecision::CancelImport)
         {
             importWarnings.insert(
                 importWarnings.end(),
@@ -276,7 +276,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             return buildCancelledResult(conversionOutcome.Format, duplicates, std::move(importWarnings));
         }
 
-        LibriFlow::Domain::SBook book{
+        Librova::Domain::SBook book{
             .Id = reservedBookId,
             .Metadata = parsedBook.Metadata,
             .File = {
@@ -341,4 +341,4 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
     }
 }
 
-} // namespace LibriFlow::Importing
+} // namespace Librova::Importing

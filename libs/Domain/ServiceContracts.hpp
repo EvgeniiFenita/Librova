@@ -9,7 +9,7 @@
 #include "Domain/Book.hpp"
 #include "Domain/CandidateBook.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 struct SParsedBook
 {
@@ -159,4 +159,4 @@ public:
     virtual std::optional<SCoverData> TryResolve(const SBookMetadata& metadata) const = 0;
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

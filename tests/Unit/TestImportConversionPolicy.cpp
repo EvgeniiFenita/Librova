@@ -7,7 +7,7 @@
 
 namespace {
 
-class CTestConverter final : public LibriFlow::Domain::IBookConverter
+class CTestConverter final : public Librova::Domain::IBookConverter
 {
 public:
     explicit CTestConverter(const bool canConvert)
@@ -16,17 +16,17 @@ public:
     }
 
     [[nodiscard]] bool CanConvert(
-        const LibriFlow::Domain::EBookFormat sourceFormat,
-        const LibriFlow::Domain::EBookFormat destinationFormat) const override
+        const Librova::Domain::EBookFormat sourceFormat,
+        const Librova::Domain::EBookFormat destinationFormat) const override
     {
         return m_canConvert
-            && sourceFormat == LibriFlow::Domain::EBookFormat::Fb2
-            && destinationFormat == LibriFlow::Domain::EBookFormat::Epub;
+            && sourceFormat == Librova::Domain::EBookFormat::Fb2
+            && destinationFormat == Librova::Domain::EBookFormat::Epub;
     }
 
-    [[nodiscard]] LibriFlow::Domain::SConversionResult Convert(
-        const LibriFlow::Domain::SConversionRequest&,
-        LibriFlow::Domain::IProgressSink&,
+    [[nodiscard]] Librova::Domain::SConversionResult Convert(
+        const Librova::Domain::SConversionRequest&,
+        Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
         return {};
@@ -40,28 +40,28 @@ private:
 
 TEST_CASE("Import conversion skips conversion for EPUB input", "[import-conversion]")
 {
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.epub",
-        LibriFlow::Domain::EBookFormat::Epub,
+        Librova::Domain::EBookFormat::Epub,
         "C:/temp/converted.epub",
         nullptr);
 
     REQUIRE_FALSE(plan.WillAttemptConversion());
     REQUIRE(plan.FallbackSourcePath == std::filesystem::path("C:/books/source.epub"));
-    REQUIRE(plan.FallbackFormat == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(plan.FallbackFormat == Librova::Domain::EBookFormat::Epub);
     REQUIRE(plan.Warnings.empty());
 }
 
 TEST_CASE("Import conversion falls back to original FB2 when converter is unavailable", "[import-conversion]")
 {
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
-        LibriFlow::Domain::EBookFormat::Fb2,
+        Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
         nullptr);
 
     REQUIRE_FALSE(plan.WillAttemptConversion());
-    REQUIRE(plan.FallbackFormat == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(plan.FallbackFormat == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(plan.Warnings == std::vector<std::string>({
         "FB2 converter unavailable. Original FB2 will be stored."
     }));
@@ -71,9 +71,9 @@ TEST_CASE("Import conversion creates FB2 to EPUB request when converter is avail
 {
     const CTestConverter converter(true);
 
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
-        LibriFlow::Domain::EBookFormat::Fb2,
+        Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
         &converter);
 
@@ -81,52 +81,52 @@ TEST_CASE("Import conversion creates FB2 to EPUB request when converter is avail
     REQUIRE(plan.Request.has_value());
     REQUIRE(plan.Request->SourcePath == std::filesystem::path("C:/books/source.fb2"));
     REQUIRE(plan.Request->DestinationPath == std::filesystem::path("C:/temp/converted.epub"));
-    REQUIRE(plan.Request->DestinationFormat == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(plan.Request->DestinationFormat == Librova::Domain::EBookFormat::Epub);
     REQUIRE(plan.Warnings.empty());
 }
 
 TEST_CASE("Import conversion stores converted output on successful conversion", "[import-conversion]")
 {
     const CTestConverter converter(true);
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
-        LibriFlow::Domain::EBookFormat::Fb2,
+        Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
         &converter);
 
-    const auto outcome = LibriFlow::ImportConversion::ResolveImportConversion(
+    const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,
-        LibriFlow::Domain::SConversionResult{
-            .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
+        Librova::Domain::SConversionResult{
+            .Status = Librova::Domain::EConversionStatus::Succeeded,
             .OutputPath = "C:/temp/converted.epub"
         });
 
-    REQUIRE(outcome.Decision == LibriFlow::ImportConversion::EImportConversionDecision::StoreConverted);
+    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::StoreConverted);
     REQUIRE(outcome.IsStorable());
     REQUIRE(outcome.SourcePath == std::filesystem::path("C:/temp/converted.epub"));
-    REQUIRE(outcome.Format == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(outcome.Format == Librova::Domain::EBookFormat::Epub);
 }
 
 TEST_CASE("Import conversion falls back to original FB2 after failed conversion", "[import-conversion]")
 {
     const CTestConverter converter(true);
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
-        LibriFlow::Domain::EBookFormat::Fb2,
+        Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
         &converter);
 
-    const auto outcome = LibriFlow::ImportConversion::ResolveImportConversion(
+    const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,
-        LibriFlow::Domain::SConversionResult{
-            .Status = LibriFlow::Domain::EConversionStatus::Failed,
+        Librova::Domain::SConversionResult{
+            .Status = Librova::Domain::EConversionStatus::Failed,
             .Warnings = {"External converter returned exit code 1."}
         });
 
-    REQUIRE(outcome.Decision == LibriFlow::ImportConversion::EImportConversionDecision::StoreSource);
+    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::StoreSource);
     REQUIRE(outcome.IsStorable());
     REQUIRE(outcome.SourcePath == std::filesystem::path("C:/books/source.fb2"));
-    REQUIRE(outcome.Format == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(outcome.Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(outcome.Warnings == std::vector<std::string>({
         "External converter returned exit code 1.",
         "FB2 conversion failed. Original FB2 will be stored."
@@ -136,23 +136,23 @@ TEST_CASE("Import conversion falls back to original FB2 after failed conversion"
 TEST_CASE("Import conversion preserves cancellation instead of silently falling back", "[import-conversion]")
 {
     const CTestConverter converter(true);
-    const auto plan = LibriFlow::ImportConversion::PlanImportConversion(
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
-        LibriFlow::Domain::EBookFormat::Fb2,
+        Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
         &converter);
 
-    const auto outcome = LibriFlow::ImportConversion::ResolveImportConversion(
+    const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,
-        LibriFlow::Domain::SConversionResult{
-            .Status = LibriFlow::Domain::EConversionStatus::Cancelled,
+        Librova::Domain::SConversionResult{
+            .Status = Librova::Domain::EConversionStatus::Cancelled,
             .Warnings = {"Conversion cancelled."}
         });
 
-    REQUIRE(outcome.Decision == LibriFlow::ImportConversion::EImportConversionDecision::CancelImport);
+    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::CancelImport);
     REQUIRE_FALSE(outcome.IsStorable());
     REQUIRE(outcome.SourcePath.empty());
-    REQUIRE(outcome.Format == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(outcome.Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(outcome.Warnings == std::vector<std::string>({
         "Conversion cancelled."
     }));

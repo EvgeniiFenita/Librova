@@ -11,28 +11,28 @@
 
 namespace {
 
-class CImmediateSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(20, "Parsing");
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{11}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{11}
         };
     }
 };
 
-class CBlockingSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CBlockingSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const override
     {
         progressSink.ReportValue(35, "Blocking import");
@@ -50,7 +50,7 @@ public:
         }
 
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Cancelled,
+            .Status = Librova::Importing::ESingleFileImportStatus::Cancelled,
             .Warnings = {"Cancelled by service test"}
         };
     }
@@ -74,11 +74,11 @@ private:
 TEST_CASE("Import job service starts and returns completed application-facing results", "[application-jobs]")
 {
     CImmediateSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
 
     const auto jobId = service.Start({
         .SourcePath = "C:/books/book.fb2",
@@ -93,7 +93,7 @@ TEST_CASE("Import job service starts and returns completed application-facing re
 
     REQUIRE(snapshot.has_value());
     REQUIRE(snapshot->JobId == jobId);
-    REQUIRE(snapshot->Status == LibriFlow::ApplicationJobs::EImportJobStatus::Completed);
+    REQUIRE(snapshot->Status == Librova::ApplicationJobs::EImportJobStatus::Completed);
     REQUIRE(snapshot->IsTerminal());
     REQUIRE(result.has_value());
     REQUIRE(result->Snapshot.JobId == jobId);
@@ -104,11 +104,11 @@ TEST_CASE("Import job service starts and returns completed application-facing re
 TEST_CASE("Import job service exposes cancellation through application-facing status", "[application-jobs]")
 {
     CBlockingSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
 
     const auto jobId = service.Start({
         .SourcePath = "C:/books/book.fb2",
@@ -119,7 +119,7 @@ TEST_CASE("Import job service exposes cancellation through application-facing st
 
     const auto snapshot = service.TryGetSnapshot(jobId);
     REQUIRE(snapshot.has_value());
-    REQUIRE(snapshot->Status == LibriFlow::ApplicationJobs::EImportJobStatus::Running);
+    REQUIRE(snapshot->Status == Librova::ApplicationJobs::EImportJobStatus::Running);
     REQUIRE(snapshot->Message == "Blocking import");
 
     REQUIRE(service.Cancel(jobId));
@@ -127,19 +127,19 @@ TEST_CASE("Import job service exposes cancellation through application-facing st
 
     const auto result = service.TryGetResult(jobId);
     REQUIRE(result.has_value());
-    REQUIRE(result->Snapshot.Status == LibriFlow::ApplicationJobs::EImportJobStatus::Cancelled);
+    REQUIRE(result->Snapshot.Status == Librova::ApplicationJobs::EImportJobStatus::Cancelled);
     REQUIRE(result->Error.has_value());
-    REQUIRE(result->Error->Code == LibriFlow::Domain::EDomainErrorCode::Cancellation);
+    REQUIRE(result->Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
 }
 
 TEST_CASE("Import job service returns empty state for unknown jobs", "[application-jobs]")
 {
     CImmediateSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
 
     REQUIRE_FALSE(service.TryGetSnapshot(123).has_value());
     REQUIRE_FALSE(service.TryGetResult(123).has_value());
@@ -150,11 +150,11 @@ TEST_CASE("Import job service returns empty state for unknown jobs", "[applicati
 TEST_CASE("Import job service removes completed jobs through application-facing API", "[application-jobs]")
 {
     CImmediateSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
 
     const auto jobId = service.Start({
         .SourcePath = "C:/books/book.fb2",

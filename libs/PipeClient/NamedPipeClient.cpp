@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-namespace LibriFlow::PipeClient {
+namespace Librova::PipeClient {
 namespace {
 
 std::atomic<std::uint64_t> RequestCounter{1};
@@ -24,4 +24,4 @@ std::uint64_t CNamedPipeClient::NextRequestId() noexcept
     return RequestCounter.fetch_add(1, std::memory_order_relaxed);
 }
 
-} // namespace LibriFlow::PipeClient
+} // namespace Librova::PipeClient

@@ -5,7 +5,7 @@
 #include <cctype>
 #include <vector>
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 namespace {
 
 bool IsWhitespaceByte(const unsigned char value) noexcept
@@ -218,4 +218,4 @@ std::string BuildDuplicateKey(const SBookMetadata& metadata)
     return key;
 }
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

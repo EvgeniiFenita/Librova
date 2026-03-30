@@ -16,7 +16,7 @@ std::filesystem::path BuildTestPipePath()
 {
     const auto uniqueId = std::to_wstring(
         static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\LibriFlow.Test.)"} + uniqueId};
+    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.Test.)"} + uniqueId};
 }
 
 } // namespace
@@ -29,11 +29,11 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
     std::jthread serverThread([&pipePath, &serverFailure] {
         try
         {
-            LibriFlow::PipeTransport::CNamedPipeServer server(pipePath);
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
             auto connection = server.WaitForClient();
 
             const auto requestBytes = connection.ReadMessage();
-            const auto parsedRequest = LibriFlow::PipeTransport::DeserializeRequestEnvelope(requestBytes);
+            const auto parsedRequest = Librova::PipeTransport::DeserializeRequestEnvelope(requestBytes);
             if (!parsedRequest.HasValue())
             {
                 throw std::runtime_error(parsedRequest.Error);
@@ -44,13 +44,13 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
                 throw std::runtime_error("Server received unexpected named pipe request payload.");
             }
 
-            const LibriFlow::PipeTransport::SPipeResponseEnvelope response{
+            const Librova::PipeTransport::SPipeResponseEnvelope response{
                 .RequestId = parsedRequest.Value->RequestId,
-                .Status = LibriFlow::PipeTransport::EPipeResponseStatus::Ok,
+                .Status = Librova::PipeTransport::EPipeResponseStatus::Ok,
                 .Payload = "pong"
             };
 
-            connection.WriteMessage(LibriFlow::PipeTransport::SerializeResponseEnvelope(response));
+            connection.WriteMessage(Librova::PipeTransport::SerializeResponseEnvelope(response));
         }
         catch (...)
         {
@@ -60,21 +60,21 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
 
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    auto client = LibriFlow::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
+    auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
 
-    const LibriFlow::PipeTransport::SPipeRequestEnvelope request{
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
         .RequestId = 11,
-        .Method = LibriFlow::PipeTransport::EPipeMethod::WaitImportJob,
+        .Method = Librova::PipeTransport::EPipeMethod::WaitImportJob,
         .Payload = "ping"
     };
 
-    client.WriteMessage(LibriFlow::PipeTransport::SerializeRequestEnvelope(request));
+    client.WriteMessage(Librova::PipeTransport::SerializeRequestEnvelope(request));
 
     const auto responseBytes = client.ReadMessage();
-    const auto parsedResponse = LibriFlow::PipeTransport::DeserializeResponseEnvelope(responseBytes);
+    const auto parsedResponse = Librova::PipeTransport::DeserializeResponseEnvelope(responseBytes);
     REQUIRE(parsedResponse.HasValue());
     REQUIRE(parsedResponse.Value->RequestId == request.RequestId);
-    REQUIRE(parsedResponse.Value->Status == LibriFlow::PipeTransport::EPipeResponseStatus::Ok);
+    REQUIRE(parsedResponse.Value->Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
     REQUIRE(parsedResponse.Value->Payload == "pong");
 
     serverThread.join();

@@ -1,18 +1,18 @@
-add_library(LibriFlowApplication STATIC
+add_library(LibrovaApplication STATIC
     LibraryImportFacade.cpp
     LibraryImportFacade.hpp
 )
 
-target_include_directories(LibriFlowApplication
+target_include_directories(LibrovaApplication
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowApplication
+target_link_libraries(LibrovaApplication
     PUBLIC
-        LibriFlowDomain
-        LibriFlowImporting
-        LibriFlowZipImporting
+        LibrovaDomain
+        LibrovaImporting
+        LibrovaZipImporting
 )
 
-target_compile_features(LibriFlowApplication PUBLIC cxx_std_20)
+target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

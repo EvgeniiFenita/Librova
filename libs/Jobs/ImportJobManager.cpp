@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-namespace LibriFlow::Jobs {
+namespace Librova::Jobs {
 
 CImportJobManager::CImportJobManager(const CImportJobRunner& jobRunner)
     : m_jobRunner(jobRunner)
@@ -35,7 +35,7 @@ CImportJobManager::~CImportJobManager()
     }
 }
 
-SImportJobHandle CImportJobManager::Start(const LibriFlow::Application::SImportRequest& request)
+SImportJobHandle CImportJobManager::Start(const Librova::Application::SImportRequest& request)
 {
     auto record = std::make_shared<SJobRecord>();
     record->Snapshot = {
@@ -182,4 +182,4 @@ std::shared_ptr<CImportJobManager::SJobRecord> CImportJobManager::TryGetRecord(c
     return iterator == m_jobs.end() ? nullptr : iterator->second;
 }
 
-} // namespace LibriFlow::Jobs
+} // namespace Librova::Jobs

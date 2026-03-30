@@ -2,9 +2,9 @@
 
 #include <google/protobuf/message_lite.h>
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 
-CPipeRequestDispatcher::CPipeRequestDispatcher(LibriFlow::ProtoServices::CLibraryJobServiceAdapter& adapter)
+CPipeRequestDispatcher::CPipeRequestDispatcher(Librova::ProtoServices::CLibraryJobServiceAdapter& adapter)
     : m_adapter(adapter)
 {
 }
@@ -14,37 +14,37 @@ SPipeResponseEnvelope CPipeRequestDispatcher::Dispatch(const SPipeRequestEnvelop
     switch (request.Method)
     {
     case EPipeMethod::StartImport:
-        return DispatchTyped<libriflow::v1::StartImportRequest, libriflow::v1::StartImportResponse>(
+        return DispatchTyped<librova::v1::StartImportRequest, librova::v1::StartImportResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.StartImport(typedRequest);
             });
     case EPipeMethod::GetImportJobSnapshot:
-        return DispatchTyped<libriflow::v1::GetImportJobSnapshotRequest, libriflow::v1::GetImportJobSnapshotResponse>(
+        return DispatchTyped<librova::v1::GetImportJobSnapshotRequest, librova::v1::GetImportJobSnapshotResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.GetImportJobSnapshot(typedRequest);
             });
     case EPipeMethod::GetImportJobResult:
-        return DispatchTyped<libriflow::v1::GetImportJobResultRequest, libriflow::v1::GetImportJobResultResponse>(
+        return DispatchTyped<librova::v1::GetImportJobResultRequest, librova::v1::GetImportJobResultResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.GetImportJobResult(typedRequest);
             });
     case EPipeMethod::WaitImportJob:
-        return DispatchTyped<libriflow::v1::WaitImportJobRequest, libriflow::v1::WaitImportJobResponse>(
+        return DispatchTyped<librova::v1::WaitImportJobRequest, librova::v1::WaitImportJobResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.WaitImportJob(typedRequest);
             });
     case EPipeMethod::CancelImportJob:
-        return DispatchTyped<libriflow::v1::CancelImportJobRequest, libriflow::v1::CancelImportJobResponse>(
+        return DispatchTyped<librova::v1::CancelImportJobRequest, librova::v1::CancelImportJobResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.CancelImportJob(typedRequest);
             });
     case EPipeMethod::RemoveImportJob:
-        return DispatchTyped<libriflow::v1::RemoveImportJobRequest, libriflow::v1::RemoveImportJobResponse>(
+        return DispatchTyped<librova::v1::RemoveImportJobRequest, librova::v1::RemoveImportJobResponse>(
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.RemoveImportJob(typedRequest);
@@ -104,4 +104,4 @@ SPipeResponseEnvelope CPipeRequestDispatcher::DispatchTyped(
     };
 }
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

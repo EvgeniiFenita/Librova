@@ -6,7 +6,7 @@
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
 
-namespace LibriFlow::ConverterConfiguration {
+namespace Librova::ConverterConfiguration {
 
 enum class EConverterConfigurationMode
 {
@@ -30,8 +30,8 @@ struct SCustomConverterSettings
 {
     std::filesystem::path ExecutablePath;
     std::vector<std::string> ArgumentTemplate;
-    LibriFlow::ConverterCommand::EConverterOutputMode OutputMode =
-        LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath;
+    Librova::ConverterCommand::EConverterOutputMode OutputMode =
+        Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath;
 
     [[nodiscard]] bool IsValid() const noexcept
     {
@@ -53,7 +53,7 @@ struct SConverterConfiguration
     [[nodiscard]] bool IsValid() const noexcept;
 };
 
-[[nodiscard]] std::optional<LibriFlow::ConverterCommand::SConverterCommandProfile> TryBuildCommandProfile(
+[[nodiscard]] std::optional<Librova::ConverterCommand::SConverterCommandProfile> TryBuildCommandProfile(
     const SConverterConfiguration& configuration);
 
-} // namespace LibriFlow::ConverterConfiguration
+} // namespace Librova::ConverterConfiguration

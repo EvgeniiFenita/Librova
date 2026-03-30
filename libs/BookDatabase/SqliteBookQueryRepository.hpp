@@ -5,18 +5,18 @@
 
 #include "Domain/BookRepository.hpp"
 
-namespace LibriFlow::BookDatabase {
+namespace Librova::BookDatabase {
 
-class CSqliteBookQueryRepository final : public LibriFlow::Domain::IBookQueryRepository
+class CSqliteBookQueryRepository final : public Librova::Domain::IBookQueryRepository
 {
 public:
     explicit CSqliteBookQueryRepository(std::filesystem::path databasePath);
 
-    [[nodiscard]] std::vector<LibriFlow::Domain::SBook> Search(const LibriFlow::Domain::SSearchQuery& query) const override;
-    [[nodiscard]] std::vector<LibriFlow::Domain::SDuplicateMatch> FindDuplicates(const LibriFlow::Domain::SCandidateBook& candidate) const override;
+    [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery& query) const override;
+    [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const override;
 
 private:
     std::filesystem::path m_databasePath;
 };
 
-} // namespace LibriFlow::BookDatabase
+} // namespace Librova::BookDatabase

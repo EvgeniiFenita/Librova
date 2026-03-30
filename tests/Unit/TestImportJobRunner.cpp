@@ -15,19 +15,19 @@
 
 namespace {
 
-class CStubSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(40, "Importing single file");
         return Result;
     }
 
-    LibriFlow::Importing::SSingleFileImportResult Result;
+    Librova::Importing::SSingleFileImportResult Result;
 };
 
 class CScopedDirectory final
@@ -55,12 +55,12 @@ private:
     std::filesystem::path m_path;
 };
 
-class CZipAwareStubSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CZipAwareStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(60, "Importing ZIP entry");
@@ -69,32 +69,32 @@ public:
         if (request.SourcePath.filename() == "second.fb2")
         {
             return {
-                .Status = LibriFlow::Importing::ESingleFileImportStatus::Failed,
+                .Status = Librova::Importing::ESingleFileImportStatus::Failed,
                 .Error = "Second entry failed."
             };
         }
 
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
         };
     }
 
     mutable std::vector<std::string> Calls;
 };
 
-class CCallbackThrowingSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CCallbackThrowingSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(20, "Before throwing callback");
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{3}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{3}
         };
     }
 };
@@ -173,19 +173,19 @@ TEST_CASE("Import job runner reports completed status for successful import", "[
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-        .ImportedBookId = LibriFlow::Domain::SBookId{5}
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{5}
     };
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work"
     }, {});
 
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Completed);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
     REQUIRE(result.Snapshot.Percent == 100);
     REQUIRE(result.Snapshot.Message == "Import completed successfully.");
     REQUIRE_FALSE(result.Error.has_value());
@@ -196,21 +196,21 @@ TEST_CASE("Import job runner maps duplicate decision required into structured fa
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = LibriFlow::Importing::ESingleFileImportStatus::DecisionRequired,
+        .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
         .Warnings = {"Probable duplicate"}
     };
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work"
     }, {});
 
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Failed);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
     REQUIRE(result.Error.has_value());
-    REQUIRE(result.Error->Code == LibriFlow::Domain::EDomainErrorCode::DuplicateDecisionRequired);
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired);
     REQUIRE(result.Snapshot.Message == "Import requires user confirmation for a probable duplicate.");
 }
 
@@ -218,32 +218,32 @@ TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = LibriFlow::Importing::ESingleFileImportStatus::Cancelled,
+        .Status = Librova::Importing::ESingleFileImportStatus::Cancelled,
         .Warnings = {"Conversion cancelled."}
     };
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work"
     }, {});
 
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Cancelled);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
     REQUIRE(result.Error.has_value());
-    REQUIRE(result.Error->Code == LibriFlow::Domain::EDomainErrorCode::Cancellation);
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
     REQUIRE(result.Snapshot.Message == "Import was cancelled.");
 }
 
 TEST_CASE("Import job runner reports partial success for ZIP import with failures", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-job-runner-zip");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-zip");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = zipPath,
@@ -251,12 +251,12 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
     }, {});
 
     REQUIRE(result.ImportResult.has_value());
-    REQUIRE(result.ImportResult->Summary.Mode == LibriFlow::Application::EImportMode::ZipArchive);
+    REQUIRE(result.ImportResult->Summary.Mode == Librova::Application::EImportMode::ZipArchive);
     REQUIRE(result.ImportResult->Summary.TotalEntries == 3);
     REQUIRE(result.ImportResult->Summary.ImportedEntries == 1);
     REQUIRE(result.ImportResult->Summary.FailedEntries == 1);
     REQUIRE(result.ImportResult->Summary.SkippedEntries == 1);
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Completed);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
     REQUIRE(result.Snapshot.Message == "Import completed with partial success.");
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(importer.Calls == std::vector<std::string>{"first.fb2", "second.fb2"});
@@ -264,12 +264,12 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
 
 TEST_CASE("Import job runner fails when ZIP import produces no imported books", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-job-runner-skipped");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-skipped");
     const std::filesystem::path zipPath = CreateSkippedOnlyZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = zipPath,
@@ -280,27 +280,27 @@ TEST_CASE("Import job runner fails when ZIP import produces no imported books", 
     REQUIRE(result.ImportResult->Summary.ImportedEntries == 0);
     REQUIRE(result.ImportResult->Summary.FailedEntries == 0);
     REQUIRE(result.ImportResult->Summary.SkippedEntries == 2);
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Failed);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
     REQUIRE(result.Snapshot.Message == "Import completed without importing any supported books.");
     REQUIRE(result.Error.has_value());
-    REQUIRE(result.Error->Code == LibriFlow::Domain::EDomainErrorCode::UnsupportedFormat);
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::UnsupportedFormat);
 }
 
 TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][import]")
 {
     CCallbackThrowingSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
         .SourcePath = "C:/books/book.fb2",
         .WorkingDirectory = "C:/work"
-    }, {}, [](const LibriFlow::Jobs::SJobProgressSnapshot&) {
+    }, {}, [](const Librova::Jobs::SJobProgressSnapshot&) {
         throw std::runtime_error("observer failure");
     });
 
-    REQUIRE(result.Snapshot.Status == LibriFlow::Jobs::EJobStatus::Completed);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(result.ImportResult.has_value());
 }

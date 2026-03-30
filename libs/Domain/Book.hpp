@@ -9,7 +9,7 @@
 #include "Domain/BookFormat.hpp"
 #include "Domain/BookId.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 struct SBookMetadata
 {
@@ -73,4 +73,4 @@ struct SBook
     }
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

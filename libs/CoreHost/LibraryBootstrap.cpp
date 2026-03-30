@@ -2,11 +2,11 @@
 
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
-namespace LibriFlow::CoreHost {
+namespace Librova::CoreHost {
 
 void CLibraryBootstrap::PrepareLibraryRoot(const std::filesystem::path& libraryRoot)
 {
-    const auto layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
+    const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
     std::filesystem::create_directories(layout.Root);
     std::filesystem::create_directories(layout.DatabaseDirectory);
     std::filesystem::create_directories(layout.BooksDirectory);
@@ -16,4 +16,4 @@ void CLibraryBootstrap::PrepareLibraryRoot(const std::filesystem::path& libraryR
     std::filesystem::create_directories(layout.LogsDirectory);
 }
 
-} // namespace LibriFlow::CoreHost
+} // namespace Librova::CoreHost

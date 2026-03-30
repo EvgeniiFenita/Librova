@@ -6,7 +6,7 @@
 
 #include <sqlite3.h>
 
-namespace LibriFlow::Sqlite {
+namespace Librova::Sqlite {
 namespace {
 
 void ThrowBindFailure(sqlite3* connection, std::string_view operation)
@@ -142,4 +142,4 @@ void CSqliteStatement::SStatementFinalizer::operator()(sqlite3_stmt* statement) 
     }
 }
 
-} // namespace LibriFlow::Sqlite
+} // namespace Librova::Sqlite

@@ -8,7 +8,7 @@
 #include <spdlog/logger.h>
 #include <spdlog/spdlog.h>
 
-namespace LibriFlow::Logging {
+namespace Librova::Logging {
 
 class CLogging final
 {
@@ -44,4 +44,4 @@ void Critical(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
     CLogging::GetLogger()->critical(format, std::forward<TArgs>(args)...);
 }
 
-} // namespace LibriFlow::Logging
+} // namespace Librova::Logging

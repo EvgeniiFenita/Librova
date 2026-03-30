@@ -8,7 +8,7 @@
 #include "Domain/DuplicateMatch.hpp"
 #include "Domain/SearchQuery.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 class IBookRepository
 {
@@ -30,4 +30,4 @@ public:
     virtual std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) const = 0;
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

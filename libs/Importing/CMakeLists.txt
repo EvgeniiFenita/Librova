@@ -1,18 +1,18 @@
-add_library(LibriFlowImporting STATIC
+add_library(LibrovaImporting STATIC
     SingleFileImportCoordinator.cpp
     SingleFileImportCoordinator.hpp
 )
 
-target_include_directories(LibriFlowImporting
+target_include_directories(LibrovaImporting
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowImporting
+target_link_libraries(LibrovaImporting
     PUBLIC
-        LibriFlowDomain
-        LibriFlowImportConversion
-        LibriFlowParserRegistry
+        LibrovaDomain
+        LibrovaImportConversion
+        LibrovaParserRegistry
 )
 
-target_compile_features(LibriFlowImporting PUBLIC cxx_std_20)
+target_compile_features(LibrovaImporting PUBLIC cxx_std_20)

@@ -4,20 +4,20 @@
 
 TEST_CASE("Domain error codes convert to stable transport-friendly strings", "[domain][error]")
 {
-    REQUIRE(LibriFlow::Domain::ToString(LibriFlow::Domain::EDomainErrorCode::Validation) == "validation");
-    REQUIRE(LibriFlow::Domain::ToString(LibriFlow::Domain::EDomainErrorCode::DuplicateDecisionRequired) == "duplicate_decision_required");
-    REQUIRE(LibriFlow::Domain::ToString(LibriFlow::Domain::EDomainErrorCode::IntegrityIssue) == "integrity_issue");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::Validation) == "validation");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired) == "duplicate_decision_required");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::IntegrityIssue) == "integrity_issue");
 }
 
 TEST_CASE("Domain error exposes user-resolvable categories", "[domain][error]")
 {
-    const LibriFlow::Domain::SDomainError validationError{
-        .Code = LibriFlow::Domain::EDomainErrorCode::Validation,
+    const Librova::Domain::SDomainError validationError{
+        .Code = Librova::Domain::EDomainErrorCode::Validation,
         .Message = "Title is required."
     };
 
-    const LibriFlow::Domain::SDomainError converterUnavailableError{
-        .Code = LibriFlow::Domain::EDomainErrorCode::ConverterUnavailable,
+    const Librova::Domain::SDomainError converterUnavailableError{
+        .Code = Librova::Domain::EDomainErrorCode::ConverterUnavailable,
         .Message = "Converter is not configured."
     };
 
@@ -28,8 +28,8 @@ TEST_CASE("Domain error exposes user-resolvable categories", "[domain][error]")
 
 TEST_CASE("Domain error exposes infrastructure failure categories", "[domain][error]")
 {
-    const LibriFlow::Domain::SDomainError storageError{
-        .Code = LibriFlow::Domain::EDomainErrorCode::StorageFailure,
+    const Librova::Domain::SDomainError storageError{
+        .Code = Librova::Domain::EDomainErrorCode::StorageFailure,
         .Message = "Failed to commit staged files."
     };
 

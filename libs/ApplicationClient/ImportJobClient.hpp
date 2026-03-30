@@ -9,40 +9,40 @@
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "PipeClient/NamedPipeClient.hpp"
 
-namespace LibriFlow::ApplicationClient {
+namespace Librova::ApplicationClient {
 
 class CImportJobClient final
 {
 public:
     explicit CImportJobClient(std::filesystem::path pipePath);
 
-    [[nodiscard]] LibriFlow::ApplicationJobs::TImportJobId Start(
-        const LibriFlow::Application::SImportRequest& request,
+    [[nodiscard]] Librova::ApplicationJobs::TImportJobId Start(
+        const Librova::Application::SImportRequest& request,
         std::chrono::milliseconds timeout) const;
 
-    [[nodiscard]] std::optional<LibriFlow::ApplicationJobs::SImportJobSnapshot> TryGetSnapshot(
-        LibriFlow::ApplicationJobs::TImportJobId jobId,
+    [[nodiscard]] std::optional<Librova::ApplicationJobs::SImportJobSnapshot> TryGetSnapshot(
+        Librova::ApplicationJobs::TImportJobId jobId,
         std::chrono::milliseconds timeout) const;
 
-    [[nodiscard]] std::optional<LibriFlow::ApplicationJobs::SImportJobResult> TryGetResult(
-        LibriFlow::ApplicationJobs::TImportJobId jobId,
+    [[nodiscard]] std::optional<Librova::ApplicationJobs::SImportJobResult> TryGetResult(
+        Librova::ApplicationJobs::TImportJobId jobId,
         std::chrono::milliseconds timeout) const;
 
     [[nodiscard]] bool Cancel(
-        LibriFlow::ApplicationJobs::TImportJobId jobId,
+        Librova::ApplicationJobs::TImportJobId jobId,
         std::chrono::milliseconds timeout) const;
 
     [[nodiscard]] bool Wait(
-        LibriFlow::ApplicationJobs::TImportJobId jobId,
+        Librova::ApplicationJobs::TImportJobId jobId,
         std::chrono::milliseconds timeout,
         std::chrono::milliseconds waitTimeout) const;
 
     [[nodiscard]] bool Remove(
-        LibriFlow::ApplicationJobs::TImportJobId jobId,
+        Librova::ApplicationJobs::TImportJobId jobId,
         std::chrono::milliseconds timeout) const;
 
 private:
-    LibriFlow::PipeClient::CNamedPipeClient m_pipeClient;
+    Librova::PipeClient::CNamedPipeClient m_pipeClient;
 };
 
-} // namespace LibriFlow::ApplicationClient
+} // namespace Librova::ApplicationClient

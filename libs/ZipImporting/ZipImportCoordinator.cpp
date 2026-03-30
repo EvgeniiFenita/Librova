@@ -170,7 +170,7 @@ std::filesystem::path ExtractEntryToWorkspace(
 
 } // namespace
 
-namespace LibriFlow::ZipImporting {
+namespace Librova::ZipImporting {
 
 std::size_t SZipImportResult::ImportedCount() const noexcept
 {
@@ -179,14 +179,14 @@ std::size_t SZipImportResult::ImportedCount() const noexcept
     }));
 }
 
-CZipImportCoordinator::CZipImportCoordinator(const LibriFlow::Importing::ISingleFileImporter& singleFileImporter)
+CZipImportCoordinator::CZipImportCoordinator(const Librova::Importing::ISingleFileImporter& singleFileImporter)
     : m_singleFileImporter(singleFileImporter)
 {
 }
 
 SZipImportResult CZipImportCoordinator::Run(
     const SZipImportRequest& request,
-    LibriFlow::Domain::IProgressSink& progressSink,
+    Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken) const
 {
     if (!request.IsValid())
@@ -268,4 +268,4 @@ SZipImportResult CZipImportCoordinator::Run(
     return result;
 }
 
-} // namespace LibriFlow::ZipImporting
+} // namespace Librova::ZipImporting

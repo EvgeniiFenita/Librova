@@ -43,7 +43,7 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 
 TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-fb2-parser");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "sample.fb2";
 
     WriteTextFile(
@@ -85,11 +85,11 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
   <binary id="cover-image" content-type="image/jpeg">ASNF</binary>
 </FictionBook>)");
 
-    const LibriFlow::Fb2Parsing::CFb2Parser parser;
-    const LibriFlow::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
 
-    REQUIRE(parser.CanParse(LibriFlow::Domain::EBookFormat::Fb2));
-    REQUIRE(parsedBook.SourceFormat == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(parser.CanParse(Librova::Domain::EBookFormat::Fb2));
+    REQUIRE(parsedBook.SourceFormat == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Аркадий Стругацкий", "Борис Стругацкий"}));
     REQUIRE(parsedBook.Metadata.Language == "ru");
@@ -106,7 +106,7 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
 
 TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-fb2-parser-invalid");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid.fb2";
 
     WriteTextFile(
@@ -120,6 +120,6 @@ TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
   </description>
 </FictionBook>)");
 
-    const LibriFlow::Fb2Parsing::CFb2Parser parser;
+    const Librova::Fb2Parsing::CFb2Parser parser;
     REQUIRE_THROWS(parser.Parse(fb2Path));
 }

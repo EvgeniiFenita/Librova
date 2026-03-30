@@ -1,18 +1,18 @@
-add_library(LibriFlowProtoServices STATIC
+add_library(LibrovaProtoServices STATIC
     LibraryJobServiceAdapter.cpp
     LibraryJobServiceAdapter.hpp
 )
 
-target_include_directories(LibriFlowProtoServices
+target_include_directories(LibrovaProtoServices
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowProtoServices
+target_link_libraries(LibrovaProtoServices
     PUBLIC
-        LibriFlowApplicationJobs
-        LibriFlowProtoContracts
-        LibriFlowProtoMapping
+        LibrovaApplicationJobs
+        LibrovaProtoContracts
+        LibrovaProtoMapping
 )
 
-target_compile_features(LibriFlowProtoServices PUBLIC cxx_std_20)
+target_compile_features(LibrovaProtoServices PUBLIC cxx_std_20)

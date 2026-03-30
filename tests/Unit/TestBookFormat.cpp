@@ -4,16 +4,16 @@
 
 TEST_CASE("Book format converts to stable storage strings", "[domain][book-format]")
 {
-    REQUIRE(LibriFlow::Domain::ToString(LibriFlow::Domain::EBookFormat::Epub) == "epub");
-    REQUIRE(LibriFlow::Domain::ToString(LibriFlow::Domain::EBookFormat::Fb2) == "fb2");
-    REQUIRE(LibriFlow::Domain::GetManagedFileName(LibriFlow::Domain::EBookFormat::Epub) == "book.epub");
-    REQUIRE(LibriFlow::Domain::GetManagedFileName(LibriFlow::Domain::EBookFormat::Fb2) == "book.fb2");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EBookFormat::Epub) == "epub");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EBookFormat::Fb2) == "fb2");
+    REQUIRE(Librova::Domain::GetManagedFileName(Librova::Domain::EBookFormat::Epub) == "book.epub");
+    REQUIRE(Librova::Domain::GetManagedFileName(Librova::Domain::EBookFormat::Fb2) == "book.fb2");
 }
 
 TEST_CASE("Book format parsing accepts canonical MVP values", "[domain][book-format]")
 {
-    REQUIRE(LibriFlow::Domain::TryParseBookFormat("epub") == LibriFlow::Domain::EBookFormat::Epub);
-    REQUIRE(LibriFlow::Domain::TryParseBookFormat(".fb2") == LibriFlow::Domain::EBookFormat::Fb2);
-    REQUIRE(LibriFlow::Domain::TryParseBookFormat("EPUB") == LibriFlow::Domain::EBookFormat::Epub);
-    REQUIRE_FALSE(LibriFlow::Domain::TryParseBookFormat("zip").has_value());
+    REQUIRE(Librova::Domain::TryParseBookFormat("epub") == Librova::Domain::EBookFormat::Epub);
+    REQUIRE(Librova::Domain::TryParseBookFormat(".fb2") == Librova::Domain::EBookFormat::Fb2);
+    REQUIRE(Librova::Domain::TryParseBookFormat("EPUB") == Librova::Domain::EBookFormat::Epub);
+    REQUIRE_FALSE(Librova::Domain::TryParseBookFormat("zip").has_value());
 }

@@ -1,4 +1,4 @@
-add_library(LibriFlowPipeTransport STATIC
+add_library(LibrovaPipeTransport STATIC
     NamedPipeChannel.cpp
     NamedPipeChannel.hpp
     PipeProtocol.cpp
@@ -7,15 +7,15 @@ add_library(LibriFlowPipeTransport STATIC
     PipeRequestDispatcher.hpp
 )
 
-target_include_directories(LibriFlowPipeTransport
+target_include_directories(LibrovaPipeTransport
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowPipeTransport
+target_link_libraries(LibrovaPipeTransport
     PUBLIC
-        LibriFlowProtoContracts
-        LibriFlowProtoServices
+        LibrovaProtoContracts
+        LibrovaProtoServices
 )
 
-target_compile_features(LibriFlowPipeTransport PUBLIC cxx_std_20)
+target_compile_features(LibrovaPipeTransport PUBLIC cxx_std_20)

@@ -10,7 +10,7 @@
 #include "Domain/DomainError.hpp"
 #include "Jobs/ImportJobManager.hpp"
 
-namespace LibriFlow::ApplicationJobs {
+namespace Librova::ApplicationJobs {
 
 using TImportJobId = std::uint64_t;
 
@@ -42,16 +42,16 @@ struct SImportJobSnapshot
 struct SImportJobResult
 {
     SImportJobSnapshot Snapshot;
-    std::optional<LibriFlow::Application::SImportResult> ImportResult;
-    std::optional<LibriFlow::Domain::SDomainError> Error;
+    std::optional<Librova::Application::SImportResult> ImportResult;
+    std::optional<Librova::Domain::SDomainError> Error;
 };
 
 class CImportJobService final
 {
 public:
-    explicit CImportJobService(LibriFlow::Jobs::CImportJobManager& jobManager);
+    explicit CImportJobService(Librova::Jobs::CImportJobManager& jobManager);
 
-    [[nodiscard]] TImportJobId Start(const LibriFlow::Application::SImportRequest& request) const;
+    [[nodiscard]] TImportJobId Start(const Librova::Application::SImportRequest& request) const;
     [[nodiscard]] std::optional<SImportJobSnapshot> TryGetSnapshot(TImportJobId jobId) const;
     [[nodiscard]] std::optional<SImportJobResult> TryGetResult(TImportJobId jobId) const;
     [[nodiscard]] bool Cancel(TImportJobId jobId) const;
@@ -59,15 +59,15 @@ public:
     [[nodiscard]] bool Remove(TImportJobId jobId) const;
 
 private:
-    [[nodiscard]] static EImportJobStatus MapStatus(LibriFlow::Jobs::EJobStatus status) noexcept;
+    [[nodiscard]] static EImportJobStatus MapStatus(Librova::Jobs::EJobStatus status) noexcept;
     [[nodiscard]] static SImportJobSnapshot MapSnapshot(
         TImportJobId jobId,
-        const LibriFlow::Jobs::SJobProgressSnapshot& snapshot);
+        const Librova::Jobs::SJobProgressSnapshot& snapshot);
     [[nodiscard]] static SImportJobResult MapResult(
         TImportJobId jobId,
-        const LibriFlow::Jobs::SImportJobResult& result);
+        const Librova::Jobs::SImportJobResult& result);
 
-    LibriFlow::Jobs::CImportJobManager& m_jobManager;
+    Librova::Jobs::CImportJobManager& m_jobManager;
 };
 
-} // namespace LibriFlow::ApplicationJobs
+} // namespace Librova::ApplicationJobs

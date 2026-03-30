@@ -162,14 +162,14 @@ std::filesystem::path CreateSampleEpub(const std::filesystem::path& outputPath)
 
 TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-epub-parser");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser");
     const std::filesystem::path epubPath = CreateSampleEpub(sandbox.GetPath() / "sample.epub");
 
-    const LibriFlow::EpubParsing::CEpubParser parser;
-    const LibriFlow::Domain::SParsedBook parsedBook = parser.Parse(epubPath);
+    const Librova::EpubParsing::CEpubParser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(epubPath);
 
-    REQUIRE(parser.CanParse(LibriFlow::Domain::EBookFormat::Epub));
-    REQUIRE(parsedBook.SourceFormat == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(parser.CanParse(Librova::Domain::EBookFormat::Epub));
+    REQUIRE(parsedBook.SourceFormat == Librova::Domain::EBookFormat::Epub);
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Аркадий Стругацкий", "Борис Стругацкий"}));
     REQUIRE(parsedBook.Metadata.Language == "ru");
@@ -181,7 +181,7 @@ TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "
 
 TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-epub-parser-invalid");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-invalid");
     const std::filesystem::path epubPath = sandbox.GetPath() / "invalid.epub";
 
     int errorCode = ZIP_ER_OK;
@@ -209,6 +209,6 @@ TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
 
     REQUIRE(zip_close(archive) == 0);
 
-    const LibriFlow::EpubParsing::CEpubParser parser;
+    const Librova::EpubParsing::CEpubParser parser;
     REQUIRE_THROWS(parser.Parse(epubPath));
 }

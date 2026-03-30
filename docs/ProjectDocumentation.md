@@ -1,4 +1,4 @@
-# LibriFlow Project Documentation
+# Librova Project Documentation
 
 This document records the stable, already-implemented facts of the repository.
 
@@ -8,25 +8,25 @@ Update it when an implementation detail becomes stable enough to be treated as c
 
 ## 1. Product Baseline
 
-- LibriFlow is a Windows-first desktop application for managing a personal e-book library.
+- Librova is a Windows-first desktop application for managing a personal e-book library.
 - The MVP supports `EPUB`, `FB2`, and `ZIP` import.
 - The UI is planned as `C# / Avalonia`.
-- `apps/LibriFlow.UI` now also contains the first non-visual UI infrastructure for resolving and launching the native core host process during development.
-- `apps/LibriFlow.UI` now also generates C# protobuf contracts from `proto/import_jobs.proto` and contains the first managed implementation of the named-pipe framing protocol.
-- `apps/LibriFlow.UI` now also contains a real managed named-pipe RPC client and an import-job client over generated protobuf contracts.
-- `apps/LibriFlow.UI` now also contains a UI-facing import-jobs service and DTO layer that hides generated protobuf types from future ViewModels.
-- `apps/LibriFlow.UI` now also contains the first shell bootstrap/session layer that owns native host lifetime and exposes UI-facing services.
-- `apps/LibriFlow.UI` now also contains the first ViewModel-ready shell and import-jobs state layer with observable state and async command support.
-- `apps/LibriFlow.UI` now also contains a shell-application composition layer that turns a `ShellSession` into a ready-to-bind `ShellViewModel`.
+- `apps/Librova.UI` now also contains the first non-visual UI infrastructure for resolving and launching the native core host process during development.
+- `apps/Librova.UI` now also generates C# protobuf contracts from `proto/import_jobs.proto` and contains the first managed implementation of the named-pipe framing protocol.
+- `apps/Librova.UI` now also contains a real managed named-pipe RPC client and an import-job client over generated protobuf contracts.
+- `apps/Librova.UI` now also contains a UI-facing import-jobs service and DTO layer that hides generated protobuf types from future ViewModels.
+- `apps/Librova.UI` now also contains the first shell bootstrap/session layer that owns native host lifetime and exposes UI-facing services.
+- `apps/Librova.UI` now also contains the first ViewModel-ready shell and import-jobs state layer with observable state and async command support.
+- `apps/Librova.UI` now also contains a shell-application composition layer that turns a `ShellSession` into a ready-to-bind `ShellViewModel`.
 - the current UI ViewModel baseline now keeps import jobs in an explicit polling state until a terminal result arrives instead of dropping back to idle immediately after job creation.
 - the current `AsyncCommand` baseline captures command failures into controlled UI state instead of letting exceptions escape as unhandled command crashes.
-- `apps/LibriFlow.UI` now also contains the first UI logging baseline backed by `Serilog`, with file logging and debug output for startup, host lifecycle, IPC job calls, and command failure paths.
-- `apps/LibriFlow.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
+- `apps/Librova.UI` now also contains the first UI logging baseline backed by `Serilog`, with file logging and debug output for startup, host lifecycle, IPC job calls, and command failure paths.
+- `apps/Librova.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
 - the current Avalonia shell baseline now exposes explicit `Start`, `Refresh`, and `Cancel` import-job actions through the `ImportJobsViewModel` and bound window controls.
 - the current Avalonia shell baseline now has an explicit startup window state model with separate running and startup-error modes instead of ad hoc exception text rendering in `App`.
 - the current Avalonia shell baseline now exposes derived result presentation state for import summary, warnings, and error text instead of leaving the latest job result as a raw DTO-only object graph.
 - the current Avalonia shell baseline now supports removing a completed import job from the in-memory job registry and clearing the UI-side result state after successful removal.
-- `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
+- `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
 - The current MVP transport direction is `Protobuf over Windows named pipes`, not mandatory `gRPC`.
@@ -35,7 +35,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 
 - Native code is organized as one static library per logical slice under `libs/<SliceName>/`.
 - UI applications live under `apps/`.
-- The repository now also contains the first native host executable under `apps/LibriFlow.Core.Host`.
+- The repository now also contains the first native host executable under `apps/Librova.Core.Host`.
 - Repository-level documentation lives under `docs/`.
 - Shared protobuf contracts live under `proto/`.
 - Build artifacts are routed under the repository root `out/`.
@@ -86,8 +86,8 @@ Implemented slices at this point:
 
 ## 4.1 Shared Contracts
 
-- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\LibriFlow\proto\import_jobs.proto).
-- Protobuf package baseline is `libriflow.v1`.
+- The repository now contains the first shared protobuf contract file in [proto/import_jobs.proto](C:\Users\evgen\Desktop\Librova\proto\import_jobs.proto).
+- Protobuf package baseline is `librova.v1`.
 - `.proto` file naming is now fixed as `snake_case`.
 - The first contract covers:
   - import request DTO
@@ -148,7 +148,7 @@ Implemented slices at this point:
   - optional `--max-sessions`
   - optional built-in `fb2cng` converter settings
   - optional custom converter command settings
-- `apps/LibriFlow.Core.Host` now builds the first real native host executable:
+- `apps/Librova.Core.Host` now builds the first real native host executable:
   - ensures managed library directories exist
   - clears stale `Temp/` state during startup recovery
   - migrates SQLite schema on startup
@@ -158,7 +158,7 @@ Implemented slices at this point:
 - the current pipe client timeout is applied as an RPC deadline for waiting on the response after connect, not only as an initial connect timeout
 - `libs/Logging` now provides the first native logging facade over `spdlog`
 - the current core logging baseline writes host logs into `Logs/host.log` and mirrors the same records to `stderr`
-- the current UI logging baseline writes logs into `%LOCALAPPDATA%\\LibriFlow\\Logs\\ui.log` and mirrors the same records to the debug sink
+- the current UI logging baseline writes logs into `%LOCALAPPDATA%\\Librova\\Logs\\ui.log` and mirrors the same records to the debug sink
 
 ## 5. Persistence And Storage
 

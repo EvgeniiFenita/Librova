@@ -43,11 +43,11 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 
 TEST_CASE("Library bootstrap creates library layout and clears stale temp state", "[core-host]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-library-bootstrap");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-bootstrap");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     WriteTextFile(libraryRoot / "Temp" / "stale" / "file.tmp", "stale");
 
-    LibriFlow::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(libraryRoot);
+    Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(libraryRoot);
 
     REQUIRE(std::filesystem::exists(libraryRoot / "Database"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Books"));

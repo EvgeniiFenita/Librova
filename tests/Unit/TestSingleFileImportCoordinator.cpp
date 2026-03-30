@@ -80,7 +80,7 @@ std::filesystem::path CreateFb2Fixture(const std::filesystem::path& outputPath)
     return outputPath;
 }
 
-class CTestProgressSink final : public LibriFlow::Domain::IProgressSink
+class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
 public:
     void ReportValue(const int percent, std::string_view message) override
@@ -99,16 +99,16 @@ public:
     bool CancellationRequested = false;
 };
 
-class CStubBookRepository final : public LibriFlow::Domain::IBookRepository
+class CStubBookRepository final : public Librova::Domain::IBookRepository
 {
 public:
-    [[nodiscard]] LibriFlow::Domain::SBookId ReserveId() override
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
     {
-        ReservedId = LibriFlow::Domain::SBookId{NextId++};
+        ReservedId = Librova::Domain::SBookId{NextId++};
         return *ReservedId;
     }
 
-    [[nodiscard]] LibriFlow::Domain::SBookId Add(const LibriFlow::Domain::SBook& book) override
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
     {
         if (ThrowOnAdd)
         {
@@ -119,40 +119,40 @@ public:
         return book.Id;
     }
 
-    [[nodiscard]] std::optional<LibriFlow::Domain::SBook> GetById(LibriFlow::Domain::SBookId) const override
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId) const override
     {
         return AddedBook;
     }
 
-    void Remove(const LibriFlow::Domain::SBookId id) override
+    void Remove(const Librova::Domain::SBookId id) override
     {
         RemovedIds.push_back(id);
     }
 
     std::int64_t NextId = 1;
-    std::optional<LibriFlow::Domain::SBookId> ReservedId;
-    std::optional<LibriFlow::Domain::SBook> AddedBook;
-    std::vector<LibriFlow::Domain::SBookId> RemovedIds;
+    std::optional<Librova::Domain::SBookId> ReservedId;
+    std::optional<Librova::Domain::SBook> AddedBook;
+    std::vector<Librova::Domain::SBookId> RemovedIds;
     bool ThrowOnAdd = false;
 };
 
-class CStubQueryRepository final : public LibriFlow::Domain::IBookQueryRepository
+class CStubQueryRepository final : public Librova::Domain::IBookQueryRepository
 {
 public:
-    [[nodiscard]] std::vector<LibriFlow::Domain::SBook> Search(const LibriFlow::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
 
-    [[nodiscard]] std::vector<LibriFlow::Domain::SDuplicateMatch> FindDuplicates(const LibriFlow::Domain::SCandidateBook&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return Duplicates;
     }
 
-    std::vector<LibriFlow::Domain::SDuplicateMatch> Duplicates;
+    std::vector<Librova::Domain::SDuplicateMatch> Duplicates;
 };
 
-class CStubManagedStorage final : public LibriFlow::Domain::IManagedStorage
+class CStubManagedStorage final : public Librova::Domain::IManagedStorage
 {
 public:
     explicit CStubManagedStorage(std::filesystem::path root)
@@ -160,16 +160,16 @@ public:
     {
     }
 
-    [[nodiscard]] LibriFlow::Domain::SPreparedStorage PrepareImport(const LibriFlow::Domain::SStoragePlan& plan) override
+    [[nodiscard]] Librova::Domain::SPreparedStorage PrepareImport(const Librova::Domain::SStoragePlan& plan) override
     {
         LastPlan = plan;
-        const auto layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(Root);
+        const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(Root);
         std::filesystem::create_directories(layout.TempDirectory);
         std::filesystem::create_directories(layout.BooksDirectory);
         std::filesystem::create_directories(layout.CoversDirectory);
 
         const std::filesystem::path stagingDirectory =
-            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(Root, plan.BookId);
+            Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(Root, plan.BookId);
         std::filesystem::remove_all(stagingDirectory);
         std::filesystem::create_directories(stagingDirectory);
 
@@ -177,7 +177,7 @@ public:
         std::filesystem::copy_file(plan.SourcePath, stagedBookPath, std::filesystem::copy_options::overwrite_existing);
 
         const std::filesystem::path finalBookPath =
-            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format);
+            Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format);
 
         std::optional<std::filesystem::path> stagedCoverPath;
         std::optional<std::filesystem::path> finalCoverPath;
@@ -200,7 +200,7 @@ public:
         };
     }
 
-    void CommitImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) override
+    void CommitImport(const Librova::Domain::SPreparedStorage& preparedStorage) override
     {
         if (ThrowOnCommit)
         {
@@ -228,7 +228,7 @@ public:
         CommitCalled = true;
     }
 
-    void RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept override
+    void RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept override
     {
         LastPreparedStorage = preparedStorage;
         std::error_code errorCode;
@@ -243,28 +243,28 @@ public:
     }
 
     std::filesystem::path Root;
-    std::optional<LibriFlow::Domain::SStoragePlan> LastPlan;
-    std::optional<LibriFlow::Domain::SPreparedStorage> LastPreparedStorage;
+    std::optional<Librova::Domain::SStoragePlan> LastPlan;
+    std::optional<Librova::Domain::SPreparedStorage> LastPreparedStorage;
     bool CommitCalled = false;
     bool RollbackCalled = false;
     bool ThrowOnCommit = false;
 };
 
-class CStubBookConverter final : public LibriFlow::Domain::IBookConverter
+class CStubBookConverter final : public Librova::Domain::IBookConverter
 {
 public:
     [[nodiscard]] bool CanConvert(
-        const LibriFlow::Domain::EBookFormat sourceFormat,
-        const LibriFlow::Domain::EBookFormat destinationFormat) const override
+        const Librova::Domain::EBookFormat sourceFormat,
+        const Librova::Domain::EBookFormat destinationFormat) const override
     {
         return Enabled
-            && sourceFormat == LibriFlow::Domain::EBookFormat::Fb2
-            && destinationFormat == LibriFlow::Domain::EBookFormat::Epub;
+            && sourceFormat == Librova::Domain::EBookFormat::Fb2
+            && destinationFormat == Librova::Domain::EBookFormat::Epub;
     }
 
-    [[nodiscard]] LibriFlow::Domain::SConversionResult Convert(
-        const LibriFlow::Domain::SConversionRequest& request,
-        LibriFlow::Domain::IProgressSink&,
+    [[nodiscard]] Librova::Domain::SConversionResult Convert(
+        const Librova::Domain::SConversionRequest& request,
+        Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
         LastRequest = request;
@@ -272,24 +272,24 @@ public:
     }
 
     bool Enabled = false;
-    mutable std::optional<LibriFlow::Domain::SConversionRequest> LastRequest;
-    LibriFlow::Domain::SConversionResult Result;
+    mutable std::optional<Librova::Domain::SConversionRequest> LastRequest;
+    Librova::Domain::SConversionResult Result;
 };
 
 } // namespace
 
 TEST_CASE("Single file import imports FB2 with converter fallback to source file", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-fallback");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -303,17 +303,17 @@ TEST_CASE("Single file import imports FB2 with converter fallback to source file
     }, progressSink, {});
 
     REQUIRE(result.IsSuccess());
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Imported);
-    REQUIRE(result.StoredFormat == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
+    REQUIRE(result.StoredFormat == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(result.Warnings == std::vector<std::string>({
         "FB2 converter unavailable. Original FB2 will be stored."
     }));
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(bookRepository.AddedBook->Id.Value == 1);
-    REQUIRE(bookRepository.AddedBook->File.Format == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(bookRepository.AddedBook->File.Sha256Hex == "fb2-hash");
     REQUIRE(managedStorage.LastPlan.has_value());
-    REQUIRE(managedStorage.LastPlan->Format == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(managedStorage.LastPlan->Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(managedStorage.LastPlan->CoverSourcePath.has_value());
     REQUIRE(managedStorage.CommitCalled);
     REQUIRE_FALSE(managedStorage.RollbackCalled);
@@ -322,21 +322,21 @@ TEST_CASE("Single file import imports FB2 with converter fallback to source file
 
 TEST_CASE("Single file import rejects strict duplicates before reserving storage", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-strict-duplicate");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-strict-duplicate");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     queryRepository.Duplicates = {{
-        .Severity = LibriFlow::Domain::EDuplicateSeverity::Strict,
-        .Reason = LibriFlow::Domain::EDuplicateReason::SameIsbn,
+        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+        .Reason = Librova::Domain::EDuplicateReason::SameIsbn,
         .ExistingBookId = {42}
     }};
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -348,7 +348,7 @@ TEST_CASE("Single file import rejects strict duplicates before reserving storage
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::RejectedDuplicate);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE_FALSE(bookRepository.ReservedId.has_value());
     REQUIRE_FALSE(bookRepository.AddedBook.has_value());
@@ -357,21 +357,21 @@ TEST_CASE("Single file import rejects strict duplicates before reserving storage
 
 TEST_CASE("Single file import returns decision required for probable duplicates without approval", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-probable-duplicate");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-probable-duplicate");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     queryRepository.Duplicates = {{
-        .Severity = LibriFlow::Domain::EDuplicateSeverity::Probable,
-        .Reason = LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+        .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+        .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
         .ExistingBookId = {24}
     }};
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -383,7 +383,7 @@ TEST_CASE("Single file import returns decision required for probable duplicates 
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::DecisionRequired);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired);
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE_FALSE(bookRepository.ReservedId.has_value());
     REQUIRE_FALSE(managedStorage.CommitCalled);
@@ -391,24 +391,24 @@ TEST_CASE("Single file import returns decision required for probable duplicates 
 
 TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-conversion");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-conversion");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
     const auto convertedPath = sandbox.GetPath() / "work" / "converted.epub";
     WriteTextFile(convertedPath, "converted-epub");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CStubBookConverter converter;
     converter.Enabled = true;
     converter.Result = {
-        .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
+        .Status = Librova::Domain::EConversionStatus::Succeeded,
         .OutputPath = convertedPath
     };
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -422,32 +422,32 @@ TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "
     }, progressSink, {});
 
     REQUIRE(result.IsSuccess());
-    REQUIRE(result.StoredFormat == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(result.StoredFormat == Librova::Domain::EBookFormat::Epub);
     REQUIRE(converter.LastRequest.has_value());
     REQUIRE(bookRepository.AddedBook.has_value());
-    REQUIRE(bookRepository.AddedBook->File.Format == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Epub);
     REQUIRE(managedStorage.LastPlan.has_value());
-    REQUIRE(managedStorage.LastPlan->Format == LibriFlow::Domain::EBookFormat::Epub);
+    REQUIRE(managedStorage.LastPlan->Format == Librova::Domain::EBookFormat::Epub);
     REQUIRE_FALSE(std::filesystem::exists(convertedPath));
 }
 
 TEST_CASE("Single file import can continue after probable duplicate when explicitly allowed", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-probable-force");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-probable-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     queryRepository.Duplicates = {{
-        .Severity = LibriFlow::Domain::EDuplicateSeverity::Probable,
-        .Reason = LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+        .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+        .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
         .ExistingBookId = {99}
     }};
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -472,25 +472,25 @@ TEST_CASE("Single file import can continue after probable duplicate when explici
 
 TEST_CASE("Single file import removes temporary converter output on cancellation", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-cancel-cleanup");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cancel-cleanup");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
     const auto convertedPath = sandbox.GetPath() / "work" / "converted.epub";
     WriteTextFile(convertedPath, "partial-output");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CStubBookConverter converter;
     converter.Enabled = true;
     converter.Result = {
-        .Status = LibriFlow::Domain::EConversionStatus::Cancelled,
+        .Status = Librova::Domain::EConversionStatus::Cancelled,
         .OutputPath = convertedPath,
         .Warnings = {"Conversion cancelled."}
     };
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -502,7 +502,7 @@ TEST_CASE("Single file import removes temporary converter output on cancellation
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Cancelled);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Cancelled);
     REQUIRE_FALSE(std::filesystem::exists(convertedPath));
     REQUIRE_FALSE(bookRepository.AddedBook.has_value());
     REQUIRE_FALSE(managedStorage.CommitCalled);
@@ -510,17 +510,17 @@ TEST_CASE("Single file import removes temporary converter output on cancellation
 
 TEST_CASE("Single file import stops on cancellation before storage prepare", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-early-cancel");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-early-cancel");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
     progressSink.CancellationRequested = true;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -532,24 +532,24 @@ TEST_CASE("Single file import stops on cancellation before storage prepare", "[i
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Cancelled);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Cancelled);
     REQUIRE_FALSE(bookRepository.ReservedId.has_value());
     REQUIRE_FALSE(managedStorage.LastPlan.has_value());
 }
 
 TEST_CASE("Single file import rolls back prepared storage when repository add fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-add-failure");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-add-failure");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     bookRepository.ThrowOnAdd = true;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -561,7 +561,7 @@ TEST_CASE("Single file import rolls back prepared storage when repository add fa
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
     REQUIRE(result.Error == "Repository add failed.");
     REQUIRE(managedStorage.RollbackCalled);
     REQUIRE(managedStorage.LastPreparedStorage.has_value());
@@ -571,17 +571,17 @@ TEST_CASE("Single file import rolls back prepared storage when repository add fa
 
 TEST_CASE("Single file import removes persisted book when storage commit fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-importing-commit-failure");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-failure");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry parserRegistry;
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     managedStorage.ThrowOnCommit = true;
     CTestProgressSink progressSink;
 
-    const LibriFlow::Importing::CSingleFileImportCoordinator coordinator(
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
         parserRegistry,
         bookRepository,
         queryRepository,
@@ -593,7 +593,7 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == LibriFlow::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
     REQUIRE(result.Error == "Storage commit failed.");
     REQUIRE(managedStorage.RollbackCalled);
     REQUIRE(managedStorage.LastPreparedStorage.has_value());

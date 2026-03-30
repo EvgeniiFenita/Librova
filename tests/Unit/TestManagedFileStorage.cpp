@@ -50,18 +50,18 @@ private:
 
 TEST_CASE("Managed file storage stages source and cover files before commit", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-managed-storage-stage");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-stage");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.fb2";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    LibriFlow::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
 
-    const LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {17},
-        .Format = LibriFlow::Domain::EBookFormat::Fb2,
+        .Format = Librova::Domain::EBookFormat::Fb2,
         .SourcePath = sourceBookPath,
         .CoverSourcePath = sourceCoverPath
     });
@@ -79,17 +79,17 @@ TEST_CASE("Managed file storage stages source and cover files before commit", "[
 
 TEST_CASE("Managed file storage commit finalizes staged files and removes temp staging", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-managed-storage-commit");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-commit");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.png";
 
     WriteTextFile(sourceBookPath, "epub-content");
     WriteTextFile(sourceCoverPath, "png-cover");
 
-    LibriFlow::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
-    const LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {21},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .SourcePath = sourceBookPath,
         .CoverSourcePath = sourceCoverPath
     });
@@ -107,15 +107,15 @@ TEST_CASE("Managed file storage commit finalizes staged files and removes temp s
 
 TEST_CASE("Managed file storage rollback removes staged files and leaves final targets absent", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-managed-storage-rollback");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-rollback");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
 
     WriteTextFile(sourceBookPath, "rollback-content");
 
-    LibriFlow::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
-    const LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {34},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .SourcePath = sourceBookPath
     });
 
@@ -128,17 +128,17 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
 
 TEST_CASE("Managed file storage restores staging state when commit fails after moving the book", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-managed-storage-commit-failure");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-commit-failure");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    LibriFlow::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
-    LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {55},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .SourcePath = sourceBookPath,
         .CoverSourcePath = sourceCoverPath
     });

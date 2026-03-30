@@ -1,17 +1,17 @@
-add_library(LibriFlowPipeClient STATIC
+add_library(LibrovaPipeClient STATIC
     NamedPipeClient.cpp
     NamedPipeClient.hpp
 )
 
-target_include_directories(LibriFlowPipeClient
+target_include_directories(LibrovaPipeClient
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowPipeClient
+target_link_libraries(LibrovaPipeClient
     PUBLIC
-        LibriFlowPipeTransport
-        LibriFlowProtoContracts
+        LibrovaPipeTransport
+        LibrovaProtoContracts
 )
 
-target_compile_features(LibriFlowPipeClient PUBLIC cxx_std_20)
+target_compile_features(LibrovaPipeClient PUBLIC cxx_std_20)

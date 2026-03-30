@@ -7,7 +7,7 @@
 
 struct sqlite3;
 
-namespace LibriFlow::Sqlite {
+namespace Librova::Sqlite {
 
 class CSqliteConnection
 {
@@ -27,4 +27,4 @@ private:
     std::unique_ptr<sqlite3, SConnectionCloser> m_connection;
 };
 
-} // namespace LibriFlow::Sqlite
+} // namespace Librova::Sqlite

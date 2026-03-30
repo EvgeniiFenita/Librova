@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 struct SBookId
 {
@@ -14,4 +14,4 @@ struct SBookId
     }
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

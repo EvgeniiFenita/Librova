@@ -7,7 +7,7 @@
 
 #include "Domain/ServiceContracts.hpp"
 
-namespace LibriFlow::ConverterCommand {
+namespace Librova::ConverterCommand {
 
 enum class EConverterOutputMode
 {
@@ -50,7 +50,7 @@ public:
 
     [[nodiscard]] static SResolvedConverterCommand Build(
         const SConverterCommandProfile& profile,
-        const LibriFlow::Domain::SConversionRequest& request);
+        const Librova::Domain::SConversionRequest& request);
 };
 
-} // namespace LibriFlow::ConverterCommand
+} // namespace Librova::ConverterCommand

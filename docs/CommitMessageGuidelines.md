@@ -1,6 +1,6 @@
-# Commit Message Guidelines for LibriFlow
+# Commit Message Guidelines for Librova
 
-This document defines the commit message format for the LibriFlow repository.
+This document defines the commit message format for the Librova repository.
 
 The goal is a git history that stays readable months later without opening every diff.
 
@@ -54,7 +54,7 @@ The summary must describe the actual change, not the activity.
 
 Prefer:
 
-- `Docs: Align code style with LibriFlow architecture`
+- `Docs: Align code style with Librova architecture`
 - `Build: Add vcpkg manifest for native dependencies`
 - `Test: Cover probable duplicate confirmation flow`
 

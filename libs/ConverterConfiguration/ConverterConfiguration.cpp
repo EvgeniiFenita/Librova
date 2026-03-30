@@ -1,6 +1,6 @@
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 
-namespace LibriFlow::ConverterConfiguration {
+namespace Librova::ConverterConfiguration {
 
 bool SConverterConfiguration::IsValid() const noexcept
 {
@@ -17,7 +17,7 @@ bool SConverterConfiguration::IsValid() const noexcept
     return false;
 }
 
-std::optional<LibriFlow::ConverterCommand::SConverterCommandProfile> TryBuildCommandProfile(
+std::optional<Librova::ConverterCommand::SConverterCommandProfile> TryBuildCommandProfile(
     const SConverterConfiguration& configuration)
 {
     if (!configuration.IsValid())
@@ -30,11 +30,11 @@ std::optional<LibriFlow::ConverterCommand::SConverterCommandProfile> TryBuildCom
     case EConverterConfigurationMode::Disabled:
         return std::nullopt;
     case EConverterConfigurationMode::BuiltInFb2Cng:
-        return LibriFlow::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
+        return Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
             configuration.Fb2Cng.ExecutablePath,
             configuration.Fb2Cng.ConfigPath);
     case EConverterConfigurationMode::CustomCommand:
-        return LibriFlow::ConverterCommand::SConverterCommandProfile{
+        return Librova::ConverterCommand::SConverterCommandProfile{
             .ExecutablePath = configuration.Custom.ExecutablePath,
             .ArgumentTemplate = configuration.Custom.ArgumentTemplate,
             .OutputMode = configuration.Custom.OutputMode
@@ -44,4 +44,4 @@ std::optional<LibriFlow::ConverterCommand::SConverterCommandProfile> TryBuildCom
     return std::nullopt;
 }
 
-} // namespace LibriFlow::ConverterConfiguration
+} // namespace Librova::ConverterConfiguration

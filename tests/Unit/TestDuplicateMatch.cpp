@@ -4,9 +4,9 @@
 
 TEST_CASE("Duplicate match exposes strict rejection rule", "[domain][duplicate]")
 {
-    const LibriFlow::Domain::SDuplicateMatch strictMatch{
-        .Severity = LibriFlow::Domain::EDuplicateSeverity::Strict,
-        .Reason = LibriFlow::Domain::EDuplicateReason::SameHash,
+    const Librova::Domain::SDuplicateMatch strictMatch{
+        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+        .Reason = Librova::Domain::EDuplicateReason::SameHash,
         .ExistingBookId = {10}
     };
 
@@ -16,9 +16,9 @@ TEST_CASE("Duplicate match exposes strict rejection rule", "[domain][duplicate]"
 
 TEST_CASE("Duplicate match exposes probable duplicate confirmation rule", "[domain][duplicate]")
 {
-    const LibriFlow::Domain::SDuplicateMatch probableMatch{
-        .Severity = LibriFlow::Domain::EDuplicateSeverity::Probable,
-        .Reason = LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+    const Librova::Domain::SDuplicateMatch probableMatch{
+        .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+        .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
         .ExistingBookId = {25}
     };
 

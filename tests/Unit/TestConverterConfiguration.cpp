@@ -4,29 +4,29 @@
 
 TEST_CASE("Disabled converter configuration builds no command profile", "[converter-config]")
 {
-    const LibriFlow::ConverterConfiguration::SConverterConfiguration configuration;
+    const Librova::ConverterConfiguration::SConverterConfiguration configuration;
 
     REQUIRE(configuration.IsValid());
     REQUIRE_FALSE(configuration.IsEnabled());
-    REQUIRE_FALSE(LibriFlow::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
+    REQUIRE_FALSE(Librova::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
 }
 
 TEST_CASE("Built-in fb2cng configuration produces the default command profile", "[converter-config]")
 {
-    const LibriFlow::ConverterConfiguration::SConverterConfiguration configuration{
-        .Mode = LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng,
+    const Librova::ConverterConfiguration::SConverterConfiguration configuration{
+        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng,
         .Fb2Cng = {
             .ExecutablePath = "C:/Tools/fbc.exe",
             .ConfigPath = "C:/Tools/fb2cng.yml"
         }
     };
 
-    const auto profile = LibriFlow::ConverterConfiguration::TryBuildCommandProfile(configuration);
+    const auto profile = Librova::ConverterConfiguration::TryBuildCommandProfile(configuration);
 
     REQUIRE(configuration.IsValid());
     REQUIRE(profile.has_value());
     REQUIRE(profile->ExecutablePath == std::filesystem::path("C:/Tools/fbc.exe"));
-    REQUIRE(profile->OutputMode == LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
+    REQUIRE(profile->OutputMode == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
     REQUIRE(profile->ArgumentTemplate == std::vector<std::string>({
         "-c",
         "C:/Tools/fb2cng.yml",
@@ -41,16 +41,16 @@ TEST_CASE("Built-in fb2cng configuration produces the default command profile", 
 
 TEST_CASE("Custom converter configuration preserves explicit template and output mode", "[converter-config]")
 {
-    const LibriFlow::ConverterConfiguration::SConverterConfiguration configuration{
-        .Mode = LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand,
+    const Librova::ConverterConfiguration::SConverterConfiguration configuration{
+        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand,
         .Custom = {
             .ExecutablePath = "C:/Tools/custom-converter.exe",
             .ArgumentTemplate = {"run", "{source}", "{destination}"},
-            .OutputMode = LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath
+            .OutputMode = Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath
         }
     };
 
-    const auto profile = LibriFlow::ConverterConfiguration::TryBuildCommandProfile(configuration);
+    const auto profile = Librova::ConverterConfiguration::TryBuildCommandProfile(configuration);
 
     REQUIRE(configuration.IsValid());
     REQUIRE(profile.has_value());
@@ -60,15 +60,15 @@ TEST_CASE("Custom converter configuration preserves explicit template and output
         "{source}",
         "{destination}"
     }));
-    REQUIRE(profile->OutputMode == LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath);
+    REQUIRE(profile->OutputMode == Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath);
 }
 
 TEST_CASE("Invalid enabled converter configuration is rejected", "[converter-config]")
 {
-    const LibriFlow::ConverterConfiguration::SConverterConfiguration configuration{
-        .Mode = LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand
+    const Librova::ConverterConfiguration::SConverterConfiguration configuration{
+        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand
     };
 
     REQUIRE_FALSE(configuration.IsValid());
-    REQUIRE_FALSE(LibriFlow::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
+    REQUIRE_FALSE(Librova::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
 }

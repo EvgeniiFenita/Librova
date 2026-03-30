@@ -10,7 +10,7 @@
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
-namespace LibriFlow::Application {
+namespace Librova::Application {
 
 enum class EImportMode
 {
@@ -44,8 +44,8 @@ struct SImportSummary
 struct SImportResult
 {
     SImportSummary Summary;
-    std::optional<LibriFlow::Importing::SSingleFileImportResult> SingleFileResult;
-    std::optional<LibriFlow::ZipImporting::SZipImportResult> ZipResult;
+    std::optional<Librova::Importing::SSingleFileImportResult> SingleFileResult;
+    std::optional<Librova::ZipImporting::SZipImportResult> ZipResult;
 
     [[nodiscard]] bool IsSuccess() const noexcept
     {
@@ -62,19 +62,19 @@ class CLibraryImportFacade final
 {
 public:
     CLibraryImportFacade(
-        const LibriFlow::Importing::ISingleFileImporter& singleFileImporter,
-        const LibriFlow::ZipImporting::CZipImportCoordinator& zipImportCoordinator);
+        const Librova::Importing::ISingleFileImporter& singleFileImporter,
+        const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator);
 
     [[nodiscard]] SImportResult Run(
         const SImportRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const;
 
 private:
     [[nodiscard]] static bool IsZipPath(const std::filesystem::path& path);
 
-    const LibriFlow::Importing::ISingleFileImporter& m_singleFileImporter;
-    const LibriFlow::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
+    const Librova::Importing::ISingleFileImporter& m_singleFileImporter;
+    const Librova::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
 };
 
-} // namespace LibriFlow::Application
+} // namespace Librova::Application

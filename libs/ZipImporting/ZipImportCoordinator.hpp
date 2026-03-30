@@ -9,7 +9,7 @@
 #include "Domain/ServiceContracts.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
 
-namespace LibriFlow::ZipImporting {
+namespace Librova::ZipImporting {
 
 enum class EZipEntryImportStatus
 {
@@ -36,7 +36,7 @@ struct SZipEntryImportResult
 {
     std::filesystem::path ArchivePath;
     EZipEntryImportStatus Status = EZipEntryImportStatus::UnsupportedEntry;
-    std::optional<LibriFlow::Importing::SSingleFileImportResult> SingleFileResult;
+    std::optional<Librova::Importing::SSingleFileImportResult> SingleFileResult;
     std::string Error;
 
     [[nodiscard]] bool IsImported() const noexcept
@@ -57,15 +57,15 @@ struct SZipImportResult
 class CZipImportCoordinator final
 {
 public:
-    explicit CZipImportCoordinator(const LibriFlow::Importing::ISingleFileImporter& singleFileImporter);
+    explicit CZipImportCoordinator(const Librova::Importing::ISingleFileImporter& singleFileImporter);
 
     [[nodiscard]] SZipImportResult Run(
         const SZipImportRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const;
 
 private:
-    const LibriFlow::Importing::ISingleFileImporter& m_singleFileImporter;
+    const Librova::Importing::ISingleFileImporter& m_singleFileImporter;
 };
 
-} // namespace LibriFlow::ZipImporting
+} // namespace Librova::ZipImporting

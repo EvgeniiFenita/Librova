@@ -1,10 +1,10 @@
 # Proto
 
-This folder contains shared protobuf contracts between `LibriFlow.UI` and `LibriFlow.Core`.
+This folder contains shared protobuf contracts between `Librova.UI` and `Librova.Core`.
 
 Current conventions:
 
-- package name: `libriflow.v1`
+- package name: `librova.v1`
 - file naming: `snake_case.proto`
 - message and enum names: `PascalCase`
 - field names: `snake_case`

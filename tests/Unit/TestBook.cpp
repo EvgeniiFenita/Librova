@@ -4,7 +4,7 @@
 
 TEST_CASE("Book metadata reports title and authors presence", "[domain][book]")
 {
-    LibriFlow::Domain::SBookMetadata metadata;
+    Librova::Domain::SBookMetadata metadata;
 
     REQUIRE_FALSE(metadata.HasTitle());
     REQUIRE_FALSE(metadata.HasAuthors());
@@ -18,7 +18,7 @@ TEST_CASE("Book metadata reports title and authors presence", "[domain][book]")
 
 TEST_CASE("Book file info reports managed path and hash presence", "[domain][book]")
 {
-    LibriFlow::Domain::SBookFileInfo fileInfo;
+    Librova::Domain::SBookFileInfo fileInfo;
 
     REQUIRE_FALSE(fileInfo.HasManagedPath());
     REQUIRE_FALSE(fileInfo.HasHash());
@@ -32,7 +32,7 @@ TEST_CASE("Book file info reports managed path and hash presence", "[domain][boo
 
 TEST_CASE("Book aggregate exposes identity and cover state", "[domain][book]")
 {
-    LibriFlow::Domain::SBook book;
+    Librova::Domain::SBook book;
 
     REQUIRE_FALSE(book.HasIdentity());
     REQUIRE_FALSE(book.HasCover());

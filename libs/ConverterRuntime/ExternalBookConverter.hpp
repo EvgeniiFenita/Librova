@@ -5,11 +5,11 @@
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
 #include "Domain/ServiceContracts.hpp"
 
-namespace LibriFlow::ConverterRuntime {
+namespace Librova::ConverterRuntime {
 
 struct SExternalConverterSettings
 {
-    LibriFlow::ConverterCommand::SConverterCommandProfile CommandProfile;
+    Librova::ConverterCommand::SConverterCommandProfile CommandProfile;
     std::chrono::milliseconds PollInterval{100};
 
     [[nodiscard]] bool IsValid() const noexcept
@@ -18,22 +18,22 @@ struct SExternalConverterSettings
     }
 };
 
-class CExternalBookConverter final : public LibriFlow::Domain::IBookConverter
+class CExternalBookConverter final : public Librova::Domain::IBookConverter
 {
 public:
     explicit CExternalBookConverter(SExternalConverterSettings settings);
 
     [[nodiscard]] bool CanConvert(
-        LibriFlow::Domain::EBookFormat sourceFormat,
-        LibriFlow::Domain::EBookFormat destinationFormat) const override;
+        Librova::Domain::EBookFormat sourceFormat,
+        Librova::Domain::EBookFormat destinationFormat) const override;
 
-    [[nodiscard]] LibriFlow::Domain::SConversionResult Convert(
-        const LibriFlow::Domain::SConversionRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Domain::SConversionResult Convert(
+        const Librova::Domain::SConversionRequest& request,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const override;
 
 private:
     SExternalConverterSettings m_settings;
 };
 
-} // namespace LibriFlow::ConverterRuntime
+} // namespace Librova::ConverterRuntime

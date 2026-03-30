@@ -2,58 +2,58 @@
 
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
 
-namespace LibriFlow::ProtoServices {
+namespace Librova::ProtoServices {
 
-CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(LibriFlow::ApplicationJobs::CImportJobService& importJobService)
+CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(Librova::ApplicationJobs::CImportJobService& importJobService)
     : m_importJobService(importJobService)
 {
 }
 
-libriflow::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
-    const libriflow::v1::StartImportRequest& request) const
+librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
+    const librova::v1::StartImportRequest& request) const
 {
-    const auto importRequest = LibriFlow::ProtoMapping::CImportJobProtoMapper::FromProto(request.import());
-    return LibriFlow::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(m_importJobService.Start(importRequest));
+    const auto importRequest = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(request.import());
+    return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(m_importJobService.Start(importRequest));
 }
 
-libriflow::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(
-    const libriflow::v1::GetImportJobSnapshotRequest& request) const
+librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(
+    const librova::v1::GetImportJobSnapshotRequest& request) const
 {
     const auto snapshot = m_importJobService.TryGetSnapshot(request.job_id());
-    return LibriFlow::ProtoMapping::CImportJobProtoMapper::ToProtoSnapshotResponse(
+    return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoSnapshotResponse(
         snapshot.has_value() ? &*snapshot : nullptr);
 }
 
-libriflow::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobResult(
-    const libriflow::v1::GetImportJobResultRequest& request) const
+librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobResult(
+    const librova::v1::GetImportJobResultRequest& request) const
 {
     const auto result = m_importJobService.TryGetResult(request.job_id());
-    return LibriFlow::ProtoMapping::CImportJobProtoMapper::ToProtoResultResponse(
+    return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoResultResponse(
         result.has_value() ? &*result : nullptr);
 }
 
-libriflow::v1::WaitImportJobResponse CLibraryJobServiceAdapter::WaitImportJob(
-    const libriflow::v1::WaitImportJobRequest& request) const
+librova::v1::WaitImportJobResponse CLibraryJobServiceAdapter::WaitImportJob(
+    const librova::v1::WaitImportJobRequest& request) const
 {
-    libriflow::v1::WaitImportJobResponse response;
+    librova::v1::WaitImportJobResponse response;
     response.set_completed(m_importJobService.Wait(request.job_id(), std::chrono::milliseconds(request.timeout_ms())));
     return response;
 }
 
-libriflow::v1::CancelImportJobResponse CLibraryJobServiceAdapter::CancelImportJob(
-    const libriflow::v1::CancelImportJobRequest& request) const
+librova::v1::CancelImportJobResponse CLibraryJobServiceAdapter::CancelImportJob(
+    const librova::v1::CancelImportJobRequest& request) const
 {
-    libriflow::v1::CancelImportJobResponse response;
+    librova::v1::CancelImportJobResponse response;
     response.set_accepted(m_importJobService.Cancel(request.job_id()));
     return response;
 }
 
-libriflow::v1::RemoveImportJobResponse CLibraryJobServiceAdapter::RemoveImportJob(
-    const libriflow::v1::RemoveImportJobRequest& request) const
+librova::v1::RemoveImportJobResponse CLibraryJobServiceAdapter::RemoveImportJob(
+    const librova::v1::RemoveImportJobRequest& request) const
 {
-    libriflow::v1::RemoveImportJobResponse response;
+    librova::v1::RemoveImportJobResponse response;
     response.set_removed(m_importJobService.Remove(request.job_id()));
     return response;
 }
 
-} // namespace LibriFlow::ProtoServices
+} // namespace Librova::ProtoServices

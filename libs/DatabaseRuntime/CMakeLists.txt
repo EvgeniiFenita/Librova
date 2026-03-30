@@ -1,14 +1,14 @@
-add_library(LibriFlowDatabaseRuntime STATIC
+add_library(LibrovaDatabaseRuntime STATIC
     SchemaMigrator.cpp
 )
 
-target_include_directories(LibriFlowDatabaseRuntime PUBLIC
+target_include_directories(LibrovaDatabaseRuntime PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-target_link_libraries(LibriFlowDatabaseRuntime PUBLIC
-    LibriFlowDatabaseSchema
-    LibriFlowSqlite
+target_link_libraries(LibrovaDatabaseRuntime PUBLIC
+    LibrovaDatabaseSchema
+    LibrovaSqlite
 )
 
-target_compile_features(LibriFlowDatabaseRuntime PUBLIC cxx_std_20)
+target_compile_features(LibrovaDatabaseRuntime PUBLIC cxx_std_20)

@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 
 using TPipeHandle = std::unique_ptr<void, void(*)(void*)>;
 
@@ -58,4 +58,4 @@ private:
     const std::filesystem::path& pipePath,
     std::chrono::milliseconds timeout);
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace LibriFlow::Core {
+namespace Librova::Core {
 
 class CVersion
 {
@@ -10,4 +10,4 @@ public:
     [[nodiscard]] static std::string_view GetValue() noexcept;
 };
 
-} // namespace LibriFlow::Core
+} // namespace Librova::Core

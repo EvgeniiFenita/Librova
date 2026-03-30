@@ -43,17 +43,17 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 TEST_CASE("Parser registry detects supported book formats from extension", "[parser-registry]")
 {
     REQUIRE(
-        LibriFlow::ParserRegistry::CBookParserRegistry::TryDetectFormat("book.epub") ==
-        std::optional<LibriFlow::Domain::EBookFormat>{LibriFlow::Domain::EBookFormat::Epub});
+        Librova::ParserRegistry::CBookParserRegistry::TryDetectFormat("book.epub") ==
+        std::optional<Librova::Domain::EBookFormat>{Librova::Domain::EBookFormat::Epub});
     REQUIRE(
-        LibriFlow::ParserRegistry::CBookParserRegistry::TryDetectFormat("BOOK.FB2") ==
-        std::optional<LibriFlow::Domain::EBookFormat>{LibriFlow::Domain::EBookFormat::Fb2});
-    REQUIRE_FALSE(LibriFlow::ParserRegistry::CBookParserRegistry::TryDetectFormat("book.zip").has_value());
+        Librova::ParserRegistry::CBookParserRegistry::TryDetectFormat("BOOK.FB2") ==
+        std::optional<Librova::Domain::EBookFormat>{Librova::Domain::EBookFormat::Fb2});
+    REQUIRE_FALSE(Librova::ParserRegistry::CBookParserRegistry::TryDetectFormat("book.zip").has_value());
 }
 
 TEST_CASE("Parser registry routes FB2 parsing through the matching parser", "[parser-registry]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-parser-registry");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-parser-registry");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "sample.fb2";
 
     WriteTextFile(
@@ -72,17 +72,17 @@ TEST_CASE("Parser registry routes FB2 parsing through the matching parser", "[pa
   </description>
 </FictionBook>)");
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry registry;
-    const LibriFlow::Domain::SParsedBook parsedBook = registry.Parse(fb2Path);
+    const Librova::ParserRegistry::CBookParserRegistry registry;
+    const Librova::Domain::SParsedBook parsedBook = registry.Parse(fb2Path);
 
-    REQUIRE(registry.CanParse(LibriFlow::Domain::EBookFormat::Fb2));
-    REQUIRE(parsedBook.SourceFormat == LibriFlow::Domain::EBookFormat::Fb2);
+    REQUIRE(registry.CanParse(Librova::Domain::EBookFormat::Fb2));
+    REQUIRE(parsedBook.SourceFormat == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Roadside Picnic");
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
 }
 
 TEST_CASE("Parser registry rejects unsupported extensions", "[parser-registry]")
 {
-    const LibriFlow::ParserRegistry::CBookParserRegistry registry;
+    const Librova::ParserRegistry::CBookParserRegistry registry;
     REQUIRE_THROWS(registry.Parse("book.zip"));
 }

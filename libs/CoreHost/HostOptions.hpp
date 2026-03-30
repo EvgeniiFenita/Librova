@@ -7,14 +7,14 @@
 
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 
-namespace LibriFlow::CoreHost {
+namespace Librova::CoreHost {
 
 struct SHostOptions
 {
     std::filesystem::path PipePath;
     std::filesystem::path LibraryRoot;
     std::size_t MaxSessions = 0;
-    LibriFlow::ConverterConfiguration::SConverterConfiguration ConverterConfiguration;
+    Librova::ConverterConfiguration::SConverterConfiguration ConverterConfiguration;
 };
 
 class CHostOptions final
@@ -23,4 +23,4 @@ public:
     [[nodiscard]] static SHostOptions Parse(const std::vector<std::string>& arguments);
 };
 
-} // namespace LibriFlow::CoreHost
+} // namespace Librova::CoreHost

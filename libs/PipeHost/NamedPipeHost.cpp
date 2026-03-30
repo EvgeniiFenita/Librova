@@ -1,23 +1,23 @@
 #include "PipeHost/NamedPipeHost.hpp"
 
-namespace LibriFlow::PipeHost {
+namespace Librova::PipeHost {
 
-CNamedPipeHost::CNamedPipeHost(LibriFlow::PipeTransport::CPipeRequestDispatcher& dispatcher)
+CNamedPipeHost::CNamedPipeHost(Librova::PipeTransport::CPipeRequestDispatcher& dispatcher)
     : m_dispatcher(dispatcher)
 {
 }
 
-void CNamedPipeHost::RunSingleSession(LibriFlow::PipeTransport::CNamedPipeConnection connection) const
+void CNamedPipeHost::RunSingleSession(Librova::PipeTransport::CNamedPipeConnection connection) const
 {
     const auto requestBytes = connection.ReadMessage();
-    const auto parsedRequest = LibriFlow::PipeTransport::DeserializeRequestEnvelope(requestBytes);
+    const auto parsedRequest = Librova::PipeTransport::DeserializeRequestEnvelope(requestBytes);
 
-    LibriFlow::PipeTransport::SPipeResponseEnvelope response;
+    Librova::PipeTransport::SPipeResponseEnvelope response;
 
     if (!parsedRequest.HasValue())
     {
         response = {
-            .Status = LibriFlow::PipeTransport::EPipeResponseStatus::InvalidRequest,
+            .Status = Librova::PipeTransport::EPipeResponseStatus::InvalidRequest,
             .ErrorMessage = parsedRequest.Error
         };
     }
@@ -26,7 +26,7 @@ void CNamedPipeHost::RunSingleSession(LibriFlow::PipeTransport::CNamedPipeConnec
         response = m_dispatcher.Dispatch(*parsedRequest.Value);
     }
 
-    connection.WriteMessage(LibriFlow::PipeTransport::SerializeResponseEnvelope(response));
+    connection.WriteMessage(Librova::PipeTransport::SerializeResponseEnvelope(response));
 }
 
-} // namespace LibriFlow::PipeHost
+} // namespace Librova::PipeHost

@@ -1,6 +1,6 @@
-# Code Style Guidelines for LibriFlow
+# Code Style Guidelines for Librova
 
-This document defines the baseline coding conventions for the LibriFlow repository.
+This document defines the baseline coding conventions for the Librova repository.
 
 These rules are intentionally strict at project start so the codebase grows with one consistent style instead of accumulating local conventions.
 
@@ -8,8 +8,8 @@ These rules are intentionally strict at project start so the codebase grows with
 
 These rules apply to:
 
-- `LibriFlow.Core` in C++20;
-- `LibriFlow.UI` in C# / .NET / Avalonia;
+- `Librova.Core` in C++20;
+- `Librova.UI` in C# / .NET / Avalonia;
 - shared `.proto` contracts;
 - automation scripts in `scripts/`;
 - repository documentation when it describes code or workflows.
@@ -104,13 +104,13 @@ if (isDuplicate) {
 Correct:
 
 ```cpp
-namespace LibriFlow::Core::Import {
+namespace Librova::Core::Import {
 
 class CImportService
 {
 };
 
-} // namespace LibriFlow::Core::Import
+} // namespace Librova::Core::Import
 ```
 
 ## 6. Class Structure

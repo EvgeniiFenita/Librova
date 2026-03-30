@@ -14,7 +14,7 @@
 #include <string>
 #include <thread>
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 namespace {
 
 [[nodiscard]] std::wstring ToWidePath(const std::filesystem::path& path)
@@ -285,4 +285,4 @@ CNamedPipeConnection ConnectToNamedPipe(
     return CNamedPipeConnection{handle};
 }
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

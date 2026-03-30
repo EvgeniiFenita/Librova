@@ -1,14 +1,14 @@
 find_package(protobuf CONFIG REQUIRED)
 
-set(LIBRIFLOW_PROTO_SOURCE_DIR ${CMAKE_SOURCE_DIR}/proto)
-set(LIBRIFLOW_PROTO_BINARY_DIR ${CMAKE_BINARY_DIR}/generated/proto)
-set(LIBRIFLOW_PROTO_FILE ${LIBRIFLOW_PROTO_SOURCE_DIR}/import_jobs.proto)
-set(LIBRIFLOW_PROTO_CC ${LIBRIFLOW_PROTO_BINARY_DIR}/import_jobs.pb.cc)
-set(LIBRIFLOW_PROTO_H ${LIBRIFLOW_PROTO_BINARY_DIR}/import_jobs.pb.h)
+set(LIBROVA_PROTO_SOURCE_DIR ${CMAKE_SOURCE_DIR}/proto)
+set(LIBROVA_PROTO_BINARY_DIR ${CMAKE_BINARY_DIR}/generated/proto)
+set(LIBROVA_PROTO_FILE ${LIBROVA_PROTO_SOURCE_DIR}/import_jobs.proto)
+set(LIBROVA_PROTO_CC ${LIBROVA_PROTO_BINARY_DIR}/import_jobs.pb.cc)
+set(LIBROVA_PROTO_H ${LIBROVA_PROTO_BINARY_DIR}/import_jobs.pb.h)
 
-file(MAKE_DIRECTORY ${LIBRIFLOW_PROTO_BINARY_DIR})
+file(MAKE_DIRECTORY ${LIBROVA_PROTO_BINARY_DIR})
 
-find_program(LIBRIFLOW_PROTOC_EXECUTABLE
+find_program(LIBROVA_PROTOC_EXECUTABLE
     NAMES protoc protoc.exe
     PATHS
         ${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/tools/protobuf
@@ -19,31 +19,31 @@ find_program(LIBRIFLOW_PROTOC_EXECUTABLE
 
 add_custom_command(
     OUTPUT
-        ${LIBRIFLOW_PROTO_CC}
-        ${LIBRIFLOW_PROTO_H}
-    COMMAND ${LIBRIFLOW_PROTOC_EXECUTABLE}
-        --proto_path=${LIBRIFLOW_PROTO_SOURCE_DIR}
-        --cpp_out=${LIBRIFLOW_PROTO_BINARY_DIR}
-        ${LIBRIFLOW_PROTO_FILE}
+        ${LIBROVA_PROTO_CC}
+        ${LIBROVA_PROTO_H}
+    COMMAND ${LIBROVA_PROTOC_EXECUTABLE}
+        --proto_path=${LIBROVA_PROTO_SOURCE_DIR}
+        --cpp_out=${LIBROVA_PROTO_BINARY_DIR}
+        ${LIBROVA_PROTO_FILE}
     DEPENDS
-        ${LIBRIFLOW_PROTO_FILE}
+        ${LIBROVA_PROTO_FILE}
     COMMENT "Generating C++ protobuf sources for import_jobs.proto"
     VERBATIM
 )
 
-add_library(LibriFlowProtoContracts STATIC
-    ${LIBRIFLOW_PROTO_CC}
-    ${LIBRIFLOW_PROTO_H}
+add_library(LibrovaProtoContracts STATIC
+    ${LIBROVA_PROTO_CC}
+    ${LIBROVA_PROTO_H}
 )
 
-target_include_directories(LibriFlowProtoContracts
+target_include_directories(LibrovaProtoContracts
     PUBLIC
-        ${LIBRIFLOW_PROTO_BINARY_DIR}
+        ${LIBROVA_PROTO_BINARY_DIR}
 )
 
-target_link_libraries(LibriFlowProtoContracts
+target_link_libraries(LibrovaProtoContracts
     PUBLIC
         protobuf::libprotobuf
 )
 
-target_compile_features(LibriFlowProtoContracts PUBLIC cxx_std_20)
+target_compile_features(LibrovaProtoContracts PUBLIC cxx_std_20)

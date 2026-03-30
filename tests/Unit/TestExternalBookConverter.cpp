@@ -38,7 +38,7 @@ private:
     std::filesystem::path m_path;
 };
 
-class CTestProgressSink final : public LibriFlow::Domain::IProgressSink
+class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
 public:
     void ReportValue(const int percent, std::string_view message) override
@@ -70,12 +70,12 @@ std::string ReadTextFile(const std::filesystem::path& path)
     return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
-LibriFlow::ConverterCommand::SConverterCommandProfile CreatePwshProfile(
+Librova::ConverterCommand::SConverterCommandProfile CreatePwshProfile(
     const std::filesystem::path& scriptPath,
-    const LibriFlow::ConverterCommand::EConverterOutputMode outputMode,
+    const Librova::ConverterCommand::EConverterOutputMode outputMode,
     const std::vector<std::string>& trailingArguments)
 {
-    LibriFlow::ConverterCommand::SConverterCommandProfile profile{
+    Librova::ConverterCommand::SConverterCommandProfile profile{
         .ExecutablePath = GPwshPath,
         .ArgumentTemplate = {"-File", scriptPath.generic_string()},
         .OutputMode = outputMode
@@ -89,7 +89,7 @@ LibriFlow::ConverterCommand::SConverterCommandProfile CreatePwshProfile(
 
 TEST_CASE("External book converter supports exact destination path converters", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-external-converter-exact");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-exact");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "copy-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -102,23 +102,23 @@ TEST_CASE("External book converter supports exact destination path converters", 
         "Copy-Item -LiteralPath $source -Destination $destination -Force\n");
     WriteTextFile(sourcePath, "converted-content");
 
-    const LibriFlow::ConverterRuntime::CExternalBookConverter converter({
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
         .CommandProfile = CreatePwshProfile(
             scriptPath,
-            LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
+            Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
             {"{source}", "{destination}"})
     });
     CTestProgressSink progressSink;
 
-    const LibriFlow::Domain::SConversionResult result = converter.Convert({
+    const Librova::Domain::SConversionResult result = converter.Convert({
         .SourcePath = sourcePath,
         .DestinationPath = destinationPath,
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     }, progressSink, {});
 
     REQUIRE(result.IsSuccess());
-    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
+    REQUIRE(result.Status == Librova::Domain::EConversionStatus::Succeeded);
     REQUIRE(result.OutputPath == destinationPath);
     REQUIRE(std::filesystem::exists(destinationPath));
     REQUIRE(ReadTextFile(destinationPath) == "converted-content");
@@ -127,7 +127,7 @@ TEST_CASE("External book converter supports exact destination path converters", 
 
 TEST_CASE("External book converter relocates single-file output directory results", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-external-converter-directory");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-directory");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "dir-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "managed.epub";
@@ -141,23 +141,23 @@ TEST_CASE("External book converter relocates single-file output directory result
         "Copy-Item -LiteralPath $source -Destination $actualPath -Force\n");
     WriteTextFile(sourcePath, "directory-output");
 
-    const LibriFlow::ConverterRuntime::CExternalBookConverter converter({
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
         .CommandProfile = CreatePwshProfile(
             scriptPath,
-            LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory,
+            Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory,
             {"{source}", "{destination_dir}"})
     });
     CTestProgressSink progressSink;
 
-    const LibriFlow::Domain::SConversionResult result = converter.Convert({
+    const Librova::Domain::SConversionResult result = converter.Convert({
         .SourcePath = sourcePath,
         .DestinationPath = destinationPath,
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     }, progressSink, {});
 
     REQUIRE(result.IsSuccess());
-    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
+    REQUIRE(result.Status == Librova::Domain::EConversionStatus::Succeeded);
     REQUIRE(result.OutputPath == destinationPath);
     REQUIRE(std::filesystem::exists(destinationPath));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath.parent_path() / "generated-by-converter.epub"));
@@ -166,7 +166,7 @@ TEST_CASE("External book converter relocates single-file output directory result
 
 TEST_CASE("External book converter reports cancellation and stops the process", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-external-converter-cancel");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-cancel");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "slow-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -180,23 +180,23 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
         "Copy-Item -LiteralPath $source -Destination $destination -Force\n");
     WriteTextFile(sourcePath, "cancel-me");
 
-    const LibriFlow::ConverterRuntime::CExternalBookConverter converter({
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
         .CommandProfile = CreatePwshProfile(
             scriptPath,
-            LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
+            Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
             {"{source}", "{destination}"}),
         .PollInterval = std::chrono::milliseconds{50}
     });
     CTestProgressSink progressSink;
     std::stop_source stopSource;
 
-    LibriFlow::Domain::SConversionResult result;
+    Librova::Domain::SConversionResult result;
     std::jthread worker([&] {
         result = converter.Convert({
             .SourcePath = sourcePath,
             .DestinationPath = destinationPath,
-            .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-            .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+            .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+            .DestinationFormat = Librova::Domain::EBookFormat::Epub
         }, progressSink, stopSource.get_token());
     });
 
@@ -206,7 +206,7 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
 
     REQUIRE_FALSE(result.IsSuccess());
     REQUIRE(result.IsCancelled());
-    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Cancelled);
+    REQUIRE(result.Status == Librova::Domain::EConversionStatus::Cancelled);
     REQUIRE(result.Warnings == std::vector<std::string>({"Conversion cancelled."}));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
 }

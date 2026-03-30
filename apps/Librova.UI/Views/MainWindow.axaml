@@ -1,0 +1,164 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="using:Librova.UI.ViewModels"
+        x:Class="Librova.UI.Views.MainWindow"
+        x:DataType="viewModels:ShellWindowViewModel"
+        Width="1100"
+        Height="760"
+        MinWidth="920"
+        MinHeight="640"
+        Background="#F3F1EA"
+        Foreground="#1F1B16"
+        mc:Ignorable="d">
+  <Grid Margin="28">
+    <Border Background="#FFF4E8"
+            BorderBrush="#D49061"
+            BorderThickness="1"
+            CornerRadius="20"
+            Padding="28"
+            IsVisible="{Binding HasStartupError}">
+      <StackPanel Spacing="12">
+        <TextBlock FontSize="30"
+                   FontWeight="SemiBold"
+                   Text="Librova Startup Error" />
+        <TextBlock FontWeight="SemiBold"
+                   Text="{Binding StatusText}" />
+        <TextBlock Text="{Binding StartupError}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Grid RowDefinitions="Auto,*"
+          IsVisible="{Binding HasShell}">
+    <Border Background="#D9E3D4"
+            CornerRadius="20"
+            Padding="24"
+            Margin="0,0,0,20">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="8">
+          <TextBlock FontSize="28"
+                     FontWeight="SemiBold"
+                     Text="Librova" />
+          <TextBlock Opacity="0.75"
+                     Text="Desktop library import shell over native core host." />
+        </StackPanel>
+        <StackPanel Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    Spacing="6">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Library Root" />
+          <TextBlock MaxWidth="360"
+                     Text="{Binding Shell.LibraryRoot}"
+                     TextWrapping="Wrap" />
+          <TextBlock Margin="0,10,0,0"
+                     FontWeight="SemiBold"
+                     Text="Pipe" />
+          <TextBlock MaxWidth="360"
+                     Text="{Binding Shell.PipePath}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            Background="#FFFDF8"
+            BorderBrush="#D5CEC2"
+            BorderThickness="1"
+            CornerRadius="20"
+            Padding="24">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
+            ColumnDefinitions="Auto,*"
+            ColumnSpacing="16"
+            RowSpacing="14">
+        <TextBlock Grid.ColumnSpan="2"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Text="Import Job" />
+
+        <TextBlock Grid.Row="1"
+                   VerticalAlignment="Center"
+                   Text="Source File" />
+        <TextBox Grid.Row="1"
+                 Grid.Column="1"
+                 Watermark="C:\Books\incoming\book.fb2"
+                 Text="{Binding Shell.ImportJobs.SourcePath}" />
+
+        <TextBlock Grid.Row="2"
+                   VerticalAlignment="Center"
+                   Text="Working Directory" />
+        <TextBox Grid.Row="2"
+                 Grid.Column="1"
+                 Watermark="C:\Temp\Librova\Work"
+                 Text="{Binding Shell.ImportJobs.WorkingDirectory}" />
+
+        <StackPanel Grid.Row="3"
+                    Grid.ColumnSpan="2"
+                    Orientation="Horizontal"
+                    Spacing="12">
+          <Button MinWidth="180"
+                  Command="{Binding Shell.ImportJobs.StartImportCommand}"
+                  Content="Start Import" />
+          <Button MinWidth="140"
+                  Command="{Binding Shell.ImportJobs.RefreshCommand}"
+                  Content="Refresh" />
+          <Button MinWidth="140"
+                  Command="{Binding Shell.ImportJobs.CancelImportCommand}"
+                  Content="Cancel" />
+          <Button MinWidth="160"
+                  Command="{Binding Shell.ImportJobs.RemoveJobCommand}"
+                  Content="Remove Job" />
+          <TextBlock VerticalAlignment="Center"
+                     FontWeight="SemiBold"
+                     Text="{Binding Shell.ImportJobs.StatusText}" />
+        </StackPanel>
+
+        <Border Grid.Row="4"
+                Grid.ColumnSpan="2"
+                Background="#F3F1EA"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="10">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Latest Job State" />
+            <TextBlock Text="{Binding Shell.ImportJobs.LastJobId, StringFormat='Job Id: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Status, StringFormat='Status: {0}'}" />
+            <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="5"
+                Grid.ColumnSpan="2"
+                Background="#E3EBF0"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Import Summary" />
+            <TextBlock Text="{Binding Shell.ImportJobs.ResultSummaryText}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="6"
+                Grid.ColumnSpan="2"
+                Background="#F4E8DA"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Warnings / Error" />
+            <TextBlock Text="{Binding Shell.ImportJobs.WarningsText}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Shell.ImportJobs.ErrorText}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+    </Grid>
+  </Grid>
+</Window>

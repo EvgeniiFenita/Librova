@@ -43,13 +43,13 @@ private:
 
 TEST_CASE("Logging initializes host logger and writes records into file", "[logging]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-logging");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-logging");
     const auto logFilePath = sandbox.GetPath() / "Logs" / "host.log";
 
-    LibriFlow::Logging::CLogging::InitializeHostLogger(logFilePath);
-    LibriFlow::Logging::Info("Hello {}.", "logger");
-    LibriFlow::Logging::Error("Something {}.", "happened");
-    LibriFlow::Logging::CLogging::Shutdown();
+    Librova::Logging::CLogging::InitializeHostLogger(logFilePath);
+    Librova::Logging::Info("Hello {}.", "logger");
+    Librova::Logging::Error("Something {}.", "happened");
+    Librova::Logging::CLogging::Shutdown();
 
     REQUIRE(std::filesystem::exists(logFilePath));
 

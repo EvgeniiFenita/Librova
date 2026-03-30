@@ -12,7 +12,7 @@
 
 #include "Jobs/ImportJobRunner.hpp"
 
-namespace LibriFlow::Jobs {
+namespace Librova::Jobs {
 
 using TImportJobId = std::uint64_t;
 
@@ -32,7 +32,7 @@ public:
     explicit CImportJobManager(const CImportJobRunner& jobRunner);
     ~CImportJobManager();
 
-    [[nodiscard]] SImportJobHandle Start(const LibriFlow::Application::SImportRequest& request);
+    [[nodiscard]] SImportJobHandle Start(const Librova::Application::SImportRequest& request);
     [[nodiscard]] std::optional<SJobProgressSnapshot> TryGetSnapshot(TImportJobId jobId) const;
     [[nodiscard]] std::optional<SImportJobResult> TryGetResult(TImportJobId jobId) const;
     [[nodiscard]] bool Cancel(TImportJobId jobId);
@@ -57,4 +57,4 @@ private:
     TImportJobId m_nextJobId = 1;
 };
 
-} // namespace LibriFlow::Jobs
+} // namespace Librova::Jobs

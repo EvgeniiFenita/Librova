@@ -8,7 +8,7 @@
 #include "EpubParsing/EpubParser.hpp"
 #include "Fb2Parsing/Fb2Parser.hpp"
 
-namespace LibriFlow::ParserRegistry {
+namespace Librova::ParserRegistry {
 namespace {
 
 [[nodiscard]] std::string NormalizeExtension(std::string extension)
@@ -22,29 +22,29 @@ namespace {
 
 } // namespace
 
-std::optional<LibriFlow::Domain::EBookFormat> CBookParserRegistry::TryDetectFormat(const std::filesystem::path& filePath)
+std::optional<Librova::Domain::EBookFormat> CBookParserRegistry::TryDetectFormat(const std::filesystem::path& filePath)
 {
     const std::string extension = NormalizeExtension(filePath.extension().string());
 
     if (extension == ".epub")
     {
-        return LibriFlow::Domain::EBookFormat::Epub;
+        return Librova::Domain::EBookFormat::Epub;
     }
 
     if (extension == ".fb2")
     {
-        return LibriFlow::Domain::EBookFormat::Fb2;
+        return Librova::Domain::EBookFormat::Fb2;
     }
 
     return std::nullopt;
 }
 
-bool CBookParserRegistry::CanParse(const LibriFlow::Domain::EBookFormat format) const
+bool CBookParserRegistry::CanParse(const Librova::Domain::EBookFormat format) const
 {
     return m_epubParser.CanParse(format) || m_fb2Parser.CanParse(format);
 }
 
-const LibriFlow::Domain::IBookParser& CBookParserRegistry::GetParser(const LibriFlow::Domain::EBookFormat format) const
+const Librova::Domain::IBookParser& CBookParserRegistry::GetParser(const Librova::Domain::EBookFormat format) const
 {
     if (m_epubParser.CanParse(format))
     {
@@ -59,9 +59,9 @@ const LibriFlow::Domain::IBookParser& CBookParserRegistry::GetParser(const Libri
     throw std::runtime_error("No parser is registered for the requested format.");
 }
 
-LibriFlow::Domain::SParsedBook CBookParserRegistry::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CBookParserRegistry::Parse(const std::filesystem::path& filePath) const
 {
-    const std::optional<LibriFlow::Domain::EBookFormat> format = TryDetectFormat(filePath);
+    const std::optional<Librova::Domain::EBookFormat> format = TryDetectFormat(filePath);
 
     if (!format.has_value())
     {
@@ -71,4 +71,4 @@ LibriFlow::Domain::SParsedBook CBookParserRegistry::Parse(const std::filesystem:
     return GetParser(*format).Parse(filePath);
 }
 
-} // namespace LibriFlow::ParserRegistry
+} // namespace Librova::ParserRegistry

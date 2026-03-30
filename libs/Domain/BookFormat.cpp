@@ -1,6 +1,6 @@
 #include "Domain/BookFormat.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 std::string_view ToString(const EBookFormat format) noexcept
 {
@@ -43,4 +43,4 @@ std::optional<EBookFormat> TryParseBookFormat(const std::string_view value) noex
     return std::nullopt;
 }
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

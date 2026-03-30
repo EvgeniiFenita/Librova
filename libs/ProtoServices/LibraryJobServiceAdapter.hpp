@@ -3,33 +3,33 @@
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "import_jobs.pb.h"
 
-namespace LibriFlow::ProtoServices {
+namespace Librova::ProtoServices {
 
 class CLibraryJobServiceAdapter final
 {
 public:
-    explicit CLibraryJobServiceAdapter(LibriFlow::ApplicationJobs::CImportJobService& importJobService);
+    explicit CLibraryJobServiceAdapter(Librova::ApplicationJobs::CImportJobService& importJobService);
 
-    [[nodiscard]] libriflow::v1::StartImportResponse StartImport(
-        const libriflow::v1::StartImportRequest& request) const;
+    [[nodiscard]] librova::v1::StartImportResponse StartImport(
+        const librova::v1::StartImportRequest& request) const;
 
-    [[nodiscard]] libriflow::v1::GetImportJobSnapshotResponse GetImportJobSnapshot(
-        const libriflow::v1::GetImportJobSnapshotRequest& request) const;
+    [[nodiscard]] librova::v1::GetImportJobSnapshotResponse GetImportJobSnapshot(
+        const librova::v1::GetImportJobSnapshotRequest& request) const;
 
-    [[nodiscard]] libriflow::v1::GetImportJobResultResponse GetImportJobResult(
-        const libriflow::v1::GetImportJobResultRequest& request) const;
+    [[nodiscard]] librova::v1::GetImportJobResultResponse GetImportJobResult(
+        const librova::v1::GetImportJobResultRequest& request) const;
 
-    [[nodiscard]] libriflow::v1::WaitImportJobResponse WaitImportJob(
-        const libriflow::v1::WaitImportJobRequest& request) const;
+    [[nodiscard]] librova::v1::WaitImportJobResponse WaitImportJob(
+        const librova::v1::WaitImportJobRequest& request) const;
 
-    [[nodiscard]] libriflow::v1::CancelImportJobResponse CancelImportJob(
-        const libriflow::v1::CancelImportJobRequest& request) const;
+    [[nodiscard]] librova::v1::CancelImportJobResponse CancelImportJob(
+        const librova::v1::CancelImportJobRequest& request) const;
 
-    [[nodiscard]] libriflow::v1::RemoveImportJobResponse RemoveImportJob(
-        const libriflow::v1::RemoveImportJobRequest& request) const;
+    [[nodiscard]] librova::v1::RemoveImportJobResponse RemoveImportJob(
+        const librova::v1::RemoveImportJobRequest& request) const;
 
 private:
-    LibriFlow::ApplicationJobs::CImportJobService& m_importJobService;
+    Librova::ApplicationJobs::CImportJobService& m_importJobService;
 };
 
-} // namespace LibriFlow::ProtoServices
+} // namespace Librova::ProtoServices

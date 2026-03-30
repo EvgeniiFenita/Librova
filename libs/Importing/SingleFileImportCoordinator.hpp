@@ -11,7 +11,7 @@
 #include "ImportConversion/ImportConversionPolicy.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 
-namespace LibriFlow::Importing {
+namespace Librova::Importing {
 
 enum class ESingleFileImportStatus
 {
@@ -39,9 +39,9 @@ struct SSingleFileImportRequest
 struct SSingleFileImportResult
 {
     ESingleFileImportStatus Status = ESingleFileImportStatus::Failed;
-    std::optional<LibriFlow::Domain::SBookId> ImportedBookId;
-    std::optional<LibriFlow::Domain::EBookFormat> StoredFormat;
-    std::vector<LibriFlow::Domain::SDuplicateMatch> DuplicateMatches;
+    std::optional<Librova::Domain::SBookId> ImportedBookId;
+    std::optional<Librova::Domain::EBookFormat> StoredFormat;
+    std::vector<Librova::Domain::SDuplicateMatch> DuplicateMatches;
     std::vector<std::string> Warnings;
     std::string Error;
 
@@ -58,7 +58,7 @@ public:
 
     [[nodiscard]] virtual SSingleFileImportResult Run(
         const SSingleFileImportRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const = 0;
 };
 
@@ -66,27 +66,27 @@ class CSingleFileImportCoordinator final : public ISingleFileImporter
 {
 public:
     CSingleFileImportCoordinator(
-        const LibriFlow::ParserRegistry::CBookParserRegistry& parserRegistry,
-        LibriFlow::Domain::IBookRepository& bookRepository,
-        const LibriFlow::Domain::IBookQueryRepository& queryRepository,
-        LibriFlow::Domain::IManagedStorage& managedStorage,
-        const LibriFlow::Domain::IBookConverter* converter);
+        const Librova::ParserRegistry::CBookParserRegistry& parserRegistry,
+        Librova::Domain::IBookRepository& bookRepository,
+        const Librova::Domain::IBookQueryRepository& queryRepository,
+        Librova::Domain::IManagedStorage& managedStorage,
+        const Librova::Domain::IBookConverter* converter);
 
     [[nodiscard]] SSingleFileImportResult Run(
         const SSingleFileImportRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const override;
 
 private:
-    [[nodiscard]] static LibriFlow::Domain::SCandidateBook BuildCandidateBook(
-        const LibriFlow::Domain::SParsedBook& parsedBook,
+    [[nodiscard]] static Librova::Domain::SCandidateBook BuildCandidateBook(
+        const Librova::Domain::SParsedBook& parsedBook,
         const std::optional<std::string>& sha256Hex);
 
-    const LibriFlow::ParserRegistry::CBookParserRegistry& m_parserRegistry;
-    LibriFlow::Domain::IBookRepository& m_bookRepository;
-    const LibriFlow::Domain::IBookQueryRepository& m_queryRepository;
-    LibriFlow::Domain::IManagedStorage& m_managedStorage;
-    const LibriFlow::Domain::IBookConverter* m_converter;
+    const Librova::ParserRegistry::CBookParserRegistry& m_parserRegistry;
+    Librova::Domain::IBookRepository& m_bookRepository;
+    const Librova::Domain::IBookQueryRepository& m_queryRepository;
+    Librova::Domain::IManagedStorage& m_managedStorage;
+    const Librova::Domain::IBookConverter* m_converter;
 };
 
-} // namespace LibriFlow::Importing
+} // namespace Librova::Importing

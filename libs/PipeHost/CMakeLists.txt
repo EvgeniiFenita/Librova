@@ -1,16 +1,16 @@
-add_library(LibriFlowPipeHost STATIC
+add_library(LibrovaPipeHost STATIC
     NamedPipeHost.cpp
     NamedPipeHost.hpp
 )
 
-target_include_directories(LibriFlowPipeHost
+target_include_directories(LibrovaPipeHost
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowPipeHost
+target_link_libraries(LibrovaPipeHost
     PUBLIC
-        LibriFlowPipeTransport
+        LibrovaPipeTransport
 )
 
-target_compile_features(LibriFlowPipeHost PUBLIC cxx_std_20)
+target_compile_features(LibrovaPipeHost PUBLIC cxx_std_20)

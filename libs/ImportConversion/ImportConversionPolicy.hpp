@@ -7,7 +7,7 @@
 
 #include "Domain/ServiceContracts.hpp"
 
-namespace LibriFlow::ImportConversion {
+namespace Librova::ImportConversion {
 
 enum class EImportConversionDecision
 {
@@ -18,9 +18,9 @@ enum class EImportConversionDecision
 
 struct SImportConversionPlan
 {
-    std::optional<LibriFlow::Domain::SConversionRequest> Request;
+    std::optional<Librova::Domain::SConversionRequest> Request;
     std::filesystem::path FallbackSourcePath;
-    LibriFlow::Domain::EBookFormat FallbackFormat = LibriFlow::Domain::EBookFormat::Epub;
+    Librova::Domain::EBookFormat FallbackFormat = Librova::Domain::EBookFormat::Epub;
     std::vector<std::string> Warnings;
 
     [[nodiscard]] bool WillAttemptConversion() const noexcept
@@ -33,7 +33,7 @@ struct SImportConversionOutcome
 {
     EImportConversionDecision Decision = EImportConversionDecision::StoreSource;
     std::filesystem::path SourcePath;
-    LibriFlow::Domain::EBookFormat Format = LibriFlow::Domain::EBookFormat::Epub;
+    Librova::Domain::EBookFormat Format = Librova::Domain::EBookFormat::Epub;
     std::vector<std::string> Warnings;
 
     [[nodiscard]] bool IsStorable() const noexcept
@@ -44,12 +44,12 @@ struct SImportConversionOutcome
 
 [[nodiscard]] SImportConversionPlan PlanImportConversion(
     const std::filesystem::path& sourcePath,
-    LibriFlow::Domain::EBookFormat sourceFormat,
+    Librova::Domain::EBookFormat sourceFormat,
     const std::filesystem::path& convertedDestinationPath,
-    const LibriFlow::Domain::IBookConverter* converter);
+    const Librova::Domain::IBookConverter* converter);
 
 [[nodiscard]] SImportConversionOutcome ResolveImportConversion(
     const SImportConversionPlan& plan,
-    const std::optional<LibriFlow::Domain::SConversionResult>& conversionResult);
+    const std::optional<Librova::Domain::SConversionResult>& conversionResult);
 
-} // namespace LibriFlow::ImportConversion
+} // namespace Librova::ImportConversion

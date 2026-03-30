@@ -6,7 +6,7 @@
 
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
-namespace LibriFlow::ManagedStorage {
+namespace Librova::ManagedStorage {
 namespace {
 
 void EnsureDirectory(const std::filesystem::path& path)
@@ -93,18 +93,18 @@ CManagedFileStorage::CManagedFileStorage(std::filesystem::path libraryRoot)
 {
 }
 
-LibriFlow::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const LibriFlow::Domain::SStoragePlan& plan)
+Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Librova::Domain::SStoragePlan& plan)
 {
     if (!plan.IsValid())
     {
         throw std::invalid_argument("Storage plan must contain a valid book id and source path.");
     }
 
-    const LibriFlow::StoragePlanning::SLibraryLayoutPaths layout = LibriFlow::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
-    const std::filesystem::path stagingDirectory = LibriFlow::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(m_libraryRoot, plan.BookId);
+    const Librova::StoragePlanning::SLibraryLayoutPaths layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
+    const std::filesystem::path stagingDirectory = Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(m_libraryRoot, plan.BookId);
     const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
     const std::filesystem::path finalBookPath =
-        LibriFlow::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format);
+        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format);
 
     EnsureDirectory(layout.BooksDirectory);
     EnsureDirectory(layout.CoversDirectory);
@@ -114,7 +114,7 @@ LibriFlow::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Lib
     EnsureDirectory(stagingDirectory);
     CopyFile(plan.SourcePath, stagedBookPath);
 
-    LibriFlow::Domain::SPreparedStorage preparedStorage{
+    Librova::Domain::SPreparedStorage preparedStorage{
         .StagedBookPath = stagedBookPath,
         .FinalBookPath = finalBookPath
     };
@@ -128,13 +128,13 @@ LibriFlow::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Lib
 
         preparedStorage.StagedCoverPath = stagedCoverPath;
         preparedStorage.FinalCoverPath =
-            LibriFlow::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+            Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
     }
 
     return preparedStorage;
 }
 
-void CManagedFileStorage::CommitImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage)
+void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& preparedStorage)
 {
     if (!preparedStorage.HasStagedBook())
     {
@@ -194,7 +194,7 @@ void CManagedFileStorage::CommitImport(const LibriFlow::Domain::SPreparedStorage
     }
 }
 
-void CManagedFileStorage::RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept
+void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept
 {
     RemovePathNoThrow(preparedStorage.StagedBookPath);
 
@@ -206,4 +206,4 @@ void CManagedFileStorage::RollbackImport(const LibriFlow::Domain::SPreparedStora
     CleanupEmptyParentDirectory(preparedStorage.StagedBookPath);
 }
 
-} // namespace LibriFlow::ManagedStorage
+} // namespace Librova::ManagedStorage

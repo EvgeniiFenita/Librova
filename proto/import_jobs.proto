@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package libriflow.v1;
+package librova.v1;
 
 message ImportRequest {
   string source_path = 1;

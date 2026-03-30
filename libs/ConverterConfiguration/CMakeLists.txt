@@ -1,16 +1,16 @@
-add_library(LibriFlowConverterConfiguration STATIC
+add_library(LibrovaConverterConfiguration STATIC
     ConverterConfiguration.cpp
     ConverterConfiguration.hpp
 )
 
-target_include_directories(LibriFlowConverterConfiguration
+target_include_directories(LibrovaConverterConfiguration
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowConverterConfiguration
+target_link_libraries(LibrovaConverterConfiguration
     PUBLIC
-        LibriFlowConverterCommand
+        LibrovaConverterCommand
 )
 
-target_compile_features(LibriFlowConverterConfiguration PUBLIC cxx_std_20)
+target_compile_features(LibrovaConverterConfiguration PUBLIC cxx_std_20)

@@ -11,7 +11,7 @@
 #include "PipeTransport/NamedPipeChannel.hpp"
 #include "PipeTransport/PipeProtocol.hpp"
 
-namespace LibriFlow::PipeClient {
+namespace Librova::PipeClient {
 
 class CPipeTransportError : public std::runtime_error
 {
@@ -26,7 +26,7 @@ public:
 
     template <typename TRequest, typename TResponse>
     [[nodiscard]] TResponse Call(
-        const LibriFlow::PipeTransport::EPipeMethod method,
+        const Librova::PipeTransport::EPipeMethod method,
         const TRequest& request,
         const std::chrono::milliseconds timeout) const
     {
@@ -40,14 +40,14 @@ public:
         }
 
         const auto startTime = std::chrono::steady_clock::now();
-        auto connection = LibriFlow::PipeTransport::ConnectToNamedPipe(m_pipePath, timeout);
-        const LibriFlow::PipeTransport::SPipeRequestEnvelope envelope{
+        auto connection = Librova::PipeTransport::ConnectToNamedPipe(m_pipePath, timeout);
+        const Librova::PipeTransport::SPipeRequestEnvelope envelope{
             .RequestId = NextRequestId(),
             .Method = method,
             .Payload = std::move(requestPayload)
         };
 
-        connection.WriteMessage(LibriFlow::PipeTransport::SerializeRequestEnvelope(envelope));
+        connection.WriteMessage(Librova::PipeTransport::SerializeRequestEnvelope(envelope));
 
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - startTime);
@@ -57,7 +57,7 @@ public:
         }
 
         const auto responseBytes = connection.ReadMessage(timeout - elapsed);
-        const auto parsedResponse = LibriFlow::PipeTransport::DeserializeResponseEnvelope(responseBytes);
+        const auto parsedResponse = Librova::PipeTransport::DeserializeResponseEnvelope(responseBytes);
         if (!parsedResponse.HasValue())
         {
             throw CPipeTransportError(parsedResponse.Error);
@@ -68,7 +68,7 @@ public:
             throw CPipeTransportError("Received mismatched pipe response id.");
         }
 
-        if (parsedResponse.Value->Status != LibriFlow::PipeTransport::EPipeResponseStatus::Ok)
+        if (parsedResponse.Value->Status != Librova::PipeTransport::EPipeResponseStatus::Ok)
         {
             throw CPipeTransportError(
                 parsedResponse.Value->ErrorMessage.empty()
@@ -91,4 +91,4 @@ private:
     std::filesystem::path m_pipePath;
 };
 
-} // namespace LibriFlow::PipeClient
+} // namespace Librova::PipeClient

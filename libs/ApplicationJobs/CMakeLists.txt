@@ -1,18 +1,18 @@
-add_library(LibriFlowApplicationJobs STATIC
+add_library(LibrovaApplicationJobs STATIC
     ImportJobService.cpp
     ImportJobService.hpp
 )
 
-target_include_directories(LibriFlowApplicationJobs
+target_include_directories(LibrovaApplicationJobs
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowApplicationJobs
+target_link_libraries(LibrovaApplicationJobs
     PUBLIC
-        LibriFlowApplication
-        LibriFlowDomain
-        LibriFlowJobs
+        LibrovaApplication
+        LibrovaDomain
+        LibrovaJobs
 )
 
-target_compile_features(LibriFlowApplicationJobs PUBLIC cxx_std_20)
+target_compile_features(LibrovaApplicationJobs PUBLIC cxx_std_20)

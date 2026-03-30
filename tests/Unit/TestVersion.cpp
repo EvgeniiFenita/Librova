@@ -4,5 +4,5 @@
 
 TEST_CASE("Core version is available", "[core][bootstrap]")
 {
-    REQUIRE(LibriFlow::Core::CVersion::GetValue() == "0.1.0");
+    REQUIRE(Librova::Core::CVersion::GetValue() == "0.1.0");
 }

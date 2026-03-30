@@ -1,19 +1,19 @@
-add_library(LibriFlowProtoMapping STATIC
+add_library(LibrovaProtoMapping STATIC
     ImportJobProtoMapper.cpp
     ImportJobProtoMapper.hpp
 )
 
-target_include_directories(LibriFlowProtoMapping
+target_include_directories(LibrovaProtoMapping
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
 )
 
-target_link_libraries(LibriFlowProtoMapping
+target_link_libraries(LibrovaProtoMapping
     PUBLIC
-        LibriFlowApplication
-        LibriFlowApplicationJobs
-        LibriFlowDomain
-        LibriFlowProtoContracts
+        LibrovaApplication
+        LibrovaApplicationJobs
+        LibrovaDomain
+        LibrovaProtoContracts
 )
 
-target_compile_features(LibriFlowProtoMapping PUBLIC cxx_std_20)
+target_compile_features(LibrovaProtoMapping PUBLIC cxx_std_20)

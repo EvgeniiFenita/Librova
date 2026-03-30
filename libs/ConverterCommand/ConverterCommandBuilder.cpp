@@ -4,7 +4,7 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace LibriFlow::ConverterCommand {
+namespace Librova::ConverterCommand {
 namespace {
 
 std::string PathToUtf8(const std::filesystem::path& path)
@@ -13,13 +13,13 @@ std::string PathToUtf8(const std::filesystem::path& path)
     return std::string{reinterpret_cast<const char*>(utf8Value.data()), utf8Value.size()};
 }
 
-std::string ToConverterFormat(const LibriFlow::Domain::EBookFormat format)
+std::string ToConverterFormat(const Librova::Domain::EBookFormat format)
 {
     switch (format)
     {
-    case LibriFlow::Domain::EBookFormat::Epub:
+    case Librova::Domain::EBookFormat::Epub:
         return "epub2";
-    case LibriFlow::Domain::EBookFormat::Fb2:
+    case Librova::Domain::EBookFormat::Fb2:
         return "fb2";
     }
 
@@ -87,7 +87,7 @@ SConverterCommandProfile CConverterCommandBuilder::CreateFb2CngProfile(
 
 SResolvedConverterCommand CConverterCommandBuilder::Build(
     const SConverterCommandProfile& profile,
-    const LibriFlow::Domain::SConversionRequest& request)
+    const Librova::Domain::SConversionRequest& request)
 {
     if (!profile.IsValid())
     {
@@ -123,4 +123,4 @@ SResolvedConverterCommand CConverterCommandBuilder::Build(
     return command;
 }
 
-} // namespace LibriFlow::ConverterCommand
+} // namespace Librova::ConverterCommand

@@ -13,12 +13,12 @@
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
-namespace LibriFlow::BookDatabase {
+namespace Librova::BookDatabase {
 namespace {
 
 std::string BuildFtsQuery(const std::string_view text)
 {
-    const std::string normalizedText = LibriFlow::Domain::NormalizeText(text);
+    const std::string normalizedText = Librova::Domain::NormalizeText(text);
     std::string query;
     std::string token;
 
@@ -58,7 +58,7 @@ std::string BuildFtsQuery(const std::string_view text)
     return query;
 }
 
-void BindTextFilters(LibriFlow::Sqlite::CSqliteStatement& statement, int& parameterIndex, const LibriFlow::Domain::SSearchQuery& query)
+void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& parameterIndex, const Librova::Domain::SSearchQuery& query)
 {
     if (query.HasText())
     {
@@ -67,7 +67,7 @@ void BindTextFilters(LibriFlow::Sqlite::CSqliteStatement& statement, int& parame
 
     if (query.AuthorUtf8.has_value())
     {
-        statement.BindText(parameterIndex++, LibriFlow::Domain::NormalizeText(*query.AuthorUtf8));
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
     }
 
     if (query.Language.has_value())
@@ -82,19 +82,19 @@ void BindTextFilters(LibriFlow::Sqlite::CSqliteStatement& statement, int& parame
 
     for (const std::string& tag : query.TagsUtf8)
     {
-        statement.BindText(parameterIndex++, LibriFlow::Domain::NormalizeText(tag));
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
     }
 
     if (query.Format.has_value())
     {
-        statement.BindText(parameterIndex++, LibriFlow::Domain::ToString(*query.Format));
+        statement.BindText(parameterIndex++, Librova::Domain::ToString(*query.Format));
     }
 
     statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Limit));
     statement.BindInt64(parameterIndex, static_cast<std::int64_t>(query.Offset));
 }
 
-std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
+std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
 {
     std::string sql =
         "SELECT DISTINCT b.id "
@@ -149,12 +149,12 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
         sql += "AND b.preferred_format = ? ";
     }
 
-    switch (query.SortBy.value_or(LibriFlow::Domain::EBookSort::Title))
+    switch (query.SortBy.value_or(Librova::Domain::EBookSort::Title))
     {
-    case LibriFlow::Domain::EBookSort::Title:
+    case Librova::Domain::EBookSort::Title:
         sql += "ORDER BY b.title COLLATE NOCASE ASC ";
         break;
-    case LibriFlow::Domain::EBookSort::Author:
+    case Librova::Domain::EBookSort::Author:
         sql +=
             "ORDER BY ("
             "SELECT MIN(a_sort.display_name) "
@@ -163,16 +163,16 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
             "WHERE ba_sort.book_id = b.id"
             ") COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC ";
         break;
-    case LibriFlow::Domain::EBookSort::DateAdded:
+    case Librova::Domain::EBookSort::DateAdded:
         sql += "ORDER BY b.added_at_utc DESC, b.title COLLATE NOCASE ASC ";
         break;
-    case LibriFlow::Domain::EBookSort::Series:
+    case Librova::Domain::EBookSort::Series:
         sql += "ORDER BY b.series COLLATE NOCASE ASC, b.series_index ASC, b.title COLLATE NOCASE ASC ";
         break;
-    case LibriFlow::Domain::EBookSort::Year:
+    case Librova::Domain::EBookSort::Year:
         sql += "ORDER BY b.year DESC, b.title COLLATE NOCASE ASC ";
         break;
-    case LibriFlow::Domain::EBookSort::FileSize:
+    case Librova::Domain::EBookSort::FileSize:
         sql += "ORDER BY b.file_size_bytes DESC, b.title COLLATE NOCASE ASC ";
         break;
     }
@@ -182,15 +182,15 @@ std::string BuildSearchSql(const LibriFlow::Domain::SSearchQuery& query)
 }
 
 void AppendStrictDuplicateMatches(
-    std::vector<LibriFlow::Domain::SDuplicateMatch>& matches,
+    std::vector<Librova::Domain::SDuplicateMatch>& matches,
     std::unordered_set<std::int64_t>& seenIds,
     const std::filesystem::path& databasePath,
     const std::string_view sql,
     const std::string_view value,
-    const LibriFlow::Domain::EDuplicateReason reason)
+    const Librova::Domain::EDuplicateReason reason)
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
-    LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
+    Librova::Sqlite::CSqliteConnection connection(databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
     statement.BindText(1, value);
 
     while (statement.Step())
@@ -203,9 +203,9 @@ void AppendStrictDuplicateMatches(
         }
 
         matches.push_back({
-            .Severity = LibriFlow::Domain::EDuplicateSeverity::Strict,
+            .Severity = Librova::Domain::EDuplicateSeverity::Strict,
             .Reason = reason,
-            .ExistingBookId = LibriFlow::Domain::SBookId{existingId}
+            .ExistingBookId = Librova::Domain::SBookId{existingId}
         });
     }
 }
@@ -217,21 +217,21 @@ CSqliteBookQueryRepository::CSqliteBookQueryRepository(std::filesystem::path dat
 {
 }
 
-std::vector<LibriFlow::Domain::SBook> CSqliteBookQueryRepository::Search(const LibriFlow::Domain::SSearchQuery& query) const
+std::vector<Librova::Domain::SBook> CSqliteBookQueryRepository::Search(const Librova::Domain::SSearchQuery& query) const
 {
-    LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
-    LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildSearchSql(query));
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildSearchSql(query));
 
     int parameterIndex = 1;
     BindTextFilters(statement, parameterIndex, query);
 
     CSqliteBookRepository repository(m_databasePath);
-    std::vector<LibriFlow::Domain::SBook> books;
+    std::vector<Librova::Domain::SBook> books;
 
     while (statement.Step())
     {
-        const LibriFlow::Domain::SBookId bookId{statement.GetColumnInt64(0)};
-        const std::optional<LibriFlow::Domain::SBook> book = repository.GetById(bookId);
+        const Librova::Domain::SBookId bookId{statement.GetColumnInt64(0)};
+        const std::optional<Librova::Domain::SBook> book = repository.GetById(bookId);
 
         if (book.has_value())
         {
@@ -242,9 +242,9 @@ std::vector<LibriFlow::Domain::SBook> CSqliteBookQueryRepository::Search(const L
     return books;
 }
 
-std::vector<LibriFlow::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDuplicates(const LibriFlow::Domain::SCandidateBook& candidate) const
+std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const
 {
-    std::vector<LibriFlow::Domain::SDuplicateMatch> matches;
+    std::vector<Librova::Domain::SDuplicateMatch> matches;
     std::unordered_set<std::int64_t> seenIds;
 
     if (candidate.HasHash())
@@ -255,12 +255,12 @@ std::vector<LibriFlow::Domain::SDuplicateMatch> CSqliteBookQueryRepository::Find
             m_databasePath,
             "SELECT id FROM books WHERE sha256_hex = ?;",
             *candidate.Sha256Hex,
-            LibriFlow::Domain::EDuplicateReason::SameHash);
+            Librova::Domain::EDuplicateReason::SameHash);
     }
 
     if (candidate.HasIsbn())
     {
-        const std::optional<std::string> normalizedIsbn = LibriFlow::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
+        const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
 
         if (normalizedIsbn.has_value())
         {
@@ -270,41 +270,41 @@ std::vector<LibriFlow::Domain::SDuplicateMatch> CSqliteBookQueryRepository::Find
                 m_databasePath,
                 "SELECT id FROM books WHERE isbn = ?;",
                 *normalizedIsbn,
-                LibriFlow::Domain::EDuplicateReason::SameIsbn);
+                Librova::Domain::EDuplicateReason::SameIsbn);
         }
     }
 
     if (candidate.Metadata.HasTitle() && candidate.Metadata.HasAuthors())
     {
-        const std::string candidateDuplicateKey = LibriFlow::Domain::BuildDuplicateKey(candidate.Metadata);
+        const std::string candidateDuplicateKey = Librova::Domain::BuildDuplicateKey(candidate.Metadata);
 
         if (!candidateDuplicateKey.empty())
         {
-            LibriFlow::Sqlite::CSqliteConnection connection(m_databasePath);
-            LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT id FROM books;");
+            Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+            Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT id FROM books;");
             CSqliteBookRepository repository(m_databasePath);
 
             while (statement.Step())
             {
-                const LibriFlow::Domain::SBookId bookId{statement.GetColumnInt64(0)};
+                const Librova::Domain::SBookId bookId{statement.GetColumnInt64(0)};
 
                 if (seenIds.contains(bookId.Value))
                 {
                     continue;
                 }
 
-                const std::optional<LibriFlow::Domain::SBook> existingBook = repository.GetById(bookId);
+                const std::optional<Librova::Domain::SBook> existingBook = repository.GetById(bookId);
 
                 if (!existingBook.has_value())
                 {
                     continue;
                 }
 
-                if (LibriFlow::Domain::BuildDuplicateKey(existingBook->Metadata) == candidateDuplicateKey)
+                if (Librova::Domain::BuildDuplicateKey(existingBook->Metadata) == candidateDuplicateKey)
                 {
                     matches.push_back({
-                        .Severity = LibriFlow::Domain::EDuplicateSeverity::Probable,
-                        .Reason = LibriFlow::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+                        .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+                        .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
                         .ExistingBookId = bookId
                     });
                     seenIds.insert(bookId.Value);
@@ -316,4 +316,4 @@ std::vector<LibriFlow::Domain::SDuplicateMatch> CSqliteBookQueryRepository::Find
     return matches;
 }
 
-} // namespace LibriFlow::BookDatabase
+} // namespace Librova::BookDatabase

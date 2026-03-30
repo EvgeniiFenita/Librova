@@ -1,4 +1,4 @@
-# Codex Session Instructions for LibriFlow
+# Codex Session Instructions for Librova
 
 This file is the startup checklist for each new coding session in this repository.
 
@@ -6,7 +6,7 @@ This file is the startup checklist for each new coding session in this repositor
 
 Before making changes, review these documents in this order:
 
-1. `docs/LibriFlow-Architecture-Master.md`
+1. `docs/Librova-Architecture-Master.md`
 2. `docs/CodeStyleGuidelines.md`
 3. `docs/CommitMessageGuidelines.md`
 4. `docs/ProjectDocumentation.md`
@@ -15,8 +15,8 @@ Before making changes, review these documents in this order:
 
 ## 2. Non-Negotiable Project Constraints
 
-- LibriFlow MVP targets Windows only.
-- Architecture is two-process: `LibriFlow.UI` in C# / Avalonia and `LibriFlow.Core` in C++20.
+- Librova MVP targets Windows only.
+- Architecture is two-process: `Librova.UI` in C# / Avalonia and `Librova.Core` in C++20.
 - UI and core communicate through `Protobuf` contracts over Windows named pipes for the MVP.
 - One user, one managed library, offline-first.
 - Unicode and Cyrillic correctness are mandatory.
@@ -68,7 +68,7 @@ Before finishing a task, verify:
 - docs were updated if the change introduced a new rule or decision.
 - `docs/ImplementationProgress.md` was updated when the task completed a verified checkpoint.
 - `docs/ProjectDocumentation.md` was updated when the task made current project reality more complete or more explicit.
-- phase placement in `docs/ImplementationProgress.md` still matches the current roadmap phase from `docs/LibriFlow-Architecture-Master.md`.
+- phase placement in `docs/ImplementationProgress.md` still matches the current roadmap phase from `docs/Librova-Architecture-Master.md`.
 
 ## 6. Commit Discipline
 
@@ -80,7 +80,7 @@ Before finishing a task, verify:
 
 If any of these files stop matching the actual repository, update them early:
 
-- `docs/LibriFlow-Architecture-Master.md`
+- `docs/Librova-Architecture-Master.md`
 - `docs/CodeStyleGuidelines.md`
 - `docs/CommitMessageGuidelines.md`
 - `docs/ImplementationProgress.md`

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 
 enum class EPipeMethod : std::uint32_t
 {
@@ -61,4 +61,4 @@ struct TPipeParseResult
 [[nodiscard]] TPipeParseResult<SPipeResponseEnvelope> DeserializeResponseEnvelope(
     const std::vector<std::byte>& bytes);
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

@@ -81,15 +81,15 @@ std::filesystem::path GetHostAppPath()
     const std::filesystem::path testExePath{modulePath};
     return testExePath.parent_path().parent_path().parent_path().parent_path()
         / "apps"
-        / "LibriFlow.Core.Host"
+        / "Librova.Core.Host"
         / "Debug"
-        / LIBRIFLOW_CORE_HOST_APP_NAME;
+        / LIBROVA_CORE_HOST_APP_NAME;
 }
 
 std::filesystem::path BuildUniquePipePath()
 {
     const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
-    return std::filesystem::path{LR"(\\.\pipe\LibriFlow.CoreHost.Process.Test.)" + suffix};
+    return std::filesystem::path{LR"(\\.\pipe\Librova.CoreHost.Process.Test.)" + suffix};
 }
 
 std::wstring Quote(const std::filesystem::path& value)
@@ -179,7 +179,7 @@ private:
 
 TEST_CASE("Core host executable serves import job requests over named pipes", "[core-host][process]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "libriflow-core-host-process");
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-core-host-process");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto workingDirectory = sandbox.GetPath() / "Work";
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "book.fb2");
@@ -213,7 +213,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
     CScopedProcess process(processInformation);
     WaitForPipeServerReady(pipePath, processInformation);
 
-    LibriFlow::ApplicationClient::CImportJobClient client(pipePath);
+    Librova::ApplicationClient::CImportJobClient client(pipePath);
     const auto jobId = client.Start({
         .SourcePath = sourcePath,
         .WorkingDirectory = workingDirectory
@@ -221,7 +221,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
 
     REQUIRE(jobId != 0);
 
-    std::optional<LibriFlow::ApplicationJobs::SImportJobResult> result;
+    std::optional<Librova::ApplicationJobs::SImportJobResult> result;
     for (int attempt = 0; attempt < 20 && !result.has_value(); ++attempt)
     {
         result = client.TryGetResult(jobId, std::chrono::seconds(5));
@@ -232,11 +232,11 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
     }
 
     REQUIRE(result.has_value());
-    REQUIRE(result->Snapshot.Status == LibriFlow::ApplicationJobs::EImportJobStatus::Completed);
+    REQUIRE(result->Snapshot.Status == Librova::ApplicationJobs::EImportJobStatus::Completed);
     REQUIRE(result->ImportResult.has_value());
     REQUIRE(result->ImportResult->Summary.ImportedEntries == 1);
     REQUIRE(client.Remove(jobId, std::chrono::seconds(5)));
-    REQUIRE(std::filesystem::exists(libraryRoot / "Database" / "libriflow.db"));
+    REQUIRE(std::filesystem::exists(libraryRoot / "Database" / "librova.db"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Books" / "0000000001" / "book.fb2"));
 
     process.Stop();

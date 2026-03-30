@@ -13,7 +13,7 @@
 #include <pugixml.hpp>
 #include <zip.h>
 
-namespace LibriFlow::EpubParsing {
+namespace Librova::EpubParsing {
 namespace {
 
 class CZipArchive final
@@ -197,12 +197,12 @@ private:
 
 } // namespace
 
-bool CEpubParser::CanParse(const LibriFlow::Domain::EBookFormat format) const
+bool CEpubParser::CanParse(const Librova::Domain::EBookFormat format) const
 {
-    return format == LibriFlow::Domain::EBookFormat::Epub;
+    return format == Librova::Domain::EBookFormat::Epub;
 }
 
-LibriFlow::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& filePath) const
 {
     CZipArchive archive(filePath);
 
@@ -230,8 +230,8 @@ LibriFlow::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& f
         throw std::runtime_error("EPUB package document is missing required metadata.");
     }
 
-    LibriFlow::Domain::SParsedBook parsedBook;
-    parsedBook.SourceFormat = LibriFlow::Domain::EBookFormat::Epub;
+    Librova::Domain::SParsedBook parsedBook;
+    parsedBook.SourceFormat = Librova::Domain::EBookFormat::Epub;
     parsedBook.Metadata.TitleUtf8 = RequireTextChild(metadataNode, "dc:title", "dc:title");
     parsedBook.Metadata.Language = RequireTextChild(metadataNode, "dc:language", "dc:language");
 
@@ -282,4 +282,4 @@ LibriFlow::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& f
     return parsedBook;
 }
 
-} // namespace LibriFlow::EpubParsing
+} // namespace Librova::EpubParsing

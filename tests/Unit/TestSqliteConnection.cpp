@@ -8,13 +8,13 @@
 
 TEST_CASE("Sqlite connection can apply schema migrations to a temporary database", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-sqlite-smoke.db";
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-smoke.db";
     std::filesystem::remove(databasePath);
 
     {
-        LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
+        Librova::Sqlite::CSqliteConnection connection(databasePath);
 
-        for (const std::string_view statement : LibriFlow::DatabaseSchema::CDatabaseSchema::GetMigrationStatements())
+        for (const std::string_view statement : Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements())
         {
             connection.Execute(statement);
         }
@@ -22,7 +22,7 @@ TEST_CASE("Sqlite connection can apply schema migrations to a temporary database
         connection.Execute("INSERT INTO books (id, title, language, preferred_format, managed_path, file_size_bytes, sha256_hex, added_at_utc) "
                            "VALUES (1, 'Roadside Picnic', 'ru', 'epub', 'Books/0000000001/book.epub', 123, 'abc', '2026-03-30T12:00:00Z');");
 
-        LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
+        Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
 
         REQUIRE(statement.Step());
         REQUIRE(statement.GetColumnInt(0) == 1);
@@ -34,12 +34,12 @@ TEST_CASE("Sqlite connection can apply schema migrations to a temporary database
 
 TEST_CASE("Sqlite connection enables foreign key enforcement for each new connection", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "libriflow-sqlite-foreign-keys.db";
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-foreign-keys.db";
     std::filesystem::remove(databasePath);
 
     {
-        LibriFlow::Sqlite::CSqliteConnection connection(databasePath);
-        LibriFlow::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA foreign_keys;");
+        Librova::Sqlite::CSqliteConnection connection(databasePath);
+        Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA foreign_keys;");
 
         REQUIRE(statement.Step());
         REQUIRE(statement.GetColumnInt(0) == 1);

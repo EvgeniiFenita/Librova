@@ -8,12 +8,12 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace LibriFlow::Logging {
+namespace Librova::Logging {
 namespace {
 
 std::mutex LoggerMutex;
 std::shared_ptr<spdlog::logger> LoggerInstance;
-constexpr std::string_view HostLoggerName = "LibriFlow.Core.Host";
+constexpr std::string_view HostLoggerName = "Librova.Core.Host";
 
 } // namespace
 
@@ -63,10 +63,10 @@ std::shared_ptr<spdlog::logger> CLogging::GetLogger()
     std::scoped_lock lock(LoggerMutex);
     if (!LoggerInstance)
     {
-        throw std::runtime_error("LibriFlow logger is not initialized.");
+        throw std::runtime_error("Librova logger is not initialized.");
     }
 
     return LoggerInstance;
 }
 
-} // namespace LibriFlow::Logging
+} // namespace Librova::Logging

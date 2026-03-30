@@ -1,16 +1,16 @@
 find_package(pugixml CONFIG REQUIRED)
 
-add_library(LibriFlowFb2Parsing STATIC
+add_library(LibrovaFb2Parsing STATIC
     Fb2Parser.cpp
 )
 
-target_include_directories(LibriFlowFb2Parsing PUBLIC
+target_include_directories(LibrovaFb2Parsing PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-target_link_libraries(LibriFlowFb2Parsing PUBLIC
-    LibriFlowDomain
+target_link_libraries(LibrovaFb2Parsing PUBLIC
+    LibrovaDomain
     pugixml::pugixml
 )
 
-target_compile_features(LibriFlowFb2Parsing PUBLIC cxx_std_20)
+target_compile_features(LibrovaFb2Parsing PUBLIC cxx_std_20)

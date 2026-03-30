@@ -2,7 +2,7 @@
 
 #include "Domain/BookId.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 enum class EDuplicateSeverity
 {
@@ -35,4 +35,4 @@ struct SDuplicateMatch
     }
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

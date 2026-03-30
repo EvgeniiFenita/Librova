@@ -13,7 +13,7 @@
 
 #include <pugixml.hpp>
 
-namespace LibriFlow::Fb2Parsing {
+namespace Librova::Fb2Parsing {
 namespace {
 
 [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& filePath)
@@ -342,12 +342,12 @@ namespace {
 
 } // namespace
 
-bool CFb2Parser::CanParse(const LibriFlow::Domain::EBookFormat format) const
+bool CFb2Parser::CanParse(const Librova::Domain::EBookFormat format) const
 {
-    return format == LibriFlow::Domain::EBookFormat::Fb2;
+    return format == Librova::Domain::EBookFormat::Fb2;
 }
 
-LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& filePath) const
 {
     const pugi::xml_document document = ParseXml(ReadTextFile(filePath), filePath);
     const pugi::xml_node rootNode = FindFirstChildByLocalName(document, "FictionBook");
@@ -359,8 +359,8 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
         throw std::runtime_error("FB2 document is missing required description/title-info nodes.");
     }
 
-    LibriFlow::Domain::SParsedBook parsedBook;
-    parsedBook.SourceFormat = LibriFlow::Domain::EBookFormat::Fb2;
+    Librova::Domain::SParsedBook parsedBook;
+    parsedBook.SourceFormat = Librova::Domain::EBookFormat::Fb2;
     const std::optional<std::string> title = TryReadNodeText(FindFirstChildByLocalName(titleInfoNode, "book-title"));
 
     if (!title.has_value())
@@ -483,4 +483,4 @@ LibriFlow::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& fi
     return parsedBook;
 }
 
-} // namespace LibriFlow::Fb2Parsing
+} // namespace Librova::Fb2Parsing

@@ -7,14 +7,14 @@
 
 TEST_CASE("Pipe request envelopes round-trip through binary framing", "[pipe]")
 {
-    const LibriFlow::PipeTransport::SPipeRequestEnvelope request{
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
         .RequestId = 42,
-        .Method = LibriFlow::PipeTransport::EPipeMethod::WaitImportJob,
+        .Method = Librova::PipeTransport::EPipeMethod::WaitImportJob,
         .Payload = "payload"
     };
 
-    const auto bytes = LibriFlow::PipeTransport::SerializeRequestEnvelope(request);
-    const auto parsed = LibriFlow::PipeTransport::DeserializeRequestEnvelope(bytes);
+    const auto bytes = Librova::PipeTransport::SerializeRequestEnvelope(request);
+    const auto parsed = Librova::PipeTransport::DeserializeRequestEnvelope(bytes);
 
     REQUIRE(parsed.HasValue());
     REQUIRE(parsed.Value->RequestId == request.RequestId);
@@ -24,15 +24,15 @@ TEST_CASE("Pipe request envelopes round-trip through binary framing", "[pipe]")
 
 TEST_CASE("Pipe response envelopes round-trip through binary framing", "[pipe]")
 {
-    const LibriFlow::PipeTransport::SPipeResponseEnvelope response{
+    const Librova::PipeTransport::SPipeResponseEnvelope response{
         .RequestId = 77,
-        .Status = LibriFlow::PipeTransport::EPipeResponseStatus::InvalidRequest,
+        .Status = Librova::PipeTransport::EPipeResponseStatus::InvalidRequest,
         .Payload = "response",
         .ErrorMessage = "broken payload"
     };
 
-    const auto bytes = LibriFlow::PipeTransport::SerializeResponseEnvelope(response);
-    const auto parsed = LibriFlow::PipeTransport::DeserializeResponseEnvelope(bytes);
+    const auto bytes = Librova::PipeTransport::SerializeResponseEnvelope(response);
+    const auto parsed = Librova::PipeTransport::DeserializeResponseEnvelope(bytes);
 
     REQUIRE(parsed.HasValue());
     REQUIRE(parsed.Value->RequestId == response.RequestId);
@@ -43,13 +43,13 @@ TEST_CASE("Pipe response envelopes round-trip through binary framing", "[pipe]")
 
 TEST_CASE("Pipe protocol rejects corrupted method values", "[pipe]")
 {
-    const LibriFlow::PipeTransport::SPipeRequestEnvelope request{
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
         .RequestId = 7,
-        .Method = LibriFlow::PipeTransport::EPipeMethod::StartImport,
+        .Method = Librova::PipeTransport::EPipeMethod::StartImport,
         .Payload = {}
     };
 
-    auto bytes = LibriFlow::PipeTransport::SerializeRequestEnvelope(request);
+    auto bytes = Librova::PipeTransport::SerializeRequestEnvelope(request);
     REQUIRE(bytes.size() >= 20);
 
     bytes[16] = std::byte{0xFF};
@@ -57,6 +57,6 @@ TEST_CASE("Pipe protocol rejects corrupted method values", "[pipe]")
     bytes[18] = std::byte{0xFF};
     bytes[19] = std::byte{0x7F};
 
-    const auto parsed = LibriFlow::PipeTransport::DeserializeRequestEnvelope(bytes);
+    const auto parsed = Librova::PipeTransport::DeserializeRequestEnvelope(bytes);
     REQUIRE_FALSE(parsed.HasValue());
 }

@@ -2,13 +2,13 @@
 
 #include "Domain/ServiceContracts.hpp"
 
-namespace LibriFlow::EpubParsing {
+namespace Librova::EpubParsing {
 
-class CEpubParser final : public LibriFlow::Domain::IBookParser
+class CEpubParser final : public Librova::Domain::IBookParser
 {
 public:
-    [[nodiscard]] bool CanParse(LibriFlow::Domain::EBookFormat format) const override;
-    [[nodiscard]] LibriFlow::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const override;
+    [[nodiscard]] bool CanParse(Librova::Domain::EBookFormat format) const override;
+    [[nodiscard]] Librova::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const override;
 };
 
-} // namespace LibriFlow::EpubParsing
+} // namespace Librova::EpubParsing

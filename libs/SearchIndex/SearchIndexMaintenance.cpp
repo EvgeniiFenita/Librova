@@ -6,7 +6,7 @@
 #include "Domain/MetadataNormalization.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
-namespace LibriFlow::SearchIndex {
+namespace Librova::SearchIndex {
 namespace {
 
 std::string JoinNormalizedText(const std::vector<std::string>& values)
@@ -15,7 +15,7 @@ std::string JoinNormalizedText(const std::vector<std::string>& values)
 
     for (const std::string& value : values)
     {
-        const std::string normalized = LibriFlow::Domain::NormalizeText(value);
+        const std::string normalized = Librova::Domain::NormalizeText(value);
 
         if (normalized.empty())
         {
@@ -40,19 +40,19 @@ std::string BuildNormalizedDescription(const std::optional<std::string>& descrip
         return {};
     }
 
-    return LibriFlow::Domain::NormalizeText(*description);
+    return Librova::Domain::NormalizeText(*description);
 }
 
 void ExecuteDeleteCommand(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
-    const LibriFlow::Domain::SBookMetadata& metadata)
+    const Librova::Domain::SBookMetadata& metadata)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "INSERT INTO search_index(search_index, rowid, title, authors, tags, description) VALUES('delete', ?, ?, ?, ?, ?);");
     statement.BindInt64(1, bookId);
-    statement.BindText(2, LibriFlow::Domain::NormalizeText(metadata.TitleUtf8));
+    statement.BindText(2, Librova::Domain::NormalizeText(metadata.TitleUtf8));
     statement.BindText(3, JoinNormalizedText(metadata.AuthorsUtf8));
     statement.BindText(4, JoinNormalizedText(metadata.TagsUtf8));
     statement.BindText(5, BuildNormalizedDescription(metadata.DescriptionUtf8));
@@ -62,15 +62,15 @@ void ExecuteDeleteCommand(
 } // namespace
 
 void CSearchIndexMaintenance::UpsertBook(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
-    const LibriFlow::Domain::SBookMetadata& metadata)
+    const Librova::Domain::SBookMetadata& metadata)
 {
-    LibriFlow::Sqlite::CSqliteStatement statement(
+    Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "INSERT INTO search_index(rowid, title, authors, tags, description) VALUES(?, ?, ?, ?, ?);");
     statement.BindInt64(1, bookId);
-    statement.BindText(2, LibriFlow::Domain::NormalizeText(metadata.TitleUtf8));
+    statement.BindText(2, Librova::Domain::NormalizeText(metadata.TitleUtf8));
     statement.BindText(3, JoinNormalizedText(metadata.AuthorsUtf8));
     statement.BindText(4, JoinNormalizedText(metadata.TagsUtf8));
     statement.BindText(5, BuildNormalizedDescription(metadata.DescriptionUtf8));
@@ -78,11 +78,11 @@ void CSearchIndexMaintenance::UpsertBook(
 }
 
 void CSearchIndexMaintenance::RemoveBook(
-    const LibriFlow::Sqlite::CSqliteConnection& connection,
+    const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
-    const LibriFlow::Domain::SBookMetadata& metadata)
+    const Librova::Domain::SBookMetadata& metadata)
 {
     ExecuteDeleteCommand(connection, bookId, metadata);
 }
 
-} // namespace LibriFlow::SearchIndex
+} // namespace Librova::SearchIndex

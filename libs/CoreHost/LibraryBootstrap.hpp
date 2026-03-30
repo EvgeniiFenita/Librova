@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-namespace LibriFlow::CoreHost {
+namespace Librova::CoreHost {
 
 class CLibraryBootstrap final
 {
@@ -10,4 +10,4 @@ public:
     static void PrepareLibraryRoot(const std::filesystem::path& libraryRoot);
 };
 
-} // namespace LibriFlow::CoreHost
+} // namespace Librova::CoreHost

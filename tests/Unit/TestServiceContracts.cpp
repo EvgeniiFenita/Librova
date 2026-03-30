@@ -4,7 +4,7 @@
 
 namespace {
 
-class CRecordingProgressSink final : public LibriFlow::Domain::IProgressSink
+class CRecordingProgressSink final : public Librova::Domain::IProgressSink
 {
 public:
     void ReportValue(const int percent, std::string_view message) override
@@ -23,51 +23,51 @@ public:
     bool CancellationRequested = false;
 };
 
-class CStubBookParser final : public LibriFlow::Domain::IBookParser
+class CStubBookParser final : public Librova::Domain::IBookParser
 {
 public:
-    bool CanParse(const LibriFlow::Domain::EBookFormat format) const override
+    bool CanParse(const Librova::Domain::EBookFormat format) const override
     {
-        return format == LibriFlow::Domain::EBookFormat::Epub;
+        return format == Librova::Domain::EBookFormat::Epub;
     }
 
-    LibriFlow::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const override
+    Librova::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const override
     {
         return {
             .Metadata = {.TitleUtf8 = filePath.filename().string(), .AuthorsUtf8 = {"Parser Author"}},
-            .SourceFormat = LibriFlow::Domain::EBookFormat::Epub
+            .SourceFormat = Librova::Domain::EBookFormat::Epub
         };
     }
 };
 
-class CStubBookConverter final : public LibriFlow::Domain::IBookConverter
+class CStubBookConverter final : public Librova::Domain::IBookConverter
 {
 public:
     bool CanConvert(
-        const LibriFlow::Domain::EBookFormat sourceFormat,
-        const LibriFlow::Domain::EBookFormat destinationFormat) const override
+        const Librova::Domain::EBookFormat sourceFormat,
+        const Librova::Domain::EBookFormat destinationFormat) const override
     {
-        return sourceFormat == LibriFlow::Domain::EBookFormat::Fb2
-            && destinationFormat == LibriFlow::Domain::EBookFormat::Epub;
+        return sourceFormat == Librova::Domain::EBookFormat::Fb2
+            && destinationFormat == Librova::Domain::EBookFormat::Epub;
     }
 
-    LibriFlow::Domain::SConversionResult Convert(
-        const LibriFlow::Domain::SConversionRequest& request,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    Librova::Domain::SConversionResult Convert(
+        const Librova::Domain::SConversionRequest& request,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(100, "Converted");
         return {
-            .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
+            .Status = Librova::Domain::EConversionStatus::Succeeded,
             .OutputPath = request.DestinationPath
         };
     }
 };
 
-class CStubManagedStorage final : public LibriFlow::Domain::IManagedStorage
+class CStubManagedStorage final : public Librova::Domain::IManagedStorage
 {
 public:
-    LibriFlow::Domain::SPreparedStorage PrepareImport(const LibriFlow::Domain::SStoragePlan& plan) override
+    Librova::Domain::SPreparedStorage PrepareImport(const Librova::Domain::SStoragePlan& plan) override
     {
         return {
             .StagedBookPath = std::filesystem::path{"Temp"} / "book.epub",
@@ -76,12 +76,12 @@ public:
         };
     }
 
-    void CommitImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) override
+    void CommitImport(const Librova::Domain::SPreparedStorage& preparedStorage) override
     {
         LastCommittedPath = preparedStorage.FinalBookPath;
     }
 
-    void RollbackImport(const LibriFlow::Domain::SPreparedStorage& preparedStorage) noexcept override
+    void RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept override
     {
         LastRolledBackPath = preparedStorage.StagedBookPath;
     }
@@ -90,7 +90,7 @@ public:
     std::filesystem::path LastRolledBackPath;
 };
 
-class CStubTrashService final : public LibriFlow::Domain::ITrashService
+class CStubTrashService final : public Librova::Domain::ITrashService
 {
 public:
     void MoveToTrash(const std::filesystem::path& path) override
@@ -101,17 +101,17 @@ public:
     std::filesystem::path LastTrashedPath;
 };
 
-class CStubCoverProvider final : public LibriFlow::Domain::ICoverProvider
+class CStubCoverProvider final : public Librova::Domain::ICoverProvider
 {
 public:
-    std::optional<LibriFlow::Domain::SCoverData> TryResolve(const LibriFlow::Domain::SBookMetadata& metadata) const override
+    std::optional<Librova::Domain::SCoverData> TryResolve(const Librova::Domain::SBookMetadata& metadata) const override
     {
         if (!metadata.HasTitle())
         {
             return std::nullopt;
         }
 
-        return LibriFlow::Domain::SCoverData{
+        return Librova::Domain::SCoverData{
             .Extension = "jpg",
             .Bytes = {std::byte{0x01}, std::byte{0x02}}
         };
@@ -122,16 +122,16 @@ public:
 
 TEST_CASE("Domain service contract value types expose minimal validity helpers", "[domain][services]")
 {
-    const LibriFlow::Domain::SConversionRequest request{
+    const Librova::Domain::SConversionRequest request{
         .SourcePath = "source.fb2",
         .DestinationPath = "book.epub",
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     };
 
-    const LibriFlow::Domain::SStoragePlan storagePlan{
+    const Librova::Domain::SStoragePlan storagePlan{
         .BookId = {5},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .SourcePath = "source.epub",
         .CoverSourcePath = "source.jpg"
     };
@@ -151,17 +151,17 @@ TEST_CASE("Parser and converter ports are usable through fake implementations", 
         {
             .SourcePath = "book.fb2",
             .DestinationPath = "book.epub",
-            .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-            .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+            .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+            .DestinationFormat = Librova::Domain::EBookFormat::Epub
         },
         progressSink,
         {});
 
-    REQUIRE(parser.CanParse(LibriFlow::Domain::EBookFormat::Epub));
+    REQUIRE(parser.CanParse(Librova::Domain::EBookFormat::Epub));
     REQUIRE(parsed.Metadata.HasTitle());
-    REQUIRE(converter.CanConvert(LibriFlow::Domain::EBookFormat::Fb2, LibriFlow::Domain::EBookFormat::Epub));
+    REQUIRE(converter.CanConvert(Librova::Domain::EBookFormat::Fb2, Librova::Domain::EBookFormat::Epub));
     REQUIRE(converted.IsSuccess());
-    REQUIRE(converted.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
+    REQUIRE(converted.Status == Librova::Domain::EConversionStatus::Succeeded);
     REQUIRE(converted.HasOutput());
     REQUIRE(progressSink.LastPercent == 100);
 }
@@ -172,9 +172,9 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     CStubTrashService trash;
     const CStubCoverProvider coverProvider;
 
-    const LibriFlow::Domain::SPreparedStorage prepared = storage.PrepareImport({
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {9},
-        .Format = LibriFlow::Domain::EBookFormat::Epub,
+        .Format = Librova::Domain::EBookFormat::Epub,
         .SourcePath = "book.epub",
         .CoverSourcePath = "cover.jpg"
     });

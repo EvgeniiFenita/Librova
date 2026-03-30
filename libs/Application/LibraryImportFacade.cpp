@@ -16,11 +16,11 @@ namespace {
 
 } // namespace
 
-namespace LibriFlow::Application {
+namespace Librova::Application {
 
 CLibraryImportFacade::CLibraryImportFacade(
-    const LibriFlow::Importing::ISingleFileImporter& singleFileImporter,
-    const LibriFlow::ZipImporting::CZipImportCoordinator& zipImportCoordinator)
+    const Librova::Importing::ISingleFileImporter& singleFileImporter,
+    const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator)
     : m_singleFileImporter(singleFileImporter)
     , m_zipImportCoordinator(zipImportCoordinator)
 {
@@ -33,7 +33,7 @@ bool CLibraryImportFacade::IsZipPath(const std::filesystem::path& path)
 
 SImportResult CLibraryImportFacade::Run(
     const SImportRequest& request,
-    LibriFlow::Domain::IProgressSink& progressSink,
+    Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken) const
 {
     if (!request.IsValid())
@@ -59,18 +59,18 @@ SImportResult CLibraryImportFacade::Run(
         {
             switch (entry.Status)
             {
-            case LibriFlow::ZipImporting::EZipEntryImportStatus::Imported:
+            case Librova::ZipImporting::EZipEntryImportStatus::Imported:
                 break;
-            case LibriFlow::ZipImporting::EZipEntryImportStatus::UnsupportedEntry:
-            case LibriFlow::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped:
+            case Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry:
+            case Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped:
                 ++result.Summary.SkippedEntries;
                 if (!entry.Error.empty())
                 {
                     result.Summary.Warnings.push_back(entry.Error);
                 }
                 break;
-            case LibriFlow::ZipImporting::EZipEntryImportStatus::Failed:
-            case LibriFlow::ZipImporting::EZipEntryImportStatus::Cancelled:
+            case Librova::ZipImporting::EZipEntryImportStatus::Failed:
+            case Librova::ZipImporting::EZipEntryImportStatus::Cancelled:
                 ++result.Summary.FailedEntries;
                 if (entry.SingleFileResult.has_value())
                 {
@@ -124,4 +124,4 @@ SImportResult CLibraryImportFacade::Run(
     return result;
 }
 
-} // namespace LibriFlow::Application
+} // namespace Librova::Application

@@ -6,7 +6,7 @@
 
 #include "Domain/BookFormat.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 enum class EBookSort
 {
@@ -45,4 +45,4 @@ struct SSearchQuery
     }
 };
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

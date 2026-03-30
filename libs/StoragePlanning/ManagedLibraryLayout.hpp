@@ -6,7 +6,7 @@
 #include "Domain/BookFormat.hpp"
 #include "Domain/BookId.hpp"
 
-namespace LibriFlow::StoragePlanning {
+namespace Librova::StoragePlanning {
 
 struct SLibraryLayoutPaths
 {
@@ -22,21 +22,21 @@ class CManagedLibraryLayout
 {
 public:
     [[nodiscard]] static SLibraryLayoutPaths Build(const std::filesystem::path& libraryRoot);
-    [[nodiscard]] static std::string GetBookFolderName(LibriFlow::Domain::SBookId bookId);
+    [[nodiscard]] static std::string GetBookFolderName(Librova::Domain::SBookId bookId);
     [[nodiscard]] static std::filesystem::path GetBookDirectory(
         const std::filesystem::path& libraryRoot,
-        LibriFlow::Domain::SBookId bookId);
+        Librova::Domain::SBookId bookId);
     [[nodiscard]] static std::filesystem::path GetManagedBookPath(
         const std::filesystem::path& libraryRoot,
-        LibriFlow::Domain::SBookId bookId,
-        LibriFlow::Domain::EBookFormat format);
+        Librova::Domain::SBookId bookId,
+        Librova::Domain::EBookFormat format);
     [[nodiscard]] static std::filesystem::path GetCoverPath(
         const std::filesystem::path& libraryRoot,
-        LibriFlow::Domain::SBookId bookId,
+        Librova::Domain::SBookId bookId,
         std::string_view extension);
     [[nodiscard]] static std::filesystem::path GetStagingDirectory(
         const std::filesystem::path& libraryRoot,
-        LibriFlow::Domain::SBookId bookId);
+        Librova::Domain::SBookId bookId);
 };
 
-} // namespace LibriFlow::StoragePlanning
+} // namespace Librova::StoragePlanning

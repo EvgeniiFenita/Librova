@@ -4,7 +4,7 @@
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
 
-namespace LibriFlow::CoreHost {
+namespace Librova::CoreHost {
 namespace {
 
 [[nodiscard]] bool HasValue(const std::vector<std::string>& arguments, const std::size_t index)
@@ -82,13 +82,13 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             }
 
             if (options.ConverterConfiguration.Mode
-                == LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
+                == Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
             {
                 throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
             }
 
             options.ConverterConfiguration.Mode =
-                LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
+                Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
             options.ConverterConfiguration.Fb2Cng.ExecutablePath = arguments[++index];
             continue;
         }
@@ -101,13 +101,13 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             }
 
             if (options.ConverterConfiguration.Mode
-                == LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
+                == Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
             {
                 throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
             }
 
             options.ConverterConfiguration.Mode =
-                LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
+                Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
             options.ConverterConfiguration.Fb2Cng.ConfigPath = std::filesystem::path{arguments[++index]};
             continue;
         }
@@ -120,13 +120,13 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             }
 
             if (options.ConverterConfiguration.Mode
-                == LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
+                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
             {
                 throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
             }
 
             options.ConverterConfiguration.Mode =
-                LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
+                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
             options.ConverterConfiguration.Custom.ExecutablePath = arguments[++index];
             continue;
         }
@@ -139,13 +139,13 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             }
 
             if (options.ConverterConfiguration.Mode
-                == LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
+                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
             {
                 throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
             }
 
             options.ConverterConfiguration.Mode =
-                LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
+                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
             options.ConverterConfiguration.Custom.ArgumentTemplate.push_back(arguments[++index]);
             continue;
         }
@@ -158,24 +158,24 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             }
 
             if (options.ConverterConfiguration.Mode
-                == LibriFlow::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
+                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
             {
                 throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
             }
 
             options.ConverterConfiguration.Mode =
-                LibriFlow::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
+                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
 
             const auto& mode = arguments[++index];
             if (mode == "exact")
             {
                 options.ConverterConfiguration.Custom.OutputMode =
-                    LibriFlow::ConverterCommand::EConverterOutputMode::ExactDestinationPath;
+                    Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath;
             }
             else if (mode == "directory")
             {
                 options.ConverterConfiguration.Custom.OutputMode =
-                    LibriFlow::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory;
+                    Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory;
             }
             else
             {
@@ -206,4 +206,4 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
     return options;
 }
 
-} // namespace LibriFlow::CoreHost
+} // namespace Librova::CoreHost

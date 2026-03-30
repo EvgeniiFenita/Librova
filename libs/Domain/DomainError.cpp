@@ -1,6 +1,6 @@
 #include "Domain/DomainError.hpp"
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 std::string_view ToString(const EDomainErrorCode code) noexcept
 {
@@ -33,4 +33,4 @@ std::string_view ToString(const EDomainErrorCode code) noexcept
     return "unknown";
 }
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

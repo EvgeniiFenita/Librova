@@ -6,7 +6,7 @@
 #include <limits>
 #include <stdexcept>
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 namespace {
 
 constexpr std::uint32_t RequestMagic = 0x4C465250; // LFRP
@@ -288,4 +288,4 @@ TPipeParseResult<SPipeResponseEnvelope> DeserializeResponseEnvelope(const std::v
     };
 }
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

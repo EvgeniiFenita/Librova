@@ -17,38 +17,38 @@ void AppendWarnings(
 
 } // namespace
 
-namespace LibriFlow::ImportConversion {
+namespace Librova::ImportConversion {
 
 SImportConversionPlan PlanImportConversion(
     const std::filesystem::path& sourcePath,
-    const LibriFlow::Domain::EBookFormat sourceFormat,
+    const Librova::Domain::EBookFormat sourceFormat,
     const std::filesystem::path& convertedDestinationPath,
-    const LibriFlow::Domain::IBookConverter* converter)
+    const Librova::Domain::IBookConverter* converter)
 {
     SImportConversionPlan plan{
         .FallbackSourcePath = sourcePath,
         .FallbackFormat = sourceFormat
     };
 
-    if (sourceFormat != LibriFlow::Domain::EBookFormat::Fb2)
+    if (sourceFormat != Librova::Domain::EBookFormat::Fb2)
     {
         return plan;
     }
 
     if (converter == nullptr
         || !converter->CanConvert(
-            LibriFlow::Domain::EBookFormat::Fb2,
-            LibriFlow::Domain::EBookFormat::Epub))
+            Librova::Domain::EBookFormat::Fb2,
+            Librova::Domain::EBookFormat::Epub))
     {
         plan.Warnings.emplace_back(GConverterUnavailableWarning);
         return plan;
     }
 
-    plan.Request = LibriFlow::Domain::SConversionRequest{
+    plan.Request = Librova::Domain::SConversionRequest{
         .SourcePath = sourcePath,
         .DestinationPath = convertedDestinationPath,
-        .SourceFormat = LibriFlow::Domain::EBookFormat::Fb2,
-        .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
     };
 
     return plan;
@@ -56,7 +56,7 @@ SImportConversionPlan PlanImportConversion(
 
 SImportConversionOutcome ResolveImportConversion(
     const SImportConversionPlan& plan,
-    const std::optional<LibriFlow::Domain::SConversionResult>& conversionResult)
+    const std::optional<Librova::Domain::SConversionResult>& conversionResult)
 {
     SImportConversionOutcome outcome{
         .Decision = EImportConversionDecision::StoreSource,
@@ -97,4 +97,4 @@ SImportConversionOutcome ResolveImportConversion(
     return outcome;
 }
 
-} // namespace LibriFlow::ImportConversion
+} // namespace Librova::ImportConversion

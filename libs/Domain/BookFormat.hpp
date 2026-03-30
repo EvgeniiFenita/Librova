@@ -3,7 +3,7 @@
 #include <optional>
 #include <string_view>
 
-namespace LibriFlow::Domain {
+namespace Librova::Domain {
 
 enum class EBookFormat
 {
@@ -15,4 +15,4 @@ enum class EBookFormat
 [[nodiscard]] std::string_view GetManagedFileName(EBookFormat format) noexcept;
 [[nodiscard]] std::optional<EBookFormat> TryParseBookFormat(std::string_view value) noexcept;
 
-} // namespace LibriFlow::Domain
+} // namespace Librova::Domain

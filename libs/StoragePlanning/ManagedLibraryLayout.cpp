@@ -5,7 +5,7 @@
 
 #include "Domain/BookFormat.hpp"
 
-namespace LibriFlow::StoragePlanning {
+namespace Librova::StoragePlanning {
 
 SLibraryLayoutPaths CManagedLibraryLayout::Build(const std::filesystem::path& libraryRoot)
 {
@@ -19,7 +19,7 @@ SLibraryLayoutPaths CManagedLibraryLayout::Build(const std::filesystem::path& li
     };
 }
 
-std::string CManagedLibraryLayout::GetBookFolderName(const LibriFlow::Domain::SBookId bookId)
+std::string CManagedLibraryLayout::GetBookFolderName(const Librova::Domain::SBookId bookId)
 {
     if (!bookId.IsValid())
     {
@@ -31,22 +31,22 @@ std::string CManagedLibraryLayout::GetBookFolderName(const LibriFlow::Domain::SB
 
 std::filesystem::path CManagedLibraryLayout::GetBookDirectory(
     const std::filesystem::path& libraryRoot,
-    const LibriFlow::Domain::SBookId bookId)
+    const Librova::Domain::SBookId bookId)
 {
     return Build(libraryRoot).BooksDirectory / GetBookFolderName(bookId);
 }
 
 std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
     const std::filesystem::path& libraryRoot,
-    const LibriFlow::Domain::SBookId bookId,
-    const LibriFlow::Domain::EBookFormat format)
+    const Librova::Domain::SBookId bookId,
+    const Librova::Domain::EBookFormat format)
 {
-    return GetBookDirectory(libraryRoot, bookId) / LibriFlow::Domain::GetManagedFileName(format);
+    return GetBookDirectory(libraryRoot, bookId) / Librova::Domain::GetManagedFileName(format);
 }
 
 std::filesystem::path CManagedLibraryLayout::GetCoverPath(
     const std::filesystem::path& libraryRoot,
-    const LibriFlow::Domain::SBookId bookId,
+    const Librova::Domain::SBookId bookId,
     std::string_view extension)
 {
     if (extension.empty())
@@ -63,9 +63,9 @@ std::filesystem::path CManagedLibraryLayout::GetCoverPath(
 
 std::filesystem::path CManagedLibraryLayout::GetStagingDirectory(
     const std::filesystem::path& libraryRoot,
-    const LibriFlow::Domain::SBookId bookId)
+    const Librova::Domain::SBookId bookId)
 {
     return Build(libraryRoot).TempDirectory / GetBookFolderName(bookId);
 }
 
-} // namespace LibriFlow::StoragePlanning
+} // namespace Librova::StoragePlanning

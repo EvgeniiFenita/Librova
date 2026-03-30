@@ -3,12 +3,12 @@
 #include "PipeTransport/PipeProtocol.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 
-namespace LibriFlow::PipeTransport {
+namespace Librova::PipeTransport {
 
 class CPipeRequestDispatcher final
 {
 public:
-    explicit CPipeRequestDispatcher(LibriFlow::ProtoServices::CLibraryJobServiceAdapter& adapter);
+    explicit CPipeRequestDispatcher(Librova::ProtoServices::CLibraryJobServiceAdapter& adapter);
 
     [[nodiscard]] SPipeResponseEnvelope Dispatch(const SPipeRequestEnvelope& request) const;
 
@@ -18,7 +18,7 @@ private:
         const SPipeRequestEnvelope& request,
         TCallback&& callback) const;
 
-    LibriFlow::ProtoServices::CLibraryJobServiceAdapter& m_adapter;
+    Librova::ProtoServices::CLibraryJobServiceAdapter& m_adapter;
 };
 
-} // namespace LibriFlow::PipeTransport
+} // namespace Librova::PipeTransport

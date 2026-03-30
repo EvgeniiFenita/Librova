@@ -1,6 +1,6 @@
 #include "DatabaseSchema/DatabaseSchema.hpp"
 
-namespace LibriFlow::DatabaseSchema {
+namespace Librova::DatabaseSchema {
 namespace {
 
 constexpr std::string_view GCreateSchemaScript = R"sql(
@@ -116,4 +116,4 @@ std::string_view CDatabaseSchema::GetCreateSchemaScript() noexcept
     return GCreateSchemaScript;
 }
 
-} // namespace LibriFlow::DatabaseSchema
+} // namespace Librova::DatabaseSchema

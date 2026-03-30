@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-namespace LibriFlow::DatabaseRuntime {
+namespace Librova::DatabaseRuntime {
 
 class CSchemaMigrator
 {
@@ -11,4 +11,4 @@ public:
     [[nodiscard]] static int ReadUserVersion(const std::filesystem::path& databasePath);
 };
 
-} // namespace LibriFlow::DatabaseRuntime
+} // namespace Librova::DatabaseRuntime

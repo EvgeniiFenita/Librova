@@ -6,7 +6,7 @@
 
 #include <sqlite3.h>
 
-namespace LibriFlow::Sqlite {
+namespace Librova::Sqlite {
 namespace {
 
 std::string BuildErrorMessage(sqlite3* connection, std::string_view prefix)
@@ -77,4 +77,4 @@ void CSqliteConnection::SConnectionCloser::operator()(sqlite3* connection) const
     }
 }
 
-} // namespace LibriFlow::Sqlite
+} // namespace Librova::Sqlite

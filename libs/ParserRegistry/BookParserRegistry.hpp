@@ -7,20 +7,20 @@
 #include "EpubParsing/EpubParser.hpp"
 #include "Fb2Parsing/Fb2Parser.hpp"
 
-namespace LibriFlow::ParserRegistry {
+namespace Librova::ParserRegistry {
 
 class CBookParserRegistry final
 {
 public:
-    [[nodiscard]] static std::optional<LibriFlow::Domain::EBookFormat> TryDetectFormat(const std::filesystem::path& filePath);
+    [[nodiscard]] static std::optional<Librova::Domain::EBookFormat> TryDetectFormat(const std::filesystem::path& filePath);
 
-    [[nodiscard]] bool CanParse(LibriFlow::Domain::EBookFormat format) const;
-    [[nodiscard]] const LibriFlow::Domain::IBookParser& GetParser(LibriFlow::Domain::EBookFormat format) const;
-    [[nodiscard]] LibriFlow::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const;
+    [[nodiscard]] bool CanParse(Librova::Domain::EBookFormat format) const;
+    [[nodiscard]] const Librova::Domain::IBookParser& GetParser(Librova::Domain::EBookFormat format) const;
+    [[nodiscard]] Librova::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const;
 
 private:
-    LibriFlow::EpubParsing::CEpubParser m_epubParser;
-    LibriFlow::Fb2Parsing::CFb2Parser m_fb2Parser;
+    Librova::EpubParsing::CEpubParser m_epubParser;
+    Librova::Fb2Parsing::CFb2Parser m_fb2Parser;
 };
 
-} // namespace LibriFlow::ParserRegistry
+} // namespace Librova::ParserRegistry

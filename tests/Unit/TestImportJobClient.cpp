@@ -20,21 +20,21 @@ std::filesystem::path BuildTestPipePath()
 {
     const auto uniqueId = std::to_wstring(
         static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\LibriFlow.AppClient.Test.)"} + uniqueId};
+    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.AppClient.Test.)"} + uniqueId};
 }
 
-class CImmediateSingleFileImporter final : public LibriFlow::Importing::ISingleFileImporter
+class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
-    [[nodiscard]] LibriFlow::Importing::SSingleFileImportResult Run(
-        const LibriFlow::Importing::SSingleFileImportRequest&,
-        LibriFlow::Domain::IProgressSink& progressSink,
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
         std::stop_token) const override
     {
         progressSink.ReportValue(15, "Parsing");
         return {
-            .Status = LibriFlow::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = LibriFlow::Domain::SBookId{31}
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{31}
         };
     }
 };
@@ -44,14 +44,14 @@ public:
 TEST_CASE("Application import job client performs end-to-end start wait and result retrieval", "[application-client]")
 {
     CImmediateSingleFileImporter importer;
-    LibriFlow::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    LibriFlow::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    LibriFlow::Jobs::CImportJobRunner runner(facade);
-    LibriFlow::Jobs::CImportJobManager manager(runner);
-    LibriFlow::ApplicationJobs::CImportJobService service(manager);
-    LibriFlow::ProtoServices::CLibraryJobServiceAdapter adapter(service);
-    LibriFlow::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
-    LibriFlow::PipeHost::CNamedPipeHost host(dispatcher);
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+    Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
@@ -60,7 +60,7 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
         {
             for (int index = 0; index < 3; ++index)
             {
-                LibriFlow::PipeTransport::CNamedPipeServer server(pipePath);
+                Librova::PipeTransport::CNamedPipeServer server(pipePath);
                 host.RunSingleSession(server.WaitForClient());
             }
         }
@@ -72,7 +72,7 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
 
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    LibriFlow::ApplicationClient::CImportJobClient client(pipePath);
+    Librova::ApplicationClient::CImportJobClient client(pipePath);
 
     const auto jobId = client.Start({
         .SourcePath = "C:/books/book.fb2",
@@ -85,7 +85,7 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
     const auto result = client.TryGetResult(jobId, std::chrono::seconds(2));
     REQUIRE(result.has_value());
     REQUIRE(result->Snapshot.JobId == jobId);
-    REQUIRE(result->Snapshot.Status == LibriFlow::ApplicationJobs::EImportJobStatus::Completed);
+    REQUIRE(result->Snapshot.Status == Librova::ApplicationJobs::EImportJobStatus::Completed);
     REQUIRE(result->ImportResult.has_value());
     REQUIRE(result->ImportResult->Summary.ImportedEntries == 1);
 

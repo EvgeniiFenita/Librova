@@ -1,16 +1,16 @@
-add_library(LibriFlowBookDatabase STATIC
+add_library(LibrovaBookDatabase STATIC
     SqliteBookQueryRepository.cpp
     SqliteBookRepository.cpp
 )
 
-target_include_directories(LibriFlowBookDatabase PUBLIC
+target_include_directories(LibrovaBookDatabase PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-target_link_libraries(LibriFlowBookDatabase PUBLIC
-    LibriFlowDomain
-    LibriFlowSearchIndex
-    LibriFlowSqlite
+target_link_libraries(LibrovaBookDatabase PUBLIC
+    LibrovaDomain
+    LibrovaSearchIndex
+    LibrovaSqlite
 )
 
-target_compile_features(LibriFlowBookDatabase PUBLIC cxx_std_20)
+target_compile_features(LibrovaBookDatabase PUBLIC cxx_std_20)
