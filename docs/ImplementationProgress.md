@@ -88,6 +88,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Test: added the first C# `xUnit` coverage for UI-side core host launch options, path resolution, and process startup readiness.
 - `2026-03-30` Feature: added generated C# protobuf contracts and the first managed named-pipe framing implementation with `xUnit` coverage.
 - `2026-03-30` Feature: added a managed named-pipe RPC client and the first C# import-job end-to-end flow against the real native host.
+- `2026-03-30` Feature: added a UI-facing import-jobs service and DTO mapping layer with `xUnit` coverage and host-backed end-to-end service flow.
 
 ### Phase 9. Stabilization
 
