@@ -15,6 +15,10 @@
         Foreground="#211B17"
         mc:Ignorable="d">
   <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
     <Style Selector="TextBlock.SectionTitle">
       <Setter Property="FontSize" Value="18" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -319,7 +323,7 @@
         <Border Background="#E0D1BF"
                 CornerRadius="28"
                 Padding="24">
-          <Grid ColumnDefinitions="*,Auto"
+          <Grid ColumnDefinitions="*"
                 ColumnSpacing="18">
             <StackPanel Spacing="8">
               <TextBlock FontSize="34"
@@ -331,20 +335,6 @@
                          Text="{Binding Shell.CurrentSectionDescription}"
                          TextWrapping="Wrap" />
             </StackPanel>
-
-            <Border Grid.Column="1"
-                    Background="#FFF8EF"
-                    CornerRadius="18"
-                    Padding="16"
-                    HorizontalAlignment="Right">
-              <StackPanel Spacing="6">
-                <TextBlock FontWeight="SemiBold"
-                           Text="Native Session" />
-                <TextBlock FontSize="12"
-                           Text="{Binding Shell.PipePath}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
           </Grid>
         </Border>
 
