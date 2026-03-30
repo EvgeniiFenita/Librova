@@ -1,7 +1,7 @@
 {
   "name": "libriflow",
   "version-string": "0.1.0",
-  "builtin-baseline": "44bb3ce006467fc13ba37ca099f64077b8bbf84d",
+  "builtin-baseline": "b5d1a94fb7f88fd835e360fd23a45a09ceedbf48",
   "dependencies": [
     "catch2"
   ]

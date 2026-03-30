@@ -14,7 +14,5 @@ if(BUILD_TESTING)
     )
 
     target_compile_features(LibriFlowCoreTests PRIVATE cxx_std_20)
-
-    include(Catch)
-    catch_discover_tests(LibriFlowCoreTests)
+    add_test(NAME LibriFlowCoreTests COMMAND LibriFlowCoreTests)
 endif()

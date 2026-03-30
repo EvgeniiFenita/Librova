@@ -65,3 +65,5 @@ If any of these files stop matching the actual repository, update them early:
 - `docs/CodeStyleGuidelines.md`
 - `docs/CommitMessageGuidelines.md`
 - `CodexSessionInstructions.md`
+
+If a new standing rule, workflow constraint, or repository convention appears during work, add it to this file in the same task instead of relying on memory.
