@@ -41,6 +41,8 @@ If the configured library root is invalid or unavailable on a later launch, Libr
 
 If the library root itself is valid but the managed library is damaged, Librova does not silently recreate the library in place. Instead, it shows startup recovery guidance and requires the user to choose a different library root or repair the damaged library manually.
 
+After startup, switching to another library is an application-level action rather than a hidden launch preference. The shell exposes `Open Library...` and `Create Library...` so the active library can be changed explicitly.
+
 ### 3.2 Book Import
 
 The user can import:
@@ -84,8 +86,7 @@ The user can move a selected book into the managed-library `Trash`, with rollbac
 
 The user can configure:
 
-- the library root for the next launch;
-- the converter mode for the next launch:
+- the converter mode:
   - disabled
   - built-in `fb2cng`
   - custom external converter

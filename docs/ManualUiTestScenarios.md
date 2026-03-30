@@ -176,19 +176,18 @@
 - browser обновляется автоматически после успешного импорта.
 - новая книга появляется без ручного перезапуска приложения.
 
-## 13. Settings: Preferred Library Root
+## 13. Open Or Create Library
 
-1. Открой `Settings`.
-2. В `Next Launch Settings` измени library root на другой валидный путь.
-3. Нажми `Save`.
+1. В левой панели найди блок `Current Library`.
+2. Нажми `Open Library...` и выбери другой существующий library root.
 Ожидаемое поведение:
-- status сообщает, что settings сохранены для следующего запуска.
-4. Перезапусти приложение.
+- текущая библиотека закрывается.
+- приложение показывает loading state и затем открывает новую библиотеку.
+- `Library` screen теперь работает уже с новым root.
+3. Нажми `Create Library...` и выбери новый пустой путь.
 Ожидаемое поведение:
-- приложение стартует уже с новым library root.
-5. Нажми `Reset` в settings и перезапусти приложение снова.
-Ожидаемое поведение:
-- приложение возвращается к default или current-session-based поведению запуска.
+- Librova создает managed library structure в новом месте.
+- приложение переключается на новую библиотеку как на активную.
 
 ## 14. Settings: Converter Configuration
 
@@ -207,7 +206,7 @@
 - validation error сообщает, что arguments обязательны.
 7. Добавь по одной argument template на строку и нажми `Save`.
 Ожидаемое поведение:
-- settings успешно сохраняются для следующего запуска.
+- converter settings успешно сохраняются.
 
 ## 15. Diagnostics And Logs
 
