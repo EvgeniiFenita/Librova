@@ -1,227 +1,227 @@
-# Librova Manual UI Test Scenarios
+# Librova: Сценарии Ручного UI-Тестирования
 
-This document is the manual test checklist for the current MVP UI.
+Этот документ задает чеклист ручной проверки текущего MVP UI.
 
-Run the app through:
+Запускать приложение через:
 
 - `.\Run-Librova.ps1`
 
-Before starting:
+Перед началом:
 
-- keep [out\runtime\logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\logs\ui.log) available
-- keep [out\runtime\library\Logs\host.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\host.log) available
+- держи открытым [out\runtime\logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\logs\ui.log)
+- держи открытым [out\runtime\library\Logs\host.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\host.log)
 
-Use these scenarios after a meaningful UI or runtime change and before calling the app stable.
+Используй эти сценарии после заметных UI или runtime изменений и перед тем, как считать сборку стабильной.
 
 ## 1. First Run Setup
 
-1. Delete `out\runtime\ui-preferences.json` and `out\runtime\ui-shell-state.json`.
-2. Run `.\Run-Librova.ps1`.
-3. In the startup window, verify `Set up your Librova library` is shown.
-4. Click `Continue` with an invalid relative path.
-Expected:
-- `Continue` is disabled or validation error is shown.
-- host does not start.
-5. Click `Browse...` and choose a valid empty folder.
-6. Click `Continue`.
-Expected:
-- startup view changes to loading and then to the main application shell.
-- [out\runtime\ui-preferences.json](C:\Users\evgen\Desktop\Librova\out\runtime\ui-preferences.json) is created.
-- selected folder contains managed library structure such as `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
+1. Удали `out\runtime\ui-preferences.json` и `out\runtime\ui-shell-state.json`.
+2. Запусти `.\Run-Librova.ps1`.
+3. Убедись, что в стартовом окне показан экран `Set up your Librova library`.
+4. Нажми `Continue`, указав невалидный относительный путь.
+Ожидаемое поведение:
+- `Continue` неактивна или показывается validation error.
+- host не стартует.
+5. Нажми `Browse...` и выбери валидную пустую папку.
+6. Нажми `Continue`.
+Ожидаемое поведение:
+- startup screen переходит в loading state, затем открывается основной shell приложения.
+- создается [out\runtime\ui-preferences.json](C:\Users\evgen\Desktop\Librova\out\runtime\ui-preferences.json).
+- в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
 
 ## 2. Startup Error Recovery
 
-1. Close the app.
-2. Edit `out\runtime\ui-preferences.json` so `PreferredLibraryRoot` points to a bad or inaccessible path.
-3. Run `.\Run-Librova.ps1`.
-Expected:
-- startup error screen is shown.
-- screen shows UI log, UI state, and preferences paths.
-- screen also shows `Choose Another Library Root`.
-4. Enter a valid folder and click `Retry With This Library`.
-Expected:
-- app starts successfully without manual file cleanup.
-- the repaired library root is persisted for next launch.
+1. Закрой приложение.
+2. Отредактируй `out\runtime\ui-preferences.json`, чтобы `PreferredLibraryRoot` указывал на плохой или недоступный путь.
+3. Запусти `.\Run-Librova.ps1`.
+Ожидаемое поведение:
+- показывается startup error screen.
+- на экране видны пути к UI log, UI state и preferences.
+- на экране также есть блок `Choose Another Library Root`.
+4. Введи валидную папку и нажми `Retry With This Library`.
+Ожидаемое поведение:
+- приложение успешно стартует без ручной чистки файлов.
+- исправленный library root сохраняется для следующего запуска.
 
 ## 3. Shell Navigation
 
-1. In the left navigation, click `Library`.
-Expected:
-- header title becomes `Library`.
-- only library content is visible in the main area.
-2. Click `Import`.
-Expected:
-- header title becomes `Import`.
-- only import content is visible.
-3. Click `Settings`.
-Expected:
-- header title becomes `Settings`.
-- only settings content is visible.
-4. Scroll each section.
-Expected:
-- content scrolls vertically.
-- panels do not overlap or render on top of each other.
+1. В левой навигации нажми `Library`.
+Ожидаемое поведение:
+- заголовок в header становится `Library`.
+- в основной области виден только library content.
+2. Нажми `Import`.
+Ожидаемое поведение:
+- заголовок становится `Import`.
+- виден только import content.
+3. Нажми `Settings`.
+Ожидаемое поведение:
+- заголовок становится `Settings`.
+- виден только settings content.
+4. Прокрути каждый раздел.
+Ожидаемое поведение:
+- контент прокручивается вертикально.
+- панели не накладываются друг на друга.
 
 ## 4. Import Validation
 
-1. Open the `Import` section.
-2. Leave `Source File` empty.
-Expected:
-- `Start Import` is disabled.
-3. Enter a non-existing absolute file path.
-Expected:
-- validation message says the source file does not exist.
-- `Start Import` stays disabled.
-4. Enter a real `.txt` file.
-Expected:
-- validation message says only `.fb2`, `.epub`, and `.zip` are supported.
-5. Enter a valid `.fb2`, `.epub`, or `.zip` file and a valid working directory.
-Expected:
-- validation messages disappear.
-- `Start Import` becomes enabled.
+1. Открой раздел `Import`.
+2. Оставь `Source File` пустым.
+Ожидаемое поведение:
+- `Start Import` неактивна.
+3. Введи несуществующий абсолютный путь к файлу.
+Ожидаемое поведение:
+- validation message сообщает, что source file не существует.
+- `Start Import` остается неактивной.
+4. Укажи реальный `.txt` файл.
+Ожидаемое поведение:
+- validation message сообщает, что поддерживаются только `.fb2`, `.epub`, `.zip`.
+5. Укажи валидный `.fb2`, `.epub` или `.zip` и валидный working directory.
+Ожидаемое поведение:
+- validation messages исчезают.
+- `Start Import` становится активной.
 
 ## 5. Import Workflow
 
-1. In `Import`, choose a valid source file and valid working directory.
-2. Click `Start Import`.
-Expected:
-- status changes from idle to running/completed text.
-- `Start Import` disables while the job is active.
-3. If the job is still running, click `Cancel`.
-Expected:
-- status reflects cancellation request or cancelled result.
-4. Click `Refresh`.
-Expected:
-- current job state is queried without errors.
-5. After a completed job, click `Remove Job`.
-Expected:
-- latest job id clears.
-- summary/warnings/error area resets.
+1. В `Import` выбери валидный source file и валидный working directory.
+2. Нажми `Start Import`.
+Ожидаемое поведение:
+- status меняется с idle на running/completed.
+- `Start Import` становится неактивной, пока job активна.
+3. Если job еще выполняется, нажми `Cancel`.
+Ожидаемое поведение:
+- status отражает cancellation request или cancelled result.
+4. Нажми `Refresh`.
+Ожидаемое поведение:
+- текущее состояние job перечитывается без ошибок.
+5. После завершенной job нажми `Remove Job`.
+Ожидаемое поведение:
+- latest job id очищается.
+- блок summary/warnings/error сбрасывается.
 
 ## 6. Drag And Drop Import Source
 
-1. Open the `Import` section.
-2. Drag a local `.fb2`, `.epub`, or `.zip` file onto the main window.
-Expected:
-- `Source File` updates to the dropped path.
-- no crash or duplicate UI state appears.
+1. Открой раздел `Import`.
+2. Перетащи локальный `.fb2`, `.epub` или `.zip` файл на главное окно.
+Ожидаемое поведение:
+- `Source File` обновляется dropped path.
+- не происходит crash или дублирования UI state.
 
 ## 7. Library Browser Basics
 
-1. Open `Library`.
-Expected:
-- list loads automatically on app start or after switching to the section.
-2. If books exist, click a book in the list.
-Expected:
-- `Selection Details` updates to the selected book.
-3. With no books selected, inspect the details panel.
-Expected:
-- panel remains visible.
-- it shows an empty-state message instead of blank or broken bindings.
-4. Use search text and filters.
-Expected:
-- refresh returns matching items only.
-5. Use `Next` and `Previous`.
-Expected:
-- page label updates.
-- `Previous` disables on the first page.
+1. Открой `Library`.
+Ожидаемое поведение:
+- список загружается автоматически при старте приложения или после переключения в раздел.
+2. Если книги есть, нажми на одну книгу в списке.
+Ожидаемое поведение:
+- `Selection Details` обновляется под выбранную книгу.
+3. Если книг нет или ничего не выбрано, посмотри на details panel.
+Ожидаемое поведение:
+- панель остается видимой.
+- в ней показывается понятный empty state, а не пустой или сломанный блок.
+4. Используй search text и filters.
+Ожидаемое поведение:
+- refresh возвращает только подходящие элементы.
+5. Используй `Next` и `Previous`.
+Ожидаемое поведение:
+- page label обновляется.
+- `Previous` неактивна на первой странице.
 
 ## 8. Full Details Loading
 
-1. In `Library`, select a book.
-2. Click `Load Full Details`.
-Expected:
-- status updates while loading.
-- extended metadata block fills with richer metadata such as publisher, ISBN, identifier, description, or SHA256 when available.
+1. В `Library` выбери книгу.
+2. Нажми `Load Full Details`.
+Ожидаемое поведение:
+- status обновляется во время загрузки.
+- блок extended metadata заполняется richer metadata, например publisher, ISBN, identifier, description или SHA256, если они доступны.
 
 ## 9. Export Book
 
-1. In `Library`, select a book.
-2. Click `Export Book...`.
-3. Choose a destination path outside the managed library.
-Expected:
-- export completes successfully.
-- destination file appears on disk.
-- managed library source file remains untouched.
+1. В `Library` выбери книгу.
+2. Нажми `Export Book...`.
+3. Выбери destination path вне managed library.
+Ожидаемое поведение:
+- export успешно завершается.
+- destination file появляется на диске.
+- исходный managed file не меняется.
 
 ## 10. Move To Trash
 
-1. In `Library`, select a book.
-2. Click `Move To Trash`.
-Expected:
-- selected book disappears from the browser after refresh.
-- file appears under the managed library `Trash` area.
-- if the book had a cover, the cover is moved consistently too.
+1. В `Library` выбери книгу.
+2. Нажми `Move To Trash`.
+Ожидаемое поведение:
+- выбранная книга исчезает из browser после refresh.
+- файл появляется внутри managed library в области `Trash`.
+- если у книги была cover, cover переносится согласованно.
 
 ## 11. Import Updates Browser
 
-1. Open `Library` and note the current book count.
-2. Switch to `Import` and import a new valid book.
-3. Return to `Library` if needed.
-Expected:
-- browser updates automatically after successful import.
-- newly imported book appears without manual app restart.
+1. Открой `Library` и запомни текущее количество книг.
+2. Перейди в `Import` и импортируй новую валидную книгу.
+3. Вернись в `Library`, если нужно.
+Ожидаемое поведение:
+- browser обновляется автоматически после успешного импорта.
+- новая книга появляется без ручного перезапуска приложения.
 
 ## 12. Settings: Preferred Library Root
 
-1. Open `Settings`.
-2. Change `Next Launch Settings` library root to a different valid path.
-3. Click `Save`.
-Expected:
-- status says settings were saved for next launch.
-4. Restart the app.
-Expected:
-- app starts against the newly chosen library root.
-5. Click `Reset` in settings and restart again.
-Expected:
-- app returns to default or current-session-based launch behavior.
+1. Открой `Settings`.
+2. В `Next Launch Settings` измени library root на другой валидный путь.
+3. Нажми `Save`.
+Ожидаемое поведение:
+- status сообщает, что settings сохранены для следующего запуска.
+4. Перезапусти приложение.
+Ожидаемое поведение:
+- приложение стартует уже с новым library root.
+5. Нажми `Reset` в settings и перезапусти приложение снова.
+Ожидаемое поведение:
+- приложение возвращается к default или current-session-based поведению запуска.
 
 ## 13. Settings: Converter Configuration
 
-1. Open `Settings`.
-2. Select `BuiltInFb2Cng`.
-3. Enter a relative executable path.
-Expected:
-- converter validation error is shown.
-- save is disabled.
-4. Enter an absolute executable path.
-Expected:
-- validation clears.
-5. Switch to `CustomCommand`.
-6. Enter an absolute executable path but leave arguments empty.
-Expected:
-- validation error says arguments are required.
-7. Add one argument template per line and save.
-Expected:
-- settings save successfully for next launch.
+1. Открой `Settings`.
+2. Выбери `BuiltInFb2Cng`.
+3. Введи относительный путь к executable.
+Ожидаемое поведение:
+- показывается converter validation error.
+- сохранение недоступно.
+4. Введи абсолютный путь к executable.
+Ожидаемое поведение:
+- validation error исчезает.
+5. Переключись на `CustomCommand`.
+6. Введи абсолютный путь к executable, но оставь arguments пустыми.
+Ожидаемое поведение:
+- validation error сообщает, что arguments обязательны.
+7. Добавь по одной argument template на строку и нажми `Save`.
+Ожидаемое поведение:
+- settings успешно сохраняются для следующего запуска.
 
 ## 14. Diagnostics And Logs
 
-1. Open `Settings`.
-2. Inspect `Diagnostics`.
-Expected:
-- UI log, host log, UI state, preferences, and host executable paths are shown.
-3. Trigger a normal import and then inspect both log files.
-Expected:
-- UI log contains startup, command, and error-relevant entries.
-- host log contains host/runtime-side operational entries.
-- logs are useful and not dominated by tight polling noise.
+1. Открой `Settings`.
+2. Посмотри блок `Diagnostics`.
+Ожидаемое поведение:
+- видны UI log, host log, UI state, preferences и host executable paths.
+3. Выполни обычный import, затем открой оба log-файла.
+Ожидаемое поведение:
+- UI log содержит startup, command и error-relevant entries.
+- host log содержит host/runtime-side operational entries.
+- логи полезны для диагностики и не зашумлены частым polling.
 
 ## 15. Relaunch State Persistence
 
-1. In `Import`, set a valid `Source File`, `Working Directory`, and `Allow probable duplicates`.
-2. Close the app normally.
-3. Run `.\Run-Librova.ps1` again.
-Expected:
-- import section restores the previous source path, working directory, and probable-duplicate toggle.
+1. В `Import` задай валидные `Source File`, `Working Directory` и `Allow probable duplicates`.
+2. Нормально закрой приложение.
+3. Снова запусти `.\Run-Librova.ps1`.
+Ожидаемое поведение:
+- раздел `Import` восстанавливает предыдущие source path, working directory и probable-duplicate toggle.
 
 ## 16. Smoke Pass After Release Build
 
-1. Run:
+1. Выполни:
    `.\Run-Tests.ps1 -Preset x64-release -Configuration Release`
-2. Run:
+2. Выполни:
    `.\Run-Librova.ps1 -Preset x64-release -Configuration Release`
-Expected:
-- release build completes.
-- UI launches successfully from release artifacts.
-- host resolves correctly from the `Release` layout.
+Ожидаемое поведение:
+- release build завершается успешно.
+- UI успешно запускается из release artifacts.
+- host корректно резолвится из `Release` layout.

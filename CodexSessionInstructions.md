@@ -55,6 +55,7 @@ Use `docs/archive/Librova-Architecture-Full.md` only when the concise master doc
 - Finish the current product gap end-to-end before branching into adjacent polish or secondary UX improvements.
 - If implemented reality removes a roadmap gap or makes a roadmap item obsolete, update `docs/Librova-Architecture-Master.md`, `docs/ProjectDocumentation.md`, and `docs/ImplementationProgress.md` in the same task.
 - If a UI workflow changes in a user-visible way, update `docs/ManualUiTestScenarios.md` in the same task so manual validation stays synchronized with the current app behavior.
+- `docs/ManualUiTestScenarios.md` must be written in Russian, while all UI labels, button names, field names, and other on-screen strings must stay exactly as they appear in the English UI.
 - For every new vertical slice, follow the appropriate checklist in `docs/FeaturePlaybooks.md` instead of inventing an ad hoc layer sequence.
 - For every proposed new task, apply `docs/MvpScopeGuard.md` first; if the task does not close an active MVP bucket or stabilization item, do not start it.
 - After any transport change, follow `docs/TransportInvariants.md` and verify both native and managed sides before treating the checkpoint as done.
