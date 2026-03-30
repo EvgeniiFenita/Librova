@@ -12,23 +12,42 @@ public sealed class ViewModelsTests
     public async Task ImportJobsViewModel_StartsImportAndPollsUntilTerminalResult()
     {
         var service = new FakeImportJobsService();
-        var viewModel = new ImportJobsViewModel(service)
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work"
-        };
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
 
-        await viewModel.StartImportAsync();
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(42UL, viewModel.LastJobId);
-        Assert.NotNull(viewModel.LastResult);
-        Assert.Equal(ImportJobStatusModel.Completed, viewModel.LastResult!.Snapshot.Status);
-        Assert.Equal("Completed", viewModel.StatusText);
-        Assert.Equal("Imported 1 of 1; failed 0; skipped 0.", viewModel.ResultSummaryText);
-        Assert.Equal("Watch for duplicates", viewModel.WarningsText);
-        Assert.Equal("No error.", viewModel.ErrorText);
-        Assert.True(service.TryGetSnapshotCalls > 0);
-        Assert.False(viewModel.IsBusy);
+            Assert.Equal(42UL, viewModel.LastJobId);
+            Assert.NotNull(viewModel.LastResult);
+            Assert.Equal(ImportJobStatusModel.Completed, viewModel.LastResult!.Snapshot.Status);
+            Assert.Equal("Completed", viewModel.StatusText);
+            Assert.Equal("Imported 1 of 1; failed 0; skipped 0.", viewModel.ResultSummaryText);
+            Assert.Equal("Watch for duplicates", viewModel.WarningsText);
+            Assert.Equal("No error.", viewModel.ErrorText);
+            Assert.True(service.TryGetSnapshotCalls > 0);
+            Assert.False(viewModel.IsBusy);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -102,64 +121,121 @@ public sealed class ViewModelsTests
     public async Task ImportJobsViewModel_RefreshCommandLoadsCurrentSnapshot()
     {
         var service = new SnapshotOnlyImportJobsService();
-        var viewModel = new ImportJobsViewModel(service)
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work"
-        };
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
 
-        await viewModel.StartImportAsync();
-        service.ReturnTerminalResult = false;
-        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+            await viewModel.StartImportAsync();
+            service.ReturnTerminalResult = false;
+            await viewModel.RefreshCommand.ExecuteAsyncForTests();
 
-        Assert.Equal("Still running", viewModel.StatusText);
-        Assert.True(service.RefreshSnapshotCalls > 0);
+            Assert.Equal("Still running", viewModel.StatusText);
+            Assert.True(service.RefreshSnapshotCalls > 0);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
     public async Task ImportJobsViewModel_CancelCommandRequestsCancellationForActiveJob()
     {
         var service = new CancelAwareImportJobsService();
-        var viewModel = new ImportJobsViewModel(service)
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work"
-        };
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
 
-        var runTask = viewModel.StartImportAsync();
-        await service.WaitForStartAsync();
-        await service.WaitForPollingAsync();
+            var runTask = viewModel.StartImportAsync();
+            await service.WaitForStartAsync();
+            await service.WaitForPollingAsync();
 
-        Assert.True(viewModel.CancelImportCommand.CanExecute(null));
+            Assert.True(viewModel.CancelImportCommand.CanExecute(null));
 
-        await viewModel.CancelImportCommand.ExecuteAsyncForTests();
-        Assert.Contains("cancellation requested", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
-        await runTask;
+            await viewModel.CancelImportCommand.ExecuteAsyncForTests();
+            Assert.Contains("cancellation requested", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+            await runTask;
 
-        Assert.True(service.CancelCalls > 0);
-        Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
+            Assert.True(service.CancelCalls > 0);
+            Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
     public async Task ImportJobsViewModel_RemoveCommandClearsCurrentJobState()
     {
         var service = new FakeImportJobsService();
-        var viewModel = new ImportJobsViewModel(service)
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work"
-        };
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
 
-        await viewModel.StartImportAsync();
-        Assert.True(viewModel.RemoveJobCommand.CanExecute(null));
+            await viewModel.StartImportAsync();
+            Assert.True(viewModel.RemoveJobCommand.CanExecute(null));
 
-        await viewModel.RemoveJobCommand.ExecuteAsyncForTests();
+            await viewModel.RemoveJobCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(42UL, service.LastRemovedJobId);
-        Assert.Null(viewModel.LastJobId);
-        Assert.Null(viewModel.LastResult);
-        Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
-        Assert.Contains("was removed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(42UL, service.LastRemovedJobId);
+            Assert.Null(viewModel.LastJobId);
+            Assert.Null(viewModel.LastResult);
+            Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
+            Assert.Contains("was removed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -183,17 +259,36 @@ public sealed class ViewModelsTests
     public async Task ImportJobsViewModel_StartImportPassesProbableDuplicateOverrideFlag()
     {
         var service = new FakeImportJobsService();
-        var viewModel = new ImportJobsViewModel(service)
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
         {
-            SourcePath = @"C:\Books\book.fb2",
-            WorkingDirectory = @"C:\Work",
-            AllowProbableDuplicates = true
-        };
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work"),
+                AllowProbableDuplicates = true
+            };
 
-        await viewModel.StartImportAsync();
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
 
-        Assert.NotNull(service.LastStartRequest);
-        Assert.True(service.LastStartRequest!.AllowProbableDuplicates);
+            Assert.NotNull(service.LastStartRequest);
+            Assert.True(service.LastStartRequest!.AllowProbableDuplicates);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -390,7 +485,7 @@ public sealed class ViewModelsTests
         Assert.Equal(BookFormatModel.Fb2, service.LastRequest.Format);
         Assert.Equal(BookSortModel.Author, service.LastRequest.SortBy);
         Assert.Equal(0UL, service.LastRequest.Offset);
-        Assert.Equal(10UL, service.LastRequest.Limit);
+        Assert.Equal(11UL, service.LastRequest.Limit);
     }
 
     [Fact]
@@ -415,6 +510,39 @@ public sealed class ViewModelsTests
         await viewModel.PreviousPageAsync();
         Assert.Equal(1, viewModel.CurrentPage);
         Assert.Equal("Alpha", viewModel.SelectedBookTitle);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_DoesNotExposePhantomNextPageForExactlyFullPage()
+    {
+        var service = new ExactPageLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+
+        await viewModel.RefreshAsync();
+
+        Assert.False(viewModel.HasMoreResults);
+        Assert.Equal("Page 1", viewModel.PageLabelText);
+        Assert.False(viewModel.NextPageCommand.CanExecute(null));
+        Assert.Equal(3UL, service.LastRequest!.Limit);
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_ClampsInvalidPageSize()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
+        {
+            PageSize = 0
+        };
+
+        Assert.Equal(1, viewModel.PageSize);
+
+        viewModel.PageSize = -10;
+
+        Assert.Equal(1, viewModel.PageSize);
+        Assert.Equal("1 per page", viewModel.PageSizeText);
     }
 
     [Fact]
@@ -718,6 +846,16 @@ public sealed class ViewModelsTests
                         Format = BookFormatModel.Epub,
                         ManagedPath = "Books/0000000002/beta.epub",
                         AddedAtUtc = DateTimeOffset.UtcNow
+                    },
+                    new BookListItemModel
+                    {
+                        BookId = 99,
+                        Title = "Lookahead",
+                        Authors = ["Author Extra"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000099/lookahead.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]);
             }
@@ -731,6 +869,38 @@ public sealed class ViewModelsTests
                     Language = "en",
                     Format = BookFormatModel.Fb2,
                     ManagedPath = "Books/0000000003/gamma.fb2",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+        }
+    }
+
+    private sealed class ExactPageLibraryCatalogService : ILibraryCatalogService
+    {
+        public BookListRequestModel? LastRequest { get; private set; }
+
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 1,
+                    Title = "Alpha",
+                    Authors = ["Author One"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000001/alpha.epub",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                },
+                new BookListItemModel
+                {
+                    BookId = 2,
+                    Title = "Beta",
+                    Authors = ["Author Two"],
+                    Language = "en",
+                    Format = BookFormatModel.Fb2,
+                    ManagedPath = "Books/0000000002/beta.fb2",
                     AddedAtUtc = DateTimeOffset.UtcNow
                 }
             ]);

@@ -35,6 +35,18 @@ internal sealed class ShellWindowViewModel : ObservableObject
     public string StartupGuidanceText { get; }
     public bool HasShell => Shell is not null;
     public bool HasStartupError => !string.IsNullOrWhiteSpace(StartupError);
+    public bool IsStartingUp => !HasShell && !HasStartupError;
+
+    public static ShellWindowViewModel CreateStartingUp() =>
+        new(
+            "Librova",
+            null,
+            "Starting native core host...",
+            null,
+            RuntimeEnvironment.GetDefaultUiLogFilePath(),
+            RuntimeEnvironment.GetDefaultUiStateFilePath(),
+            RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
+            "The app is preparing the native core host and loading the first library snapshot.");
 
     public static ShellWindowViewModel CreateRunning(ShellViewModel shell) =>
         new(

@@ -32,6 +32,18 @@ public sealed class ShellWindowConfiguratorTests
     }
 
     [Fact]
+    public void CreateStartingUpState_ProducesLoadingViewModel()
+    {
+        var state = ShellWindowConfigurator.CreateStartingUpState();
+
+        Assert.Equal("Librova", state.ViewModel.Title);
+        Assert.False(state.ViewModel.HasShell);
+        Assert.False(state.ViewModel.HasStartupError);
+        Assert.True(state.ViewModel.IsStartingUp);
+        Assert.Contains("Starting", state.ViewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void CreateStartupErrorState_ProducesStartupErrorViewModel()
     {
         var state = ShellWindowConfigurator.CreateStartupErrorState("pipe startup failed");

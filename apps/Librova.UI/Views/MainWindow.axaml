@@ -52,6 +52,26 @@
   </Window.Styles>
 
   <Grid Margin="26">
+    <Border IsVisible="{Binding IsStartingUp}"
+            Background="#FFF8EF"
+            BorderBrush="#D9C7AE"
+            BorderThickness="1"
+            CornerRadius="28"
+            Padding="30">
+      <StackPanel Spacing="14">
+        <TextBlock FontSize="34"
+                   FontWeight="Bold"
+                   Text="Librova is starting" />
+        <TextBlock FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="{Binding StatusText}" />
+        <TextBlock MaxWidth="760"
+                   FontSize="15"
+                   Text="{Binding StartupGuidanceText}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
     <Border IsVisible="{Binding HasStartupError}"
             Background="#FFF4EC"
             BorderBrush="#D97C49"

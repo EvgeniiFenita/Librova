@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Avalonia.Markup.Xaml;
 using Librova.UI.Desktop;
 using Librova.UI.Logging;
@@ -24,37 +25,39 @@ internal sealed partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownRequested += OnShutdownRequested;
+            var mainWindow = new MainWindow();
+            ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
+            desktop.MainWindow = mainWindow;
 
-            try
-            {
-                UiLogging.Information("Starting Avalonia desktop shell.");
-                var session = ShellBootstrap.StartDevelopmentSessionAsync(CancellationToken.None)
-                    .GetAwaiter()
-                    .GetResult();
-                var mainWindow = new MainWindow();
-                var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
-                _shellApplication = ShellApplication.Create(
-                    session,
-                    new AvaloniaPathSelectionService(mainWindow),
-                    launchOptions);
-                _shellApplication.InitializeAsync().GetAwaiter().GetResult();
-                ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
-                desktop.MainWindow = mainWindow;
-                UiLogging.Information("Avalonia desktop shell is ready.");
-            }
-            catch (Exception error)
-            {
-                UiLogging.Error(error, "Failed to initialize Avalonia desktop shell.");
-                var mainWindow = new MainWindow();
-                ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message);
-                desktop.MainWindow = mainWindow;
-            }
+            StartShellAsync(desktop, mainWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    private async void StartShellAsync(IClassicDesktopStyleApplicationLifetime desktop, MainWindow mainWindow)
+    {
+        try
+        {
+            UiLogging.Information("Starting Avalonia desktop shell.");
+            var session = await ShellBootstrap.StartDevelopmentSessionAsync(CancellationToken.None);
+            var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
+            _shellApplication = ShellApplication.Create(
+                session,
+                new AvaloniaPathSelectionService(mainWindow),
+                launchOptions);
+            await _shellApplication.InitializeAsync();
+            ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
+            UiLogging.Information("Avalonia desktop shell is ready.");
+        }
+        catch (Exception error)
+        {
+            UiLogging.Error(error, "Failed to initialize Avalonia desktop shell.");
+            ShellWindowConfigurator.ConfigureStartupError(mainWindow, error.Message);
+        }
+    }
+
+    private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         if (_shellApplication is null)
         {
@@ -62,7 +65,21 @@ internal sealed partial class App : Application
         }
 
         UiLogging.Information("Shutting down Avalonia desktop shell.");
-        _shellApplication.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        e.Cancel = true;
+        var application = _shellApplication;
         _shellApplication = null;
+
+        try
+        {
+            await application.DisposeAsync();
+        }
+        finally
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.ShutdownRequested -= OnShutdownRequested;
+                Dispatcher.UIThread.Post(() => desktop.Shutdown());
+            }
+        }
     }
 }

@@ -24,6 +24,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - `apps/Librova.UI` now also contains the first real Avalonia application skeleton with `App`, `MainWindow`, and shell-window composition over the existing native-host-backed `ShellApplication`.
 - the current Avalonia shell baseline now exposes explicit `Start`, `Refresh`, and `Cancel` import-job actions through the `ImportJobsViewModel` and bound window controls.
 - the current Avalonia shell baseline now has an explicit startup window state model with separate running and startup-error modes instead of ad hoc exception text rendering in `App`.
+- the current Avalonia shell baseline now also has an explicit non-blocking loading state while the native host and initial library snapshot are starting, instead of synchronously blocking the UI thread during shell bootstrap.
 - the current Avalonia shell baseline now exposes derived result presentation state for import summary, warnings, and error text instead of leaving the latest job result as a raw DTO-only object graph.
 - the current Avalonia shell baseline now supports removing a completed import job from the in-memory job registry and clearing the UI-side result state after successful removal.
 - the current Avalonia shell baseline now exposes a testable path-selection abstraction for source-file and working-directory picking, so future desktop dialogs can stay outside the ViewModel layer.
@@ -195,6 +196,8 @@ Implemented slices at this point:
 - `apps/Librova.UI` now also contains the first library-catalog client, mapper, and service layer above the named-pipe/protobuf transport.
 - the current Avalonia shell now exposes a first `Library Snapshot` panel with refreshable read-side results from the native host, including basic text search and compact book cards.
 - the current `Library Snapshot` panel now also includes author/language/format filters, sort selection, next/previous paging, selection preservation, and a details panel for the currently selected book.
+- the current library browser uses lookahead pagination (`limit = page size + 1`) so `HasMoreResults` is based on a real extra row instead of a false `count == page size` heuristic.
+- the current browser `PageSize` is clamped to a valid positive value instead of accepting zero or negative sizes.
 - the current shell now preloads the library browser on startup and refreshes it automatically after a successful import, so the read-side view no longer requires a manual refresh to reflect new books.
 
 ## 5. Persistence And Storage
@@ -351,6 +354,7 @@ Stable facts taken from that reference:
 - C# startup-error-state coverage for diagnostics-path and guidance exposure
 - C# ViewModel coverage for the first UI-side library browser refresh flow
 - C# ViewModel coverage for browser filter propagation, paging, selection, and details-state behavior
+- C# regression coverage for exact-full-page pagination, clamped page size, and import-command happy paths with real validated source files
 - C# shell-level coverage for startup browser preload and post-import browser refresh
 
 ## 12. Current Gaps

@@ -74,7 +74,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         get => _pageSize;
         set
         {
-            if (SetProperty(ref _pageSize, value))
+            var effectiveValue = value < 1 ? 1 : value;
+            if (SetProperty(ref _pageSize, effectiveValue))
             {
                 RaisePropertyChanged(nameof(PageSizeText));
             }
@@ -197,15 +198,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
+            var visibleItems = items.Take(PageSize).ToArray();
+
             Books.Clear();
-            foreach (var item in items)
+            foreach (var item in visibleItems)
             {
                 Books.Add(item);
             }
 
             CurrentPage = pageNumber;
-            HasMoreResults = items.Count >= PageSize;
-            SelectedBook = items.FirstOrDefault(item => item.BookId == previousSelectionId) ?? items.FirstOrDefault();
+            HasMoreResults = items.Count > PageSize;
+            SelectedBook = visibleItems.FirstOrDefault(item => item.BookId == previousSelectionId) ?? visibleItems.FirstOrDefault();
             RaisePropertyChanged(nameof(HasBooks));
             RaisePropertyChanged(nameof(BookCountText));
             StatusText = Books.Count == 0
@@ -238,7 +241,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             },
             SortBy = SelectedSort,
             Offset = checked((ulong)Math.Max(0, pageNumber - 1) * (ulong)PageSize),
-            Limit = checked((ulong)PageSize)
+            Limit = checked((ulong)PageSize + 1UL)
         };
 
     private static string BuildSelectedBookDetailsText(BookListItemModel item)

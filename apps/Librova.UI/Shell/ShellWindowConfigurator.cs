@@ -5,6 +5,9 @@ namespace Librova.UI.Shell;
 
 internal static class ShellWindowConfigurator
 {
+    public static ShellWindowState CreateStartingUpState() =>
+        new(ShellWindowViewModel.CreateStartingUp());
+
     public static ShellWindowState CreateState(ShellApplication application) =>
         new(ShellWindowViewModel.CreateRunning(application.Shell));
 
@@ -19,6 +22,9 @@ internal static class ShellWindowConfigurator
 
     public static void ConfigureStartupError(MainWindow window, string message) =>
         Apply(window, CreateStartupErrorState(message));
+
+    public static void ConfigureStartingUp(MainWindow window) =>
+        Apply(window, CreateStartingUpState());
 
     private static void Apply(MainWindow window, ShellWindowState state)
     {
