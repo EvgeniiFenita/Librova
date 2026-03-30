@@ -40,6 +40,7 @@ Implemented slices at this point:
 - `SearchIndex`
 - `ConverterCommand`
 - `ConverterRuntime`
+- `ImportConversion`
 
 ## 4. Persistence And Storage
 
@@ -81,6 +82,12 @@ Implemented slices at this point:
   - exact destination file path
   - single produced file in a destination directory with relocation into the managed target path
 - Converter execution supports cancellation through `stop_token` and progress reporting through `IProgressSink`.
+- Conversion results now distinguish `succeeded`, `failed`, and `cancelled`.
+- Import conversion policy is implemented as a separate slice:
+  - `EPUB` input is stored without conversion
+  - `FB2` input attempts conversion to `EPUB` when a compatible converter is available
+  - failed or unavailable conversion falls back to storing the original `FB2` with warnings
+  - cancelled conversion remains a cancellation outcome and does not silently fall back to storing the source file
 
 ## 8. External Converter Reference
 
@@ -112,6 +119,7 @@ Stable facts taken from that reference:
   - search behavior
   - converter command building
   - external converter runtime execution and cancellation
+  - import conversion fallback policy
 
 ## 10. Current Gaps
 

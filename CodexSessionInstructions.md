@@ -36,6 +36,7 @@ Before making changes, review these documents in this order:
 - If the SQLite schema depends on optional SQLite modules such as `FTS5`, declare the required features explicitly in `vcpkg.json` instead of relying on default port settings.
 - Keep `docs/ProjectDocumentation.md` updated with stable implementation facts, not plans or aspirations.
 - External converter integration should stay user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive dependency.
+- Conversion cancellation is a distinct outcome from converter failure; cancelled conversions must not silently fall back to storing the original FB2 file.
 
 ## 4. Implementation Priorities
 

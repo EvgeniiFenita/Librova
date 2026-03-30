@@ -37,11 +37,28 @@ struct SConversionRequest
     }
 };
 
+enum class EConversionStatus
+{
+    Failed,
+    Succeeded,
+    Cancelled
+};
+
 struct SConversionResult
 {
-    bool Succeeded = false;
+    EConversionStatus Status = EConversionStatus::Failed;
     std::filesystem::path OutputPath;
     std::vector<std::string> Warnings;
+
+    [[nodiscard]] bool IsSuccess() const noexcept
+    {
+        return Status == EConversionStatus::Succeeded;
+    }
+
+    [[nodiscard]] bool IsCancelled() const noexcept
+    {
+        return Status == EConversionStatus::Cancelled;
+    }
 
     [[nodiscard]] bool HasOutput() const noexcept
     {

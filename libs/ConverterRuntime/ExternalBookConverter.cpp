@@ -299,7 +299,7 @@ DWORD WaitForProcessWithCancellation(
 LibriFlow::Domain::SConversionResult BuildCancelledResult()
 {
     return {
-        .Succeeded = false,
+        .Status = LibriFlow::Domain::EConversionStatus::Cancelled,
         .Warnings = {"Conversion cancelled."}
     };
 }
@@ -307,7 +307,7 @@ LibriFlow::Domain::SConversionResult BuildCancelledResult()
 LibriFlow::Domain::SConversionResult BuildFailedResult(const std::string& warning)
 {
     return {
-        .Succeeded = false,
+        .Status = LibriFlow::Domain::EConversionStatus::Failed,
         .Warnings = {warning}
     };
 }
@@ -414,7 +414,7 @@ LibriFlow::Domain::SConversionResult CExternalBookConverter::Convert(
     progressSink.ReportValue(100, "Converter process completed");
 
     return {
-        .Succeeded = true,
+        .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
         .OutputPath = resolvedOutputPath
     };
 }

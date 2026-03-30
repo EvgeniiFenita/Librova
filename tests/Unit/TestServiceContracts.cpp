@@ -58,7 +58,7 @@ public:
     {
         progressSink.ReportValue(100, "Converted");
         return {
-            .Succeeded = true,
+            .Status = LibriFlow::Domain::EConversionStatus::Succeeded,
             .OutputPath = request.DestinationPath
         };
     }
@@ -160,7 +160,8 @@ TEST_CASE("Parser and converter ports are usable through fake implementations", 
     REQUIRE(parser.CanParse(LibriFlow::Domain::EBookFormat::Epub));
     REQUIRE(parsed.Metadata.HasTitle());
     REQUIRE(converter.CanConvert(LibriFlow::Domain::EBookFormat::Fb2, LibriFlow::Domain::EBookFormat::Epub));
-    REQUIRE(converted.Succeeded);
+    REQUIRE(converted.IsSuccess());
+    REQUIRE(converted.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
     REQUIRE(converted.HasOutput());
     REQUIRE(progressSink.LastPercent == 100);
 }

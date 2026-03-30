@@ -117,7 +117,8 @@ TEST_CASE("External book converter supports exact destination path converters", 
         .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
     }, progressSink, {});
 
-    REQUIRE(result.Succeeded);
+    REQUIRE(result.IsSuccess());
+    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
     REQUIRE(result.OutputPath == destinationPath);
     REQUIRE(std::filesystem::exists(destinationPath));
     REQUIRE(ReadTextFile(destinationPath) == "converted-content");
@@ -155,7 +156,8 @@ TEST_CASE("External book converter relocates single-file output directory result
         .DestinationFormat = LibriFlow::Domain::EBookFormat::Epub
     }, progressSink, {});
 
-    REQUIRE(result.Succeeded);
+    REQUIRE(result.IsSuccess());
+    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Succeeded);
     REQUIRE(result.OutputPath == destinationPath);
     REQUIRE(std::filesystem::exists(destinationPath));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath.parent_path() / "generated-by-converter.epub"));
@@ -202,7 +204,9 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
     stopSource.request_stop();
     worker.join();
 
-    REQUIRE_FALSE(result.Succeeded);
+    REQUIRE_FALSE(result.IsSuccess());
+    REQUIRE(result.IsCancelled());
+    REQUIRE(result.Status == LibriFlow::Domain::EConversionStatus::Cancelled);
     REQUIRE(result.Warnings == std::vector<std::string>({"Conversion cancelled."}));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
 }
