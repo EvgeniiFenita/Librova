@@ -96,6 +96,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first real Avalonia app skeleton with `App`, `MainWindow`, shell-window composition, and verified C# coverage for window-state configuration.
 - `2026-03-30` Feature: expanded the UI shell with explicit refresh and cancel import-job actions in the ViewModel and bound Avalonia window controls, with `xUnit` coverage for both behaviors.
 - `2026-03-30` Feature: added an explicit shell-window startup state model for both running and startup-error modes, with verified C# coverage for both compositions.
+- `2026-03-30` Feature: added derived import-result presentation state in the UI shell for summary, warnings, and error text, with verified `xUnit` coverage through the ViewModel layer.
 
 ### Phase 9. Stabilization
 

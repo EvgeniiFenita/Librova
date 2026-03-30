@@ -68,7 +68,7 @@
             BorderThickness="1"
             CornerRadius="20"
             Padding="24">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
             ColumnDefinitions="Auto,*"
             ColumnSpacing="16"
             RowSpacing="14">
@@ -123,6 +123,34 @@
             <TextBlock Text="{Binding Shell.ImportJobs.IsBusy, StringFormat='Busy: {0}'}" />
             <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Status, StringFormat='Status: {0}'}" />
             <TextBlock Text="{Binding Shell.ImportJobs.LastResult.Snapshot.Message, StringFormat='Message: {0}'}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="5"
+                Grid.ColumnSpan="2"
+                Background="#E3EBF0"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Import Summary" />
+            <TextBlock Text="{Binding Shell.ImportJobs.ResultSummaryText}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="6"
+                Grid.ColumnSpan="2"
+                Background="#F4E8DA"
+                CornerRadius="16"
+                Padding="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold"
+                       Text="Warnings / Error" />
+            <TextBlock Text="{Binding Shell.ImportJobs.WarningsText}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Shell.ImportJobs.ErrorText}"
                        TextWrapping="Wrap" />
           </StackPanel>
         </Border>

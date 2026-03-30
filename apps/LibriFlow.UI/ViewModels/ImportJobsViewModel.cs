@@ -15,6 +15,9 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool _isBusy;
     private ulong? _lastJobId;
     private ImportJobResultModel? _lastResult;
+    private string _resultSummaryText = "No completed job yet.";
+    private string _warningsText = "No warnings.";
+    private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
 
     public ImportJobsViewModel(IImportJobsService importJobsService)
@@ -85,7 +88,31 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public ImportJobResultModel? LastResult
     {
         get => _lastResult;
-        private set => SetProperty(ref _lastResult, value);
+        private set
+        {
+            if (SetProperty(ref _lastResult, value))
+            {
+                UpdateDerivedResultState();
+            }
+        }
+    }
+
+    public string ResultSummaryText
+    {
+        get => _resultSummaryText;
+        private set => SetProperty(ref _resultSummaryText, value);
+    }
+
+    public string WarningsText
+    {
+        get => _warningsText;
+        private set => SetProperty(ref _warningsText, value);
+    }
+
+    public string ErrorText
+    {
+        get => _errorText;
+        private set => SetProperty(ref _errorText, value);
     }
 
     public AsyncCommand StartImportCommand { get; }
@@ -228,6 +255,31 @@ internal sealed class ImportJobsViewModel : ObservableObject
     {
         StatusText = error.Message.Length == 0 ? "Import failed." : error.Message;
         return Task.CompletedTask;
+    }
+
+    private void UpdateDerivedResultState()
+    {
+        if (LastResult is null)
+        {
+            ResultSummaryText = "No completed job yet.";
+            WarningsText = "No warnings.";
+            ErrorText = "No error.";
+            return;
+        }
+
+        var summary = LastResult.Summary;
+        ResultSummaryText = summary is null
+            ? "No import summary available."
+            : $"Imported {summary.ImportedEntries} of {summary.TotalEntries}; failed {summary.FailedEntries}; skipped {summary.SkippedEntries}.";
+
+        var warnings = summary?.Warnings ?? LastResult.Snapshot.Warnings;
+        WarningsText = warnings.Count == 0
+            ? "No warnings."
+            : string.Join(Environment.NewLine, warnings);
+
+        ErrorText = LastResult.Error is null
+            ? "No error."
+            : $"{LastResult.Error.Code}: {LastResult.Error.Message}";
     }
 
     private bool CanStartImport() =>

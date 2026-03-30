@@ -22,6 +22,9 @@ public sealed class ViewModelsTests
         Assert.NotNull(viewModel.LastResult);
         Assert.Equal(ImportJobStatusModel.Completed, viewModel.LastResult!.Snapshot.Status);
         Assert.Equal("Completed", viewModel.StatusText);
+        Assert.Equal("Imported 1 of 1; failed 0; skipped 0.", viewModel.ResultSummaryText);
+        Assert.Equal("Watch for duplicates", viewModel.WarningsText);
+        Assert.Equal("No error.", viewModel.ErrorText);
         Assert.True(service.TryGetSnapshotCalls > 0);
         Assert.False(viewModel.IsBusy);
     }
@@ -53,6 +56,7 @@ public sealed class ViewModelsTests
         Assert.Equal("transport failed", viewModel.StatusText);
         Assert.False(viewModel.IsBusy);
         Assert.Null(viewModel.LastResult);
+        Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
     }
 
     [Fact]
@@ -118,7 +122,11 @@ public sealed class ViewModelsTests
                     Summary = new ImportSummaryModel
                     {
                         Mode = ImportModeModel.SingleFile,
-                        ImportedEntries = 1
+                        TotalEntries = 1,
+                        ImportedEntries = 1,
+                        FailedEntries = 0,
+                        SkippedEntries = 0,
+                        Warnings = ["Watch for duplicates"]
                     }
                 }
                 : null);
