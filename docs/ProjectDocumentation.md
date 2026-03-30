@@ -11,6 +11,8 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - LibriFlow is a Windows-first desktop application for managing a personal e-book library.
 - The MVP supports `EPUB`, `FB2`, and `ZIP` import.
 - The UI is planned as `C# / Avalonia`.
+- `apps/LibriFlow.UI` now also contains the first non-visual UI infrastructure for resolving and launching the native core host process during development.
+- `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
 - The current MVP transport direction is `Protobuf over Windows named pipes`, not mandatory `gRPC`.
