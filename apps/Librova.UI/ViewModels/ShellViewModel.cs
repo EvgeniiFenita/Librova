@@ -1,4 +1,5 @@
 using Librova.UI.Desktop;
+using Librova.UI.ImportJobs;
 using Librova.UI.Shell;
 using Librova.UI.Mvvm;
 
@@ -12,6 +13,7 @@ internal sealed class ShellViewModel : ObservableObject
     {
         _session = session;
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
+        ImportJobs.WorkingDirectory = ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot);
     }
 
     public string LibraryRoot => _session.HostOptions.LibraryRoot;

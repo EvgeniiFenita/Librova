@@ -26,6 +26,9 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"C:\Libraries\Librova", application.Shell.LibraryRoot);
         Assert.Equal(@"\\.\pipe\Librova.ShellApplication.Test", application.Shell.PipePath);
         Assert.NotNull(application.Shell.ImportJobs);
+        Assert.Equal(
+            Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
+            application.Shell.ImportJobs.WorkingDirectory);
     }
 
     [Fact]

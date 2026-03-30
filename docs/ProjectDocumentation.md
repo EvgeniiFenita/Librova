@@ -28,6 +28,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now supports removing a completed import job from the in-memory job registry and clearing the UI-side result state after successful removal.
 - the current Avalonia shell baseline now exposes a testable path-selection abstraction for source-file and working-directory picking, so future desktop dialogs can stay outside the ViewModel layer.
 - the current Avalonia shell baseline now includes a real Avalonia-backed path-selection adapter wired into shell composition, so `Browse...` actions can use the desktop storage provider while the ViewModel stays dialog-agnostic.
+- the current shell composition now pre-populates the import `WorkingDirectory` with a deterministic path under `<LibraryRoot>/Temp/UiImport`, so the import screen is usable without manual temp-path entry.
 - `tests/Librova.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -300,6 +301,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for completed-job removal and result-state reset behavior
 - C# ViewModel coverage for path-selection commands through a fake desktop interaction service
 - C# shell composition coverage for injecting a desktop path-selection service into the running shell
+- C# shell composition coverage for default import working-directory initialization
 
 ## 12. Current Gaps
 
