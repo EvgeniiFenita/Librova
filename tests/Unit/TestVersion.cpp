@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "LibriFlow/Core/Version.hpp"
+#include "Core/Version.hpp"
 
 TEST_CASE("Core version is available", "[core][bootstrap]")
 {

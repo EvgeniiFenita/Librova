@@ -1,5 +1,5 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/LibriFlow.UI/LibriFlow.UI.csproj" />
+  <Folder Name="/apps/">
+    <Project Path="apps/LibriFlow.UI/LibriFlow.UI.csproj" />
   </Folder>
 </Solution>

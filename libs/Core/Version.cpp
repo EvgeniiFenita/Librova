@@ -1,4 +1,4 @@
-#include "LibriFlow/Core/Version.hpp"
+#include "Core/Version.hpp"
 
 namespace LibriFlow::Core {
 

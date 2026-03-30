@@ -4,7 +4,7 @@ if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
     add_executable(LibriFlowCoreTests
-        VersionTests.cpp
+        TestVersion.cpp
     )
 
     target_link_libraries(LibriFlowCoreTests

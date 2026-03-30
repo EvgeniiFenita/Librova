@@ -270,7 +270,24 @@ UI-side presentation:
 - job queue visualization;
 - setup wizard.
 
-## 8. Interop Strategy
+## 8. Repository Layout
+
+Recommended repository structure:
+
+- `libs/` for native static libraries grouped by logical slice;
+- `apps/` for executables and UI applications;
+- `proto/` for shared protobuf contracts;
+- `tests/` for unit, integration, and contract tests;
+- `docs/` for repository-level documentation.
+
+Rules:
+
+- each native logical slice should have its own folder under `libs/<SliceName>/`;
+- each native library folder should contain its own `CMakeLists.txt`;
+- in native libraries, headers and implementation files should stay together in the same directory unless a different layout is clearly justified;
+- application targets should depend on these slice libraries instead of accumulating all code in one large target.
+
+## 9. Interop Strategy
 
 ### Recommended model
 
@@ -291,9 +308,9 @@ Direct native interop would reduce startup complexity but creates tighter coupli
 
 Because future portability matters, a service boundary is the more stable choice.
 
-## 9. Domain Model
+## 10. Domain Model
 
-### 9.1 Main aggregate
+### 10.1 Main aggregate
 
 `Book` is the aggregate root.
 
@@ -307,7 +324,7 @@ It owns:
 - hash;
 - timestamps.
 
-### 9.2 Core value objects
+### 10.2 Core value objects
 
 ```cpp
 struct SBookId
@@ -354,7 +371,7 @@ struct SBook
 };
 ```
 
-### 9.3 Duplicate classification
+### 10.3 Duplicate classification
 
 ```cpp
 enum class EDuplicateSeverity
@@ -379,7 +396,7 @@ struct SDuplicateMatch
 };
 ```
 
-## 10. Key Interfaces
+## 11. Key Interfaces
 
 ```cpp
 class IBookRepository
@@ -445,9 +462,9 @@ Notes:
 - `IBookConverter` is an abstraction over any external conversion engine, not one concrete tool;
 - `ITrashService` is cross-platform by contract, Windows-specific in MVP implementation.
 
-## 11. Import, Conversion, And Job Model
+## 12. Import, Conversion, And Job Model
 
-### 11.1 Single-file import flow
+### 12.1 Single-file import flow
 
 1. UI submits source path and import preferences.
 2. Core detects format.
@@ -462,7 +479,7 @@ Notes:
 11. Storage commit finalizes managed files.
 12. Job reports completion.
 
-### 11.2 ZIP import flow
+### 12.2 ZIP import flow
 
 1. ZIP reader enumerates entries.
 2. Supported files are extracted to temp workspace.
@@ -470,7 +487,7 @@ Notes:
 4. Results are aggregated.
 5. Failures do not roll back successful entries.
 
-### 11.3 Job engine
+### 12.3 Job engine
 
 Long-running operations must be modeled as jobs:
 
@@ -491,7 +508,7 @@ Each job supports:
 
 This is a better fit than blocking RPC methods.
 
-## 12. Crash Safety And Rollback
+## 13. Crash Safety And Rollback
 
 Crash-safe import is required.
 
@@ -505,7 +522,7 @@ Strategy:
 
 This is required for correctness during bulk import and conversion-heavy workflows.
 
-## 13. File Storage Design
+## 14. File Storage Design
 
 ### Recommended layout
 
@@ -535,7 +552,7 @@ Using `BookId`-based storage is preferable to `{Author}/{Title}` because it:
 
 Human-readable names can still be generated for export.
 
-## 14. Database Design
+## 15. Database Design
 
 Recommended logical schema:
 
@@ -554,7 +571,7 @@ Notes:
 - author and tag normalization should be enforced at repository level;
 - search should combine indexed relational filters and FTS-backed text lookup.
 
-## 15. Search Design
+## 16. Search Design
 
 Search should use a hybrid model:
 
@@ -564,7 +581,7 @@ Search should use a hybrid model:
 
 This avoids overloading FTS with responsibilities better handled by the relational model.
 
-## 16. Unicode Strategy
+## 17. Unicode Strategy
 
 Unicode must be treated as a first-class concern.
 
@@ -583,7 +600,7 @@ Windows path guidance:
 - convert to wide-character paths only at OS boundaries;
 - keep path helper logic isolated in Infrastructure.
 
-## 17. Service Contract Shape
+## 18. Service Contract Shape
 
 The `.proto` contract should separate query, command, and long-running job concerns.
 
@@ -608,7 +625,7 @@ Recommended operation set:
 
 The contract should return structured error codes and user-safe messages, not raw exception text.
 
-## 18. UI Architecture
+## 19. UI Architecture
 
 Recommended UI composition:
 
@@ -629,7 +646,7 @@ Recommended UI behavior:
 - jobs panel displays progress, warnings, and cancel actions;
 - drag-and-drop feeds the same import command path as file picker import.
 
-## 19. Extensibility Points
+## 20. Extensibility Points
 
 The architecture should allow future growth without rewriting the core use cases.
 
@@ -643,7 +660,7 @@ Key extension seams:
 - future collection subsystem as separate domain slice;
 - future multi-format storage by expanding aggregate and `formats` usage.
 
-## 20. Error Model
+## 21. Error Model
 
 Core errors should be classified into explicit categories:
 
@@ -661,7 +678,7 @@ Core errors should be classified into explicit categories:
 
 This allows the UI to react correctly instead of parsing strings.
 
-## 21. First-Run Wizard
+## 22. First-Run Wizard
 
 The setup wizard should configure:
 
@@ -675,9 +692,9 @@ Recommended default FB2 policy:
 - convert to EPUB when converter is available;
 - otherwise store original FB2 and report warning.
 
-## 22. Testing Strategy
+## 23. Testing Strategy
 
-### 22.1 C++ unit tests with Catch2
+### 23.1 C++ unit tests with Catch2
 
 Target:
 
@@ -689,7 +706,7 @@ Target:
 - converter command building;
 - query DTO validation.
 
-### 22.2 C++ integration tests
+### 23.2 C++ integration tests
 
 Target:
 
@@ -708,7 +725,7 @@ Representative scenarios:
 - Cyrillic search works case-insensitively;
 - deletion uses trash abstraction.
 
-### 22.3 IPC contract tests
+### 23.3 IPC contract tests
 
 Target:
 
@@ -718,7 +735,7 @@ Target:
 - duplicate decision flow;
 - contract compatibility expectations.
 
-### 22.4 UI tests
+### 23.4 UI tests
 
 Recommended approach:
 
@@ -733,11 +750,12 @@ Target:
 - drag-and-drop routing;
 - command orchestration.
 
-## 23. Development Roadmap
+## 24. Development Roadmap
 
 ### Phase 0. Build Foundation
 
-- repo structure for backend, frontend, shared proto;
+- repo structure with `libs/` for native static libraries, `apps/` for executables and UI, `proto/` for shared contracts, and `tests/`;
+- each native logical slice as its own static library with a local `CMakeLists.txt`;
 - CMake and dependency wiring;
 - Avalonia solution bootstrap;
 - Catch2 and UI test setup;
@@ -811,7 +829,7 @@ Target:
 - restart recovery;
 - portable packaging.
 
-## 24. Risks And Mitigations
+## 25. Risks And Mitigations
 
 ### Unicode issues at boundaries
 
@@ -853,7 +871,7 @@ Mitigation:
 - startup cleanup/recovery;
 - rollback tests for storage-sensitive use cases.
 
-## 25. Final Recommendations
+## 26. Final Recommendations
 
 The recommended architecture for LibriFlow is:
 
@@ -870,7 +888,7 @@ The recommended architecture for LibriFlow is:
 
 This architecture is intentionally conservative where correctness and maintainability matter, and flexible where future platform support and feature growth are likely.
 
-## 26. Frozen Decisions
+## 27. Frozen Decisions
 
 This section records decisions that should be treated as fixed unless explicitly revised later.
 
@@ -937,7 +955,7 @@ This section records decisions that should be treated as fixed unless explicitly
 - Portable folder deployment is sufficient for MVP.
 - Local build and local tests are enough for the initial roadmap; CI/CD is not required yet.
 
-## 27. Working Agreements
+## 28. Working Agreements
 
 The architecture document is not the only project-level source of truth. The following companion documents are part of the repository bootstrap and should be read at the start of a new session:
 

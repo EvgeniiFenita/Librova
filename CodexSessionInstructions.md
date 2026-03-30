@@ -27,6 +27,8 @@ Before making changes, review these documents in this order:
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean boundaries.
 - When adding new conventions, update the relevant document in the same task.
+- For native code, prefer one static library per logical slice under `libs/<SliceName>/`, with a local `CMakeLists.txt` in that folder.
+- In native libraries, keep `.hpp` and `.cpp` files together in the same directory unless a different layout becomes clearly necessary.
 
 ## 4. Implementation Priorities
 

@@ -1,10 +1,10 @@
 add_library(LibriFlowCore STATIC
-    src/Version.cpp
+    Version.cpp
 )
 
 target_include_directories(LibriFlowCore
     PUBLIC
-        include
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
 target_compile_features(LibriFlowCore PUBLIC cxx_std_20)

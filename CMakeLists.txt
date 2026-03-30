@@ -8,5 +8,5 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-add_subdirectory(src/LibriFlow.Core)
-add_subdirectory(tests/LibriFlow.Core.Tests)
+add_subdirectory(libs/Core)
+add_subdirectory(tests/Unit)
