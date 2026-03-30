@@ -101,9 +101,32 @@ public sealed class ViewModelsTests
         Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
     }
 
+    [Fact]
+    public async Task ImportJobsViewModel_RemoveCommandClearsCurrentJobState()
+    {
+        var service = new FakeImportJobsService();
+        var viewModel = new ImportJobsViewModel(service)
+        {
+            SourcePath = @"C:\Books\book.fb2",
+            WorkingDirectory = @"C:\Work"
+        };
+
+        await viewModel.StartImportAsync();
+        Assert.True(viewModel.RemoveJobCommand.CanExecute(null));
+
+        await viewModel.RemoveJobCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(42UL, service.LastRemovedJobId);
+        Assert.Null(viewModel.LastJobId);
+        Assert.Null(viewModel.LastResult);
+        Assert.Equal("No completed job yet.", viewModel.ResultSummaryText);
+        Assert.Contains("was removed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }
+        public ulong? LastRemovedJobId { get; private set; }
         private bool _resultReady;
 
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -144,7 +167,10 @@ public sealed class ViewModelsTests
         }
 
         public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        {
+            LastRemovedJobId = jobId;
+            return Task.FromResult(true);
+        }
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(42UL);

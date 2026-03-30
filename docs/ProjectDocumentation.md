@@ -25,6 +25,7 @@ Update it when an implementation detail becomes stable enough to be treated as c
 - the current Avalonia shell baseline now exposes explicit `Start`, `Refresh`, and `Cancel` import-job actions through the `ImportJobsViewModel` and bound window controls.
 - the current Avalonia shell baseline now has an explicit startup window state model with separate running and startup-error modes instead of ad hoc exception text rendering in `App`.
 - the current Avalonia shell baseline now exposes derived result presentation state for import summary, warnings, and error text instead of leaving the latest job result as a raw DTO-only object graph.
+- the current Avalonia shell baseline now supports removing a completed import job from the in-memory job registry and clearing the UI-side result state after successful removal.
 - `tests/LibriFlow.UI.Tests` now provides the first C# test baseline over UI-side core-host launch infrastructure.
 - The core is implemented in `C++20`.
 - The system architecture is two-process and uses `Protobuf` contracts at the process boundary.
@@ -293,6 +294,7 @@ Stable facts taken from that reference:
 - C# ViewModel coverage for refresh and cancellation actions in the UI import shell
 - C# shell-window state coverage for both normal startup composition and startup-error composition
 - C# ViewModel coverage for derived import result presentation state
+- C# ViewModel coverage for completed-job removal and result-state reset behavior
 
 ## 12. Current Gaps
 

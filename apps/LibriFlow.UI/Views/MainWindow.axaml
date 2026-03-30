@@ -106,6 +106,9 @@
           <Button MinWidth="140"
                   Command="{Binding Shell.ImportJobs.CancelImportCommand}"
                   Content="Cancel" />
+          <Button MinWidth="160"
+                  Command="{Binding Shell.ImportJobs.RemoveJobCommand}"
+                  Content="Remove Job" />
           <TextBlock VerticalAlignment="Center"
                      FontWeight="SemiBold"
                      Text="{Binding Shell.ImportJobs.StatusText}" />

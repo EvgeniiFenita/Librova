@@ -26,6 +26,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         StartImportCommand = new AsyncCommand(StartImportAsync, CanStartImport, HandleCommandErrorAsync);
         RefreshCommand = new AsyncCommand(RefreshCurrentAsync, CanRefresh, HandleCommandErrorAsync);
         CancelImportCommand = new AsyncCommand(CancelCurrentAsync, CanCancel, HandleCommandErrorAsync);
+        RemoveJobCommand = new AsyncCommand(RemoveCurrentAsync, CanRemove, HandleCommandErrorAsync);
     }
 
     public string SourcePath
@@ -68,6 +69,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 StartImportCommand.RaiseCanExecuteChanged();
                 RefreshCommand.RaiseCanExecuteChanged();
                 CancelImportCommand.RaiseCanExecuteChanged();
+                RemoveJobCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -81,6 +83,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             {
                 RefreshCommand.RaiseCanExecuteChanged();
                 CancelImportCommand.RaiseCanExecuteChanged();
+                RemoveJobCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -118,6 +121,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public AsyncCommand StartImportCommand { get; }
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand CancelImportCommand { get; }
+    public AsyncCommand RemoveJobCommand { get; }
 
     public async Task StartImportAsync()
     {
@@ -215,6 +219,31 @@ internal sealed class ImportJobsViewModel : ObservableObject
         StatusText = $"Import job {LastJobId.Value} could not be cancelled.";
     }
 
+    public async Task RemoveCurrentAsync()
+    {
+        if (LastJobId is null)
+        {
+            return;
+        }
+
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var removed = await _importJobsService.RemoveAsync(
+            LastJobId.Value,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+
+        if (!removed)
+        {
+            StatusText = $"Import job {LastJobId.Value} could not be removed.";
+            return;
+        }
+
+        var removedJobId = LastJobId.Value;
+        LastJobId = null;
+        LastResult = null;
+        StatusText = $"Import job {removedJobId} was removed.";
+    }
+
     private async Task PollUntilCompletedAsync(ulong jobId, CancellationToken cancellationToken)
     {
         while (true)
@@ -290,4 +319,6 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
 
     private bool CanCancel() => LastJobId.HasValue && IsBusy;
+
+    private bool CanRemove() => LastJobId.HasValue && !IsBusy;
 }
