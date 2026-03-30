@@ -5,8 +5,10 @@ if(BUILD_TESTING)
 
     add_executable(LibriFlowCoreTests
         TestBook.cpp
+        TestBookRepository.cpp
         TestBookFormat.cpp
         TestBookId.cpp
+        TestSearchQuery.cpp
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
