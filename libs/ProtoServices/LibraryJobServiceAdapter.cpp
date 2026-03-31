@@ -42,22 +42,45 @@ CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
 librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
     const librova::v1::StartImportRequest& request) const
 {
+    LogInfoIfInitialized(
+        "StartImport requested. SourcePath='{}' WorkingDirectory='{}' AllowProbableDuplicates={}.",
+        request.import().source_path(),
+        request.import().working_directory(),
+        request.import().allow_probable_duplicates());
+
     const auto importRequest = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(request.import());
-    return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(m_importJobService.Start(importRequest));
+    const auto jobId = m_importJobService.Start(importRequest);
+    LogInfoIfInitialized("StartImport queued job {}.", jobId);
+    return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(jobId);
 }
 
 librova::v1::ListBooksResponse CLibraryJobServiceAdapter::ListBooks(
     const librova::v1::ListBooksRequest& request) const
 {
     const auto bookListRequest = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request.query());
-    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
-        m_libraryCatalogFacade.ListBooks(bookListRequest));
+    const auto result = m_libraryCatalogFacade.ListBooks(bookListRequest);
+    LogInfoIfInitialized(
+        "ListBooks returned {} item(s). Query='{}' Language='{}' Offset={} Limit={}.",
+        result.Items.size(),
+        bookListRequest.TextUtf8,
+        bookListRequest.Language.value_or(""),
+        bookListRequest.Offset,
+        bookListRequest.Limit);
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(result);
 }
 
 librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
     const librova::v1::GetBookDetailsRequest& request) const
 {
     const auto details = m_libraryCatalogFacade.GetBookDetails(Librova::Domain::SBookId{request.book_id()});
+    if (details.has_value())
+    {
+        LogInfoIfInitialized("GetBookDetails returned details for book {}.", request.book_id());
+    }
+    else
+    {
+        LogWarnIfInitialized("GetBookDetails requested unknown book {}.", request.book_id());
+    }
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
         details.has_value() ? &*details : nullptr);
 }
@@ -124,6 +147,27 @@ librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobR
     const librova::v1::GetImportJobResultRequest& request) const
 {
     const auto result = m_importJobService.TryGetResult(request.job_id());
+    if (result.has_value())
+    {
+        if (result->Error.has_value())
+        {
+            LogWarnIfInitialized(
+                "Import job {} completed with status {} and error '{}'.",
+                request.job_id(),
+                static_cast<int>(result->Snapshot.Status),
+                result->Error->Message);
+        }
+        else
+        {
+            LogInfoIfInitialized(
+                "Import job {} completed with status {}. Imported={} Failed={} Skipped={}.",
+                request.job_id(),
+                static_cast<int>(result->Snapshot.Status),
+                result->ImportResult.has_value() ? result->ImportResult->Summary.ImportedEntries : 0,
+                result->ImportResult.has_value() ? result->ImportResult->Summary.FailedEntries : 0,
+                result->ImportResult.has_value() ? result->ImportResult->Summary.SkippedEntries : 0);
+        }
+    }
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoResultResponse(
         result.has_value() ? &*result : nullptr);
 }
@@ -141,6 +185,7 @@ librova::v1::CancelImportJobResponse CLibraryJobServiceAdapter::CancelImportJob(
 {
     librova::v1::CancelImportJobResponse response;
     response.set_accepted(m_importJobService.Cancel(request.job_id()));
+    LogInfoIfInitialized("CancelImportJob for job {} accepted={}.", request.job_id(), response.accepted());
     return response;
 }
 
@@ -149,6 +194,7 @@ librova::v1::RemoveImportJobResponse CLibraryJobServiceAdapter::RemoveImportJob(
 {
     librova::v1::RemoveImportJobResponse response;
     response.set_removed(m_importJobService.Remove(request.job_id()));
+    LogInfoIfInitialized("RemoveImportJob for job {} removed={}.", request.job_id(), response.removed());
     return response;
 }
 
