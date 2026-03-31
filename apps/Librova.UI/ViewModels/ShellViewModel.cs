@@ -43,7 +43,7 @@ internal sealed class ShellViewModel : ObservableObject
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _switchLibraryAsync = switchLibraryAsync;
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
-        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService);
+        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService, session.HostOptions.LibraryRoot);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
@@ -213,9 +213,9 @@ internal sealed class ShellViewModel : ObservableObject
     };
     public string CurrentSectionDescription => CurrentSection switch
     {
-        ShellSection.Library => "Browse the managed library, inspect metadata, export books, and move books to trash.",
+        ShellSection.Library => "Browse the managed library as a visual grid, inspect book metadata, export books, and move books to trash.",
         ShellSection.Import => "Bring EPUB, FB2, and ZIP sources into the managed library through the native import pipeline.",
-        ShellSection.Settings => "Adjust next-launch library preferences, inspect diagnostics, and review runtime notes.",
+        ShellSection.Settings => "Adjust converter preferences and inspect runtime diagnostics.",
         _ => string.Empty
     };
     public string UiLogFilePath => RuntimeEnvironment.GetDefaultUiLogFilePath();
@@ -357,15 +357,6 @@ internal sealed class ShellViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsBuiltInConverterSelected));
         RaisePropertyChanged(nameof(IsCustomConverterSelected));
         SavePreferencesCommand.RaiseCanExecuteChanged();
-    }
-
-    private string BuildOperationalWarningsText()
-    {
-        var messages = new List<string>();
-
-        return messages.Count == 0
-            ? string.Empty
-            : string.Join(Environment.NewLine, messages);
     }
 
     private async Task HandleImportCompletedSuccessfullyAsync()

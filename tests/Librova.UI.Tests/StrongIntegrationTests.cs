@@ -93,7 +93,7 @@ public sealed class StrongIntegrationTests
             await ImportBookAsync(session.ImportJobs, sandboxRoot, "beta.fb2", "Beta", "Author", "Two", cancellation.Token);
             await ImportBookAsync(session.ImportJobs, sandboxRoot, "gamma.fb2", "Gamma", "Author", "Three", cancellation.Token);
 
-            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog)
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot)
             {
                 PageSize = 2
             };
@@ -132,10 +132,11 @@ public sealed class StrongIntegrationTests
             var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportedBook.fb2");
             var viewModel = new LibraryBrowserViewModel(
                 session.LibraryCatalog,
-                new FakeExportSelectionService(exportPath));
+                new FakeExportSelectionService(exportPath),
+                options.LibraryRoot);
 
             await viewModel.RefreshAsync();
-            Assert.NotNull(viewModel.SelectedBook);
+            await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
             await viewModel.ExportSelectedBookAsync();
 
@@ -162,10 +163,10 @@ public sealed class StrongIntegrationTests
 
             await ImportBookAsync(session.ImportJobs, sandboxRoot, "trash.fb2", "Trash Book", "Arkady", "Strugatsky", cancellation.Token);
 
-            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog);
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot);
 
             await viewModel.RefreshAsync();
-            Assert.NotNull(viewModel.SelectedBook);
+            await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
             await viewModel.MoveSelectedBookToTrashAsync();
 

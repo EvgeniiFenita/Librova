@@ -486,12 +486,12 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
 
         Assert.True(viewModel.HasBooks);
-        Assert.Equal("Loaded 1 book(s) for page 1.", viewModel.StatusText);
+        Assert.Equal("Loaded 1 book(s).", viewModel.StatusText);
         Assert.Single(viewModel.Books);
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
-        Assert.NotNull(viewModel.SelectedBook);
-        Assert.Contains("Arkady Strugatsky", viewModel.SelectedBookDetailsText, StringComparison.Ordinal);
-        Assert.Contains("Load Full Details", viewModel.SelectedBookExtendedDetailsText, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(viewModel.SelectedBook);
+        Assert.Equal("1 shown", viewModel.BookCountText);
+        Assert.True(viewModel.Books[0].ShowCoverPlaceholder);
     }
 
     [Fact]
@@ -506,16 +506,13 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_PassesFiltersAndSortIntoCatalogRequest()
+    public async Task LibraryBrowserViewModel_PassesSearchAndLanguageIntoCatalogRequest()
     {
         var service = new RecordingLibraryCatalogService();
         var viewModel = new LibraryBrowserViewModel(service)
         {
             SearchText = "road",
-            AuthorFilter = "Arkady",
             LanguageFilter = "en",
-            SelectedFormatFilter = "FB2",
-            SelectedSort = BookSortModel.Author,
             PageSize = 10
         };
 
@@ -523,10 +520,10 @@ public sealed class ViewModelsTests
 
         Assert.NotNull(service.LastRequest);
         Assert.Equal("road", service.LastRequest!.Text);
-        Assert.Equal("Arkady", service.LastRequest.Author);
         Assert.Equal("en", service.LastRequest.Language);
-        Assert.Equal(BookFormatModel.Fb2, service.LastRequest.Format);
-        Assert.Equal(BookSortModel.Author, service.LastRequest.SortBy);
+        Assert.Null(service.LastRequest.Author);
+        Assert.Null(service.LastRequest.Format);
+        Assert.Null(service.LastRequest.SortBy);
         Assert.Equal(0UL, service.LastRequest.Offset);
         Assert.Equal(11UL, service.LastRequest.Limit);
     }
@@ -543,16 +540,16 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
         Assert.True(viewModel.HasMoreResults);
         Assert.Equal("Page 1+", viewModel.PageLabelText);
-        Assert.Equal("Alpha", viewModel.SelectedBookTitle);
+        Assert.Null(viewModel.SelectedBook);
 
         await viewModel.NextPageAsync();
         Assert.Equal(2, viewModel.CurrentPage);
         Assert.Equal("Page 2", viewModel.PageLabelText);
-        Assert.Equal("Gamma", viewModel.SelectedBookTitle);
+        Assert.Null(viewModel.SelectedBook);
 
         await viewModel.PreviousPageAsync();
         Assert.Equal(1, viewModel.CurrentPage);
-        Assert.Equal("Alpha", viewModel.SelectedBookTitle);
+        Assert.Null(viewModel.SelectedBook);
     }
 
     [Fact]
@@ -579,13 +576,13 @@ public sealed class ViewModelsTests
         var viewModel = new LibraryBrowserViewModel(service);
 
         await viewModel.RefreshAsync();
-        Assert.NotNull(viewModel.SelectedBook);
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
         await viewModel.LoadDetailsCommand.ExecuteAsyncForTests();
 
         Assert.NotNull(viewModel.SelectedBookDetails);
-        Assert.Contains("Macmillan", viewModel.SelectedBookExtendedDetailsText, StringComparison.Ordinal);
-        Assert.Contains("Aliens land only in one city.", viewModel.SelectedBookExtendedDetailsText, StringComparison.Ordinal);
+        Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Publisher" && pair.Value == "Macmillan");
+        Assert.Equal("Aliens land only in one city.", viewModel.SelectedBookAnnotationText);
     }
 
     [Fact]
@@ -599,7 +596,7 @@ public sealed class ViewModelsTests
         var viewModel = new LibraryBrowserViewModel(service, selectionService);
 
         await viewModel.RefreshAsync();
-        Assert.NotNull(viewModel.SelectedBook);
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
         await viewModel.ExportSelectedBookAsync();
 
@@ -615,7 +612,7 @@ public sealed class ViewModelsTests
         var viewModel = new LibraryBrowserViewModel(service);
 
         await viewModel.RefreshAsync();
-        Assert.NotNull(viewModel.SelectedBook);
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
         var selectedBookId = viewModel.SelectedBook!.BookId;
 
         await viewModel.MoveSelectedBookToTrashAsync();
@@ -638,6 +635,31 @@ public sealed class ViewModelsTests
 
         Assert.Equal(1, viewModel.PageSize);
         Assert.Equal("1 per page", viewModel.PageSizeText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_TogglesSelectionAndLoadsDetails()
+    {
+        var service = new FakeLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        var book = viewModel.Books[0];
+
+        await viewModel.ToggleSelectedBookAsync(book);
+
+        Assert.Equal(book.BookId, viewModel.SelectedBook?.BookId);
+        Assert.True(viewModel.ShowDetailsPanel);
+        Assert.True(book.IsSelected);
+        Assert.Equal("Roadside Picnic", viewModel.SelectedBookTitle);
+        Assert.Equal("Arkady Strugatsky", viewModel.SelectedBookAuthorText);
+        Assert.NotNull(viewModel.SelectedBookDetails);
+
+        await viewModel.ToggleSelectedBookAsync(book);
+
+        Assert.Null(viewModel.SelectedBook);
+        Assert.False(viewModel.ShowDetailsPanel);
+        Assert.False(book.IsSelected);
     }
 
     [Fact]
