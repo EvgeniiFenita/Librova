@@ -3,7 +3,7 @@ syntax = "proto3";
 package librova.v1;
 
 message ImportRequest {
-  string source_path = 1;
+  repeated string source_paths = 1;
   string working_directory = 2;
   optional string sha256_hex = 3;
   bool allow_probable_duplicates = 4;
@@ -30,6 +30,7 @@ enum ImportMode {
   IMPORT_MODE_UNSPECIFIED = 0;
   IMPORT_MODE_SINGLE_FILE = 1;
   IMPORT_MODE_ZIP_ARCHIVE = 2;
+  IMPORT_MODE_BATCH = 3;
 }
 
 enum ImportJobStatus {

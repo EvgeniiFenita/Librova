@@ -28,7 +28,6 @@ The native core is responsible for:
 
 Near-term MVP work still targets three product-facing extensions on top of that baseline:
 
-- recursive directory import;
 - series and genres as stronger first-class metadata;
 - replacing the current managed delete path with Windows `Recycle Bin` integration.
 
@@ -81,7 +80,7 @@ The system is expected to:
 - clean stale temp state on startup;
 - keep rollback/failure semantics explicit.
 
-Directory import is expected to follow the same transactional and summary-oriented principles as single-file import, while scaling to recursive scans over mixed-content folders.
+The import pipeline now accepts one or many selected source paths, including folders. Directory import follows the same transactional and summary-oriented principles as single-file import while scaling to recursive scans over mixed-content folders.
 
 ## 4. Import And Conversion Rules
 
@@ -155,7 +154,6 @@ Testing is layered:
 
 Current architectural focus is:
 
-- adding directory import without weakening import safety guarantees;
 - strengthening series/genres support as end-to-end metadata;
 - replacing internal trash handling with Windows `Recycle Bin` integration;
 - stabilization;

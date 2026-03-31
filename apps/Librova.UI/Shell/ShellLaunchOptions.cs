@@ -2,7 +2,7 @@ namespace Librova.UI.Shell;
 
 internal sealed class ShellLaunchOptions
 {
-    public string? InitialSourcePath { get; init; }
+    public string[]? InitialSourcePaths { get; init; }
 
     public static ShellLaunchOptions FromArgs(string[]? args)
     {
@@ -17,7 +17,7 @@ internal sealed class ShellLaunchOptions
             {
                 return new ShellLaunchOptions
                 {
-                    InitialSourcePath = argument
+                    InitialSourcePaths = [argument]
                 };
             }
         }

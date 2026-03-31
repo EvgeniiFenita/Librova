@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <stop_token>
 #include <thread>
@@ -69,6 +70,27 @@ private:
     mutable bool Started = false;
 };
 
+struct SImportSandbox
+{
+    std::filesystem::path Root;
+    std::filesystem::path SourcePath;
+    std::filesystem::path WorkingDirectory;
+};
+
+SImportSandbox CreateImportSandbox(const std::string_view scenario)
+{
+    const auto root = std::filesystem::temp_directory_path() / ("librova-job-manager-" + std::string{scenario});
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return {
+        .Root = root,
+        .SourcePath = sourcePath,
+        .WorkingDirectory = root / "work"
+    };
+}
+
 } // namespace
 
 TEST_CASE("Import job manager stores completed result for finished import", "[jobs][manager]")
@@ -78,10 +100,11 @@ TEST_CASE("Import job manager stores completed result for finished import", "[jo
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
+    const auto sandbox = CreateImportSandbox("completed");
 
     const auto handle = manager.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(handle.IsValid());
@@ -96,6 +119,7 @@ TEST_CASE("Import job manager stores completed result for finished import", "[jo
     REQUIRE(result.has_value());
     REQUIRE(result->ImportResult.has_value());
     REQUIRE(result->ImportResult->Summary.ImportedEntries == 1);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job manager cancels a running job", "[jobs][manager]")
@@ -105,10 +129,11 @@ TEST_CASE("Import job manager cancels a running job", "[jobs][manager]")
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
+    const auto sandbox = CreateImportSandbox("cancel");
 
     const auto handle = manager.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(handle.IsValid());
@@ -127,6 +152,7 @@ TEST_CASE("Import job manager cancels a running job", "[jobs][manager]")
     REQUIRE(result->Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
     REQUIRE(result->Error.has_value());
     REQUIRE(result->Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job manager returns empty results for unknown job id", "[jobs][manager]")
@@ -150,10 +176,11 @@ TEST_CASE("Import job manager can remove completed jobs", "[jobs][manager]")
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
+    const auto sandbox = CreateImportSandbox("remove");
 
     const auto handle = manager.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(manager.Wait(handle.Id, std::chrono::seconds(1)));
@@ -161,6 +188,7 @@ TEST_CASE("Import job manager can remove completed jobs", "[jobs][manager]")
     REQUIRE_FALSE(manager.TryGetSnapshot(handle.Id).has_value());
     REQUIRE_FALSE(manager.TryGetResult(handle.Id).has_value());
     REQUIRE_FALSE(manager.Remove(handle.Id));
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job manager does not remove running jobs", "[jobs][manager]")
@@ -170,14 +198,16 @@ TEST_CASE("Import job manager does not remove running jobs", "[jobs][manager]")
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
+    const auto sandbox = CreateImportSandbox("running-remove");
 
     const auto handle = manager.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(importer.WaitUntilStarted(std::chrono::seconds(1)));
     REQUIRE_FALSE(manager.Remove(handle.Id));
     REQUIRE(manager.Cancel(handle.Id));
     REQUIRE(manager.Wait(handle.Id, std::chrono::seconds(1)));
+    std::filesystem::remove_all(sandbox.Root);
 }

@@ -215,7 +215,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
 
     Librova::ApplicationClient::CImportJobClient client(pipePath);
     const auto jobId = client.Start({
-        .SourcePath = sourcePath,
+        .SourcePaths = {sourcePath},
         .WorkingDirectory = workingDirectory
     }, std::chrono::seconds(5));
 

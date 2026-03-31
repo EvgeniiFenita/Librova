@@ -17,19 +17,19 @@ internal sealed class AvaloniaPathSelectionService : IPathSelectionService
         _ownerWindow = ownerWindow;
     }
 
-    public async Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
     {
         var storageProvider = _ownerWindow.StorageProvider;
         if (storageProvider is null)
         {
             UiLogging.Warning("Source file selection requested, but no Avalonia storage provider is available.");
-            return null;
+            return [];
         }
 
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select source book",
-            AllowMultiple = false,
+            Title = "Select source books",
+            AllowMultiple = true,
             FileTypeFilter =
             [
                 new FilePickerFileType("Supported books")
@@ -41,8 +41,34 @@ internal sealed class AvaloniaPathSelectionService : IPathSelectionService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var path = files.Count == 0 ? null : GetLocalPath(files[0]);
-        UiLogging.Information("Source file selection completed. HasPath={HasPath}", !string.IsNullOrWhiteSpace(path));
+        var paths = files
+            .Select(GetLocalPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .ToArray();
+        UiLogging.Information("Source file selection completed. Count={Count}", paths.Length);
+        return paths;
+    }
+
+    public async Task<string?> PickSourceDirectoryAsync(CancellationToken cancellationToken)
+    {
+        var storageProvider = _ownerWindow.StorageProvider;
+        if (storageProvider is null)
+        {
+            UiLogging.Warning("Source directory selection requested, but no Avalonia storage provider is available.");
+            return null;
+        }
+
+        var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select source directory",
+            AllowMultiple = false
+        });
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = folders.Count == 0 ? null : GetLocalPath(folders[0]);
+        UiLogging.Information("Source directory selection completed. HasPath={HasPath}", !string.IsNullOrWhiteSpace(path));
         return path;
     }
 

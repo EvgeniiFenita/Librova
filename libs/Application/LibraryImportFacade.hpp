@@ -15,19 +15,20 @@ namespace Librova::Application {
 enum class EImportMode
 {
     SingleFile,
-    ZipArchive
+    ZipArchive,
+    Batch
 };
 
 struct SImportRequest
 {
-    std::filesystem::path SourcePath;
+    std::vector<std::filesystem::path> SourcePaths;
     std::filesystem::path WorkingDirectory;
     std::optional<std::string> Sha256Hex;
     bool AllowProbableDuplicates = false;
 
     [[nodiscard]] bool IsValid() const noexcept
     {
-        return !SourcePath.empty() && !WorkingDirectory.empty();
+        return !SourcePaths.empty() && !WorkingDirectory.empty();
     }
 };
 

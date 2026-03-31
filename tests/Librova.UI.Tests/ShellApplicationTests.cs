@@ -211,7 +211,7 @@ public sealed class ShellApplicationTests
             session,
             new FakePathSelectionService
             {
-                SelectedSourcePath = @"C:\Incoming\book.fb2",
+                SelectedSourcePaths = [@"C:\Incoming\book.fb2"],
                 SelectedWorkingDirectory = @"C:\Temp\Librova\Work"
             },
             stateStore: CreateIsolatedStateStore(),
@@ -220,7 +220,7 @@ public sealed class ShellApplicationTests
         await application.Shell.ImportJobs.BrowseSourceAsync();
         await application.Shell.ImportJobs.BrowseWorkingDirectoryAsync();
 
-        Assert.Equal(@"C:\Incoming\book.fb2", application.Shell.ImportJobs.SourcePath);
+        Assert.Equal([@"C:\Incoming\book.fb2"], application.Shell.ImportJobs.SourcePaths);
         Assert.Equal(@"C:\Temp\Librova\Work", application.Shell.ImportJobs.WorkingDirectory);
     }
 
@@ -242,12 +242,12 @@ public sealed class ShellApplicationTests
             session,
             launchOptions: new ShellLaunchOptions
             {
-                InitialSourcePath = @"C:\Incoming\opened.fb2"
+                InitialSourcePaths = [@"C:\Incoming\opened.fb2"]
             },
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: new FakePreferencesStore());
 
-        Assert.Equal(@"C:\Incoming\opened.fb2", application.Shell.ImportJobs.SourcePath);
+        Assert.Equal([@"C:\Incoming\opened.fb2"], application.Shell.ImportJobs.SourcePaths);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public sealed class ShellApplicationTests
         var stateStore = CreateIsolatedStateStore();
         stateStore.Save(new ShellStateSnapshot
         {
-            SourcePath = @"C:\Saved\previous.fb2",
+            SourcePaths = [@"C:\Saved\previous.fb2", @"C:\Saved\previous.epub"],
             WorkingDirectory = @"C:\Saved\Work",
             AllowProbableDuplicates = true
         });
@@ -276,7 +276,7 @@ public sealed class ShellApplicationTests
             stateStore: stateStore,
             preferencesStore: new FakePreferencesStore());
 
-        Assert.Equal(@"C:\Saved\previous.fb2", application.Shell.ImportJobs.SourcePath);
+        Assert.Equal([@"C:\Saved\previous.fb2", @"C:\Saved\previous.epub"], application.Shell.ImportJobs.SourcePaths);
         Assert.Equal(@"C:\Saved\Work", application.Shell.ImportJobs.WorkingDirectory);
         Assert.True(application.Shell.ImportJobs.AllowProbableDuplicates);
     }
@@ -307,7 +307,8 @@ public sealed class ShellApplicationTests
 
         var snapshot = stateStore.TryLoad();
         Assert.NotNull(snapshot);
-        Assert.Equal(@"C:\Incoming\persist.fb2", snapshot!.SourcePath);
+        Assert.NotNull(snapshot!.SourcePaths);
+        Assert.Equal([@"C:\Incoming\persist.fb2"], snapshot!.SourcePaths);
         Assert.Equal(@"C:\Temp\Persisted", snapshot.WorkingDirectory);
         Assert.True(snapshot.AllowProbableDuplicates);
     }
@@ -657,12 +658,15 @@ public sealed class ShellApplicationTests
 
     private sealed class FakePathSelectionService : IPathSelectionService
     {
-        public string? SelectedSourcePath { get; init; }
+        public IReadOnlyList<string> SelectedSourcePaths { get; init; } = [];
         public string? SelectedWorkingDirectory { get; init; }
         public string? SelectedExportPath { get; init; }
 
-        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
-            => Task.FromResult(SelectedSourcePath);
+        public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
+            => Task.FromResult(SelectedSourcePaths);
+
+        public Task<string?> PickSourceDirectoryAsync(CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);

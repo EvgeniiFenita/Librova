@@ -10,7 +10,8 @@ public sealed class ShellLaunchOptionsTests
     {
         var options = ShellLaunchOptions.FromArgs(["", "  ", @"C:\Incoming\book.fb2", @"C:\Ignored.epub"]);
 
-        Assert.Equal(@"C:\Incoming\book.fb2", options.InitialSourcePath);
+        Assert.NotNull(options.InitialSourcePaths);
+        Assert.Equal([@"C:\Incoming\book.fb2"], options.InitialSourcePaths);
     }
 
     [Fact]
@@ -18,6 +19,6 @@ public sealed class ShellLaunchOptionsTests
     {
         var options = ShellLaunchOptions.FromArgs(["", "   "]);
 
-        Assert.Null(options.InitialSourcePath);
+        Assert.Null(options.InitialSourcePaths);
     }
 }

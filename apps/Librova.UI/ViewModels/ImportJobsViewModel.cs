@@ -3,8 +3,10 @@ using Librova.UI.ImportJobs;
 using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +16,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 {
     private readonly IImportJobsService _importJobsService;
     private readonly IPathSelectionService _pathSelectionService;
-    private string _sourcePath = string.Empty;
+    private IReadOnlyList<string> _sourcePaths = [];
     private string _workingDirectory = string.Empty;
     private bool _allowProbableDuplicates;
     private string _statusText = "Idle";
@@ -27,6 +29,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
+
     public event Func<Task>? ImportCompletedSuccessfully;
     public event Action<bool>? ImportActivityChanged;
 
@@ -40,6 +43,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         CancelImportCommand = new AsyncCommand(CancelCurrentAsync, CanCancel, HandleCommandErrorAsync);
         RemoveJobCommand = new AsyncCommand(RemoveCurrentAsync, CanRemove, HandleCommandErrorAsync);
         SelectSourceAndImportCommand = new AsyncCommand(SelectSourceAndImportAsync, () => !IsBusy, HandleCommandErrorAsync);
+        SelectDirectoryAndImportCommand = new AsyncCommand(SelectDirectoryAndImportAsync, () => !IsBusy, HandleCommandErrorAsync);
         BrowseSourceCommand = new AsyncCommand(BrowseSourceAsync, () => !IsBusy, HandleCommandErrorAsync);
         BrowseWorkingDirectoryCommand = new AsyncCommand(BrowseWorkingDirectoryAsync, () => !IsBusy, HandleCommandErrorAsync);
         UpdateValidationState();
@@ -47,14 +51,23 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public string SourcePath
     {
-        get => _sourcePath;
-        set
+        get => SourcePaths.FirstOrDefault() ?? string.Empty;
+        set => SetSourcePaths(string.IsNullOrWhiteSpace(value) ? [] : [value]);
+    }
+
+    public IReadOnlyList<string> SourcePaths
+    {
+        get => _sourcePaths;
+        private set
         {
-            if (SetProperty(ref _sourcePath, value))
-            {
-                UpdateValidationState();
-                StartImportCommand.RaiseCanExecuteChanged();
-            }
+            _sourcePaths = value;
+            UpdateValidationState();
+            StartImportCommand.RaiseCanExecuteChanged();
+            RaisePropertyChanged();
+            RaisePropertyChanged(nameof(SourcePath));
+            RaisePropertyChanged(nameof(HasSelectedSource));
+            RaisePropertyChanged(nameof(SelectedSourceLabel));
+            RaisePropertyChanged(nameof(SelectedSourcePathText));
         }
     }
 
@@ -93,16 +106,23 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public bool HasWorkingDirectoryValidationError => !string.IsNullOrWhiteSpace(WorkingDirectoryValidationMessage);
     public bool ShowSourceHelperText => !HasSourceValidationError;
     public bool ShowWorkingDirectoryHelperText => !HasWorkingDirectoryValidationError;
-    public bool HasSelectedSource => !string.IsNullOrWhiteSpace(SourcePath);
+    public bool HasSelectedSource => SourcePaths.Count > 0;
     public bool ShowIdleImportPicker => !IsBusy;
     public bool ShowRunningImportState => IsBusy;
     public bool HasImportResult => LastResult is not null;
-    public string SelectedSourceLabel => string.IsNullOrWhiteSpace(SourcePath)
-        ? "No file selected yet."
-        : Path.GetFileName(SourcePath);
-    public string SelectedSourcePathText => string.IsNullOrWhiteSpace(SourcePath)
-        ? "Drop a local .fb2, .epub, or .zip file here or use Select Files..."
-        : SourcePath;
+    public string SelectedSourceLabel => SourcePaths.Count switch
+    {
+        0 => "No source selected yet.",
+        1 => Path.GetFileName(SourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+        _ => $"{SourcePaths.Count} selected sources"
+    };
+    public string SelectedSourcePathText => SourcePaths.Count switch
+    {
+        0 => "Drop local .fb2, .epub, or .zip files or folders here, or use Select Files... / Select Folder...",
+        1 => SourcePaths[0],
+        _ => string.Join(Environment.NewLine, SourcePaths.Take(5))
+             + (SourcePaths.Count > 5 ? Environment.NewLine + $"...and {SourcePaths.Count - 5} more." : string.Empty)
+    };
 
     public bool IsBusy
     {
@@ -116,6 +136,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 CancelImportCommand.RaiseCanExecuteChanged();
                 RemoveJobCommand.RaiseCanExecuteChanged();
                 SelectSourceAndImportCommand.RaiseCanExecuteChanged();
+                SelectDirectoryAndImportCommand.RaiseCanExecuteChanged();
                 BrowseSourceCommand.RaiseCanExecuteChanged();
                 BrowseWorkingDirectoryCommand.RaiseCanExecuteChanged();
             }
@@ -177,32 +198,39 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public AsyncCommand CancelImportCommand { get; }
     public AsyncCommand RemoveJobCommand { get; }
     public AsyncCommand SelectSourceAndImportCommand { get; }
+    public AsyncCommand SelectDirectoryAndImportCommand { get; }
     public AsyncCommand BrowseSourceCommand { get; }
     public AsyncCommand BrowseWorkingDirectoryCommand { get; }
 
     public Shell.ShellStateSnapshot CreateStateSnapshot() =>
         new()
         {
-            SourcePath = SourcePath,
+            SourcePaths = SourcePaths.ToArray(),
             WorkingDirectory = WorkingDirectory,
             AllowProbableDuplicates = AllowProbableDuplicates
         };
 
     public void ApplyDroppedSourcePath(string? sourcePath)
+        => ApplyDroppedSourcePaths(string.IsNullOrWhiteSpace(sourcePath) ? [] : [sourcePath]);
+
+    public void ApplyDroppedSourcePaths(IReadOnlyList<string> sourcePaths)
     {
-        if (string.IsNullOrWhiteSpace(sourcePath))
+        if (sourcePaths.Count == 0 || sourcePaths.All(string.IsNullOrWhiteSpace))
         {
-            UiLogging.Warning("Ignored dropped source path because it was empty.");
+            UiLogging.Warning("Ignored dropped source paths because they were empty.");
             return;
         }
 
-        SourcePath = sourcePath;
-        UiLogging.Information("Applied dropped source path to import shell.");
+        SetSourcePaths(sourcePaths);
+        UiLogging.Information("Applied {SourceCount} dropped source path(s) to import shell.", SourcePaths.Count);
     }
 
-    public async Task ApplyDroppedSourcePathAndStartAsync(string? sourcePath)
+    public Task ApplyDroppedSourcePathAndStartAsync(string? sourcePath)
+        => ApplyDroppedSourcePathsAndStartAsync(string.IsNullOrWhiteSpace(sourcePath) ? [] : [sourcePath]);
+
+    public async Task ApplyDroppedSourcePathsAndStartAsync(IReadOnlyList<string> sourcePaths)
     {
-        ApplyDroppedSourcePath(sourcePath);
+        ApplyDroppedSourcePaths(sourcePaths);
 
         if (CanStartImport())
         {
@@ -223,7 +251,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             var jobId = await _importJobsService.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = SourcePath,
+                    SourcePaths = SourcePaths.ToArray(),
                     WorkingDirectory = WorkingDirectory,
                     AllowProbableDuplicates = AllowProbableDuplicates
                 },
@@ -299,13 +327,9 @@ internal sealed class ImportJobsViewModel : ObservableObject
             cancellation.Dispose();
         }
 
-        if (accepted)
-        {
-            StatusText = $"Import job {LastJobId.Value} cancellation requested.";
-            return;
-        }
-
-        StatusText = $"Import job {LastJobId.Value} could not be cancelled.";
+        StatusText = accepted
+            ? $"Import job {LastJobId.Value} cancellation requested."
+            : $"Import job {LastJobId.Value} could not be cancelled.";
     }
 
     public async Task RemoveCurrentAsync()
@@ -336,23 +360,39 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public async Task BrowseSourceAsync()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var selectedPath = await _pathSelectionService.PickSourceFileAsync(cancellation.Token);
-        if (!string.IsNullOrWhiteSpace(selectedPath))
+        var selectedPaths = await _pathSelectionService.PickSourceFilesAsync(cancellation.Token);
+        if (selectedPaths.Count > 0)
         {
-            SourcePath = selectedPath;
+            SetSourcePaths(selectedPaths);
         }
     }
 
     public async Task SelectSourceAndImportAsync()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var selectedPath = await _pathSelectionService.PickSourceFileAsync(cancellation.Token);
+        var selectedPaths = await _pathSelectionService.PickSourceFilesAsync(cancellation.Token);
+        if (selectedPaths.Count == 0)
+        {
+            return;
+        }
+
+        SetSourcePaths(selectedPaths);
+        if (CanStartImport())
+        {
+            await StartImportAsync();
+        }
+    }
+
+    public async Task SelectDirectoryAndImportAsync()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var selectedPath = await _pathSelectionService.PickSourceDirectoryAsync(cancellation.Token);
         if (string.IsNullOrWhiteSpace(selectedPath))
         {
             return;
         }
 
-        SourcePath = selectedPath;
+        SetSourcePaths([selectedPath]);
         if (CanStartImport())
         {
             await StartImportAsync();
@@ -466,13 +506,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (eventArgs.PropertyName is nameof(SourcePath))
-        {
-            RaisePropertyChanged(nameof(HasSelectedSource));
-            RaisePropertyChanged(nameof(SelectedSourceLabel));
-            RaisePropertyChanged(nameof(SelectedSourcePathText));
-        }
-        else if (eventArgs.PropertyName is nameof(IsBusy))
+        if (eventArgs.PropertyName is nameof(IsBusy))
         {
             RaisePropertyChanged(nameof(ShowIdleImportPicker));
             RaisePropertyChanged(nameof(ShowRunningImportState));
@@ -506,7 +540,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private bool CanStartImport() =>
         !IsBusy
-        && !string.IsNullOrWhiteSpace(SourcePath)
+        && SourcePaths.Count > 0
         && !string.IsNullOrWhiteSpace(WorkingDirectory)
         && !HasSourceValidationError
         && !HasWorkingDirectoryValidationError;
@@ -519,7 +553,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private void UpdateValidationState()
     {
-        SourceValidationMessage = BuildSourceValidationMessage(SourcePath);
+        SourceValidationMessage = BuildSourceValidationMessage(SourcePaths);
         WorkingDirectoryValidationMessage = BuildWorkingDirectoryValidationMessage(WorkingDirectory);
         RaisePropertyChanged(nameof(HasSourceValidationError));
         RaisePropertyChanged(nameof(HasWorkingDirectoryValidationError));
@@ -527,34 +561,42 @@ internal sealed class ImportJobsViewModel : ObservableObject
         RaisePropertyChanged(nameof(ShowWorkingDirectoryHelperText));
     }
 
-    private static string BuildSourceValidationMessage(string sourcePath)
+    private static string BuildSourceValidationMessage(IReadOnlyList<string> sourcePaths)
     {
-        if (string.IsNullOrWhiteSpace(sourcePath))
+        if (sourcePaths.Count == 0)
         {
             return string.Empty;
         }
 
-        if (!Path.IsPathFullyQualified(sourcePath))
+        foreach (var sourcePath in sourcePaths)
         {
-            return "Use an absolute source file path.";
-        }
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return "Selected sources must not be blank.";
+            }
 
-        if (Directory.Exists(sourcePath))
-        {
-            return "Source path must point to a file, not a directory.";
-        }
+            if (!Path.IsPathFullyQualified(sourcePath))
+            {
+                return "Use absolute source paths.";
+            }
 
-        if (!File.Exists(sourcePath))
-        {
-            return "Source file does not exist.";
-        }
+            if (Directory.Exists(sourcePath))
+            {
+                continue;
+            }
 
-        var extension = Path.GetExtension(sourcePath);
-        if (!extension.Equals(".fb2", StringComparison.OrdinalIgnoreCase)
-            && !extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
-            && !extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Supported source types are .fb2, .epub, and .zip.";
+            if (!File.Exists(sourcePath))
+            {
+                return "A selected source does not exist.";
+            }
+
+            var extension = Path.GetExtension(sourcePath);
+            if (!extension.Equals(".fb2", StringComparison.OrdinalIgnoreCase)
+                && !extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
+                && !extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
+            }
         }
 
         return string.Empty;
@@ -578,5 +620,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
 
         return string.Empty;
+    }
+
+    private void SetSourcePaths(IReadOnlyList<string> sourcePaths)
+    {
+        SourcePaths = sourcePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 }

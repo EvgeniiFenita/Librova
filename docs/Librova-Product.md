@@ -53,13 +53,14 @@ The user can import:
 
 - a single `EPUB`;
 - a single `FB2`;
+- multiple selected `EPUB` / `FB2` files in one batch;
 - a `ZIP` containing `EPUB` and `FB2`.
-
-The next MVP extension is recursive directory import, so the user will also be able to point Librova at a folder and let it discover supported books and archives under that directory tree.
+- a directory, with recursive discovery of supported `FB2`, `EPUB`, and `ZIP` sources.
 
 The import flow includes:
 
-- file selection or drag-and-drop from the UI;
+- file or folder selection from the UI;
+- drag-and-drop of one or many files and folders;
 - metadata parsing;
 - duplicate detection;
 - optional conversion `FB2 -> EPUB`;
@@ -118,7 +119,6 @@ The current MVP includes:
 
 The active MVP backlog still includes:
 
-- recursive directory import;
 - richer series and genres support;
 - Windows `Recycle Bin` integration for delete.
 
@@ -163,7 +163,6 @@ Already implemented:
 
 Most remaining work now belongs to:
 
-- recursive directory import;
 - series and genres support;
 - Windows `Recycle Bin` integration;
 - stabilization and release-candidate hardening.

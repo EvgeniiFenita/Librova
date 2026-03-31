@@ -43,8 +43,8 @@ librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
     const librova::v1::StartImportRequest& request) const
 {
     LogInfoIfInitialized(
-        "StartImport requested. SourcePath='{}' WorkingDirectory='{}' AllowProbableDuplicates={}.",
-        request.import().source_path(),
+        "StartImport requested. SourceCount={} WorkingDirectory='{}' AllowProbableDuplicates={}.",
+        request.import().source_paths_size(),
         request.import().working_directory(),
         request.import().allow_probable_duplicates());
 

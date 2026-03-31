@@ -63,7 +63,7 @@ public sealed class ShellBootstrapTests
             var jobId = await session.ImportJobs.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = [sourcePath],
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),

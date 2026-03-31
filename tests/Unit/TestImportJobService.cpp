@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <fstream>
 #include <mutex>
 #include <stop_token>
 #include <thread>
@@ -69,6 +70,27 @@ private:
     mutable bool Started = false;
 };
 
+struct SImportSandbox
+{
+    std::filesystem::path Root;
+    std::filesystem::path SourcePath;
+    std::filesystem::path WorkingDirectory;
+};
+
+SImportSandbox CreateImportSandbox(const std::string_view scenario)
+{
+    const auto root = std::filesystem::temp_directory_path() / ("librova-job-service-" + std::string{scenario});
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return {
+        .Root = root,
+        .SourcePath = sourcePath,
+        .WorkingDirectory = root / "work"
+    };
+}
+
 } // namespace
 
 TEST_CASE("Import job service starts and returns completed application-facing results", "[application-jobs]")
@@ -79,10 +101,11 @@ TEST_CASE("Import job service starts and returns completed application-facing re
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
+    const auto sandbox = CreateImportSandbox("completed");
 
     const auto jobId = service.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(jobId != 0);
@@ -99,6 +122,7 @@ TEST_CASE("Import job service starts and returns completed application-facing re
     REQUIRE(result->Snapshot.JobId == jobId);
     REQUIRE(result->ImportResult.has_value());
     REQUIRE(result->ImportResult->Summary.ImportedEntries == 1);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job service exposes cancellation through application-facing status", "[application-jobs]")
@@ -109,10 +133,11 @@ TEST_CASE("Import job service exposes cancellation through application-facing st
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
+    const auto sandbox = CreateImportSandbox("cancel");
 
     const auto jobId = service.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(importer.WaitUntilStarted(std::chrono::seconds(1)));
@@ -130,6 +155,7 @@ TEST_CASE("Import job service exposes cancellation through application-facing st
     REQUIRE(result->Snapshot.Status == Librova::ApplicationJobs::EImportJobStatus::Cancelled);
     REQUIRE(result->Error.has_value());
     REQUIRE(result->Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job service returns empty state for unknown jobs", "[application-jobs]")
@@ -155,14 +181,16 @@ TEST_CASE("Import job service removes completed jobs through application-facing 
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
+    const auto sandbox = CreateImportSandbox("remove");
 
     const auto jobId = service.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     });
 
     REQUIRE(service.Wait(jobId, std::chrono::seconds(1)));
     REQUIRE(service.Remove(jobId));
     REQUIRE_FALSE(service.TryGetSnapshot(jobId).has_value());
     REQUIRE_FALSE(service.TryGetResult(jobId).has_value());
+    std::filesystem::remove_all(sandbox.Root);
 }

@@ -9,10 +9,10 @@ internal static class ImportJobMapper
     {
         var request = new ImportRequest
         {
-            SourcePath = model.SourcePath,
             WorkingDirectory = model.WorkingDirectory,
             AllowProbableDuplicates = model.AllowProbableDuplicates
         };
+        request.SourcePaths.AddRange(model.SourcePaths);
 
         if (!string.IsNullOrWhiteSpace(model.Sha256Hex))
         {
@@ -56,6 +56,7 @@ internal static class ImportJobMapper
                 {
                     ImportMode.SingleFile => ImportModeModel.SingleFile,
                     ImportMode.ZipArchive => ImportModeModel.ZipArchive,
+                    ImportMode.Batch => ImportModeModel.Batch,
                     _ => ImportModeModel.SingleFile
                 },
                 TotalEntries = result.Summary.TotalEntries,

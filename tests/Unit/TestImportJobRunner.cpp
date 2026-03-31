@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -99,6 +100,27 @@ public:
     }
 };
 
+struct SImportSandbox
+{
+    std::filesystem::path Root;
+    std::filesystem::path SourcePath;
+    std::filesystem::path WorkingDirectory;
+};
+
+SImportSandbox CreateImportSandbox(const std::string_view scenario, const std::string_view fileName = "book.fb2")
+{
+    const auto root = std::filesystem::temp_directory_path() / ("librova-job-runner-" + std::string{scenario});
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / fileName;
+    std::ofstream(sourcePath).put('x');
+    return {
+        .Root = root,
+        .SourcePath = sourcePath,
+        .WorkingDirectory = root / "work"
+    };
+}
+
 void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string& text)
 {
     void* buffer = std::malloc(text.size());
@@ -179,10 +201,11 @@ TEST_CASE("Import job runner reports completed status for successful import", "[
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
+    const auto sandbox = CreateImportSandbox("success");
 
     const auto result = runner.Run({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     }, {});
 
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
@@ -190,6 +213,7 @@ TEST_CASE("Import job runner reports completed status for successful import", "[
     REQUIRE(result.Snapshot.Message == "Import completed successfully.");
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(result.ImportResult.has_value());
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job runner maps duplicate decision required into structured failure", "[jobs][import]")
@@ -202,16 +226,18 @@ TEST_CASE("Import job runner maps duplicate decision required into structured fa
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
+    const auto sandbox = CreateImportSandbox("decision-required");
 
     const auto result = runner.Run({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     }, {});
 
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
     REQUIRE(result.Error.has_value());
     REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired);
     REQUIRE(result.Snapshot.Message == "Import requires user confirmation for a probable duplicate.");
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs][import]")
@@ -224,16 +250,18 @@ TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
+    const auto sandbox = CreateImportSandbox("cancelled");
 
     const auto result = runner.Run({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     }, {});
 
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
     REQUIRE(result.Error.has_value());
     REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
     REQUIRE(result.Snapshot.Message == "Import was cancelled.");
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Import job runner reports partial success for ZIP import with failures", "[jobs][import]")
@@ -246,7 +274,7 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
-        .SourcePath = zipPath,
+        .SourcePaths = {zipPath},
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, {});
 
@@ -272,7 +300,7 @@ TEST_CASE("Import job runner fails when ZIP import produces no imported books", 
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
-        .SourcePath = zipPath,
+        .SourcePaths = {zipPath},
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, {});
 
@@ -292,10 +320,11 @@ TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][impor
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     Librova::Jobs::CImportJobRunner runner(facade);
+    const auto sandbox = CreateImportSandbox("observer-failure");
 
     const auto result = runner.Run({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     }, {}, [](const Librova::Jobs::SJobProgressSnapshot&) {
         throw std::runtime_error("observer failure");
     });
@@ -303,4 +332,5 @@ TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][impor
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(result.ImportResult.has_value());
+    std::filesystem::remove_all(sandbox.Root);
 }

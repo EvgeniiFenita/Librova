@@ -20,8 +20,15 @@ namespace Librova::ProtoMapping {
 
 Librova::Application::SImportRequest CImportJobProtoMapper::FromProto(const librova::v1::ImportRequest& request)
 {
+    std::vector<std::filesystem::path> sourcePaths;
+    sourcePaths.reserve(static_cast<std::size_t>(request.source_paths_size()));
+    for (const auto& sourcePath : request.source_paths())
+    {
+        sourcePaths.push_back(PathFromUtf8(sourcePath));
+    }
+
     return {
-        .SourcePath = PathFromUtf8(request.source_path()),
+        .SourcePaths = std::move(sourcePaths),
         .WorkingDirectory = PathFromUtf8(request.working_directory()),
         .Sha256Hex = request.has_sha256_hex() ? std::optional<std::string>{request.sha256_hex()} : std::nullopt,
         .AllowProbableDuplicates = request.allow_probable_duplicates()
@@ -84,7 +91,10 @@ Librova::ApplicationJobs::SImportJobResult CImportJobProtoMapper::FromProto(
 librova::v1::ImportRequest CImportJobProtoMapper::ToProto(const Librova::Application::SImportRequest& request)
 {
     librova::v1::ImportRequest message;
-    message.set_source_path(PathToUtf8(request.SourcePath));
+    for (const auto& sourcePath : request.SourcePaths)
+    {
+        message.add_source_paths(PathToUtf8(sourcePath));
+    }
     message.set_working_directory(PathToUtf8(request.WorkingDirectory));
 
     if (request.Sha256Hex.has_value())
@@ -209,6 +219,8 @@ Librova::Application::EImportMode CImportJobProtoMapper::FromProto(const librova
         return Librova::Application::EImportMode::SingleFile;
     case librova::v1::IMPORT_MODE_ZIP_ARCHIVE:
         return Librova::Application::EImportMode::ZipArchive;
+    case librova::v1::IMPORT_MODE_BATCH:
+        return Librova::Application::EImportMode::Batch;
     case librova::v1::IMPORT_MODE_UNSPECIFIED:
         break;
     }
@@ -279,6 +291,8 @@ librova::v1::ImportMode CImportJobProtoMapper::ToProto(const Librova::Applicatio
         return librova::v1::IMPORT_MODE_SINGLE_FILE;
     case Librova::Application::EImportMode::ZipArchive:
         return librova::v1::IMPORT_MODE_ZIP_ARCHIVE;
+    case Librova::Application::EImportMode::Batch:
+        return librova::v1::IMPORT_MODE_BATCH;
     }
 
     return librova::v1::IMPORT_MODE_UNSPECIFIED;

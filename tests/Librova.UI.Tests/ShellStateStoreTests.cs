@@ -12,7 +12,7 @@ public sealed class ShellStateStoreTests
         var store = new ShellStateStore(filePath);
         var expected = new ShellStateSnapshot
         {
-            SourcePath = @"C:\Incoming\saved.fb2",
+            SourcePaths = [@"C:\Incoming\saved.fb2", @"C:\Incoming\saved.epub"],
             WorkingDirectory = @"C:\Temp\Librova\UiImport",
             AllowProbableDuplicates = true
         };
@@ -21,7 +21,7 @@ public sealed class ShellStateStoreTests
         var actual = store.TryLoad();
 
         Assert.NotNull(actual);
-        Assert.Equal(expected.SourcePath, actual!.SourcePath);
+        Assert.Equal(expected.SourcePaths, actual!.SourcePaths);
         Assert.Equal(expected.WorkingDirectory, actual.WorkingDirectory);
         Assert.Equal(expected.AllowProbableDuplicates, actual.AllowProbableDuplicates);
     }

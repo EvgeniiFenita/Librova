@@ -3,6 +3,7 @@
 #include <chrono>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <stop_token>
 #include <string>
 #include <thread>
@@ -80,6 +81,27 @@ public:
     }
 };
 
+struct SImportSandbox
+{
+    std::filesystem::path Root;
+    std::filesystem::path SourcePath;
+    std::filesystem::path WorkingDirectory;
+};
+
+SImportSandbox CreateImportSandbox()
+{
+    const auto root = std::filesystem::temp_directory_path() / "librova-app-client-import";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return {
+        .Root = root,
+        .SourcePath = sourcePath,
+        .WorkingDirectory = root / "work"
+    };
+}
+
 } // namespace
 
 TEST_CASE("Application import job client performs end-to-end start wait and result retrieval", "[application-client]")
@@ -120,10 +142,11 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     Librova::ApplicationClient::CImportJobClient client(pipePath);
+    const auto sandbox = CreateImportSandbox();
 
     const auto jobId = client.Start({
-        .SourcePath = "C:/books/book.fb2",
-        .WorkingDirectory = "C:/work"
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
     }, std::chrono::seconds(2));
 
     REQUIRE(jobId != 0);
@@ -138,4 +161,5 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
+    std::filesystem::remove_all(sandbox.Root);
 }

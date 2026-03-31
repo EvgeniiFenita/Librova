@@ -15,7 +15,8 @@ internal enum ImportJobStatusModel
 internal enum ImportModeModel
 {
     SingleFile,
-    ZipArchive
+    ZipArchive,
+    Batch
 }
 
 internal enum ImportErrorCodeModel
@@ -36,7 +37,7 @@ internal enum ImportErrorCodeModel
 
 internal sealed class StartImportRequestModel
 {
-    public required string SourcePath { get; init; }
+    public required IReadOnlyList<string> SourcePaths { get; init; }
     public required string WorkingDirectory { get; init; }
     public string? Sha256Hex { get; init; }
     public bool AllowProbableDuplicates { get; init; }

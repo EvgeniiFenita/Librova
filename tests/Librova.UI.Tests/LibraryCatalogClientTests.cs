@@ -59,7 +59,7 @@ public sealed class LibraryCatalogClientTests
             var jobId = await importService.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = [sourcePath],
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),
@@ -162,7 +162,7 @@ public sealed class LibraryCatalogClientTests
             var jobId = await importService.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = [sourcePath],
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),
@@ -264,7 +264,7 @@ public sealed class LibraryCatalogClientTests
             var jobId = await importService.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = [sourcePath],
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),
@@ -366,7 +366,7 @@ public sealed class LibraryCatalogClientTests
             var jobId = await importService.StartAsync(
                 new StartImportRequestModel
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = [sourcePath],
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),

@@ -163,7 +163,10 @@ public sealed class FirstRunSetupViewModelTests
     {
         public string? SelectedWorkingDirectory { get; init; }
 
-        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<string?> PickSourceDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)

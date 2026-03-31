@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <mutex>
 #include <stdexcept>
 #include <stop_token>
@@ -82,6 +83,16 @@ public:
     }
 };
 
+std::filesystem::path CreateImportSourcePath()
+{
+    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-host-import";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return sourcePath;
+}
+
 } // namespace
 
 TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[pipe-host]")
@@ -120,11 +131,12 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
+    const auto sourcePath = CreateImportSourcePath();
 
     librova::v1::StartImportRequest typedRequest;
     auto* import = typedRequest.mutable_import();
-    import->set_source_path("C:/books/book.fb2");
-    import->set_working_directory("C:/work");
+    import->add_source_paths(sourcePath.string());
+    import->set_working_directory((sourcePath.parent_path() / "work").string());
 
     std::string payload;
     REQUIRE(typedRequest.SerializeToString(&payload));

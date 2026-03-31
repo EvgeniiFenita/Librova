@@ -6,7 +6,7 @@ Librova has a working MVP baseline, but active MVP work is still continuing.
 
 Already implemented end-to-end:
 
-- single-file and archive import;
+- single-file, multi-file, directory, and archive import;
 - browser and details;
 - export;
 - first-run setup;
@@ -17,7 +17,6 @@ Already implemented end-to-end:
 
 The remaining active MVP scope is:
 
-- recursive directory import for mixed `FB2` / `EPUB` / `ZIP` collections;
 - stronger support for series and genres across parsing, storage, details, and browser filtering;
 - replacing the current managed-library `Trash` implementation with Windows `Recycle Bin` integration;
 - broad review passes on runtime behavior and crash safety;
@@ -37,7 +36,7 @@ Librova can be treated as MVP-ready when:
 
 - `Debug` and `Release` validation stay green;
 - manual UI test scenarios have been walked through successfully;
-- directory import, series/genres support, and Windows `Recycle Bin` delete flow are implemented and validated;
+- series/genres support and Windows `Recycle Bin` delete flow are implemented and validated;
 - no critical runtime regressions remain in startup, import, browser, export, delete, or settings flows;
 - logs are actionable enough to diagnose startup and runtime problems.
 

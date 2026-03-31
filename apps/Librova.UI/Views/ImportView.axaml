@@ -13,7 +13,7 @@
           <TextBlock Classes="SectionTitle"
                      Text="Import Books" />
           <TextBlock Opacity="0.72"
-                     Text="Drop a local `.fb2`, `.epub`, or `.zip` file onto the window, or use `Select Files...` to import it into the managed library."
+                     Text="Drop local `.fb2`, `.epub`, or `.zip` files and folders onto the window, or use `Select Files...` / `Select Folder...` to import them into the managed library."
                      TextWrapping="Wrap" />
         </StackPanel>
 
@@ -22,15 +22,23 @@
                 BorderBrush="#D9BE98">
           <StackPanel Spacing="12">
             <TextBlock FontWeight="SemiBold"
-                       Text="Drop files here" />
+                       Text="Drop files or folders here" />
             <TextBlock Opacity="0.82"
-                       Text="Librova accepts single `.fb2`, `.epub`, and `.zip` inputs. Selecting or dropping a file starts the import flow immediately."
+                       Text="Librova accepts `.fb2`, `.epub`, `.zip`, multiple selected files, and recursive folder imports. Selecting or dropping sources starts the import flow immediately."
                        TextWrapping="Wrap" />
-            <Button Classes="PrimaryAction"
-                    Width="180"
-                    HorizontalAlignment="Left"
-                    Command="{Binding ImportJobs.SelectSourceAndImportCommand}"
-                    Content="Select Files..." />
+            <WrapPanel Orientation="Horizontal"
+                       ItemHeight="44">
+              <Button Classes="PrimaryAction"
+                      Width="180"
+                      HorizontalAlignment="Left"
+                      Command="{Binding ImportJobs.SelectSourceAndImportCommand}"
+                      Content="Select Files..." />
+              <Button Classes="SecondaryAction"
+                      Width="180"
+                      HorizontalAlignment="Left"
+                      Command="{Binding ImportJobs.SelectDirectoryAndImportCommand}"
+                      Content="Select Folder..." />
+            </WrapPanel>
           </StackPanel>
         </Border>
 

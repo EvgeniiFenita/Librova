@@ -3,6 +3,7 @@
 #include <chrono>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <stop_token>
 #include <string>
 #include <thread>
@@ -80,6 +81,16 @@ public:
     }
 };
 
+std::filesystem::path CreateImportSourcePath()
+{
+    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-client-import";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return sourcePath;
+}
+
 } // namespace
 
 TEST_CASE("Named pipe client performs typed StartImport call through host", "[pipe-client]")
@@ -118,11 +129,12 @@ TEST_CASE("Named pipe client performs typed StartImport call through host", "[pi
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
+    const auto sourcePath = CreateImportSourcePath();
 
     librova::v1::StartImportRequest request;
     auto* import = request.mutable_import();
-    import->set_source_path("C:/books/book.fb2");
-    import->set_working_directory("C:/work");
+    import->add_source_paths(sourcePath.string());
+    import->set_working_directory((sourcePath.parent_path() / "work").string());
 
     const auto response = client.Call<librova::v1::StartImportRequest, librova::v1::StartImportResponse>(
         Librova::PipeTransport::EPipeMethod::StartImport,

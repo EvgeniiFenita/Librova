@@ -243,7 +243,7 @@ public sealed class ViewModelsTests
     {
         var selectionService = new FakePathSelectionService
         {
-            SelectedSourcePath = @"C:\Incoming\book.fb2",
+            SelectedSourcePaths = [@"C:\Incoming\book.fb2", @"C:\Incoming\batch.epub"],
             SelectedWorkingDirectory = @"C:\Temp\Librova\Work"
         };
         var viewModel = new ImportJobsViewModel(new FakeImportJobsService(), selectionService);
@@ -251,7 +251,7 @@ public sealed class ViewModelsTests
         await viewModel.BrowseSourceCommand.ExecuteAsyncForTests();
         await viewModel.BrowseWorkingDirectoryCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(@"C:\Incoming\book.fb2", viewModel.SourcePath);
+        Assert.Equal([@"C:\Incoming\book.fb2", @"C:\Incoming\batch.epub"], viewModel.SourcePaths);
         Assert.Equal(@"C:\Temp\Librova\Work", viewModel.WorkingDirectory);
     }
 
@@ -269,7 +269,7 @@ public sealed class ViewModelsTests
                 service,
                 new FakePathSelectionService
                 {
-                    SelectedSourcePath = sourcePath
+                    SelectedSourcePaths = [sourcePath]
                 })
             {
                 WorkingDirectory = Path.Combine(sandboxRoot, "work")
@@ -277,10 +277,94 @@ public sealed class ViewModelsTests
 
             await viewModel.SelectSourceAndImportCommand.ExecuteAsyncForTests();
 
-            Assert.Equal(sourcePath, viewModel.SourcePath);
+            Assert.Equal([sourcePath], viewModel.SourcePaths);
             Assert.Equal(42UL, viewModel.LastJobId);
             Assert.NotNull(viewModel.LastResult);
-            Assert.Equal(sourcePath, service.LastStartRequest?.SourcePath);
+            Assert.Equal([sourcePath], service.LastStartRequest?.SourcePaths);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_SelectSourceAndImportCommand_StartsBatchImportAfterPickingMultipleFiles()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var firstSourcePath = CreateSupportedSourceFile(sandboxRoot, "selected-one.fb2");
+            var secondSourcePath = CreateSupportedSourceFile(sandboxRoot, "selected-two.epub");
+            var viewModel = new ImportJobsViewModel(
+                service,
+                new FakePathSelectionService
+                {
+                    SelectedSourcePaths = [firstSourcePath, secondSourcePath]
+                })
+            {
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.SelectSourceAndImportCommand.ExecuteAsyncForTests();
+
+            Assert.Equal([firstSourcePath, secondSourcePath], viewModel.SourcePaths);
+            Assert.Equal(42UL, viewModel.LastJobId);
+            Assert.Equal([firstSourcePath, secondSourcePath], service.LastStartRequest?.SourcePaths);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_SelectDirectoryAndImportCommand_StartsRecursiveDirectoryImport()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourceDirectory = Path.Combine(sandboxRoot, "incoming");
+            Directory.CreateDirectory(sourceDirectory);
+            var viewModel = new ImportJobsViewModel(
+                service,
+                new FakePathSelectionService
+                {
+                    SelectedSourceDirectory = sourceDirectory
+                })
+            {
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.SelectDirectoryAndImportCommand.ExecuteAsyncForTests();
+
+            Assert.Equal([sourceDirectory], viewModel.SourcePaths);
+            Assert.Equal(42UL, viewModel.LastJobId);
+            Assert.Equal([sourceDirectory], service.LastStartRequest?.SourcePaths);
         }
         finally
         {
@@ -343,7 +427,7 @@ public sealed class ViewModelsTests
         };
 
         Assert.False(viewModel.StartImportCommand.CanExecute(null));
-        Assert.Equal("Source file does not exist.", viewModel.SourceValidationMessage);
+        Assert.Equal("A selected source does not exist.", viewModel.SourceValidationMessage);
     }
 
     [Fact]
@@ -400,7 +484,7 @@ public sealed class ViewModelsTests
             };
 
             Assert.False(viewModel.StartImportCommand.CanExecute(null));
-            Assert.Equal("Supported source types are .fb2, .epub, and .zip.", viewModel.SourceValidationMessage);
+            Assert.Equal("Supported source types are .fb2, .epub, and .zip, or a directory containing them.", viewModel.SourceValidationMessage);
         }
         finally
         {
@@ -927,12 +1011,16 @@ public sealed class ViewModelsTests
 
     private sealed class FakePathSelectionService : IPathSelectionService
     {
-        public string? SelectedSourcePath { get; init; }
+        public IReadOnlyList<string> SelectedSourcePaths { get; init; } = [];
+        public string? SelectedSourceDirectory { get; init; }
         public string? SelectedWorkingDirectory { get; init; }
         public string? SelectedExportPath { get; init; }
 
-        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken)
-            => Task.FromResult(SelectedSourcePath);
+        public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
+            => Task.FromResult(SelectedSourcePaths);
+
+        public Task<string?> PickSourceDirectoryAsync(CancellationToken cancellationToken)
+            => Task.FromResult(SelectedSourceDirectory);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);

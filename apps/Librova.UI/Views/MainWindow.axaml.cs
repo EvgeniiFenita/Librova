@@ -19,7 +19,7 @@ internal sealed partial class MainWindow : Window
 
     private void OnDragOver(object? sender, DragEventArgs eventArgs)
     {
-        eventArgs.DragEffects = TryGetDroppedSourcePath(eventArgs) is null
+        eventArgs.DragEffects = TryGetDroppedSourcePaths(eventArgs).Count == 0
             ? DragDropEffects.None
             : DragDropEffects.Copy;
         eventArgs.Handled = true;
@@ -32,21 +32,26 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        var sourcePath = TryGetDroppedSourcePath(eventArgs);
+        var sourcePaths = TryGetDroppedSourcePaths(eventArgs);
         await viewModel.Shell.ActivateImportSectionAsync();
-        await viewModel.Shell.ImportJobs.ApplyDroppedSourcePathAndStartAsync(sourcePath);
+        await viewModel.Shell.ImportJobs.ApplyDroppedSourcePathsAndStartAsync(sourcePaths);
         eventArgs.Handled = true;
     }
 
-    private static string? TryGetDroppedSourcePath(DragEventArgs eventArgs)
+    private static IReadOnlyList<string> TryGetDroppedSourcePaths(DragEventArgs eventArgs)
     {
-        var storageItem = eventArgs.Data.GetFiles()?.FirstOrDefault();
-        if (storageItem is null)
+        var files = eventArgs.Data.GetFiles();
+        if (files is null)
         {
-            return null;
+            return [];
         }
 
-        return GetLocalPath(storageItem);
+        return files
+            .Select(GetLocalPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string? GetLocalPath(IStorageItem storageItem)

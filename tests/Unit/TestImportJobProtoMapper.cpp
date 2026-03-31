@@ -7,7 +7,7 @@
 TEST_CASE("Import job proto mapper round-trips import request paths and optional hash", "[proto-mapping]")
 {
     const Librova::Application::SImportRequest request{
-        .SourcePath = std::filesystem::path{u8"C:/books/Тест.fb2"},
+        .SourcePaths = {std::filesystem::path{u8"C:/books/Тест.fb2"}},
         .WorkingDirectory = std::filesystem::path{u8"C:/work/Каталог"},
         .Sha256Hex = std::string{"abc123"},
         .AllowProbableDuplicates = true
@@ -16,7 +16,7 @@ TEST_CASE("Import job proto mapper round-trips import request paths and optional
     const auto proto = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(request);
     const auto restored = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(proto);
 
-    REQUIRE(restored.SourcePath == request.SourcePath);
+    REQUIRE(restored.SourcePaths == request.SourcePaths);
     REQUIRE(restored.WorkingDirectory == request.WorkingDirectory);
     REQUIRE(restored.Sha256Hex == request.Sha256Hex);
     REQUIRE(restored.AllowProbableDuplicates == request.AllowProbableDuplicates);

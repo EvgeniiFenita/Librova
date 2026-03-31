@@ -68,13 +68,13 @@ internal sealed class ShellViewModel : ObservableObject
 
         UpdateConverterValidation();
 
-        if (!string.IsNullOrWhiteSpace(launchOptions?.InitialSourcePath))
+        if (launchOptions?.InitialSourcePaths is { Length: > 0 } launchSourcePaths)
         {
-            ImportJobs.SourcePath = launchOptions.InitialSourcePath;
+            ImportJobs.ApplyDroppedSourcePaths(launchSourcePaths);
         }
-        else if (!string.IsNullOrWhiteSpace(savedState?.SourcePath))
+        else if (savedState?.SourcePaths is { Length: > 0 } savedSourcePaths)
         {
-            ImportJobs.SourcePath = savedState.SourcePath;
+            ImportJobs.ApplyDroppedSourcePaths(savedSourcePaths);
         }
     }
 

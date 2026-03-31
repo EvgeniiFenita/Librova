@@ -25,8 +25,8 @@ internal sealed class ImportJobsService : IImportJobsService
         CancellationToken cancellationToken)
     {
         UiLogging.Information(
-            "Starting import job request. SourcePath={SourcePath} WorkingDirectory={WorkingDirectory} TimeoutMs={TimeoutMs}",
-            request.SourcePath,
+            "Starting import job request. SourceCount={SourceCount} WorkingDirectory={WorkingDirectory} TimeoutMs={TimeoutMs}",
+            request.SourcePaths.Count,
             request.WorkingDirectory,
             timeout.TotalMilliseconds);
 
@@ -138,7 +138,7 @@ internal sealed class ImportJobsService : IImportJobsService
         }
         catch (Exception error)
         {
-            UiLogging.Error(error, "Failed to start import job. SourcePath={SourcePath}", request.SourcePath);
+            UiLogging.Error(error, "Failed to start import job. SourceCount={SourceCount}", request.SourcePaths.Count);
             throw;
         }
     }

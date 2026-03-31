@@ -40,6 +40,20 @@ public:
 
 } // namespace
 
+namespace {
+
+std::filesystem::path CreateImportSourcePath(const std::string_view scenario)
+{
+    const auto root = std::filesystem::temp_directory_path() / ("librova-pipe-dispatch-" + std::string{scenario});
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return sourcePath;
+}
+
+} // namespace
+
 TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pipe]")
 {
     CImmediateSingleFileImporter importer;
@@ -75,11 +89,12 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+    const auto sourcePath = CreateImportSourcePath("start");
 
     librova::v1::StartImportRequest typedRequest;
     auto* import = typedRequest.mutable_import();
-    import->set_source_path("C:/books/book.fb2");
-    import->set_working_directory("C:/work");
+    import->add_source_paths(sourcePath.string());
+    import->set_working_directory((sourcePath.parent_path() / "work").string());
 
     std::string payload;
     REQUIRE(typedRequest.SerializeToString(&payload));

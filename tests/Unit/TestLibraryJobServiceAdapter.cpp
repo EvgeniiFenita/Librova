@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <stop_token>
@@ -117,6 +118,27 @@ public:
     }
 };
 
+struct SImportSandbox
+{
+    std::filesystem::path Root;
+    std::filesystem::path SourcePath;
+    std::filesystem::path WorkingDirectory;
+};
+
+SImportSandbox CreateImportSandbox(const std::string_view scenario)
+{
+    const auto root = std::filesystem::temp_directory_path() / ("librova-proto-service-import-" + std::string{scenario});
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto sourcePath = root / "book.fb2";
+    std::ofstream(sourcePath).put('x');
+    return {
+        .Root = root,
+        .SourcePath = sourcePath,
+        .WorkingDirectory = root / "work"
+    };
+}
+
 } // namespace
 
 TEST_CASE("Library job service adapter starts jobs and returns protobuf results", "[proto-service]")
@@ -134,11 +156,12 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    const auto sandbox = CreateImportSandbox("start");
 
     librova::v1::StartImportRequest startRequest;
     auto* import = startRequest.mutable_import();
-    import->set_source_path("C:/books/book.fb2");
-    import->set_working_directory("C:/work");
+    import->add_source_paths(sandbox.SourcePath.string());
+    import->set_working_directory(sandbox.WorkingDirectory.string());
     import->set_allow_probable_duplicates(true);
 
     const auto startResponse = adapter.StartImport(startRequest);
@@ -158,6 +181,7 @@ TEST_CASE("Library job service adapter starts jobs and returns protobuf results"
     REQUIRE(resultResponse.has_result());
     REQUIRE(resultResponse.result().snapshot().job_id() == startResponse.job_id());
     REQUIRE(resultResponse.result().summary().imported_entries() == 1);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Library job service adapter exposes snapshot cancellation and removal", "[proto-service]")
@@ -175,10 +199,11 @@ TEST_CASE("Library job service adapter exposes snapshot cancellation and removal
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    const auto sandbox = CreateImportSandbox("cancel");
 
     librova::v1::StartImportRequest startRequest;
-    startRequest.mutable_import()->set_source_path("C:/books/book.fb2");
-    startRequest.mutable_import()->set_working_directory("C:/work");
+    startRequest.mutable_import()->add_source_paths(sandbox.SourcePath.string());
+    startRequest.mutable_import()->set_working_directory(sandbox.WorkingDirectory.string());
 
     const auto startResponse = adapter.StartImport(startRequest);
     REQUIRE(importer.WaitUntilStarted(std::chrono::seconds(1)));
@@ -203,6 +228,7 @@ TEST_CASE("Library job service adapter exposes snapshot cancellation and removal
     removeRequest.set_job_id(startResponse.job_id());
     REQUIRE(adapter.RemoveImportJob(removeRequest).removed());
     REQUIRE_FALSE(adapter.GetImportJobSnapshot(snapshotRequest).has_snapshot());
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Library job service adapter exposes book list query over protobuf", "[proto-service][catalog]")

@@ -59,7 +59,7 @@ public sealed class ImportJobClientTests
             var jobId = await client.StartImportAsync(
                 new ImportRequest
                 {
-                    SourcePath = sourcePath,
+                    SourcePaths = { sourcePath },
                     WorkingDirectory = Path.Combine(sandboxRoot, "Work")
                 },
                 TimeSpan.FromSeconds(5),

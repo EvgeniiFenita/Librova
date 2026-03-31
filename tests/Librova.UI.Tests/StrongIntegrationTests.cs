@@ -215,7 +215,7 @@ public sealed class StrongIntegrationTests
         var jobId = await importJobs.StartAsync(
             new StartImportRequestModel
             {
-                SourcePath = sourcePath,
+                SourcePaths = [sourcePath],
                 WorkingDirectory = workDirectory
             },
             TimeSpan.FromSeconds(5),
@@ -282,7 +282,10 @@ public sealed class StrongIntegrationTests
 
     private sealed class FakeExportSelectionService(string exportPath) : Desktop.IPathSelectionService
     {
-        public Task<string?> PickSourceFileAsync(CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<string?> PickSourceDirectoryAsync(CancellationToken cancellationToken) =>
             Task.FromResult<string?>(null);
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken) =>
