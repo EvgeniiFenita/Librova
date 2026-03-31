@@ -38,7 +38,7 @@ internal sealed class BookListRequestModel
 
 internal sealed class BookListItemModel : INotifyPropertyChanged
 {
-    private Uri? _resolvedCoverUri;
+    private IImage? _resolvedCoverImage;
     private IBrush? _coverBackgroundBrush;
     private string _coverPlaceholderText = "BOOK";
     private bool _isSelected;
@@ -59,10 +59,10 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
     public string? CoverPath { get; init; }
     public ulong SizeBytes { get; init; }
     public DateTimeOffset AddedAtUtc { get; init; }
-    public Uri? ResolvedCoverUri
+    public IImage? ResolvedCoverImage
     {
-        get => _resolvedCoverUri;
-        set => SetField(ref _resolvedCoverUri, value);
+        get => _resolvedCoverImage;
+        set => SetField(ref _resolvedCoverImage, value);
     }
 
     public IBrush? CoverBackgroundBrush
@@ -104,7 +104,7 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
     public string AuthorsText => Authors.Count == 0 ? "Unknown author" : string.Join(", ", Authors);
     public string TagsText => Tags.Count == 0 ? "No tags" : string.Join(", ", Tags);
     public string FormatText => Format.ToString().ToUpperInvariant();
-    public bool HasResolvedCover => ResolvedCoverUri is not null;
+    public bool HasResolvedCover => ResolvedCoverImage is not null;
     public bool ShowCoverPlaceholder => !HasResolvedCover;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -118,7 +118,7 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
 
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        if (propertyName is nameof(ResolvedCoverUri))
+        if (propertyName is nameof(ResolvedCoverImage))
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasResolvedCover)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCoverPlaceholder)));
@@ -128,7 +128,7 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
 
 internal sealed class BookDetailsModel : INotifyPropertyChanged
 {
-    private Uri? _resolvedCoverUri;
+    private IImage? _resolvedCoverImage;
     private IBrush? _coverBackgroundBrush;
     private string _coverPlaceholderText = "BOOK";
 
@@ -150,10 +150,10 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
     public ulong SizeBytes { get; init; }
     public string Sha256Hex { get; init; } = string.Empty;
     public DateTimeOffset AddedAtUtc { get; init; }
-    public Uri? ResolvedCoverUri
+    public IImage? ResolvedCoverImage
     {
-        get => _resolvedCoverUri;
-        set => SetField(ref _resolvedCoverUri, value);
+        get => _resolvedCoverImage;
+        set => SetField(ref _resolvedCoverImage, value);
     }
 
     public IBrush? CoverBackgroundBrush
@@ -168,7 +168,7 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
         set => SetField(ref _coverPlaceholderText, value);
     }
 
-    public bool HasResolvedCover => ResolvedCoverUri is not null;
+    public bool HasResolvedCover => ResolvedCoverImage is not null;
     public bool ShowCoverPlaceholder => !HasResolvedCover;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -182,7 +182,7 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
 
         field = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        if (propertyName is nameof(ResolvedCoverUri))
+        if (propertyName is nameof(ResolvedCoverImage))
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasResolvedCover)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCoverPlaceholder)));

@@ -495,7 +495,7 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_ResolvesCoverUriAgainstLibraryRoot()
+    public async Task LibraryBrowserViewModel_LoadsCoverImageThroughLoaderAgainstLibraryRoot()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
         var coversRoot = Path.Combine(sandboxRoot, "Covers");
@@ -503,17 +503,22 @@ public sealed class ViewModelsTests
 
         try
         {
-            var coverPath = Path.Combine(coversRoot, "0000000001.jpg");
-            await File.WriteAllTextAsync(coverPath, "cover");
+            var coverPath = Path.Combine(coversRoot, "0000000001.png");
+            await File.WriteAllTextAsync(coverPath, "cover-path-marker");
 
             var service = new CoverAwareLibraryCatalogService();
-            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot);
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
 
             await viewModel.RefreshAsync();
 
-            Assert.NotNull(viewModel.Books[0].ResolvedCoverUri);
-            Assert.Equal(new Uri(coverPath, UriKind.Absolute), viewModel.Books[0].ResolvedCoverUri);
-            Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
+            Assert.Single(loader.LoadedPaths);
+            Assert.Equal(coverPath, loader.LoadedPaths[0]);
+
+            await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+            Assert.Equal(2, loader.LoadedPaths.Count);
+            Assert.Equal(coverPath, loader.LoadedPaths[1]);
         }
         finally
         {
@@ -1048,19 +1053,42 @@ public sealed class ViewModelsTests
                     Language = "en",
                     Format = BookFormatModel.Epub,
                     ManagedPath = "Books/0000000001/book.epub",
-                    CoverPath = "Covers/0000000001.jpg",
+                    CoverPath = "Covers/0000000001.png",
                     AddedAtUtc = DateTimeOffset.UtcNow
                 }
             ]);
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<BookDetailsModel?>(null);
+            => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
+            {
+                BookId = bookId,
+                Title = "Covered Book",
+                Authors = ["Author"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/book.epub",
+                CoverPath = "Covers/0000000001.png",
+                SizeBytes = 1024,
+                Sha256Hex = "hash",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+    }
+
+    private sealed class RecordingCoverImageLoader : ICoverImageLoader
+    {
+        public List<string> LoadedPaths { get; } = [];
+
+        public Avalonia.Media.IImage? Load(string absolutePath)
+        {
+            LoadedPaths.Add(absolutePath);
+            return null;
+        }
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService

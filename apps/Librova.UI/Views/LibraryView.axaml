@@ -19,13 +19,20 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
-    </Style>
-    <Style Selector="Button.BookCardButton:pointerover /template/ ContentPresenter">
-      <Setter Property="Opacity" Value="0.96" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </ControlTemplate>
+      </Setter>
     </Style>
     <Style Selector="Border.BookCard">
       <Setter Property="CornerRadius" Value="18" />
       <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="Button.BookCardButton:pointerover Border.BookCard">
+      <Setter Property="Opacity" Value="0.97" />
     </Style>
     <Style Selector="Border.CoverSlot">
       <Setter Property="CornerRadius" Value="16" />
@@ -66,45 +73,51 @@
           ColumnSpacing="18">
       <Border Classes="SurfaceCard"
               Padding="18">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="16">
-            <Border Classes="TintedCard"
-                    Background="#F6E8D7"
-                    BorderBrush="#D9BE98"
-                    IsVisible="{Binding LibraryBrowser.ShowEmptyState}">
-              <StackPanel Spacing="10"
-                          HorizontalAlignment="Center"
-                          MaxWidth="420">
-                <TextBlock FontSize="38"
-                           HorizontalAlignment="Center"
-                           Text="⌕" />
-                <TextBlock FontSize="22"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           Text="{Binding LibraryBrowser.EmptyStateTitle}" />
-                <TextBlock HorizontalAlignment="Center"
-                           Text="{Binding LibraryBrowser.EmptyStateDescription}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
+        <Grid RowDefinitions="*">
+          <Border Classes="TintedCard"
+                  Background="#F6E8D7"
+                  BorderBrush="#D9BE98"
+                  IsVisible="{Binding LibraryBrowser.ShowEmptyState}">
+            <StackPanel Spacing="10"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MaxWidth="420">
+              <TextBlock FontSize="38"
+                         HorizontalAlignment="Center"
+                         Text="⌕" />
+              <TextBlock FontSize="22"
+                         FontWeight="SemiBold"
+                         HorizontalAlignment="Center"
+                         Text="{Binding LibraryBrowser.EmptyStateTitle}" />
+              <TextBlock HorizontalAlignment="Center"
+                         Text="{Binding LibraryBrowser.EmptyStateDescription}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
 
-            <ItemsControl IsVisible="{Binding LibraryBrowser.HasBooks}"
+          <ScrollViewer x:Name="BooksViewport"
+                        IsVisible="{Binding LibraryBrowser.HasBooks}"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl Width="{Binding #BooksViewport.Bounds.Width}"
                           ItemsSource="{Binding LibraryBrowser.Books}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal"
-                             ItemWidth="184"
-                             ItemHeight="324" />
+                  <WrapPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Button Classes="BookCardButton"
-                          Width="172"
+                          Width="184"
+                          Height="314"
+                          Margin="0,0,16,16"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Top"
                           Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.SelectBookCommand}"
                           CommandParameter="{Binding .}">
-                    <Border Classes="BookCard">
+                    <Border Classes="BookCard"
+                            Height="314">
                       <Border.Background>
                         <Binding Path="CardBackgroundBrush" />
                       </Border.Background>
@@ -114,14 +127,16 @@
                       <Border.BorderThickness>
                         <Binding Path="CardBorderThickness" />
                       </Border.BorderThickness>
-                      <StackPanel Spacing="10">
+                      <Grid RowDefinitions="Auto,*"
+                            RowSpacing="10">
                         <Border Classes="CoverSlot"
-                                Width="148"
-                                Height="222"
+                                Width="160"
+                                Height="240"
+                                HorizontalAlignment="Center"
                                 Background="{Binding CoverBackgroundBrush}">
                           <Grid>
                             <Image IsVisible="{Binding HasResolvedCover}"
-                                   Source="{Binding ResolvedCoverUri}"
+                                   Source="{Binding ResolvedCoverImage}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Stretch"
                                    VerticalAlignment="Stretch" />
@@ -134,25 +149,32 @@
                                        Text="{Binding CoverPlaceholderText}" />
                           </Grid>
                         </Border>
-                        <TextBlock FontWeight="SemiBold"
-                                   MaxWidth="148"
+                        <TextBlock Grid.Row="1"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   MaxWidth="160"
+                                   MinHeight="42"
                                    MaxHeight="42"
                                    Text="{Binding Title}"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
+                      </Grid>
                     </Border>
                   </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-        </ScrollViewer>
+          </ScrollViewer>
+        </Grid>
       </Border>
 
-      <Border Width="428"
+      <Border Grid.Column="1"
               Classes="SurfaceCard"
+              Width="380"
               Padding="18"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Stretch"
               IsVisible="{Binding LibraryBrowser.ShowDetailsPanel}">
         <Grid RowDefinitions="Auto,Auto,*,Auto"
               RowSpacing="14">
@@ -168,14 +190,16 @@
           </Grid>
 
           <Grid Grid.Row="1"
-                ColumnDefinitions="156,*"
+                ColumnDefinitions="140,*"
                 ColumnSpacing="14">
             <Border Classes="CoverSlot"
-                    Height="234"
+                    Width="140"
+                    Height="210"
+                    VerticalAlignment="Top"
                     Background="{Binding LibraryBrowser.SelectedBookCoverBackgroundBrush}">
               <Grid>
                 <Image IsVisible="{Binding LibraryBrowser.HasSelectedBookCover}"
-                       Source="{Binding LibraryBrowser.SelectedBookCoverUri}"
+                       Source="{Binding LibraryBrowser.SelectedBookCoverImage}"
                        Stretch="Uniform"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch" />
@@ -199,6 +223,9 @@
                          Opacity="0.78"
                          Text="{Binding LibraryBrowser.SelectedBookAuthorText}"
                          TextWrapping="Wrap" />
+              <TextBlock IsVisible="{Binding LibraryBrowser.ShowDetailsPanelLoading}"
+                         Opacity="0.68"
+                         Text="Loading details..." />
 
               <ItemsControl ItemsSource="{Binding LibraryBrowser.SelectedBookMetadataPairs}">
                 <ItemsControl.ItemTemplate>
@@ -229,13 +256,9 @@
                         BorderBrush="#E2D2BF"
                         BorderThickness="1"
                         CornerRadius="14"
-                        Padding="12"
-                        MaxHeight="180">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                HorizontalScrollBarVisibility="Disabled">
-                    <TextBlock Text="{Binding LibraryBrowser.SelectedBookAnnotationText}"
-                               TextWrapping="Wrap" />
-                  </ScrollViewer>
+                        Padding="12">
+                  <TextBlock Text="{Binding LibraryBrowser.SelectedBookAnnotationText}"
+                             TextWrapping="Wrap" />
                 </Border>
               </StackPanel>
             </StackPanel>

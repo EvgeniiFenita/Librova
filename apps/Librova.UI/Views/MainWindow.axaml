@@ -243,94 +243,88 @@
       </ScrollViewer>
     </Border>
 
-    <ScrollViewer IsVisible="{Binding HasShell}"
-                  HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Auto">
-      <Grid ColumnDefinitions="250,*"
-            ColumnSpacing="20">
-        <Border Grid.Column="0"
-                Background="#DCCBB8"
+    <Grid IsVisible="{Binding HasShell}"
+          ColumnDefinitions="250,*"
+          ColumnSpacing="20">
+      <Border Grid.Column="0"
+              Background="#DCCBB8"
+              CornerRadius="28"
+              Padding="22">
+        <StackPanel Spacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock FontSize="34"
+                       FontWeight="Bold"
+                       Text="Librova" />
+            <TextBlock Opacity="0.78"
+                       Text="A focused desktop library manager over the native core."
+                       TextWrapping="Wrap" />
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowLibrarySectionCommand}"
+                    Content="Library" />
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowImportSectionCommand}"
+                    Content="Import" />
+            <Button Classes="SecondaryAction"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding Shell.ShowSettingsSectionCommand}"
+                    Content="Settings" />
+          </StackPanel>
+
+          <Border Background="#FFF8EF"
+                  CornerRadius="18"
+                  Padding="16">
+            <StackPanel Spacing="10">
+              <TextBlock FontWeight="SemiBold"
+                         Text="Current Library" />
+              <TextBlock FontSize="12"
+                         Text="{Binding Shell.LibraryRoot}"
+                         TextWrapping="Wrap" />
+              <Button Classes="SecondaryAction"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding Shell.OpenLibraryCommand}"
+                      Content="Open Library..." />
+              <Button Classes="SecondaryAction"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding Shell.CreateLibraryCommand}"
+                      Content="Create Library..." />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Grid Grid.Column="1"
+            RowDefinitions="Auto,*"
+            RowSpacing="18">
+        <Border Background="#E0D1BF"
                 CornerRadius="28"
-                Padding="22">
-          <StackPanel Spacing="18">
+                Padding="24">
+          <Grid ColumnDefinitions="*"
+                ColumnSpacing="18">
             <StackPanel Spacing="8">
               <TextBlock FontSize="34"
                          FontWeight="Bold"
-                         Text="Librova" />
-              <TextBlock Opacity="0.78"
-                         Text="A focused desktop library manager over the native core."
+                         Text="{Binding Shell.CurrentSectionTitle}" />
+              <TextBlock MaxWidth="720"
+                         FontSize="15"
+                         Opacity="0.82"
+                         Text="{Binding Shell.CurrentSectionDescription}"
                          TextWrapping="Wrap" />
             </StackPanel>
-
-            <StackPanel Spacing="10">
-              <Button Classes="SecondaryAction"
-                      HorizontalAlignment="Stretch"
-                      Command="{Binding Shell.ShowLibrarySectionCommand}"
-                      Content="Library" />
-              <Button Classes="SecondaryAction"
-                      HorizontalAlignment="Stretch"
-                      Command="{Binding Shell.ShowImportSectionCommand}"
-                      Content="Import" />
-              <Button Classes="SecondaryAction"
-                      HorizontalAlignment="Stretch"
-                      Command="{Binding Shell.ShowSettingsSectionCommand}"
-                      Content="Settings" />
-            </StackPanel>
-
-            <Border Background="#FFF8EF"
-                    CornerRadius="18"
-                    Padding="16">
-              <StackPanel Spacing="10">
-                <TextBlock FontWeight="SemiBold"
-                           Text="Current Library" />
-                <TextBlock FontSize="12"
-                           Text="{Binding Shell.LibraryRoot}"
-                           TextWrapping="Wrap" />
-                <Button Classes="SecondaryAction"
-                        HorizontalAlignment="Stretch"
-                        Command="{Binding Shell.OpenLibraryCommand}"
-                        Content="Open Library..." />
-                <Button Classes="SecondaryAction"
-                        HorizontalAlignment="Stretch"
-                        Command="{Binding Shell.CreateLibraryCommand}"
-                        Content="Create Library..." />
-              </StackPanel>
-            </Border>
-          </StackPanel>
+          </Grid>
         </Border>
 
-        <Grid Grid.Column="1"
-              RowDefinitions="Auto,*"
-              RowSpacing="18">
-          <Border Background="#E0D1BF"
-                  CornerRadius="28"
-                  Padding="24">
-            <Grid ColumnDefinitions="*"
-                  ColumnSpacing="18">
-              <StackPanel Spacing="8">
-                <TextBlock FontSize="34"
-                           FontWeight="Bold"
-                           Text="{Binding Shell.CurrentSectionTitle}" />
-                <TextBlock MaxWidth="720"
-                           FontSize="15"
-                           Opacity="0.82"
-                           Text="{Binding Shell.CurrentSectionDescription}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Grid>
-          </Border>
-
-          <ScrollViewer Grid.Row="1"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled">
-            <Grid DataContext="{Binding Shell}">
-              <views:LibraryView IsVisible="{Binding IsLibrarySectionActive}" />
-              <views:ImportView IsVisible="{Binding IsImportSectionActive}" />
-              <views:SettingsView IsVisible="{Binding IsSettingsSectionActive}" />
-            </Grid>
-          </ScrollViewer>
+        <Grid Grid.Row="1"
+              DataContext="{Binding Shell}">
+          <views:LibraryView IsVisible="{Binding IsLibrarySectionActive}" />
+          <views:ImportView IsVisible="{Binding IsImportSectionActive}" />
+          <views:SettingsView IsVisible="{Binding IsSettingsSectionActive}" />
         </Grid>
       </Grid>
-    </ScrollViewer>
+    </Grid>
   </Grid>
 </Window>

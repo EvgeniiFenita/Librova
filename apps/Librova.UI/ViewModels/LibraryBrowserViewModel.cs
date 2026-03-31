@@ -21,12 +21,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#BA5A2A"));
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
+    private readonly ICoverImageLoader _coverImageLoader;
     private readonly string _libraryRoot;
     private CancellationTokenSource? _refreshDebounce;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
     private string _statusText = "Library view is idle.";
     private bool _isBusy;
+    private bool _isLoadingSelectionDetails;
     private int _pageSize = 120;
     private int _currentPage = 1;
     private bool _hasMoreResults;
@@ -36,19 +38,21 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public LibraryBrowserViewModel(
         ILibraryCatalogService? libraryCatalogService = null,
         IPathSelectionService? pathSelectionService = null,
-        string? libraryRoot = null)
+        string? libraryRoot = null,
+        ICoverImageLoader? coverImageLoader = null)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
+        _coverImageLoader = coverImageLoader ?? new FileCoverImageLoader();
         _libraryRoot = libraryRoot ?? string.Empty;
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         NextPageCommand = new AsyncCommand(NextPageAsync, () => !IsBusy && HasMoreResults, HandleCommandErrorAsync);
         PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
-        LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => HasSelectedBook && !IsLoadingSelectionDetails, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         MoveSelectedBookToTrashCommand = new AsyncCommand(MoveSelectedBookToTrashAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
-        SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => !IsBusy && book is not null);
-        CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
+        CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         AvailableLanguageFilters.Add("All languages");
     }
 
@@ -176,7 +180,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
                 RaisePropertyChanged(nameof(SelectedBookAnnotationText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverUri));
+                RaisePropertyChanged(nameof(SelectedBookCoverImage));
                 RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
@@ -200,7 +204,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
                 RaisePropertyChanged(nameof(SelectedBookAnnotationText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverUri));
+                RaisePropertyChanged(nameof(SelectedBookCoverImage));
                 RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
@@ -234,9 +238,23 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
+    public bool IsLoadingSelectionDetails
+    {
+        get => _isLoadingSelectionDetails;
+        private set
+        {
+            if (SetProperty(ref _isLoadingSelectionDetails, value))
+            {
+                RaisePropertyChanged(nameof(ShowDetailsPanelLoading));
+                LoadDetailsCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
     public bool HasBooks => Books.Count > 0;
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
+    public bool ShowDetailsPanelLoading => HasSelectedBook && IsLoadingSelectionDetails;
     public bool ShowEmptyState => !HasBooks;
     public bool CanGoToPreviousPage => CurrentPage > 1;
     public string PageSizeText => $"{PageSize} per page";
@@ -261,10 +279,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         SelectedBookDetails?.ManagedPath
         ?? SelectedBook?.ManagedPath
         ?? "No managed file path available.";
-    public Uri? SelectedBookCoverUri => SelectedBookDetails?.ResolvedCoverUri ?? SelectedBook?.ResolvedCoverUri;
+    public IImage? SelectedBookCoverImage => SelectedBookDetails?.ResolvedCoverImage ?? SelectedBook?.ResolvedCoverImage;
     public IBrush? SelectedBookCoverBackgroundBrush => SelectedBookDetails?.CoverBackgroundBrush ?? SelectedBook?.CoverBackgroundBrush;
     public string SelectedBookCoverPlaceholderText => SelectedBookDetails?.CoverPlaceholderText ?? SelectedBook?.CoverPlaceholderText ?? "BOOK";
-    public bool HasSelectedBookCover => SelectedBookCoverUri is not null;
+    public bool HasSelectedBookCover => SelectedBookCoverImage is not null;
     public bool ShowSelectedBookCoverPlaceholder => !HasSelectedBookCover;
     public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => BuildSelectedBookMetadataPairs();
 
@@ -330,7 +348,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             return;
         }
 
-        IsBusy = true;
+        IsLoadingSelectionDetails = true;
         StatusText = $"Loading details for '{SelectedBook.Title}'...";
 
         try
@@ -348,7 +366,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            IsLoadingSelectionDetails = false;
         }
     }
 
@@ -530,7 +548,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookListItemModel Prepare(BookListItemModel item)
     {
-        item.ResolvedCoverUri = ResolveCoverUri(item.CoverPath);
+        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
         item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, item.AuthorsText);
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         item.IsSelected = false;
@@ -540,13 +558,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookDetailsModel Prepare(BookDetailsModel item)
     {
-        item.ResolvedCoverUri = ResolveCoverUri(item.CoverPath);
+        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
         item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, BuildAuthorsText(item.Authors));
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         return item;
     }
 
-    private Uri? ResolveCoverUri(string? coverPath)
+    private IImage? LoadCoverImage(string? coverPath)
     {
         if (string.IsNullOrWhiteSpace(coverPath))
         {
@@ -555,18 +573,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
         try
         {
-            if (Path.IsPathFullyQualified(coverPath))
-            {
-                return File.Exists(coverPath) ? new Uri(coverPath, UriKind.Absolute) : null;
-            }
+            var resolvedPath = Path.IsPathFullyQualified(coverPath)
+                ? coverPath
+                : string.IsNullOrWhiteSpace(_libraryRoot)
+                    ? null
+                    : Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));
 
-            if (string.IsNullOrWhiteSpace(_libraryRoot))
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            var resolvedPath = Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));
-            return File.Exists(resolvedPath) ? new Uri(resolvedPath, UriKind.Absolute) : null;
+            return _coverImageLoader.Load(resolvedPath);
         }
         catch (Exception)
         {
@@ -669,7 +687,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     {
         item.CardBackgroundBrush = isSelected ? SelectedCardBackground : DefaultCardBackground;
         item.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
-        item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(1);
+        item.CardBorderThickness = new Thickness(2);
     }
 
     private static IBrush CreateGradientBrush(long bookId, string title, string authorsText)
@@ -700,3 +718,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 }
 
 internal sealed record MetadataPair(string Label, string Value);
+
+internal interface ICoverImageLoader
+{
+    IImage? Load(string absolutePath);
+}
+
+internal sealed class FileCoverImageLoader : ICoverImageLoader
+{
+    public IImage? Load(string absolutePath)
+    {
+        using var stream = File.OpenRead(absolutePath);
+        return new Avalonia.Media.Imaging.Bitmap(stream);
+    }
+}
