@@ -212,3 +212,15 @@ TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
     const Librova::EpubParsing::CEpubParser parser;
     REQUIRE_THROWS(parser.Parse(epubPath));
 }
+
+TEST_CASE("EPUB parser opens Unicode file paths on Windows", "[epub-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-unicode");
+    const std::filesystem::path epubPath = CreateSampleEpub(sandbox.GetPath() / std::filesystem::path{u8"фантастика.epub"});
+
+    const Librova::EpubParsing::CEpubParser parser;
+    const auto parsedBook = parser.Parse(epubPath);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
+    REQUIRE(parsedBook.CoverBytes == std::vector<std::byte>({std::byte{0x01}, std::byte{0x23}, std::byte{0x45}}));
+}

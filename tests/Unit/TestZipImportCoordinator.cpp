@@ -15,6 +15,12 @@
 
 namespace {
 
+std::string PathToUtf8(const std::filesystem::path& path)
+{
+    const auto utf8Path = path.generic_u8string();
+    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
 class CScopedDirectory final
 {
 public:
@@ -113,7 +119,8 @@ void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string
 std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
-    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+    const auto utf8Path = PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
 
     if (archive == nullptr)
     {
@@ -136,7 +143,8 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 std::filesystem::path CreateUnsafeZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
-    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+    const auto utf8Path = PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
 
     if (archive == nullptr)
     {
@@ -214,4 +222,21 @@ TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-imp
     REQUIRE(importer.Calls.size() == 1);
     REQUIRE(importer.Calls[0].SourcePath.filename() == "inside.fb2");
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "outside.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator opens Unicode archive paths on Windows", "[zip-import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-unicode");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / std::filesystem::path{u8"книги.zip"});
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.ImportedCount() == 1);
+    REQUIRE(importer.Calls.size() == 2);
 }

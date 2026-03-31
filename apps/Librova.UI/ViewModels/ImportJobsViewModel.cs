@@ -232,6 +232,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
             LastJobId = jobId;
             StatusText = $"Import job {jobId} started.";
+            UiLogging.Information("Import job {JobId} started from UI shell.", jobId);
             await PollUntilCompletedAsync(jobId, _activeImportCancellation.Token);
         }
         finally
@@ -385,6 +386,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 StatusText = result.Snapshot.Message.Length == 0
                     ? result.Snapshot.Status.ToString()
                     : result.Snapshot.Message;
+                LogTerminalResult(jobId, result);
                 await RaiseImportCompletedSuccessfullyAsync(result);
                 return;
             }
@@ -412,7 +414,29 @@ internal sealed class ImportJobsViewModel : ObservableObject
             : error.Message.Length == 0
                 ? "Import failed."
                 : error.Message;
+        UiLogging.Error(error, "Import workflow failed in UI shell.");
         return Task.CompletedTask;
+    }
+
+    private static void LogTerminalResult(ulong jobId, ImportJobResultModel result)
+    {
+        if (result.Snapshot.Status is ImportJobStatusModel.Completed)
+        {
+            UiLogging.Information(
+                "Import job {JobId} completed. Imported={Imported} Failed={Failed} Skipped={Skipped}",
+                jobId,
+                result.Summary?.ImportedEntries ?? 0UL,
+                result.Summary?.FailedEntries ?? 0UL,
+                result.Summary?.SkippedEntries ?? 0UL);
+            return;
+        }
+
+        UiLogging.Warning(
+            "Import job {JobId} finished with status {Status}. Message={Message} Error={Error}",
+            jobId,
+            result.Snapshot.Status,
+            result.Snapshot.Message,
+            result.Error?.Message ?? "No structured error.");
     }
 
     private void UpdateDerivedResultState()

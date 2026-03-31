@@ -12,13 +12,20 @@
 
 namespace {
 
+[[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path)
+{
+    const auto utf8Path = path.generic_u8string();
+    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
 class CZipArchive final
 {
 public:
     explicit CZipArchive(const std::filesystem::path& filePath)
     {
         int errorCode = ZIP_ER_OK;
-        m_archive = zip_open(filePath.string().c_str(), ZIP_RDONLY, &errorCode);
+        const std::string utf8Path = PathToUtf8(filePath);
+        m_archive = zip_open(utf8Path.c_str(), ZIP_RDONLY, &errorCode);
 
         if (m_archive == nullptr)
         {
