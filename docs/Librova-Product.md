@@ -67,12 +67,13 @@ The user-facing import screen is intentionally simplified: it centers on selecti
 
 The user can:
 
-- search books;
-- filter by author, language, and format;
-- sort the list;
-- change pages;
-- inspect details for the selected book;
-- request fuller details for the selected entry.
+- search books by title or author through a single search field;
+- filter the grid by language;
+- browse books as cover-driven cards in a responsive grid;
+- open a right-hand details panel without leaving the `Library` section;
+- inspect richer metadata for the selected book;
+- export the selected book;
+- move the selected book to trash.
 
 ### 3.4 Export
 
@@ -136,11 +137,11 @@ The MVP is now functionally close to completion.
 Already implemented:
 
 - import pipeline;
-- browser and details;
+- browser and details with a card-grid `Library` view;
 - export;
 - delete-to-trash;
 - first-run setup;
-- settings for the next launch;
+- converter settings and diagnostics;
 - logging;
 - a strong automated test baseline;
 - a manual UI validation checklist.

@@ -23,6 +23,10 @@ The remaining roadmap is primarily stabilization work:
 - final release-candidate hardening;
 - documentation cleanup when implemented reality changes.
 
+Library browsing polish that is explicitly deferred until a later library UX iteration:
+
+- genre-based filtering in the `Library` toolbar.
+
 ## 3. Release Readiness Criteria
 
 Librova can be treated as MVP-ready when:
