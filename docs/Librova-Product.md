@@ -55,6 +55,8 @@ The user can import:
 - a single `FB2`;
 - a `ZIP` containing `EPUB` and `FB2`.
 
+The next MVP extension is recursive directory import, so the user will also be able to point Librova at a folder and let it discover supported books and archives under that directory tree.
+
 The import flow includes:
 
 - file selection or drag-and-drop from the UI;
@@ -80,13 +82,15 @@ The user can:
 - export the selected book;
 - move the selected book to trash.
 
+Series and genres are part of the active MVP direction and are expected to become first-class browsing metadata rather than incidental parser output.
+
 ### 3.4 Export
 
 The user can export a selected managed book to any destination path outside the managed library.
 
-### 3.5 Move To Trash
+### 3.5 Delete / Recycle
 
-The user can move a selected book into the managed-library `Trash`, with rollback-safe backend semantics.
+The product direction for MVP is to keep a safe user-facing delete action, but align it with the Windows desktop model by sending deleted managed files to the system `Recycle Bin` instead of maintaining a long-term internal library-local trash folder.
 
 ### 3.6 Settings
 
@@ -111,6 +115,12 @@ The current MVP includes:
 - first-run setup;
 - diagnostics and logging;
 - a native host process behind the UI.
+
+The active MVP backlog still includes:
+
+- recursive directory import;
+- richer series and genres support;
+- Windows `Recycle Bin` integration for delete.
 
 ## 5. What Is Not Included In The MVP
 
@@ -153,9 +163,10 @@ Already implemented:
 
 Most remaining work now belongs to:
 
-- stabilization;
-- final review;
-- release-candidate hardening.
+- recursive directory import;
+- series and genres support;
+- Windows `Recycle Bin` integration;
+- stabilization and release-candidate hardening.
 
 ## 8. Related Documents
 

@@ -26,6 +26,12 @@ The native core is responsible for:
 - search;
 - file export and delete-to-trash behavior.
 
+Near-term MVP work still targets three product-facing extensions on top of that baseline:
+
+- recursive directory import;
+- series and genres as stronger first-class metadata;
+- replacing the current managed delete path with Windows `Recycle Bin` integration.
+
 ## 2. IPC Boundary
 
 The MVP transport is:
@@ -63,6 +69,8 @@ One managed library root contains:
 
 Managed paths are stable and `BookId`-based.
 
+The current `Trash` directory is an implementation detail of the present baseline, not a frozen product decision. The active MVP direction is to replace that behavior with a Windows `Recycle Bin` backed delete flow rather than invest in a more complex internal trash or storage-sharding design.
+
 ### 3.3 Import Safety
 
 Imports are staged before commit.
@@ -72,6 +80,8 @@ The system is expected to:
 - avoid partial visible success where possible;
 - clean stale temp state on startup;
 - keep rollback/failure semantics explicit.
+
+Directory import is expected to follow the same transactional and summary-oriented principles as single-file import, while scaling to recursive scans over mixed-content folders.
 
 ## 4. Import And Conversion Rules
 
@@ -91,6 +101,8 @@ Search is hybrid:
 - text search through SQLite `FTS5`.
 
 The UI browser is read-side oriented and goes through application facades and transport contracts rather than querying storage directly.
+
+Series and genres are part of the active MVP metadata direction and are expected to be supported coherently through parser output, persistence, transport contracts, and UI-facing filters/details.
 
 ## 6. Build And Repository Layout
 
@@ -141,8 +153,11 @@ Testing is layered:
 
 ## 8. Current Architectural Focus
 
-The architecture is no longer in active feature-expansion mode for MVP. Current focus is:
+Current architectural focus is:
 
+- adding directory import without weakening import safety guarantees;
+- strengthening series/genres support as end-to-end metadata;
+- replacing internal trash handling with Windows `Recycle Bin` integration;
 - stabilization;
 - release hardening;
 - runtime review;
