@@ -39,6 +39,8 @@ On first launch, the user chooses a library root. Under that root Librova stores
 
 Once a library is active, both UI and native host logs are kept under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders.
 
+The native host is treated as a child runtime of the UI session. Normal shutdown and abnormal UI termination are both expected to stop the host process instead of leaving it orphaned in the background.
+
 If the configured library root is invalid or unavailable on a later launch, Librova opens a startup recovery screen and lets the user choose a different library root before retrying startup.
 
 If the library root itself is valid but the managed library is damaged, Librova does not silently recreate the library in place. Instead, it shows startup recovery guidance and requires the user to choose a different library root or repair the damaged library manually.
@@ -72,6 +74,7 @@ The user can:
 - search books by title or author through a single search field;
 - filter the grid by language;
 - browse books as cover-driven cards in a responsive grid;
+- see stable-size book cards with a generated gradient placeholder when a cover is missing;
 - open a right-hand details panel without leaving the `Library` section;
 - inspect richer metadata for the selected book;
 - export the selected book;

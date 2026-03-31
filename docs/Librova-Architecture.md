@@ -35,6 +35,8 @@ The MVP transport is:
 
 This is the canonical runtime boundary between UI and core.
 
+For process lifetime safety on Windows, the UI also passes its parent process id to the native host and binds the host lifetime to the UI session, so the host is not expected to survive a crashed or abruptly terminated UI process.
+
 The MVP deliberately does not depend on:
 
 - `gRPC` runtime
@@ -77,6 +79,7 @@ The system is expected to:
 - `FB2` tries to convert to `EPUB`.
 - If conversion fails or is unavailable, original `FB2` may be stored with warnings.
 - Conversion cancellation is not treated as ordinary converter failure.
+- `FB2` metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real personal libraries, including Windows-1251 content on Windows.
 - strict duplicates are rejected;
 - probable duplicates require explicit user consent.
 
