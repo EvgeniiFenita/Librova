@@ -121,7 +121,7 @@
                                 Background="{Binding CoverBackgroundBrush}">
                           <Grid>
                             <Image IsVisible="{Binding HasResolvedCover}"
-                                   Source="{Binding ResolvedCoverPath}"
+                                   Source="{Binding ResolvedCoverUri}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Stretch"
                                    VerticalAlignment="Stretch" />
@@ -150,7 +150,7 @@
         </ScrollViewer>
       </Border>
 
-      <Border Width="372"
+      <Border Width="428"
               Classes="SurfaceCard"
               Padding="18"
               IsVisible="{Binding LibraryBrowser.ShowDetailsPanel}">
@@ -167,40 +167,38 @@
                     Content="×" />
           </Grid>
 
-          <Border Grid.Row="1"
-                  Classes="CoverSlot"
-                  Height="338"
-                  Background="{Binding LibraryBrowser.SelectedBookCoverBackgroundBrush}">
-            <Grid>
-              <Image IsVisible="{Binding LibraryBrowser.HasSelectedBookCover}"
-                     Source="{Binding LibraryBrowser.SelectedBookCoverPath}"
-                     Stretch="Uniform"
-                     HorizontalAlignment="Stretch"
-                     VerticalAlignment="Stretch" />
-              <TextBlock IsVisible="{Binding LibraryBrowser.ShowSelectedBookCoverPlaceholder}"
-                         FontSize="78"
-                         FontWeight="Bold"
-                         Foreground="#FFF8EF"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"
-                         Text="{Binding LibraryBrowser.SelectedBookCoverPlaceholderText}" />
-            </Grid>
-          </Border>
-
-          <ScrollViewer Grid.Row="2"
-                        VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="14">
-              <StackPanel Spacing="6">
-                <TextBlock FontSize="24"
+          <Grid Grid.Row="1"
+                ColumnDefinitions="156,*"
+                ColumnSpacing="14">
+            <Border Classes="CoverSlot"
+                    Height="234"
+                    Background="{Binding LibraryBrowser.SelectedBookCoverBackgroundBrush}">
+              <Grid>
+                <Image IsVisible="{Binding LibraryBrowser.HasSelectedBookCover}"
+                       Source="{Binding LibraryBrowser.SelectedBookCoverUri}"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch" />
+                <TextBlock IsVisible="{Binding LibraryBrowser.ShowSelectedBookCoverPlaceholder}"
+                           FontSize="64"
                            FontWeight="Bold"
-                           Text="{Binding LibraryBrowser.SelectedBookTitle}"
-                           TextWrapping="Wrap" />
-                <TextBlock FontSize="15"
-                           Opacity="0.78"
-                           Text="{Binding LibraryBrowser.SelectedBookAuthorText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
+                           Foreground="#FFF8EF"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Text="{Binding LibraryBrowser.SelectedBookCoverPlaceholderText}" />
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Spacing="8">
+              <TextBlock FontSize="24"
+                         FontWeight="Bold"
+                         Text="{Binding LibraryBrowser.SelectedBookTitle}"
+                         TextWrapping="Wrap" />
+              <TextBlock FontSize="15"
+                         Opacity="0.78"
+                         Text="{Binding LibraryBrowser.SelectedBookAuthorText}"
+                         TextWrapping="Wrap" />
 
               <ItemsControl ItemsSource="{Binding LibraryBrowser.SelectedBookMetadataPairs}">
                 <ItemsControl.ItemTemplate>
@@ -217,7 +215,13 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+            </StackPanel>
+          </Grid>
 
+          <ScrollViewer Grid.Row="2"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="14">
               <StackPanel Spacing="6">
                 <TextBlock Classes="MetaLabel"
                            Text="Annotation" />

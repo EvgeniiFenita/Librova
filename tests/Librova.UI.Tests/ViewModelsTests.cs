@@ -495,6 +495,42 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ResolvesCoverUriAgainstLibraryRoot()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        var coversRoot = Path.Combine(sandboxRoot, "Covers");
+        Directory.CreateDirectory(coversRoot);
+
+        try
+        {
+            var coverPath = Path.Combine(coversRoot, "0000000001.jpg");
+            await File.WriteAllTextAsync(coverPath, "cover");
+
+            var service = new CoverAwareLibraryCatalogService();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot);
+
+            await viewModel.RefreshAsync();
+
+            Assert.NotNull(viewModel.Books[0].ResolvedCoverUri);
+            Assert.Equal(new Uri(coverPath, UriKind.Absolute), viewModel.Books[0].ResolvedCoverUri);
+            Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_ReportsEmptySearchResult()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
@@ -995,6 +1031,33 @@ public sealed class ViewModelsTests
             LastExportRequest = (bookId, destinationPath);
             return Task.FromResult<string?>(destinationPath);
         }
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class CoverAwareLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 1,
+                    Title = "Covered Book",
+                    Authors = ["Author"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000001/book.epub",
+                    CoverPath = "Covers/0000000001.jpg",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

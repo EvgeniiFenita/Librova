@@ -176,7 +176,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
                 RaisePropertyChanged(nameof(SelectedBookAnnotationText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverPath));
+                RaisePropertyChanged(nameof(SelectedBookCoverUri));
                 RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
@@ -200,7 +200,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
                 RaisePropertyChanged(nameof(SelectedBookAnnotationText));
                 RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverPath));
+                RaisePropertyChanged(nameof(SelectedBookCoverUri));
                 RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
@@ -261,10 +261,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         SelectedBookDetails?.ManagedPath
         ?? SelectedBook?.ManagedPath
         ?? "No managed file path available.";
-    public string? SelectedBookCoverPath => SelectedBookDetails?.ResolvedCoverPath ?? SelectedBook?.ResolvedCoverPath;
+    public Uri? SelectedBookCoverUri => SelectedBookDetails?.ResolvedCoverUri ?? SelectedBook?.ResolvedCoverUri;
     public IBrush? SelectedBookCoverBackgroundBrush => SelectedBookDetails?.CoverBackgroundBrush ?? SelectedBook?.CoverBackgroundBrush;
     public string SelectedBookCoverPlaceholderText => SelectedBookDetails?.CoverPlaceholderText ?? SelectedBook?.CoverPlaceholderText ?? "BOOK";
-    public bool HasSelectedBookCover => !string.IsNullOrWhiteSpace(SelectedBookCoverPath);
+    public bool HasSelectedBookCover => SelectedBookCoverUri is not null;
     public bool ShowSelectedBookCoverPlaceholder => !HasSelectedBookCover;
     public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => BuildSelectedBookMetadataPairs();
 
@@ -530,7 +530,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookListItemModel Prepare(BookListItemModel item)
     {
-        item.ResolvedCoverPath = ResolveCoverPath(item.CoverPath);
+        item.ResolvedCoverUri = ResolveCoverUri(item.CoverPath);
         item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, item.AuthorsText);
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         item.IsSelected = false;
@@ -540,13 +540,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookDetailsModel Prepare(BookDetailsModel item)
     {
-        item.ResolvedCoverPath = ResolveCoverPath(item.CoverPath);
+        item.ResolvedCoverUri = ResolveCoverUri(item.CoverPath);
         item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, BuildAuthorsText(item.Authors));
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         return item;
     }
 
-    private string? ResolveCoverPath(string? coverPath)
+    private Uri? ResolveCoverUri(string? coverPath)
     {
         if (string.IsNullOrWhiteSpace(coverPath))
         {
@@ -557,7 +557,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             if (Path.IsPathFullyQualified(coverPath))
             {
-                return File.Exists(coverPath) ? coverPath : null;
+                return File.Exists(coverPath) ? new Uri(coverPath, UriKind.Absolute) : null;
             }
 
             if (string.IsNullOrWhiteSpace(_libraryRoot))
@@ -566,7 +566,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             }
 
             var resolvedPath = Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));
-            return File.Exists(resolvedPath) ? resolvedPath : null;
+            return File.Exists(resolvedPath) ? new Uri(resolvedPath, UriKind.Absolute) : null;
         }
         catch (Exception)
         {
