@@ -13,6 +13,7 @@ public sealed class CoreHostProcessTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            ParentProcessId = 12345,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
             Fb2CngConfigPath = @"C:\Tools\fbc.yaml"
@@ -23,6 +24,7 @@ public sealed class CoreHostProcessTests
         Assert.Contains("--fb2cng-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-config", arguments, StringComparison.Ordinal);
+        Assert.Contains("--parent-pid 12345", arguments, StringComparison.Ordinal);
     }
 
     [Fact]

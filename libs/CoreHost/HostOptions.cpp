@@ -1,5 +1,6 @@
 #include "CoreHost/HostOptions.hpp"
 
+#include <limits>
 #include <stdexcept>
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
@@ -18,6 +19,24 @@ namespace {
     {
         const auto parsed = std::stoull(value);
         return static_cast<std::size_t>(parsed);
+    }
+    catch (const std::exception&)
+    {
+        throw std::invalid_argument("Invalid numeric value for " + optionName + ".");
+    }
+}
+
+[[nodiscard]] std::uint32_t ParsePositiveProcessId(const std::string& value, const std::string& optionName)
+{
+    try
+    {
+        const auto parsed = std::stoull(value);
+        if (parsed == 0 || parsed > static_cast<unsigned long long>(std::numeric_limits<std::uint32_t>::max()))
+        {
+            throw std::invalid_argument("out-of-range");
+        }
+
+        return static_cast<std::uint32_t>(parsed);
     }
     catch (const std::exception&)
     {
@@ -60,6 +79,17 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
         if (argument == "--serve-one")
         {
             options.MaxSessions = 1;
+            continue;
+        }
+
+        if (argument == "--parent-pid")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --parent-pid.");
+            }
+
+            options.ParentProcessId = ParsePositiveProcessId(arguments[++index], "--parent-pid");
             continue;
         }
 

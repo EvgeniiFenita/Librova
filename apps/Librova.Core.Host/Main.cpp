@@ -1,10 +1,12 @@
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "Application/LibraryImportFacade.hpp"
@@ -32,6 +34,10 @@
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace {
 
 [[nodiscard]] std::vector<std::string> CollectArguments(const int argc, char** argv)
@@ -57,6 +63,53 @@ namespace {
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).LogsDirectory / "host.log";
 }
 
+#ifdef _WIN32
+[[nodiscard]] std::jthread StartParentProcessWatchdog(const std::optional<std::uint32_t> parentProcessId)
+{
+    if (!parentProcessId.has_value())
+    {
+        return {};
+    }
+
+    HANDLE parentHandle = ::OpenProcess(SYNCHRONIZE, FALSE, *parentProcessId);
+    if (parentHandle == nullptr)
+    {
+        throw std::runtime_error("Failed to open parent process handle for --parent-pid.");
+    }
+
+    return std::jthread([parentHandle, parentProcessId](std::stop_token stopToken)
+    {
+        while (!stopToken.stop_requested())
+        {
+            const auto waitResult = ::WaitForSingleObject(parentHandle, 250);
+            if (waitResult == WAIT_TIMEOUT)
+            {
+                continue;
+            }
+
+            if (waitResult == WAIT_OBJECT_0)
+            {
+                Librova::Logging::Warn(
+                    "Parent process {} exited. Stopping Librova.Core.Host.",
+                    *parentProcessId);
+                ::CloseHandle(parentHandle);
+                ::ExitProcess(0);
+            }
+
+            Librova::Logging::Warn(
+                "Failed while waiting for parent process {}. WaitResult={} LastError={}.",
+                *parentProcessId,
+                static_cast<unsigned long>(waitResult),
+                static_cast<unsigned long>(::GetLastError()));
+            ::CloseHandle(parentHandle);
+            ::ExitProcess(1);
+        }
+
+        ::CloseHandle(parentHandle);
+    });
+}
+#endif
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -68,6 +121,14 @@ int main(int argc, char** argv)
         Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot);
         Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
         Librova::Logging::Info("Starting Librova.Core.Host for library root '{}'.", options.LibraryRoot.string());
+
+#ifdef _WIN32
+        auto parentWatchdog = StartParentProcessWatchdog(options.ParentProcessId);
+        if (options.ParentProcessId.has_value())
+        {
+            Librova::Logging::Info("Watching parent process {} for host lifetime.", *options.ParentProcessId);
+        }
+#endif
 
         const auto databasePath = GetDatabasePath(options.LibraryRoot);
         Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);

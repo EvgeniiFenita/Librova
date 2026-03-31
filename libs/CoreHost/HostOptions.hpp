@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,6 +15,7 @@ struct SHostOptions
 {
     std::filesystem::path PipePath;
     std::filesystem::path LibraryRoot;
+    std::optional<std::uint32_t> ParentProcessId;
     std::size_t MaxSessions = 0;
     Librova::ConverterConfiguration::SConverterConfiguration ConverterConfiguration;
 };

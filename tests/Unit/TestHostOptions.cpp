@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,12 +27,14 @@ TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")
     const auto options = Librova::CoreHost::CHostOptions::Parse({
         "--pipe", R"(\\.\pipe\Librova.Test)",
         "--library-root", "C:/Librova",
+        "--parent-pid", "4242",
         "--fb2cng-exe", "C:/tools/fbc.exe",
         "--fb2cng-config", "C:/tools/fbc.yaml",
         "--serve-one"
     });
 
     REQUIRE(options.MaxSessions == 1);
+    REQUIRE(options.ParentProcessId == std::optional<std::uint32_t>{4242});
     REQUIRE(options.ConverterConfiguration.Mode
         == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng);
     REQUIRE(options.ConverterConfiguration.Fb2Cng.ExecutablePath == std::filesystem::path{"C:/tools/fbc.exe"});

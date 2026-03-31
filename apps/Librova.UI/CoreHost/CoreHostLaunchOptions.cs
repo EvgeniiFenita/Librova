@@ -8,6 +8,7 @@ internal sealed class CoreHostLaunchOptions
     public required string ExecutablePath { get; init; }
     public required string PipePath { get; init; }
     public required string LibraryRoot { get; init; }
+    public int? ParentProcessId { get; init; }
     public bool ServeOneSession { get; init; }
     public int? MaxSessions { get; init; }
     public UiConverterMode ConverterMode { get; init; }
@@ -52,6 +53,11 @@ internal sealed class CoreHostLaunchOptions
         if (MaxSessions is <= 0)
         {
             throw new InvalidOperationException("MaxSessions must be positive when provided.");
+        }
+
+        if (ParentProcessId is <= 0)
+        {
+            throw new InvalidOperationException("ParentProcessId must be positive when provided.");
         }
 
         switch (ConverterMode)

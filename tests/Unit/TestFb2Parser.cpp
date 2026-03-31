@@ -123,3 +123,33 @@ TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
     const Librova::Fb2Parsing::CFb2Parser parser;
     REQUIRE_THROWS(parser.Parse(fb2Path));
 }
+
+TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "cp1251.fb2";
+
+    const std::string fb2Text =
+        "<?xml version=\"1.0\" encoding=\"windows-1251\"?>\r\n"
+        "<FictionBook>\r\n"
+        "  <description>\r\n"
+        "    <title-info>\r\n"
+        "      <book-title>\xC0\xED\xE3\xE5\xEB\xFB \xE8 \xE4\xE5\xEC\xEE\xED\xFB</book-title>\r\n"
+        "      <author>\r\n"
+        "        <first-name>\xC4\xFD\xED</first-name>\r\n"
+        "        <last-name>\xC1\xF0\xE0\xF3\xED</last-name>\r\n"
+        "      </author>\r\n"
+        "      <lang>ru</lang>\r\n"
+        "    </title-info>\r\n"
+        "  </description>\r\n"
+        "</FictionBook>";
+
+    WriteTextFile(fb2Path, fb2Text);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Ангелы и демоны");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Дэн Браун"}));
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}

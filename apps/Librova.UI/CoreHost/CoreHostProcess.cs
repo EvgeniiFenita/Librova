@@ -12,6 +12,7 @@ namespace Librova.UI.CoreHost;
 internal sealed class CoreHostProcess : IAsyncDisposable
 {
     private Process? _process;
+    private IntPtr _jobHandle;
 
     public async Task StartAsync(CoreHostLaunchOptions options, CancellationToken cancellationToken)
     {
@@ -58,6 +59,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
         try
         {
+            AttachProcessToLifetimeJob(process);
             await WaitForPipeReadyAsync(process, options.PipePath, startupOutput, cancellationToken).ConfigureAwait(false);
             _process = process;
             UiLogging.Information(
@@ -69,6 +71,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
             UiLogging.Error(error, "Failed to start or initialize core host process.");
             TryTerminate(process);
+            ReleaseLifetimeJob();
             process.Dispose();
             throw;
         }
@@ -78,6 +81,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
     {
         if (_process is null)
         {
+            ReleaseLifetimeJob();
             return;
         }
 
@@ -87,6 +91,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         UiLogging.Information("Stopping core host process. ProcessId={ProcessId}", process.Id);
         TryTerminate(process);
         await process.WaitForExitAsync().ConfigureAwait(false);
+        ReleaseLifetimeJob();
         UiLogging.Information("Core host process stopped. ProcessId={ProcessId}", process.Id);
     }
 
@@ -95,6 +100,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         var builder = new StringBuilder();
         builder.Append("--pipe ").Append(Quote(options.PipePath));
         builder.Append(" --library-root ").Append(Quote(options.LibraryRoot));
+        if (options.ParentProcessId.HasValue)
+        {
+            builder.Append(" --parent-pid ").Append(options.ParentProcessId.Value);
+        }
 
         if (options.ServeOneSession)
         {
@@ -202,6 +211,123 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
         }
     }
+
+    private void AttachProcessToLifetimeJob(Process process)
+    {
+        if (!OperatingSystem.IsWindows() || _jobHandle != IntPtr.Zero)
+        {
+            return;
+        }
+
+        var jobHandle = CreateJobObject(IntPtr.Zero, null);
+        if (jobHandle == IntPtr.Zero)
+        {
+            UiLogging.Warning("Failed to create Windows job object for core host lifetime management. Error={ErrorCode}", Marshal.GetLastWin32Error());
+            return;
+        }
+
+        var limitInformation = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        {
+            BasicLimitInformation = new JOBOBJECT_BASIC_LIMIT_INFORMATION
+            {
+                LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            }
+        };
+        var length = Marshal.SizeOf<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
+        var pointer = Marshal.AllocHGlobal(length);
+
+        try
+        {
+            Marshal.StructureToPtr(limitInformation, pointer, false);
+            if (!SetInformationJobObject(jobHandle, JobObjectExtendedLimitInformation, pointer, (uint)length))
+            {
+                UiLogging.Warning("Failed to configure Windows job object for core host lifetime management. Error={ErrorCode}", Marshal.GetLastWin32Error());
+                CloseHandle(jobHandle);
+                return;
+            }
+
+            if (!AssignProcessToJobObject(jobHandle, process.Handle))
+            {
+                UiLogging.Warning("Failed to assign core host to Windows job object. ProcessId={ProcessId} Error={ErrorCode}", process.Id, Marshal.GetLastWin32Error());
+                CloseHandle(jobHandle);
+                return;
+            }
+
+            _jobHandle = jobHandle;
+            UiLogging.Information(
+                "Attached core host process to Windows lifetime job. ProcessId={ProcessId}",
+                process.Id);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pointer);
+        }
+    }
+
+    private void ReleaseLifetimeJob()
+    {
+        if (_jobHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        CloseHandle(_jobHandle);
+        _jobHandle = IntPtr.Zero;
+    }
+
+    private const uint JobObjectExtendedLimitInformation = 9;
+    private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
+    {
+        public long PerProcessUserTimeLimit;
+        public long PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public UIntPtr MinimumWorkingSetSize;
+        public UIntPtr MaximumWorkingSetSize;
+        public uint ActiveProcessLimit;
+        public UIntPtr Affinity;
+        public uint PriorityClass;
+        public uint SchedulingClass;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IO_COUNTERS
+    {
+        public ulong ReadOperationCount;
+        public ulong WriteOperationCount;
+        public ulong OtherOperationCount;
+        public ulong ReadTransferCount;
+        public ulong WriteTransferCount;
+        public ulong OtherTransferCount;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+    {
+        public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
+        public IO_COUNTERS IoInfo;
+        public UIntPtr ProcessMemoryLimit;
+        public UIntPtr JobMemoryLimit;
+        public UIntPtr PeakProcessMemoryUsed;
+        public UIntPtr PeakJobMemoryUsed;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr CreateJobObject(IntPtr jobAttributes, string? name);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetInformationJobObject(IntPtr job, uint infoType, IntPtr jobObjectInfo, uint jobObjectInfoLength);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
