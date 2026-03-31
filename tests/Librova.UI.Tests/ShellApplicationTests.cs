@@ -391,6 +391,7 @@ public sealed class ShellApplicationTests
 
         Assert.Equal(@"C:\Tools\LibrovaCoreHostApp.exe", application.Shell.HostExecutablePath);
         Assert.Equal(Path.Combine(@"C:\Libraries\Librova", "Logs", "host.log"), application.Shell.HostLogFilePath);
+        Assert.Equal(Path.Combine(@"C:\Libraries\Librova", "Logs", "ui.log"), application.Shell.UiLogFilePath);
         Assert.Contains("UI log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("host log", application.Shell.DiagnosticsHintText, StringComparison.OrdinalIgnoreCase);
     }

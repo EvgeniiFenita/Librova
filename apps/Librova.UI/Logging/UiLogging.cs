@@ -43,8 +43,15 @@ internal static class UiLogging
     {
         lock (SyncRoot)
         {
-            ShutdownUnsafe();
-            InitializeUnsafe(logFilePath);
+            ReinitializeUnsafe(logFilePath, mergePreviousLog: false);
+        }
+    }
+
+    public static void Reinitialize(string logFilePath)
+    {
+        lock (SyncRoot)
+        {
+            ReinitializeUnsafe(logFilePath, mergePreviousLog: true);
         }
     }
 
@@ -94,6 +101,43 @@ internal static class UiLogging
 
         _currentLogFilePath = logFilePath;
         _initialized = true;
+    }
+
+    private static void ReinitializeUnsafe(string logFilePath, bool mergePreviousLog)
+    {
+        if (_initialized && string.Equals(_currentLogFilePath, logFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var previousLogFilePath = _currentLogFilePath;
+        ShutdownUnsafe();
+
+        if (mergePreviousLog
+            && !string.IsNullOrWhiteSpace(previousLogFilePath)
+            && !string.Equals(previousLogFilePath, logFilePath, StringComparison.OrdinalIgnoreCase)
+            && File.Exists(previousLogFilePath))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)!);
+            var previousContents = File.ReadAllText(previousLogFilePath);
+            if (!string.IsNullOrWhiteSpace(previousContents))
+            {
+                File.AppendAllText(logFilePath, previousContents);
+            }
+
+            try
+            {
+                File.Delete(previousLogFilePath);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        InitializeUnsafe(logFilePath);
     }
 
     private static void ShutdownUnsafe()

@@ -15,15 +15,15 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runtimeRoot = Join-Path $repoRoot "out\runtime"
-$runtimeLogs = Join-Path $runtimeRoot "logs"
 $libraryRoot = Join-Path $runtimeRoot "library"
-$uiLogFile = Join-Path $runtimeLogs "ui.log"
+$bootstrapUiLogFile = Join-Path $runtimeRoot "bootstrap-ui.log"
+$libraryUiLogFile = Join-Path $libraryRoot "Logs\ui.log"
 $uiStateFile = Join-Path $runtimeRoot "ui-shell-state.json"
 $uiPreferencesFile = Join-Path $runtimeRoot "ui-preferences.json"
 $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\$Configuration\LibrovaCoreHostApp.exe"
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
 
-New-Item -ItemType Directory -Force -Path $runtimeLogs | Out-Null
+New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
 if (-not $FirstRun -and -not $SecondRun) {
     New-Item -ItemType Directory -Force -Path $libraryRoot | Out-Null
 }
@@ -45,7 +45,6 @@ if (-not (Test-Path -LiteralPath $uiExecutable)) {
     throw "UI executable was not found: $uiExecutable"
 }
 
-$env:LIBROVA_UI_LOG_FILE = $uiLogFile
 $env:LIBROVA_UI_STATE_FILE = $uiStateFile
 $env:LIBROVA_UI_PREFERENCES_FILE = $uiPreferencesFile
 $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExecutable
@@ -59,17 +58,29 @@ if ($FirstRun) {
         Remove-Item -LiteralPath $uiPreferencesFile -Force
     }
 
+    if (Test-Path -LiteralPath $bootstrapUiLogFile) {
+        Remove-Item -LiteralPath $bootstrapUiLogFile -Force
+    }
+
+    $env:LIBROVA_UI_LOG_FILE = $bootstrapUiLogFile
     Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
 }
 elseif ($SecondRun) {
+    $env:LIBROVA_UI_LOG_FILE = $bootstrapUiLogFile
     Remove-Item Env:LIBROVA_LIBRARY_ROOT -ErrorAction SilentlyContinue
 }
 else {
+    $env:LIBROVA_UI_LOG_FILE = $libraryUiLogFile
     $env:LIBROVA_LIBRARY_ROOT = $libraryRoot
 }
 
 Write-Host "==> Launching Librova UI"
-Write-Host "    UI log:      $uiLogFile"
+if ($FirstRun -or $SecondRun) {
+    Write-Host "    UI log:      (bootstrap) $bootstrapUiLogFile -> (final) <LibraryRoot>\\Logs\\ui.log"
+}
+else {
+    Write-Host "    UI log:      $libraryUiLogFile"
+}
 Write-Host "    UI state:    $uiStateFile"
 Write-Host "    UI prefs:    $uiPreferencesFile"
 if ($FirstRun) {

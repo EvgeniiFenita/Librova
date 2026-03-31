@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Librova.UI.Desktop;
 using Librova.UI.CoreHost;
 using Librova.UI.Logging;
+using Librova.UI.Runtime;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using Librova.UI.Views;
@@ -138,6 +139,7 @@ internal sealed partial class App : Application
 
         try
         {
+            UiLogging.Reinitialize(RuntimeEnvironment.GetUiLogFilePathForLibrary(hostOptions.LibraryRoot));
             UiLogging.Information("Starting Avalonia desktop shell.");
             var session = await ShellBootstrap.StartSessionAsync(hostOptions, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

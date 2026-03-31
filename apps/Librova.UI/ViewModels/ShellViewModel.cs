@@ -218,7 +218,7 @@ internal sealed class ShellViewModel : ObservableObject
         ShellSection.Settings => "Adjust converter preferences and inspect runtime diagnostics.",
         _ => string.Empty
     };
-    public string UiLogFilePath => RuntimeEnvironment.GetDefaultUiLogFilePath();
+    public string UiLogFilePath => RuntimeEnvironment.GetUiLogFilePathForLibrary(LibraryRoot);
     public string UiStateFilePath => ShellStateStore.CreateDefault().FilePath;
     public string UiPreferencesFilePath => UiPreferencesStore.CreateDefault().FilePath;
     public string HostExecutablePath => _session.HostOptions.ExecutablePath;

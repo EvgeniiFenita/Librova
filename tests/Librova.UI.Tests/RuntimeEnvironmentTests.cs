@@ -21,6 +21,16 @@ public sealed class RuntimeEnvironmentTests
     }
 
     [Fact]
+    public void RuntimeEnvironment_GetUiLogFilePathForLibrary_UsesLibraryLogsDirectory()
+    {
+        var libraryRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "library");
+
+        var path = RuntimeEnvironment.GetUiLogFilePathForLibrary(libraryRoot);
+
+        Assert.Equal(Path.Combine(libraryRoot, "Logs", "ui.log"), path);
+    }
+
+    [Fact]
     public void ShellStateStore_CreateDefault_UsesEnvironmentOverride()
     {
         var expected = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json");

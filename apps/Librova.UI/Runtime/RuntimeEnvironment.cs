@@ -11,6 +11,9 @@ internal static class RuntimeEnvironment
     public const string LibraryRootEnvVar = "LIBROVA_LIBRARY_ROOT";
     public const string CoreHostExecutableEnvVar = "LIBROVA_CORE_HOST_EXECUTABLE";
 
+    public static string GetUiLogFilePathForLibrary(string libraryRoot) =>
+        Path.Combine(libraryRoot, "Logs", "ui.log");
+
     public static string GetDefaultUiLogFilePath() =>
         GetPathFromEnvironment(UiLogFileEnvVar)
         ?? Path.Combine(

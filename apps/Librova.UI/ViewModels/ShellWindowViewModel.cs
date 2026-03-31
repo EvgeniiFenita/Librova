@@ -1,4 +1,5 @@
 using Librova.UI.Mvvm;
+using Librova.UI.Logging;
 using Librova.UI.Runtime;
 
 namespace Librova.UI.ViewModels;
@@ -50,7 +51,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
             null,
             "Starting native core host...",
             null,
-            RuntimeEnvironment.GetDefaultUiLogFilePath(),
+            UiLogging.CurrentLogFilePath ?? RuntimeEnvironment.GetDefaultUiLogFilePath(),
             RuntimeEnvironment.GetDefaultUiStateFilePath(),
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
             "The app is preparing the native core host and loading the first library snapshot.");
@@ -74,7 +75,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
             setup,
             "Choose the managed library location before the first launch.",
             null,
-            RuntimeEnvironment.GetDefaultUiLogFilePath(),
+            UiLogging.CurrentLogFilePath ?? RuntimeEnvironment.GetDefaultUiLogFilePath(),
             RuntimeEnvironment.GetDefaultUiStateFilePath(),
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
             "Librova stores the managed library, database, covers, logs, temporary import files, and trash under the selected root. You can change this again later in the running shell settings.");
@@ -86,7 +87,7 @@ internal sealed class ShellWindowViewModel : ObservableObject
             recoverySetup,
             "Startup failed.",
             string.IsNullOrWhiteSpace(message) ? "Failed to start Librova." : message,
-            RuntimeEnvironment.GetDefaultUiLogFilePath(),
+            UiLogging.CurrentLogFilePath ?? RuntimeEnvironment.GetDefaultUiLogFilePath(),
             RuntimeEnvironment.GetDefaultUiStateFilePath(),
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
             recoverySetup is null
