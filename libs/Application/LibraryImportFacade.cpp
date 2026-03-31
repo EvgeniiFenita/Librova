@@ -295,7 +295,10 @@ SImportResult CLibraryImportFacade::Run(
     {
         if (request.SourcePaths.size() == 1)
         {
-            result.Summary.Mode = EImportMode::SingleFile;
+            std::error_code errorCode;
+            result.Summary.Mode = std::filesystem::is_directory(request.SourcePaths.front(), errorCode)
+                ? EImportMode::Batch
+                : EImportMode::SingleFile;
         }
         else
         {

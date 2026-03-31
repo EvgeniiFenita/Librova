@@ -234,7 +234,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         if (CanStartImport())
         {
-            await StartImportAsync();
+            try
+            {
+                await StartImportAsync();
+            }
+            catch (Exception error)
+            {
+                await HandleCommandErrorAsync(error);
+            }
         }
     }
 
@@ -568,26 +575,33 @@ internal sealed class ImportJobsViewModel : ObservableObject
             return string.Empty;
         }
 
+        var hasUsableSource = false;
+        string? firstBlockingMessage = null;
+
         foreach (var sourcePath in sourcePaths)
         {
             if (string.IsNullOrWhiteSpace(sourcePath))
             {
-                return "Selected sources must not be blank.";
+                firstBlockingMessage ??= "Selected sources must not be blank.";
+                continue;
             }
 
             if (!Path.IsPathFullyQualified(sourcePath))
             {
-                return "Use absolute source paths.";
+                firstBlockingMessage ??= "Use absolute source paths.";
+                continue;
             }
 
             if (Directory.Exists(sourcePath))
             {
+                hasUsableSource = true;
                 continue;
             }
 
             if (!File.Exists(sourcePath))
             {
-                return "A selected source does not exist.";
+                firstBlockingMessage ??= "A selected source does not exist.";
+                continue;
             }
 
             var extension = Path.GetExtension(sourcePath);
@@ -595,11 +609,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
                 && !extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
                 && !extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
-                return "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
+                firstBlockingMessage ??= "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
+                continue;
             }
+
+            hasUsableSource = true;
         }
 
-        return string.Empty;
+        return hasUsableSource ? string.Empty : firstBlockingMessage ?? string.Empty;
     }
 
     private static string BuildWorkingDirectoryValidationMessage(string workingDirectory)

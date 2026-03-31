@@ -173,3 +173,33 @@ TEST_CASE("Library import facade expands directories recursively", "[application
 
     std::filesystem::remove_all(sandbox);
 }
+
+TEST_CASE("Library import facade keeps batch mode for empty selected directory", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-empty-directory";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "nested");
+    std::ofstream(sandbox / "nested" / "note.txt").put('x');
+
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.Summary.TotalEntries == 0);
+    REQUIRE(result.Summary.ImportedEntries == 0);
+    REQUIRE(result.Summary.Warnings.size() == 1);
+    REQUIRE(result.Summary.Warnings[0].find("does not contain supported") != std::string::npos);
+
+    std::filesystem::remove_all(sandbox);
+}

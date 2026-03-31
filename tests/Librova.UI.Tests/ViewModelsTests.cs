@@ -382,6 +382,85 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_ApplyDroppedSourcePathsAndStartAsync_HandlesStartFailuresWithoutThrowing()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = CreateSupportedSourceFile(sandboxRoot, "dropped.fb2");
+            var viewModel = new ImportJobsViewModel(new FailingImportJobsService())
+            {
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.ApplyDroppedSourcePathsAndStartAsync([sourcePath]);
+
+            Assert.Equal([sourcePath], viewModel.SourcePaths);
+            Assert.Equal("transport failed", viewModel.StatusText);
+            Assert.False(viewModel.IsBusy);
+            Assert.Null(viewModel.LastResult);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_AllowsMixedValidAndUnsupportedSelectedSourcesWhenAtLeastOneSourceIsImportable()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var validSourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2");
+            var unsupportedSourcePath = Path.Combine(sandboxRoot, "notes.txt");
+            await File.WriteAllTextAsync(unsupportedSourcePath, "ignored");
+
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            viewModel.ApplyDroppedSourcePaths([validSourcePath, unsupportedSourcePath]);
+
+            Assert.True(viewModel.StartImportCommand.CanExecute(null));
+            Assert.Equal(string.Empty, viewModel.SourceValidationMessage);
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal([validSourcePath, unsupportedSourcePath], service.LastStartRequest?.SourcePaths);
+            Assert.Equal(42UL, viewModel.LastJobId);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_StartImportPassesProbableDuplicateOverrideFlag()
     {
         var service = new FakeImportJobsService();
