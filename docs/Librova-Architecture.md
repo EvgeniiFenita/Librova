@@ -117,6 +117,7 @@ Native code is organized as one static library per logical slice under `libs/<Sl
 
 - native logging uses `spdlog`
 - UI logging uses `Serilog`
+- once a library session is active, both log streams are written under `LibraryRoot/Logs`
 
 Important runtime paths should log actionable information, especially:
 

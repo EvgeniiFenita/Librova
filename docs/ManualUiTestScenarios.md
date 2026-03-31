@@ -8,8 +8,13 @@
 
 Перед началом:
 
-- держи открытым [out\runtime\logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\logs\ui.log)
-- держи открытым [out\runtime\library\Logs\host.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\host.log)
+- для обычного запуска держи открытыми:
+  - [out\runtime\library\Logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\ui.log)
+  - [out\runtime\library\Logs\host.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\host.log)
+- для `-FirstRun` и `-SecondRun` до выбора или открытия библиотеки UI временно пишет bootstrap log в:
+  - [out\runtime\bootstrap-ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\bootstrap-ui.log)
+- после успешного выбора или открытия библиотеки bootstrap log должен быть перенесен в:
+  - [out\runtime\library\Logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\ui.log)
 
 Используй эти сценарии после заметных UI или runtime изменений и перед тем, как считать сборку стабильной.
 
@@ -28,6 +33,7 @@
 - startup screen переходит в loading state, затем открывается основной shell приложения.
 - создается [out\runtime\ui-preferences.json](C:\Users\evgen\Desktop\Librova\out\runtime\ui-preferences.json).
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
+- UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
 
 ## 2. Startup Error Recovery
 
@@ -38,6 +44,7 @@
 - показывается startup error screen.
 - на экране видны пути к UI log, UI state и preferences.
 - на экране также есть блок `Choose Another Library Root`.
+- пока библиотека еще не открыта, UI log path может указывать на bootstrap log в `out\runtime\bootstrap-ui.log`.
 4. Введи валидную папку и нажми `Retry With This Library`.
 Ожидаемое поведение:
 - приложение успешно стартует без ручной чистки файлов.
@@ -220,6 +227,7 @@
 - UI log содержит startup, command и error-relevant entries.
 - host log содержит host/runtime-side operational entries.
 - логи полезны для диагностики и не зашумлены частым polling.
+- при уже открытой библиотеке оба runtime log-файла лежат в `LibraryRoot\Logs`.
 
 ## 16. Relaunch State Persistence
 
