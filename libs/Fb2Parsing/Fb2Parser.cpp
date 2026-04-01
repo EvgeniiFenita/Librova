@@ -1,6 +1,7 @@
 #include "Fb2Parsing/Fb2Parser.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cctype>
 #include <cstdint>
 #include <fstream>
@@ -225,6 +226,22 @@ namespace {
     }
 
     return *value;
+}
+
+template <typename TValue>
+TValue ParseExactNumber(const std::string_view value, const char* errorMessage)
+{
+    TValue parsedValue{};
+    const char* begin = value.data();
+    const char* end = value.data() + value.size();
+    const auto [parseEnd, errorCode] = std::from_chars(begin, end, parsedValue);
+
+    if (errorCode != std::errc{} || parseEnd != end)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+
+    return parsedValue;
 }
 
 [[nodiscard]] std::string ReadAnnotationText(const pugi::xml_node& annotationNode)
@@ -481,14 +498,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
     if (const char* sequenceNumber = FindFirstChildByLocalName(titleInfoNode, "sequence").attribute("number").as_string(); sequenceNumber != nullptr && sequenceNumber[0] != '\0')
     {
-        try
-        {
-            parsedBook.Metadata.SeriesIndex = std::stod(sequenceNumber);
-        }
-        catch (const std::exception&)
-        {
-            throw std::runtime_error("Failed to parse FB2 sequence number.");
-        }
+        parsedBook.Metadata.SeriesIndex = ParseExactNumber<double>(sequenceNumber, "Failed to parse FB2 sequence number.");
     }
 
     if (const pugi::xml_node annotationNode = FindFirstChildByLocalName(titleInfoNode, "annotation"))
@@ -515,14 +525,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
         if (const std::optional<std::string> year = TryReadTextChild(publishInfoNode, "year"))
         {
-            try
-            {
-                parsedBook.Metadata.Year = std::stoi(*year);
-            }
-            catch (const std::exception&)
-            {
-                throw std::runtime_error("Failed to parse FB2 publish year.");
-            }
+            parsedBook.Metadata.Year = ParseExactNumber<int>(*year, "Failed to parse FB2 publish year.");
         }
     }
 

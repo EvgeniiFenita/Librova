@@ -153,3 +153,69 @@ TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Дэн Браун"}));
     REQUIRE(parsedBook.Metadata.Language == "ru");
 }
+
+TEST_CASE("FB2 parser accepts dot-separated sequence numbers independently from process locale", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-sequence-number");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "sequence-number.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Test</book-title>
+      <author>
+        <first-name>Arkady</first-name>
+        <last-name>Strugatsky</last-name>
+      </author>
+      <lang>ru</lang>
+      <sequence name="Cycle" number="1.5" />
+    </title-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.SeriesUtf8 == std::optional<std::string>{"Cycle"});
+    REQUIRE(parsedBook.Metadata.SeriesIndex == std::optional<double>{1.5});
+}
+
+TEST_CASE("FB2 parser rejects invalid publish year text", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid-year");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid-year.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Test</book-title>
+      <author>
+        <first-name>Arkady</first-name>
+        <last-name>Strugatsky</last-name>
+      </author>
+      <lang>ru</lang>
+    </title-info>
+    <publish-info>
+      <year>1972abc</year>
+    </publish-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+
+    try
+    {
+        static_cast<void>(parser.Parse(fb2Path));
+        FAIL("Expected parser to reject invalid FB2 publish year.");
+    }
+    catch (const std::exception& error)
+    {
+        REQUIRE(std::string{error.what()}.find("publish year") != std::string::npos);
+    }
+}

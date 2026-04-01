@@ -74,6 +74,8 @@ Status: completed and verified.
 
 ### Iteration 5 — FB2 Parsing Hardening
 
+Status: completed and verified.
+
 - replace locale-dependent numeric parsing in FB2 metadata extraction;
 - keep Windows-1251 support while tightening parser behavior through targeted tests.
 
