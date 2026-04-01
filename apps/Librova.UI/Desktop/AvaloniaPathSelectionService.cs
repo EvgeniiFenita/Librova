@@ -94,6 +94,36 @@ internal sealed class AvaloniaPathSelectionService : IPathSelectionService
         return path;
     }
 
+    public async Task<string?> PickExecutableFileAsync(string title, CancellationToken cancellationToken)
+    {
+        var storageProvider = _ownerWindow.StorageProvider;
+        if (storageProvider is null)
+        {
+            UiLogging.Warning("Executable file selection requested, but no Avalonia storage provider is available.");
+            return null;
+        }
+
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = string.IsNullOrWhiteSpace(title) ? "Select executable file" : title,
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Executable files")
+                {
+                    Patterns = ["*.exe"]
+                },
+                FilePickerFileTypes.All
+            ]
+        });
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var path = files.Count == 0 ? null : GetLocalPath(files[0]);
+        UiLogging.Information("Executable file selection completed. HasPath={HasPath}", !string.IsNullOrWhiteSpace(path));
+        return path;
+    }
+
     public async Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
     {
         var storageProvider = _ownerWindow.StorageProvider;

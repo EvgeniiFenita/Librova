@@ -15,6 +15,9 @@ internal sealed class NullPathSelectionService : IPathSelectionService
     public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
         => Task.FromResult<string?>(null);
 
+    public Task<string?> PickExecutableFileAsync(string title, CancellationToken cancellationToken)
+        => Task.FromResult<string?>(null);
+
     public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
         => Task.FromResult<string?>(null);
 }

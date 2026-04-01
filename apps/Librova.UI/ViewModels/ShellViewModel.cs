@@ -60,6 +60,7 @@ internal sealed class ShellViewModel : ObservableObject
         _selectedCustomConverterOutputMode = savedPreferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath;
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
+        BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync, () => IsBuiltInConverterSelected);
         OpenLibraryCommand = new AsyncCommand(OpenLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         CreateLibraryCommand = new AsyncCommand(CreateLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Library);
@@ -83,6 +84,7 @@ internal sealed class ShellViewModel : ObservableObject
     public ImportJobsViewModel ImportJobs { get; }
     public LibraryBrowserViewModel LibraryBrowser { get; }
     public AsyncCommand SavePreferencesCommand { get; }
+    public AsyncCommand BrowseFb2CngExecutablePathCommand { get; }
     public AsyncCommand OpenLibraryCommand { get; }
     public AsyncCommand CreateLibraryCommand { get; }
     public AsyncCommand ShowLibrarySectionCommand { get; }
@@ -254,6 +256,15 @@ internal sealed class ShellViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
+    private async Task BrowseFb2CngExecutablePathAsync()
+    {
+        var selectedPath = await _pathSelectionService.PickExecutableFileAsync("Select fb2cng executable", default);
+        if (!string.IsNullOrWhiteSpace(selectedPath))
+        {
+            Fb2CngExecutablePath = selectedPath;
+        }
+    }
+
     private async Task OpenLibraryAsync()
     {
         var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
@@ -356,6 +367,7 @@ internal sealed class ShellViewModel : ObservableObject
         RaisePropertyChanged(nameof(IsConverterDisabled));
         RaisePropertyChanged(nameof(IsBuiltInConverterSelected));
         RaisePropertyChanged(nameof(IsCustomConverterSelected));
+        BrowseFb2CngExecutablePathCommand.RaiseCanExecuteChanged();
         SavePreferencesCommand.RaiseCanExecuteChanged();
     }
 

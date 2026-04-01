@@ -21,9 +21,17 @@
 
         <StackPanel IsVisible="{Binding IsBuiltInConverterSelected}"
                     Spacing="10">
-          <TextBox Classes="ImportField"
-                   Watermark="C:\Tools\fbc.exe"
-                   Text="{Binding Fb2CngExecutablePath}" />
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="10">
+            <TextBox Classes="ImportField"
+                     Watermark="C:\Tools\fbc.exe"
+                     Text="{Binding Fb2CngExecutablePath}" />
+            <Button Grid.Column="1"
+                    Classes="SecondaryAction"
+                    MinWidth="108"
+                    Command="{Binding BrowseFb2CngExecutablePathCommand}"
+                    Content="Browse..." />
+          </Grid>
           <TextBox Classes="ImportField"
                    Watermark="Optional: C:\Tools\fbc.yaml"
                    Text="{Binding Fb2CngConfigPath}" />

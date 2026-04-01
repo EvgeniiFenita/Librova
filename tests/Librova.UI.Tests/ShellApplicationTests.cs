@@ -372,6 +372,37 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task ShellSettings_BrowseFb2CngExecutablePathCommand_AppliesSelectedExecutable()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            new FakePathSelectionService
+            {
+                SelectedExecutablePath = @"C:\Tools\fbc.exe"
+            },
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        application.Shell.SelectedConverterMode = UiConverterMode.BuiltInFb2Cng;
+
+        await application.Shell.BrowseFb2CngExecutablePathCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(@"C:\Tools\fbc.exe", application.Shell.Fb2CngExecutablePath);
+    }
+
+    [Fact]
     public void Create_ExposesDiagnosticsPathsForCurrentSession()
     {
         var session = new ShellSession(
@@ -660,6 +691,7 @@ public sealed class ShellApplicationTests
     {
         public IReadOnlyList<string> SelectedSourcePaths { get; init; } = [];
         public string? SelectedWorkingDirectory { get; init; }
+        public string? SelectedExecutablePath { get; init; }
         public string? SelectedExportPath { get; init; }
 
         public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
@@ -670,6 +702,9 @@ public sealed class ShellApplicationTests
 
         public Task<string?> PickWorkingDirectoryAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedWorkingDirectory);
+
+        public Task<string?> PickExecutableFileAsync(string title, CancellationToken cancellationToken)
+            => Task.FromResult(SelectedExecutablePath);
 
         public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
             => Task.FromResult(SelectedExportPath);
