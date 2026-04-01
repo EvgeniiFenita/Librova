@@ -1,4 +1,5 @@
 #include <chrono>
+#include <atomic>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -29,6 +30,7 @@
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
+#include "PipeTransport/NamedPipeChannel.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
@@ -64,7 +66,28 @@ namespace {
 }
 
 #ifdef _WIN32
-[[nodiscard]] std::jthread StartParentProcessWatchdog(const std::optional<std::uint32_t> parentProcessId)
+struct SHostShutdownState
+{
+    std::atomic<bool> Requested = false;
+    std::atomic<int> ExitCode = 0;
+};
+
+void TryWakePipeServer(const std::filesystem::path& pipePath) noexcept
+{
+    try
+    {
+        auto connection = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::milliseconds(250));
+        (void)connection;
+    }
+    catch (...)
+    {
+    }
+}
+
+[[nodiscard]] std::jthread StartParentProcessWatchdog(
+    const std::optional<std::uint32_t> parentProcessId,
+    const std::filesystem::path& pipePath,
+    SHostShutdownState& shutdownState)
 {
     if (!parentProcessId.has_value())
     {
@@ -77,7 +100,7 @@ namespace {
         throw std::runtime_error("Failed to open parent process handle for --parent-pid.");
     }
 
-    return std::jthread([parentHandle, parentProcessId](std::stop_token stopToken)
+    return std::jthread([parentHandle, parentProcessId, pipePath, &shutdownState](std::stop_token stopToken)
     {
         while (!stopToken.stop_requested())
         {
@@ -92,8 +115,10 @@ namespace {
                 Librova::Logging::Warn(
                     "Parent process {} exited. Stopping Librova.Core.Host.",
                     *parentProcessId);
-                ::CloseHandle(parentHandle);
-                ::ExitProcess(0);
+                shutdownState.ExitCode.store(0);
+                shutdownState.Requested.store(true);
+                TryWakePipeServer(pipePath);
+                break;
             }
 
             Librova::Logging::Warn(
@@ -101,8 +126,10 @@ namespace {
                 *parentProcessId,
                 static_cast<unsigned long>(waitResult),
                 static_cast<unsigned long>(::GetLastError()));
-            ::CloseHandle(parentHandle);
-            ::ExitProcess(1);
+            shutdownState.ExitCode.store(1);
+            shutdownState.Requested.store(true);
+            TryWakePipeServer(pipePath);
+            break;
         }
 
         ::CloseHandle(parentHandle);
@@ -123,7 +150,8 @@ int main(int argc, char** argv)
         Librova::Logging::Info("Starting Librova.Core.Host for library root '{}'.", options.LibraryRoot.string());
 
 #ifdef _WIN32
-        auto parentWatchdog = StartParentProcessWatchdog(options.ParentProcessId);
+        SHostShutdownState shutdownState;
+        auto parentWatchdog = StartParentProcessWatchdog(options.ParentProcessId, options.PipePath, shutdownState);
         if (options.ParentProcessId.has_value())
         {
             Librova::Logging::Info("Watching parent process {} for host lifetime.", *options.ParentProcessId);
@@ -171,18 +199,50 @@ int main(int argc, char** argv)
         const Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
         std::size_t servedSessions = 0;
-        while (options.MaxSessions == 0 || servedSessions < options.MaxSessions)
+        while (
+#ifdef _WIN32
+            !shutdownState.Requested.load() &&
+#endif
+            (options.MaxSessions == 0 || servedSessions < options.MaxSessions))
         {
             try
             {
                 Librova::PipeTransport::CNamedPipeServer server(options.PipePath);
                 Librova::Logging::Info("Waiting for pipe session on '{}'.", options.PipePath.string());
-                host.RunSingleSession(server.WaitForClient());
+                auto connection = server.WaitForClient();
+
+#ifdef _WIN32
+                if (shutdownState.Requested.load())
+                {
+                    Librova::Logging::Info("Shutdown requested. Ending pipe accept loop.");
+                    break;
+                }
+#endif
+
+                host.RunSingleSession(std::move(connection));
+
+#ifdef _WIN32
+                if (shutdownState.Requested.load())
+                {
+                    Librova::Logging::Info("Shutdown requested after pipe session. Ending pipe accept loop.");
+                    break;
+                }
+#endif
+
                 Librova::Logging::Info("Pipe session completed successfully.");
                 ++servedSessions;
             }
             catch (const std::exception& error)
             {
+#ifdef _WIN32
+                if (shutdownState.Requested.load())
+                {
+                    Librova::Logging::Info(
+                        "Stopping pipe loop after shutdown request interrupted waiting or session handling.");
+                    break;
+                }
+#endif
+
                 Librova::Logging::Error("Pipe session failed: {}", error.what());
                 std::cerr << "Librova.Core.Host session error: " << error.what() << '\n';
             }
@@ -190,7 +250,12 @@ int main(int argc, char** argv)
 
         Librova::Logging::Info("Librova.Core.Host stopped after serving {} sessions.", servedSessions);
         Librova::Logging::CLogging::Shutdown();
+
+#ifdef _WIN32
+        return shutdownState.ExitCode.load();
+#else
         return 0;
+#endif
     }
     catch (const std::exception& error)
     {

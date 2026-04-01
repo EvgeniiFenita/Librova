@@ -30,17 +30,79 @@ Library browsing polish that is explicitly deferred until a later library UX ite
 - broader library UX polish beyond the MVP-safe series/genres work;
 - storage sharding or per-book storage-layout redesign.
 
-## 3. Release Readiness Criteria
+## 3. MVP Blockers From Review Pass
+
+The review-pass blocker list has been reduced, but one release-blocking runtime issue still remains before MVP can be treated as stable:
+
+- external converter child processes are not yet bound to a Windows `Job Object`, so crashed or abruptly terminated sessions may leave converter processes alive.
+
+The earlier blocker items around SQLite Unicode path handling and watchdog-driven `ExitProcess` shutdown have now been closed and re-verified through automated tests.
+
+## 4. Iterative Stabilization Plan
+
+Work should move in small checkpoints, each ending with updated tests and docs when implemented reality changes.
+
+### Iteration 1 — SQLite Unicode Path Safety
+
+Status: completed and verified.
+
+- switch native SQLite open path handling to explicit UTF-8 conversion;
+- add verification that a database under a Unicode or Cyrillic path opens and migrates successfully.
+
+### Iteration 2 — Graceful Host Shutdown
+
+Status: completed and verified.
+
+- replace watchdog-driven `ExitProcess` termination with a graceful shutdown signal;
+- ensure destructor-based cleanup, SQLite close, and log flushing remain on the normal process-exit path;
+- add verification for parent-process termination behavior.
+
+### Iteration 3 — Converter Lifetime Safety
+
+Status: current highest-priority blocker.
+
+- bind external converter processes to a Windows `Job Object` with kill-on-close semantics;
+- keep cancellation as a distinct outcome and clean up converter outputs after cancellation;
+- add verification that cancelled or aborted sessions do not leave converter processes or partial outputs behind.
+
+### Iteration 4 — SQLite Runtime Hardening
+
+- add `busy_timeout` protection for concurrent read/write access patterns;
+- verify search and import behavior under overlapping database access.
+
+### Iteration 5 — FB2 Parsing Hardening
+
+- replace locale-dependent numeric parsing in FB2 metadata extraction;
+- keep Windows-1251 support while tightening parser behavior through targeted tests.
+
+### Iteration 6 — IPC Contract Guardrails
+
+- add explicit validation that C++ and C# pipe method enums stay synchronized;
+- treat transport drift checks as part of routine validation for future RPC work.
+
+### Iteration 7 — Logging And Failure Diagnostics
+
+- stop silently swallowing rollback failures in trash-related recovery paths;
+- make export overwrite behavior explicit in code, logs, and, if needed, the user-facing contract.
+
+### Iteration 8 — Code Health Cleanup
+
+- remove duplicated path-safety and UTF-8 helper logic where it creates maintenance risk;
+- harden ZIP archive wrappers against accidental copy semantics;
+- clean up smaller review-pass issues that are real but not release-blocking.
+
+## 5. Release Readiness Criteria
 
 Librova can be treated as MVP-ready when:
 
 - `Debug` and `Release` validation stay green;
+- the confirmed MVP blockers from the review pass are closed and re-verified;
 - manual UI test scenarios have been walked through successfully;
 - series/genres support and Windows `Recycle Bin` delete flow are implemented and validated;
 - no critical runtime regressions remain in startup, import, browser, export, delete, or settings flows;
 - logs are actionable enough to diagnose startup and runtime problems.
 
-## 4. Out Of Scope For The Current MVP
+## 6. Out Of Scope For The Current MVP
 
 Not on the active MVP path:
 
@@ -52,7 +114,7 @@ Not on the active MVP path:
 - storage sharding and other storage-layout refactors without a proven MVP need;
 - large convenience features that do not reduce MVP risk.
 
-## 5. History
+## 7. History
 
 Verified checkpoint history is preserved in:
 
