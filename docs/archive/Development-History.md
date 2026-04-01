@@ -145,3 +145,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: added per-connection SQLite `busy_timeout` hardening and regression coverage for overlapping write transactions so the host does not fail immediately on short-lived write contention.
 - `2026-04-01` Fix: replaced locale-dependent FB2 numeric parsing with exact locale-independent parsing and added regression coverage for dot-separated series numbers plus invalid publish-year rejection.
 - `2026-04-01` Test: added explicit IPC enum invariants and cross-suite transport guardrails so C++ and C# named-pipe method and response-status ids cannot drift silently.
+- `2026-04-01` Fix: made export overwrite behavior explicit in native logs, added rollback-failure diagnostics for trash restore paths, and enabled native `/utf-8` compilation so structured Unicode-safe logging stays available without per-call workarounds.

@@ -3,6 +3,8 @@
 #include <system_error>
 #include <stdexcept>
 
+#include "Logging/Logging.hpp"
+
 namespace Librova::Application {
 namespace {
 
@@ -63,6 +65,12 @@ namespace {
     return canonicalPath.lexically_normal();
 }
 
+std::string PathToUtf8(const std::filesystem::path& path)
+{
+    const auto utf8Path = path.generic_u8string();
+    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
 } // namespace
 
 CLibraryExportFacade::CLibraryExportFacade(
@@ -110,10 +118,24 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
         std::filesystem::create_directories(destinationPath.parent_path());
     }
 
+    if (std::filesystem::exists(destinationPath) && Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Warn(
+            "Export destination already exists and will be overwritten. Destination='{}'.",
+            PathToUtf8(destinationPath));
+    }
+
     std::filesystem::copy_file(
         sourcePath,
         destinationPath,
         std::filesystem::copy_options::overwrite_existing);
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Info(
+            "Exported managed book to '{}'.",
+            PathToUtf8(destinationPath));
+    }
 
     return destinationPath;
 }

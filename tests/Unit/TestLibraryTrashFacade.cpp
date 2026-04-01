@@ -7,6 +7,7 @@
 #include "Application/LibraryTrashFacade.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Logging/Logging.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 
 namespace {
@@ -96,12 +97,18 @@ public:
         const std::filesystem::path& destinationPath) override
     {
         ++RestoreCalls;
+        if (FailOnRestoreCall.has_value() && *FailOnRestoreCall == RestoreCalls)
+        {
+            throw std::runtime_error("trash restore failed");
+        }
+
         RestoreSequence.emplace_back(destinationPath.filename().string());
         std::filesystem::create_directories(destinationPath.parent_path());
         std::filesystem::rename(trashedPath, destinationPath);
     }
 
     std::optional<int> FailOnMoveCall;
+    std::optional<int> FailOnRestoreCall;
     int MoveCalls = 0;
     int RestoreCalls = 0;
     std::vector<std::string> RestoreSequence;
@@ -282,6 +289,64 @@ TEST_CASE("Library trash facade restores book and cover when repository remove f
     REQUIRE(trashService.RestoreSequence.size() == 2);
     REQUIRE(trashService.RestoreSequence[0] == "0000000004.jpg");
     REQUIRE(trashService.RestoreSequence[1] == "book.epub");
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library trash facade logs rollback restore failures when logger is initialized", "[application][trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-log";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000005");
+    std::filesystem::create_directories(sandbox / "Library/Covers");
+
+    const auto bookPath = sandbox / "Library/Books/0000000005/book.epub";
+    const auto coverPath = sandbox / "Library/Covers/0000000005.jpg";
+    const auto logPath = sandbox / "Logs" / "host.log";
+    std::ofstream(bookPath, std::ios::binary) << "epub";
+    std::ofstream(coverPath, std::ios::binary) << "cover";
+
+    Librova::Domain::SBook book;
+    book.Id = {5};
+    book.Metadata.TitleUtf8 = "Rollback Log";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000005/book.epub";
+    book.File.SizeBytes = 12;
+    book.CoverPath = std::filesystem::path{"Covers/0000000005.jpg"};
+
+    CFakeBookRepository repository(book);
+    repository.ThrowOnRemove = true;
+    CFakeTrashService trashService(sandbox / "Trash");
+    trashService.FailOnRestoreCall = 1;
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+    try
+    {
+        const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
+
+        try
+        {
+            (void)facade.MoveBookToTrash(book.Id);
+            FAIL("Expected trash facade to surface repository remove failure.");
+        }
+        catch (const std::exception& error)
+        {
+            REQUIRE(std::string{error.what()} == "repository remove failed");
+        }
+    }
+    catch (...)
+    {
+        Librova::Logging::CLogging::Shutdown();
+        throw;
+    }
+    Librova::Logging::CLogging::Shutdown();
+
+    {
+        std::ifstream logStream(logPath, std::ios::binary);
+        const std::string logText{std::istreambuf_iterator<char>{logStream}, std::istreambuf_iterator<char>{}};
+        REQUIRE(logText.find("Failed to restore") != std::string::npos);
+        REQUIRE(logText.find("trash restore failed") != std::string::npos);
+    }
 
     std::filesystem::remove_all(sandbox);
 }

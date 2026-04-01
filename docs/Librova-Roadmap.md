@@ -88,6 +88,8 @@ Status: completed and verified.
 
 ### Iteration 7 — Logging And Failure Diagnostics
 
+Status: completed and verified.
+
 - stop silently swallowing rollback failures in trash-related recovery paths;
 - make export overwrite behavior explicit in code, logs, and, if needed, the user-facing contract.
 

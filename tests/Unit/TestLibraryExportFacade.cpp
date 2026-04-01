@@ -6,6 +6,7 @@
 #include "Application/LibraryExportFacade.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Logging/Logging.hpp"
 
 namespace {
 
@@ -155,4 +156,43 @@ TEST_CASE("LibraryExportFacade rejects symlinked managed path escaping library r
     {
         REQUIRE(std::string{error.what()}.find("unsafe") != std::string::npos);
     }
+}
+
+TEST_CASE("LibraryExportFacade overwrites an existing destination file", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-overwrite");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto sourcePath = libraryRoot / "Books/0000000004/book.epub";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
+    const auto logPath = sandbox.GetPath() / "Logs" / "export.log";
+
+    std::filesystem::create_directories(sourcePath.parent_path());
+    std::filesystem::create_directories(destinationPath.parent_path());
+    std::ofstream(sourcePath, std::ios::binary) << "new-contents";
+    std::ofstream(destinationPath, std::ios::binary) << "old-contents";
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-overwrite.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    const auto bookId = repository.Add(CreateBook({4}, "Books/0000000004/book.epub"));
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+    try
+    {
+        const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot);
+        const auto exportedPath = facade.ExportBook(bookId, destinationPath);
+
+        REQUIRE(exportedPath.has_value());
+        REQUIRE(ReadAllText(destinationPath) == "new-contents");
+    }
+    catch (...)
+    {
+        Librova::Logging::CLogging::Shutdown();
+        throw;
+    }
+    Librova::Logging::CLogging::Shutdown();
+
+    const auto logText = ReadAllText(logPath);
+    REQUIRE(logText.find("overwritten") != std::string::npos);
+    REQUIRE(logText.find("Exported managed book") != std::string::npos);
 }

@@ -20,6 +20,8 @@ target_link_libraries(LibrovaApplication
         LibrovaImporting
         LibrovaManagedTrash
         LibrovaZipImporting
+    PRIVATE
+        LibrovaLogging
 )
 
 target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

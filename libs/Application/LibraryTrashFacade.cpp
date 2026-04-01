@@ -3,6 +3,8 @@
 #include <system_error>
 #include <stdexcept>
 
+#include "Logging/Logging.hpp"
+
 namespace Librova::Application {
 namespace {
 
@@ -63,6 +65,32 @@ namespace {
     return canonicalPath.lexically_normal();
 }
 
+std::string PathToUtf8(const std::filesystem::path& path)
+{
+    const auto utf8Path = path.generic_u8string();
+    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
+void LogRollbackFailure(const std::string_view label, const std::filesystem::path& sourcePath, const std::exception& error) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    try
+    {
+        Librova::Logging::Error(
+            "Failed to restore {} during trash rollback. Path='{}' Error='{}'.",
+            label,
+            PathToUtf8(sourcePath),
+            error.what());
+    }
+    catch (...)
+    {
+    }
+}
+
 } // namespace
 
 CLibraryTrashFacade::CLibraryTrashFacade(
@@ -121,8 +149,9 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
             {
                 m_trashService.RestoreFromTrash(*trashedCoverPath, *sourceCoverPath);
             }
-            catch (...)
+            catch (const std::exception& error)
             {
+                LogRollbackFailure("cover", *sourceCoverPath, error);
             }
         }
 
@@ -132,8 +161,9 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
             {
                 m_trashService.RestoreFromTrash(*trashedBookPath, sourceBookPath);
             }
-            catch (...)
+            catch (const std::exception& error)
             {
+                LogRollbackFailure("book", sourceBookPath, error);
             }
         }
 
