@@ -1,5 +1,6 @@
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
+using Librova.UI.LibraryCatalog;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using Xunit;
@@ -232,6 +233,80 @@ public sealed class StrongIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ImportJobs_CancelledBatchImport_RollsBackLibraryAndManagedFiles()
+    {
+        var sandboxRoot = CreateSandboxRoot("cancelled-batch-rollback");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "CancelledBatchRollback");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            var importRoot = Path.Combine(sandboxRoot, "Incoming");
+            Directory.CreateDirectory(importRoot);
+            const int totalBooks = 40;
+            for (var index = 0; index < totalBooks; index++)
+            {
+                CreateFb2File(
+                    importRoot,
+                    $"cancel-{index:D3}.fb2",
+                    $"Cancelled Batch {index:D3}",
+                    "Arkady",
+                    "Strugatsky");
+            }
+
+            var jobId = await session.ImportJobs.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [importRoot],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            ImportJobSnapshotModel? runningSnapshot = null;
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while (DateTime.UtcNow < deadline)
+            {
+                var snapshot = await session.ImportJobs.TryGetSnapshotAsync(jobId, TimeSpan.FromSeconds(2), cancellation.Token);
+                if (snapshot is not null
+                    && snapshot.Status == ImportJobStatusModel.Running
+                    && snapshot.ProcessedEntries > 0)
+                {
+                    runningSnapshot = snapshot;
+                    break;
+                }
+
+                await Task.Delay(50, cancellation.Token);
+            }
+
+            Assert.NotNull(runningSnapshot);
+            Assert.True(await session.ImportJobs.CancelAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token));
+            Assert.True(await session.ImportJobs.WaitAsync(jobId, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(20), cancellation.Token));
+
+            var result = await session.ImportJobs.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
+            Assert.NotNull(result);
+            Assert.Equal(ImportJobStatusModel.Cancelled, result!.Snapshot.Status);
+            Assert.Equal(0UL, result.Summary!.ImportedEntries);
+
+            var books = await session.LibraryCatalog.ListBooksAsync(
+                new BookListRequestModel(),
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            Assert.Empty(books);
+
+            Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Books")));
+            Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Covers")));
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static ShellApplication CreateApplication(ShellSession session, string sandboxRoot) =>
         ShellApplication.Create(
             session,
@@ -338,6 +413,11 @@ public sealed class StrongIntegrationTests
         {
         }
     }
+
+    private static IReadOnlyList<string> EnumerateAllFiles(string root) =>
+        !Directory.Exists(root)
+            ? []
+            : Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).ToArray();
 
     private sealed class FakeExportSelectionService(string exportPath) : Desktop.IPathSelectionService
     {

@@ -218,7 +218,11 @@ int main(int argc, char** argv)
             managedStorage,
             converterPtr);
         const Librova::ZipImporting::CZipImportCoordinator zipImportCoordinator(singleFileImporter);
-        const Librova::Application::CLibraryImportFacade importFacade(singleFileImporter, zipImportCoordinator);
+        const Librova::Application::CLibraryImportFacade importFacade(
+            singleFileImporter,
+            zipImportCoordinator,
+            &bookRepository,
+            options.LibraryRoot);
         const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
         const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot);
         const Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, options.LibraryRoot);

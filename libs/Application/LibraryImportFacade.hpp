@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "Domain/BookRepository.hpp"
 #include "Domain/ServiceContracts.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
@@ -47,6 +48,8 @@ struct SImportResult
     SImportSummary Summary;
     std::optional<Librova::Importing::SSingleFileImportResult> SingleFileResult;
     std::optional<Librova::ZipImporting::SZipImportResult> ZipResult;
+    std::vector<Librova::Domain::SBookId> ImportedBookIds;
+    bool WasCancelled = false;
 
     [[nodiscard]] bool IsSuccess() const noexcept
     {
@@ -64,7 +67,9 @@ class CLibraryImportFacade final
 public:
     CLibraryImportFacade(
         const Librova::Importing::ISingleFileImporter& singleFileImporter,
-        const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator);
+        const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator,
+        Librova::Domain::IBookRepository* bookRepository = nullptr,
+        std::filesystem::path libraryRoot = {});
 
     [[nodiscard]] SImportResult Run(
         const SImportRequest& request,
@@ -73,9 +78,12 @@ public:
 
 private:
     [[nodiscard]] static bool IsZipPath(const std::filesystem::path& path);
+    void RollbackImportedBooks(const std::vector<Librova::Domain::SBookId>& importedBookIds) const;
 
     const Librova::Importing::ISingleFileImporter& m_singleFileImporter;
     const Librova::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
+    Librova::Domain::IBookRepository* m_bookRepository = nullptr;
+    std::filesystem::path m_libraryRoot;
 };
 
 } // namespace Librova::Application

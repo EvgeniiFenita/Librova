@@ -102,6 +102,14 @@ CImportJobRunner::CImportJobRunner(const Librova::Application::CLibraryImportFac
 std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
     const Librova::Application::SImportResult& importResult)
 {
+    if (importResult.WasCancelled)
+    {
+        return Librova::Domain::SDomainError{
+            .Code = Librova::Domain::EDomainErrorCode::Cancellation,
+            .Message = "Import was cancelled."
+        };
+    }
+
     if (importResult.ZipResult.has_value())
     {
         const auto wasCancelled = std::ranges::any_of(importResult.ZipResult->Entries, [](const auto& entry) {
