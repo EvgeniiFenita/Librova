@@ -27,6 +27,7 @@
                        Text="Librova accepts `.fb2`, `.epub`, `.zip`, multiple selected files, and recursive folder imports. Selecting or dropping sources starts the import flow immediately."
                        TextWrapping="Wrap" />
             <WrapPanel Orientation="Horizontal"
+                       ItemSpacing="14"
                        ItemHeight="44">
               <Button Classes="PrimaryAction"
                       Width="180"
