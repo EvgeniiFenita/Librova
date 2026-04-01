@@ -147,6 +147,17 @@
 - показываются summary, warnings и error state последнего импорта.
 - browser позже может быть обновлен автоматически.
 
+## 6.1 Probable Duplicate Override
+
+1. Импортируй книгу так, чтобы повторный импорт той же книги считался duplicate.
+2. На `Import` включи `Allow duplicate import`.
+3. Повтори импорт той же книги.
+Ожидаемое поведение:
+- повторный импорт завершается успешно.
+- в `Library` появляются две отдельные записи книги.
+- записи имеют разные managed files и удаляются независимо друг от друга.
+- duplicate override работает и для случая strict duplicate.
+
 ## 7. Drag And Drop Import Source
 
 1. Открой раздел `Import`.

@@ -78,6 +78,59 @@ public sealed class StrongIntegrationTests
     }
 
     [Fact]
+    public async Task ShellApplication_AllowsStrictDuplicateImportAsIndependentBookWhenEnabled()
+    {
+        var sandboxRoot = CreateSandboxRoot("shell-strict-duplicate-override");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "ShellStrictDuplicateOverride");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+            await using var application = CreateApplication(session, sandboxRoot);
+
+            await application.InitializeAsync();
+
+            var firstSource = CreateFb2File(
+                sandboxRoot,
+                "duplicate-one.fb2",
+                "Duplicated Book",
+                "Arkady",
+                "Strugatsky",
+                "978-5-17-090334-4");
+            var secondSource = CreateFb2File(
+                sandboxRoot,
+                "duplicate-two.fb2",
+                "Duplicated Book",
+                "Arkady",
+                "Strugatsky",
+                "978-5-17-090334-4");
+
+            application.Shell.ImportJobs.SourcePath = firstSource;
+            application.Shell.ImportJobs.WorkingDirectory = Path.Combine(sandboxRoot, "UiWork", "first");
+            await application.Shell.ImportJobs.StartImportAsync();
+
+            application.Shell.ImportJobs.SourcePath = secondSource;
+            application.Shell.ImportJobs.WorkingDirectory = Path.Combine(sandboxRoot, "UiWork", "second");
+            application.Shell.ImportJobs.AllowProbableDuplicates = true;
+            await application.Shell.ImportJobs.StartImportAsync();
+
+            await application.Shell.LibraryBrowser.RefreshAsync();
+
+            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Count);
+            Assert.All(application.Shell.LibraryBrowser.Books, book => Assert.Equal("Duplicated Book", book.Title));
+            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Select(book => book.BookId).Distinct().Count());
+            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Select(book => book.ManagedPath).Distinct().Count());
+            Assert.Contains("Completed", application.Shell.ImportJobs.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_PaginatesAgainstRealHost()
     {
         var sandboxRoot = CreateSandboxRoot("browser-paging");
@@ -240,7 +293,8 @@ public sealed class StrongIntegrationTests
         string fileName,
         string title,
         string authorFirstName,
-        string authorLastName)
+        string authorLastName,
+        string? isbn = null)
     {
         var sourcePath = Path.Combine(sandboxRoot, fileName);
         File.WriteAllText(
@@ -257,6 +311,11 @@ public sealed class StrongIntegrationTests
                   </author>
                   <lang>en</lang>
                 </title-info>
+                {{(string.IsNullOrWhiteSpace(isbn) ? string.Empty : $"""
+                <publish-info>
+                  <isbn>{isbn}</isbn>
+                </publish-info>
+                """)}}
               </description>
               <body>
                 <section><p>Body</p></section>

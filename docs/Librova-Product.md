@@ -63,6 +63,7 @@ The import flow includes:
 - drag-and-drop of one or many files and folders;
 - metadata parsing;
 - duplicate detection;
+- explicit user opt-in when Librova allows a duplicate to be imported as a separate managed record;
 - optional conversion `FB2 -> EPUB`;
 - staging before commit;
 - database write;

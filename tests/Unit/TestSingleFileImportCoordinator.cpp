@@ -389,6 +389,45 @@ TEST_CASE("Single file import returns decision required for probable duplicates 
     REQUIRE_FALSE(managedStorage.CommitCalled);
 }
 
+TEST_CASE("Single file import can continue after strict duplicate when explicitly allowed", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-strict-force");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    queryRepository.Duplicates = {{
+        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+        .Reason = Librova::Domain::EDuplicateReason::SameIsbn,
+        .ExistingBookId = {77}
+    }};
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .AllowProbableDuplicates = true
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(result.DuplicateMatches.size() == 1);
+    REQUIRE(result.Warnings == std::vector<std::string>({
+        "Import continued with explicit strict duplicate override.",
+        "FB2 converter unavailable. Original FB2 will be stored."
+    }));
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(managedStorage.CommitCalled);
+}
+
 TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-conversion");

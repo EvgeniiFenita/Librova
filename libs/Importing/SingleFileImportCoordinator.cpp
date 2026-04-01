@@ -11,6 +11,7 @@ namespace {
 
 constexpr auto GStrictDuplicateWarning = "Import rejected because a strict duplicate already exists.";
 constexpr auto GProbableDuplicateWarning = "Import requires user confirmation because a probable duplicate was found.";
+constexpr auto GForcedStrictDuplicateWarning = "Import continued with explicit strict duplicate override.";
 constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit probable duplicate override.";
 
 void EnsureDirectory(const std::filesystem::path& path)
@@ -185,7 +186,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             return buildCancelledResult(parsedBook.SourceFormat, duplicates, {});
         }
 
-        if (HasStrictDuplicate(duplicates))
+        if (HasStrictDuplicate(duplicates) && !request.AllowProbableDuplicates)
         {
             return {
                 .Status = ESingleFileImportStatus::RejectedDuplicate,
@@ -209,6 +210,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         progressSink.ReportValue(30, "Planning conversion");
 
         std::vector<std::string> importWarnings;
+
+        if (HasStrictDuplicate(duplicates) && request.AllowProbableDuplicates)
+        {
+            importWarnings.emplace_back(GForcedStrictDuplicateWarning);
+        }
 
         if (HasProbableDuplicate(duplicates) && request.AllowProbableDuplicates)
         {

@@ -47,6 +47,11 @@
                    IsVisible="{Binding ImportJobs.HasSourceValidationError}"
                    Text="{Binding ImportJobs.SourceValidationMessage}"
                    TextWrapping="Wrap" />
+        <CheckBox IsChecked="{Binding ImportJobs.AllowProbableDuplicates}"
+                  Content="Allow duplicate import" />
+        <TextBlock Opacity="0.72"
+                   Text="When enabled, Librova can continue after a probable duplicate warning and store the new book as a separate managed record."
+                   TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 

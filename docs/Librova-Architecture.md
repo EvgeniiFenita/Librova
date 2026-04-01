@@ -89,8 +89,8 @@ The import pipeline now accepts one or many selected source paths, including fol
 - If conversion fails or is unavailable, original `FB2` may be stored with warnings.
 - Conversion cancellation is not treated as ordinary converter failure.
 - `FB2` metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real personal libraries, including Windows-1251 content on Windows.
-- strict duplicates are rejected;
-- probable duplicates require explicit user consent.
+- duplicates are rejected by default;
+- the import UI may explicitly override duplicate rejection and store the new item as a separate managed record.
 
 ## 5. Search Model
 
