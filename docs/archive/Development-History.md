@@ -164,3 +164,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: added the same executable `Browse...` picker affordance to the custom converter settings path so both converter modes can be configured without manual path typing.
 - `2026-04-01` Fix: moved `Settings` to a bottom-anchored position in the left navigation rail so system configuration is visually separated from the primary `Library` and `Import` workflows.
 - `2026-04-01` Fix: replaced the technical left-rail subtitle with the product-facing slogan `A personal desktop library for your books.`
+- `2026-04-01` Fix: added a first application icon asset and wired it into the Avalonia window plus the Windows application manifest path.
