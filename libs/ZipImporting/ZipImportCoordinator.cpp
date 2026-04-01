@@ -221,7 +221,7 @@ public:
         if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&m_innerSink); structuredSink != nullptr)
         {
             structuredSink->ReportStructuredProgress(
-                totalEntries,
+                m_totalEntries,
                 m_processedEntries + processedEntries,
                 importedEntries,
                 failedEntries,
@@ -266,7 +266,10 @@ CZipImportCoordinator::CZipImportCoordinator(const Librova::Importing::ISingleFi
 {
 }
 
-std::size_t CZipImportCoordinator::CountPlannedEntries(const std::filesystem::path& zipPath) const
+std::size_t CZipImportCoordinator::CountPlannedEntries(
+    const std::filesystem::path& zipPath,
+    const Librova::Domain::IProgressSink* progressSink,
+    const std::stop_token stopToken) const
 {
     CZipArchive archive(zipPath);
     std::size_t plannedEntries = 0;
@@ -274,6 +277,11 @@ std::size_t CZipImportCoordinator::CountPlannedEntries(const std::filesystem::pa
 
     for (zip_uint64_t index = 0; index < entryCount; ++index)
     {
+        if (stopToken.stop_requested() || (progressSink != nullptr && progressSink->IsCancellationRequested()))
+        {
+            break;
+        }
+
         const std::string entryName = archive.GetEntryName(index);
         if (!IsDirectoryEntry(entryName))
         {
@@ -297,7 +305,7 @@ SZipImportResult CZipImportCoordinator::Run(
     CZipArchive archive(request.ZipPath);
     SZipImportResult result;
     const zip_uint64_t entryCount = static_cast<zip_uint64_t>(archive.GetEntryCount());
-    const std::size_t totalEntries = CountPlannedEntries(request.ZipPath);
+    const std::size_t totalEntries = CountPlannedEntries(request.ZipPath, &progressSink, stopToken);
     std::size_t processedEntries = 0;
     std::size_t importedEntries = 0;
     std::size_t failedEntries = 0;

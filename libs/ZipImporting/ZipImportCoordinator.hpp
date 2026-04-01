@@ -59,7 +59,10 @@ class CZipImportCoordinator final
 public:
     explicit CZipImportCoordinator(const Librova::Importing::ISingleFileImporter& singleFileImporter);
 
-    [[nodiscard]] std::size_t CountPlannedEntries(const std::filesystem::path& zipPath) const;
+    [[nodiscard]] std::size_t CountPlannedEntries(
+        const std::filesystem::path& zipPath,
+        const Librova::Domain::IProgressSink* progressSink = nullptr,
+        std::stop_token stopToken = {}) const;
 
     [[nodiscard]] SZipImportResult Run(
         const SZipImportRequest& request,

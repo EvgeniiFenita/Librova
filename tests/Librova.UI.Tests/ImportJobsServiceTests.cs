@@ -236,6 +236,113 @@ public sealed class ImportJobsServiceTests
         }
     }
 
+    [Fact]
+    public async Task Service_ReportsRunningAggregateSnapshotCountersThroughHost()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-import-service-progress",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.Progress.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+            };
+
+            var importRoot = Path.Combine(sandboxRoot, "Incoming");
+            Directory.CreateDirectory(importRoot);
+            const int totalBooks = 40;
+            for (var index = 0; index < totalBooks; index++)
+            {
+                await File.WriteAllTextAsync(
+                    Path.Combine(importRoot, $"book-{index:D3}.fb2"),
+                    CreateFb2($"Progress Book {index:D3}"));
+            }
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await process.StartAsync(options, cancellation.Token);
+
+            var service = new ImportJobsService(options.PipePath);
+            var jobId = await service.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [importRoot],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            ImportJobSnapshotModel? runningSnapshot = null;
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (DateTime.UtcNow < deadline)
+            {
+                var snapshot = await service.TryGetSnapshotAsync(jobId, TimeSpan.FromSeconds(2), cancellation.Token);
+                if (snapshot is not null
+                    && snapshot.Status == ImportJobStatusModel.Running
+                    && snapshot.TotalEntries == totalBooks
+                    && snapshot.ProcessedEntries > 0
+                    && snapshot.ProcessedEntries < snapshot.TotalEntries)
+                {
+                    runningSnapshot = snapshot;
+                    break;
+                }
+
+                var result = await service.TryGetResultAsync(jobId, TimeSpan.FromSeconds(2), cancellation.Token);
+                if (result is not null)
+                {
+                    break;
+                }
+
+                await Task.Delay(50, cancellation.Token);
+            }
+
+            Assert.NotNull(runningSnapshot);
+            Assert.Equal((ulong)totalBooks, runningSnapshot!.TotalEntries);
+            Assert.InRange(runningSnapshot.ProcessedEntries, 1UL, (ulong)totalBooks - 1);
+            Assert.True(
+                runningSnapshot.ImportedEntries + runningSnapshot.FailedEntries + runningSnapshot.SkippedEntries
+                <= runningSnapshot.ProcessedEntries);
+
+            Assert.True(await service.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(15),
+                cancellation.Token));
+
+            var finalResult = await service.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
+            Assert.NotNull(finalResult);
+            Assert.Equal(ImportJobStatusModel.Completed, finalResult!.Snapshot.Status);
+            Assert.Equal((ulong)totalBooks, finalResult.Snapshot.TotalEntries);
+            Assert.Equal((ulong)totalBooks, finalResult.Snapshot.ProcessedEntries);
+            Assert.Equal((ulong)totalBooks, finalResult.Summary!.TotalEntries);
+            Assert.Equal((ulong)totalBooks, finalResult.Summary.ImportedEntries);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     private static string CreateFb2(string title) =>
         $$"""
         <?xml version="1.0" encoding="UTF-8"?>
