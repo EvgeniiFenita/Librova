@@ -89,6 +89,8 @@ Series and genres are part of the active MVP direction and are expected to becom
 
 The user can export a selected managed book to any destination path outside the managed library.
 
+The export dialog should suggest a meaningful default filename derived from the book title and author, sanitized for Windows file-name rules.
+
 ### 3.5 Delete / Recycle
 
 The current MVP keeps a safe user-facing delete action through the managed-library `Trash` flow.

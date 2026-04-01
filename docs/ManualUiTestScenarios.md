@@ -213,6 +213,7 @@
 2. В правой панели нажми `Export`.
 3. Выбери destination path вне managed library.
 Ожидаемое поведение:
+- диалог предлагает имя файла, собранное из title и author, а недопустимые для Windows символы не попадают в suggested file name.
 - export успешно завершается.
 - destination file появляется на диске.
 - исходный managed file не меняется.

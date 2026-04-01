@@ -836,7 +836,26 @@ public sealed class ViewModelsTests
 
         Assert.Equal(viewModel.SelectedBook!.BookId, service.LastExportBookId);
         Assert.Equal(@"C:\Exports\alpha.epub", service.LastExportPath);
+        Assert.Equal("Roadside Picnic - Arkady Strugatsky.epub", selectionService.LastSuggestedExportFileName);
         Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesSanitizedTitleAndAuthorForSuggestedExportFileName()
+    {
+        var service = new InvalidMetadataLibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\sanitized.fb2"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        await viewModel.ExportSelectedBookAsync();
+
+        Assert.Equal("Roadside Picnic Director's Cut - Arkady Boris Strugatsky.fb2", selectionService.LastSuggestedExportFileName);
+        Assert.Equal(@"C:\Exports\sanitized.fb2", service.LastExportPath);
     }
 
     [Fact]
@@ -1124,6 +1143,7 @@ public sealed class ViewModelsTests
         public string? SelectedSourceDirectory { get; init; }
         public string? SelectedWorkingDirectory { get; init; }
         public string? SelectedExportPath { get; init; }
+        public string? LastSuggestedExportFileName { get; private set; }
 
         public Task<IReadOnlyList<string>> PickSourceFilesAsync(CancellationToken cancellationToken)
             => Task.FromResult(SelectedSourcePaths);
@@ -1135,7 +1155,10 @@ public sealed class ViewModelsTests
             => Task.FromResult(SelectedWorkingDirectory);
 
         public Task<string?> PickExportDestinationAsync(string suggestedFileName, CancellationToken cancellationToken)
-            => Task.FromResult(SelectedExportPath);
+        {
+            LastSuggestedExportFileName = suggestedFileName;
+            return Task.FromResult(SelectedExportPath);
+        }
     }
 
     private static string CreateSupportedSourceFile(string sandboxRoot, string fileName)
@@ -1341,6 +1364,48 @@ public sealed class ViewModelsTests
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class InvalidMetadataLibraryCatalogService : ILibraryCatalogService
+    {
+        public string? LastExportPath { get; private set; }
+
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 41,
+                    Title = "Roadside: Picnic / Director's Cut?",
+                    Authors = ["Arkady*Boris|Strugatsky"],
+                    Language = "en",
+                    Format = BookFormatModel.Fb2,
+                    ManagedPath = "Books/0000000041/book.fb2",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
+            {
+                BookId = bookId,
+                Title = "Roadside: Picnic / Director's Cut?",
+                Authors = ["Arkady*Boris|Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000041/book.fb2",
+                SizeBytes = 512,
+                Sha256Hex = "invalid-metadata",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastExportPath = destinationPath;
+            return Task.FromResult<string?>(destinationPath);
+        }
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -377,13 +378,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             return;
         }
 
-        const string defaultFileName = "book.epub";
-        var suggestedFileName = Path.GetFileName(SelectedBook.ManagedPath);
-        if (string.IsNullOrWhiteSpace(suggestedFileName))
-        {
-            suggestedFileName = defaultFileName;
-        }
-
+        var suggestedFileName = BuildSuggestedExportFileName();
         var destinationPath = await _pathSelectionService.PickExportDestinationAsync(suggestedFileName, default);
         if (string.IsNullOrWhiteSpace(destinationPath))
         {
@@ -685,6 +680,79 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private static string BuildAuthorsText(IReadOnlyList<string> authors) =>
         authors.Count == 0 ? "Unknown author" : string.Join(", ", authors);
+
+    private string BuildSuggestedExportFileName()
+    {
+        const string fallbackBaseName = "book";
+
+        var title = SanitizeFileNamePart(SelectedBookDetails?.Title ?? SelectedBook?.Title);
+        var authors = SanitizeFileNamePart(
+            SelectedBookDetails is not null
+                ? BuildAuthorsText(SelectedBookDetails.Authors)
+                : SelectedBook?.AuthorsText);
+
+        var baseName = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(authors)
+            ? $"{title} - {authors}"
+            : !string.IsNullOrWhiteSpace(title)
+                ? title
+                : !string.IsNullOrWhiteSpace(authors)
+                    ? authors
+                    : fallbackBaseName;
+
+        var extension = Path.GetExtension(SelectedBook?.ManagedPath);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = (SelectedBookDetails?.Format ?? SelectedBook?.Format ?? BookFormatModel.Epub) switch
+            {
+                BookFormatModel.Fb2 => ".fb2",
+                _ => ".epub"
+            };
+        }
+
+        return baseName + extension.ToLowerInvariant();
+    }
+
+    private static string SanitizeFileNamePart(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(value.Length);
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        var previousWasWhitespace = false;
+
+        foreach (var character in value.Trim())
+        {
+            if (Array.IndexOf(invalidCharacters, character) >= 0 || char.IsControl(character))
+            {
+                if (!previousWasWhitespace && builder.Length > 0)
+                {
+                    builder.Append(' ');
+                    previousWasWhitespace = true;
+                }
+
+                continue;
+            }
+
+            if (char.IsWhiteSpace(character))
+            {
+                if (!previousWasWhitespace && builder.Length > 0)
+                {
+                    builder.Append(' ');
+                    previousWasWhitespace = true;
+                }
+
+                continue;
+            }
+
+            builder.Append(character);
+            previousWasWhitespace = false;
+        }
+
+        return builder.ToString().Trim(' ', '.');
+    }
 
     private static void ApplySelectionStyle(BookListItemModel item, bool isSelected)
     {
