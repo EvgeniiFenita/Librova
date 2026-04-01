@@ -169,7 +169,7 @@ Most remaining work now belongs to:
 
 ## 8. Related Documents
 
-- [Librova-Architecture](C:\Users\evgen\Desktop\Librova\docs\Librova-Architecture.md)
-- [Librova-Roadmap](C:\Users\evgen\Desktop\Librova\docs\Librova-Roadmap.md)
-- [ManualUiTestScenarios](C:\Users\evgen\Desktop\Librova\docs\ManualUiTestScenarios.md)
-- [Development-History](C:\Users\evgen\Desktop\Librova\docs\archive\Development-History.md)
+- [Librova-Architecture](Librova-Architecture.md)
+- [Librova-Roadmap](Librova-Roadmap.md)
+- [ManualUiTestScenarios](ManualUiTestScenarios.md)
+- [Development-History](archive/Development-History.md)

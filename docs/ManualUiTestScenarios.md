@@ -9,12 +9,12 @@
 Перед началом:
 
 - для обычного запуска держи открытыми:
-  - [out\runtime\library\Logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\ui.log)
-  - [out\runtime\library\Logs\host.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\host.log)
+  - [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
+  - [out\runtime\library\Logs\host.log](out/runtime/library/Logs/host.log)
 - для `-FirstRun` и `-SecondRun` до выбора или открытия библиотеки UI временно пишет bootstrap log в:
-  - [out\runtime\bootstrap-ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\bootstrap-ui.log)
+  - [out\runtime\bootstrap-ui.log](out/runtime/bootstrap-ui.log)
 - после успешного выбора или открытия библиотеки bootstrap log должен быть перенесен в:
-  - [out\runtime\library\Logs\ui.log](C:\Users\evgen\Desktop\Librova\out\runtime\library\Logs\ui.log)
+  - [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
 
 Используй эти сценарии после заметных UI или runtime изменений и перед тем, как считать сборку стабильной.
 
@@ -31,7 +31,7 @@
 6. Нажми `Continue`.
 Ожидаемое поведение:
 - startup screen переходит в loading state, затем открывается основной shell приложения.
-- создается [out\runtime\ui-preferences.json](C:\Users\evgen\Desktop\Librova\out\runtime\ui-preferences.json).
+- создается [out\runtime\ui-preferences.json](out/runtime/ui-preferences.json).
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
 - UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
 

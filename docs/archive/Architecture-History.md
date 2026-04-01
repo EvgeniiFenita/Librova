@@ -990,19 +990,17 @@ This section records decisions that should be treated as fixed unless explicitly
 
 ## 28. Working Agreements
 
-The architecture document is not the only project-level source of truth. The following companion documents are part of the repository bootstrap and should be read at the start of a new session:
+The architecture document is not the only project-level source of truth. The following companion documents are part of the repository bootstrap and are read automatically by Codex at the start of each session:
 
-- `docs/CodeStyleGuidelines.md`
-- `docs/CommitMessageGuidelines.md`
-- `docs/ProjectDocumentation.md`
-- `CodexSessionInstructions.md`
+- `AGENTS.md`
+- `docs/engineering/CodeStyleGuidelines.md`
+- `docs/engineering/CommitMessageGuidelines.md`
 
 Their purpose is:
 
 - architecture document: product and technical decisions;
 - code style document: implementation and naming conventions;
 - commit message document: git history conventions;
-- project documentation: stable implementation facts already true in the repository;
 - session instructions: startup checklist and task execution discipline.
 
 If implementation reality changes any of these assumptions, update the relevant document instead of letting the repository drift.

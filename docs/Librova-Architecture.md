@@ -165,4 +165,4 @@ Current architectural focus is:
 
 Long-form historical planning and architectural evolution are preserved in:
 
-- [Architecture-History](C:\Users\evgen\Desktop\Librova\docs\archive\Architecture-History.md)
+- [Architecture-History](archive/Architecture-History.md)

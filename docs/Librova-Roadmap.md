@@ -56,4 +56,4 @@ Not on the active MVP path:
 
 Verified checkpoint history is preserved in:
 
-- [Development-History](C:\Users\evgen\Desktop\Librova\docs\archive\Development-History.md)
+- [Development-History](archive/Development-History.md)
