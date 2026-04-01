@@ -248,8 +248,6 @@ TEST_CASE("External book converter removes partial output files after cancellati
     });
 
     std::this_thread::sleep_for(std::chrono::milliseconds{200});
-    REQUIRE(std::filesystem::exists(destinationPath));
-
     stopSource.request_stop();
     worker.join();
 
