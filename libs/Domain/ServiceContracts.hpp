@@ -112,6 +112,21 @@ public:
     virtual bool IsCancellationRequested() const = 0;
 };
 
+class IStructuredImportProgressSink
+{
+public:
+    virtual ~IStructuredImportProgressSink() = default;
+
+    virtual void ReportStructuredProgress(
+        std::size_t totalEntries,
+        std::size_t processedEntries,
+        std::size_t importedEntries,
+        std::size_t failedEntries,
+        std::size_t skippedEntries,
+        int percent,
+        std::string_view message) = 0;
+};
+
 class IBookParser
 {
 public:

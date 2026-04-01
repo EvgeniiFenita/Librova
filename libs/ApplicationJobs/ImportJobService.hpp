@@ -30,6 +30,11 @@ struct SImportJobSnapshot
     int Percent = 0;
     std::string Message;
     std::vector<std::string> Warnings;
+    std::size_t TotalEntries = 0;
+    std::size_t ProcessedEntries = 0;
+    std::size_t ImportedEntries = 0;
+    std::size_t FailedEntries = 0;
+    std::size_t SkippedEntries = 0;
 
     [[nodiscard]] bool IsTerminal() const noexcept
     {

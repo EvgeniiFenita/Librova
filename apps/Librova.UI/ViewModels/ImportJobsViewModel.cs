@@ -25,6 +25,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool _isBusy;
     private ulong? _lastJobId;
     private ImportJobResultModel? _lastResult;
+    private string _progressSummaryText = "Progress details will appear here.";
     private string _resultSummaryText = "No completed job yet.";
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
@@ -181,6 +182,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
         private set => SetProperty(ref _resultSummaryText, value);
     }
 
+    public string ProgressSummaryText
+    {
+        get => _progressSummaryText;
+        private set => SetProperty(ref _progressSummaryText, value);
+    }
+
     public string WarningsText
     {
         get => _warningsText;
@@ -249,6 +256,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     {
         IsBusy = true;
         StatusText = "Starting import...";
+        ProgressSummaryText = "Preparing import workload...";
         LastResult = null;
         _activeImportCancellation?.Dispose();
         _activeImportCancellation = new CancellationTokenSource();
@@ -294,10 +302,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         if (result is not null)
         {
-            LastResult = result;
-            StatusText = result.Snapshot.Message.Length == 0
-                ? result.Snapshot.Status.ToString()
-                : result.Snapshot.Message;
+            ApplyTerminalResult(result);
             return;
         }
 
@@ -308,9 +313,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         if (snapshot is not null)
         {
-            StatusText = snapshot.Message.Length == 0
-                ? snapshot.Status.ToString()
-                : snapshot.Message;
+            ApplySnapshot(snapshot);
         }
     }
 
@@ -429,10 +432,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
             if (result is not null)
             {
-                LastResult = result;
-                StatusText = result.Snapshot.Message.Length == 0
-                    ? result.Snapshot.Status.ToString()
-                    : result.Snapshot.Message;
+                ApplyTerminalResult(result);
                 LogTerminalResult(jobId, result);
                 await RaiseImportCompletedSuccessfullyAsync(result);
                 return;
@@ -445,9 +445,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
             if (snapshot is not null)
             {
-                StatusText = snapshot.Message.Length == 0
-                    ? snapshot.Status.ToString()
-                    : snapshot.Message;
+                ApplySnapshot(snapshot);
             }
 
             await Task.Delay(200, cancellationToken);
@@ -499,7 +497,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         var summary = LastResult.Summary;
         ResultSummaryText = summary is null
             ? "No import summary available."
-            : $"Imported {summary.ImportedEntries} of {summary.TotalEntries}; failed {summary.FailedEntries}; skipped {summary.SkippedEntries}.";
+            : FormatTerminalSummary(summary);
 
         var warnings = summary?.Warnings ?? LastResult.Snapshot.Warnings;
         WarningsText = warnings.Count == 0
@@ -509,6 +507,53 @@ internal sealed class ImportJobsViewModel : ObservableObject
         ErrorText = LastResult.Error is null
             ? "No error."
             : $"{LastResult.Error.Code}: {LastResult.Error.Message}";
+    }
+
+    private void ApplySnapshot(ImportJobSnapshotModel snapshot)
+    {
+        StatusText = snapshot.Message.Length == 0
+            ? snapshot.Status.ToString()
+            : snapshot.Message;
+        ProgressSummaryText = FormatProgressSummary(snapshot);
+    }
+
+    private void ApplyTerminalResult(ImportJobResultModel result)
+    {
+        LastResult = result;
+        StatusText = result.Snapshot.Message.Length == 0
+            ? result.Snapshot.Status.ToString()
+            : result.Snapshot.Message;
+        ProgressSummaryText = FormatProgressSummary(result.Snapshot);
+    }
+
+    private static string FormatProgressSummary(ImportJobSnapshotModel snapshot)
+    {
+        if (snapshot.TotalEntries == 0)
+        {
+            return snapshot.Status switch
+            {
+                ImportJobStatusModel.Completed => "No supported files were found in the selected import sources.",
+                ImportJobStatusModel.Failed => "No supported files were found in the selected import sources.",
+                ImportJobStatusModel.Cancelled => "Import was cancelled before Librova finished processing the selected files.",
+                _ => "Preparing import workload..."
+            };
+        }
+
+        var processedEntries = Math.Min(snapshot.ProcessedEntries, snapshot.TotalEntries);
+        var percent = Math.Clamp(snapshot.Percent, 0, 100);
+        var fileNoun = snapshot.TotalEntries == 1 ? "file" : "files";
+        return $"Processed {processedEntries} of {snapshot.TotalEntries} {fileNoun} ({percent}%). Imported {snapshot.ImportedEntries}, failed {snapshot.FailedEntries}, skipped {snapshot.SkippedEntries}.";
+    }
+
+    private static string FormatTerminalSummary(ImportSummaryModel summary)
+    {
+        if (summary.TotalEntries == 0)
+        {
+            return "No supported files were found in the selected import sources.";
+        }
+
+        var fileNoun = summary.TotalEntries == 1 ? "file" : "files";
+        return $"Processed {summary.TotalEntries} {fileNoun}. Imported {summary.ImportedEntries}, failed {summary.FailedEntries}, skipped {summary.SkippedEntries}.";
     }
 
     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)

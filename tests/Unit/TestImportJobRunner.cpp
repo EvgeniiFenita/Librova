@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -333,4 +334,61 @@ TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][impor
     REQUIRE_FALSE(result.Error.has_value());
     REQUIRE(result.ImportResult.has_value());
     std::filesystem::remove_all(sandbox.Root);
+}
+
+TEST_CASE("Import job runner publishes structured batch progress snapshots", "[jobs][import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-structured-progress");
+    const auto firstSourcePath = sandbox.GetPath() / "first.fb2";
+    const auto secondSourcePath = sandbox.GetPath() / "second.fb2";
+    std::ofstream(firstSourcePath).put('a');
+    std::ofstream(secondSourcePath).put('b');
+
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{11}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    std::vector<Librova::Jobs::SJobProgressSnapshot> snapshots;
+
+    const auto result = runner.Run({
+        .SourcePaths = {firstSourcePath, secondSourcePath},
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, {}, [&snapshots](const Librova::Jobs::SJobProgressSnapshot& snapshot) {
+        snapshots.push_back(snapshot);
+    });
+
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
+    REQUIRE(result.ImportResult.has_value());
+    REQUIRE(result.ImportResult->Summary.TotalEntries == 2);
+    REQUIRE(result.ImportResult->Summary.ImportedEntries == 2);
+    REQUIRE_FALSE(snapshots.empty());
+
+    const auto prepared = std::find_if(snapshots.begin(), snapshots.end(), [](const auto& snapshot) {
+        return snapshot.Message == "Prepared import workload";
+    });
+    REQUIRE(prepared != snapshots.end());
+    REQUIRE(prepared->TotalEntries == 2);
+    REQUIRE(prepared->ProcessedEntries == 0);
+    REQUIRE(prepared->ImportedEntries == 0);
+    REQUIRE(prepared->FailedEntries == 0);
+    REQUIRE(prepared->SkippedEntries == 0);
+
+    const auto processed = std::find_if(snapshots.begin(), snapshots.end(), [](const auto& snapshot) {
+        return snapshot.Message == "Processed source file";
+    });
+    REQUIRE(processed != snapshots.end());
+    REQUIRE(processed->TotalEntries == 2);
+    REQUIRE(processed->ProcessedEntries == 1);
+    REQUIRE(processed->ImportedEntries == 1);
+    REQUIRE(processed->Percent == 50);
+
+    REQUIRE(result.Snapshot.TotalEntries == 2);
+    REQUIRE(result.Snapshot.ProcessedEntries == 2);
+    REQUIRE(result.Snapshot.ImportedEntries == 2);
+    REQUIRE(result.Snapshot.FailedEntries == 0);
+    REQUIRE(result.Snapshot.SkippedEntries == 0);
 }

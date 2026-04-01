@@ -29,7 +29,8 @@ public sealed class ViewModelsTests
             Assert.NotNull(viewModel.LastResult);
             Assert.Equal(ImportJobStatusModel.Completed, viewModel.LastResult!.Snapshot.Status);
             Assert.Equal("Completed", viewModel.StatusText);
-            Assert.Equal("Imported 1 of 1; failed 0; skipped 0.", viewModel.ResultSummaryText);
+            Assert.Equal("Processed 1 file. Imported 1, failed 0, skipped 0.", viewModel.ResultSummaryText);
+            Assert.Equal("Processed 1 of 1 file (100%). Imported 1, failed 0, skipped 0.", viewModel.ProgressSummaryText);
             Assert.Equal("Watch for duplicates", viewModel.WarningsText);
             Assert.Equal("No error.", viewModel.ErrorText);
             Assert.True(service.TryGetSnapshotCalls > 0);
@@ -137,6 +138,7 @@ public sealed class ViewModelsTests
             await viewModel.RefreshCommand.ExecuteAsyncForTests();
 
             Assert.Equal("Still running", viewModel.StatusText);
+            Assert.Equal("Processed 1 of 4 files (25%). Imported 1, failed 0, skipped 0.", viewModel.ProgressSummaryText);
             Assert.True(service.RefreshSnapshotCalls > 0);
         }
         finally
@@ -323,6 +325,40 @@ public sealed class ViewModelsTests
             Assert.Equal([firstSourcePath, secondSourcePath], viewModel.SourcePaths);
             Assert.Equal(42UL, viewModel.LastJobId);
             Assert.Equal([firstSourcePath, secondSourcePath], service.LastStartRequest?.SourcePaths);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_UsesZeroFileSummaryWhenNoSupportedEntriesWereFound()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new EmptyImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "empty.zip"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal("No supported files were found in the selected import sources.", viewModel.ResultSummaryText);
+            Assert.Equal("No supported files were found in the selected import sources.", viewModel.ProgressSummaryText);
         }
         finally
         {
@@ -975,7 +1011,13 @@ public sealed class ViewModelsTests
                     {
                         JobId = jobId,
                         Status = ImportJobStatusModel.Completed,
-                        Message = "Completed"
+                        Message = "Completed",
+                        Percent = 100,
+                        TotalEntries = 1,
+                        ProcessedEntries = 1,
+                        ImportedEntries = 1,
+                        FailedEntries = 0,
+                        SkippedEntries = 0
                     },
                     Summary = new ImportSummaryModel
                     {
@@ -997,7 +1039,13 @@ public sealed class ViewModelsTests
             {
                 JobId = jobId,
                 Status = ImportJobStatusModel.Running,
-                Message = "Running"
+                Message = "Running",
+                Percent = 0,
+                TotalEntries = 1,
+                ProcessedEntries = 0,
+                ImportedEntries = 0,
+                FailedEntries = 0,
+                SkippedEntries = 0
             });
         }
 
@@ -1054,7 +1102,13 @@ public sealed class ViewModelsTests
                     {
                         JobId = jobId,
                         Status = ImportJobStatusModel.Completed,
-                        Message = "Completed"
+                        Message = "Completed",
+                        Percent = 100,
+                        TotalEntries = 1,
+                        ProcessedEntries = 1,
+                        ImportedEntries = 1,
+                        FailedEntries = 0,
+                        SkippedEntries = 0
                     }
                 }
                 : null);
@@ -1066,7 +1120,13 @@ public sealed class ViewModelsTests
             {
                 JobId = jobId,
                 Status = ImportJobStatusModel.Running,
-                Message = "Still running"
+                Message = "Still running",
+                Percent = 25,
+                TotalEntries = 4,
+                ProcessedEntries = 1,
+                ImportedEntries = 1,
+                FailedEntries = 0,
+                SkippedEntries = 0
             });
         }
 
@@ -1109,7 +1169,13 @@ public sealed class ViewModelsTests
                     {
                         JobId = jobId,
                         Status = ImportJobStatusModel.Cancelled,
-                        Message = "Cancelled"
+                        Message = "Cancelled",
+                        Percent = 33,
+                        TotalEntries = 3,
+                        ProcessedEntries = 1,
+                        ImportedEntries = 0,
+                        FailedEntries = 1,
+                        SkippedEntries = 0
                     }
                 });
             }
@@ -1124,7 +1190,13 @@ public sealed class ViewModelsTests
             {
                 JobId = jobId,
                 Status = ImportJobStatusModel.Running,
-                Message = "Running"
+                Message = "Running",
+                Percent = 0,
+                TotalEntries = 3,
+                ProcessedEntries = 0,
+                ImportedEntries = 0,
+                FailedEntries = 0,
+                SkippedEntries = 0
             });
         }
 
@@ -1163,6 +1235,60 @@ public sealed class ViewModelsTests
             LastSuggestedExportFileName = suggestedFileName;
             return Task.FromResult(SelectedExportPath);
         }
+    }
+
+    private sealed class EmptyImportJobsService : IImportJobsService
+    {
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(new ImportJobResultModel
+            {
+                Snapshot = new ImportJobSnapshotModel
+                {
+                    JobId = jobId,
+                    Status = ImportJobStatusModel.Failed,
+                    Message = "Import completed without importing any supported books.",
+                    Percent = 0,
+                    TotalEntries = 0,
+                    ProcessedEntries = 0,
+                    ImportedEntries = 0,
+                    FailedEntries = 0,
+                    SkippedEntries = 0
+                },
+                Summary = new ImportSummaryModel
+                {
+                    Mode = ImportModeModel.Batch,
+                    TotalEntries = 0,
+                    ImportedEntries = 0,
+                    FailedEntries = 0,
+                    SkippedEntries = 0
+                }
+            });
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Prepared import workload",
+                Percent = 0,
+                TotalEntries = 0,
+                ProcessedEntries = 0,
+                ImportedEntries = 0,
+                FailedEntries = 0,
+                SkippedEntries = 0
+            });
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(91UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private static string CreateSupportedSourceFile(string sandboxRoot, string fileName)

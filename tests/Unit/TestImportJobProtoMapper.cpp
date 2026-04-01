@@ -30,7 +30,12 @@ TEST_CASE("Import job proto mapper maps job result into transport DTO", "[proto-
             .Status = Librova::ApplicationJobs::EImportJobStatus::Failed,
             .Percent = 80,
             .Message = "Import failed",
-            .Warnings = {"warning-1", "warning-2"}
+            .Warnings = {"warning-1", "warning-2"},
+            .TotalEntries = 4,
+            .ProcessedEntries = 3,
+            .ImportedEntries = 1,
+            .FailedEntries = 1,
+            .SkippedEntries = 1
         },
         .ImportResult = Librova::Application::SImportResult{
             .Summary = {
@@ -53,6 +58,11 @@ TEST_CASE("Import job proto mapper maps job result into transport DTO", "[proto-
     REQUIRE(proto.snapshot().job_id() == 17);
     REQUIRE(proto.snapshot().status() == librova::v1::IMPORT_JOB_STATUS_FAILED);
     REQUIRE(proto.snapshot().warnings_size() == 2);
+    REQUIRE(proto.snapshot().total_entries() == 4);
+    REQUIRE(proto.snapshot().processed_entries() == 3);
+    REQUIRE(proto.snapshot().imported_entries() == 1);
+    REQUIRE(proto.snapshot().failed_entries() == 1);
+    REQUIRE(proto.snapshot().skipped_entries() == 1);
     REQUIRE(proto.summary().mode() == librova::v1::IMPORT_MODE_ZIP_ARCHIVE);
     REQUIRE(proto.summary().imported_entries() == 2);
     REQUIRE(proto.error().code() == librova::v1::ERROR_CODE_INTEGRITY_ISSUE);
@@ -65,7 +75,13 @@ TEST_CASE("Import job proto mapper populates optional snapshot and result respon
         .JobId = 9,
         .Status = Librova::ApplicationJobs::EImportJobStatus::Running,
         .Percent = 33,
-        .Message = "Working"
+        .Message = "Working",
+        .Warnings = {"entry warning"},
+        .TotalEntries = 7,
+        .ProcessedEntries = 2,
+        .ImportedEntries = 1,
+        .FailedEntries = 0,
+        .SkippedEntries = 1
     };
 
     const auto snapshotResponse = Librova::ProtoMapping::CImportJobProtoMapper::ToProtoSnapshotResponse(&snapshot);
@@ -73,6 +89,10 @@ TEST_CASE("Import job proto mapper populates optional snapshot and result respon
 
     REQUIRE(snapshotResponse.has_snapshot());
     REQUIRE(snapshotResponse.snapshot().job_id() == 9);
+    REQUIRE(snapshotResponse.snapshot().total_entries() == 7);
+    REQUIRE(snapshotResponse.snapshot().processed_entries() == 2);
+    REQUIRE(snapshotResponse.snapshot().imported_entries() == 1);
+    REQUIRE(snapshotResponse.snapshot().skipped_entries() == 1);
     REQUIRE_FALSE(emptySnapshotResponse.has_snapshot());
 
     const Librova::ApplicationJobs::SImportJobResult result{

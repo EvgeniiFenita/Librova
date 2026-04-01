@@ -77,6 +77,11 @@ message ImportJobSnapshot {
   int32 percent = 3;
   string message = 4;
   repeated string warnings = 5;
+  uint64 total_entries = 6;
+  uint64 processed_entries = 7;
+  uint64 imported_entries = 8;
+  uint64 failed_entries = 9;
+  uint64 skipped_entries = 10;
 }
 
 message ImportJobResult {

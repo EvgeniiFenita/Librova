@@ -33,7 +33,12 @@ public sealed class ImportJobMapperTests
                 JobId = 5,
                 Status = ImportJobStatus.Completed,
                 Percent = 100,
-                Message = "Done"
+                Message = "Done",
+                TotalEntries = 4,
+                ProcessedEntries = 4,
+                ImportedEntries = 2,
+                FailedEntries = 1,
+                SkippedEntries = 1
             },
             Summary = new ImportSummary
             {
@@ -51,6 +56,11 @@ public sealed class ImportJobMapperTests
         });
 
         Assert.Equal(ImportJobStatusModel.Completed, model.Snapshot.Status);
+        Assert.Equal(4UL, model.Snapshot.TotalEntries);
+        Assert.Equal(4UL, model.Snapshot.ProcessedEntries);
+        Assert.Equal(2UL, model.Snapshot.ImportedEntries);
+        Assert.Equal(1UL, model.Snapshot.FailedEntries);
+        Assert.Equal(1UL, model.Snapshot.SkippedEntries);
         Assert.Equal(ImportModeModel.ZipArchive, model.Summary!.Mode);
         Assert.Equal(ImportErrorCodeModel.DatabaseFailure, model.Error!.Code);
     }

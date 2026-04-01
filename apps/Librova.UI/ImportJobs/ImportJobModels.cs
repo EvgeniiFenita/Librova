@@ -60,6 +60,11 @@ internal sealed class ImportJobSnapshotModel
     public int Percent { get; init; }
     public string Message { get; init; } = string.Empty;
     public IReadOnlyList<string> Warnings { get; init; } = [];
+    public ulong TotalEntries { get; init; }
+    public ulong ProcessedEntries { get; init; }
+    public ulong ImportedEntries { get; init; }
+    public ulong FailedEntries { get; init; }
+    public ulong SkippedEntries { get; init; }
 }
 
 internal sealed class DomainErrorModel

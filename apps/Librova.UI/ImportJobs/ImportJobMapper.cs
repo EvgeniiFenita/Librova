@@ -43,7 +43,12 @@ internal static class ImportJobMapper
             },
             Percent = snapshot.Percent,
             Message = snapshot.Message,
-            Warnings = snapshot.Warnings.ToArray()
+            Warnings = snapshot.Warnings.ToArray(),
+            TotalEntries = snapshot.TotalEntries,
+            ProcessedEntries = snapshot.ProcessedEntries,
+            ImportedEntries = snapshot.ImportedEntries,
+            FailedEntries = snapshot.FailedEntries,
+            SkippedEntries = snapshot.SkippedEntries
         };
 
     public static ImportJobResultModel FromProto(ImportJobResult result) =>

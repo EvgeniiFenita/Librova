@@ -1,5 +1,6 @@
 #include "Jobs/ImportJobRunner.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace Librova::Jobs {
@@ -16,6 +17,26 @@ CImportJobRunner::CJobProgressSink::CJobProgressSink(
 void CImportJobRunner::CJobProgressSink::ReportValue(const int percent, std::string_view message)
 {
     m_snapshot.Status = EJobStatus::Running;
+    m_snapshot.Percent = percent;
+    m_snapshot.Message.assign(message);
+    PublishSnapshot();
+}
+
+void CImportJobRunner::CJobProgressSink::ReportStructuredProgress(
+    const std::size_t totalEntries,
+    const std::size_t processedEntries,
+    const std::size_t importedEntries,
+    const std::size_t failedEntries,
+    const std::size_t skippedEntries,
+    const int percent,
+    std::string_view message)
+{
+    m_snapshot.Status = EJobStatus::Running;
+    m_snapshot.TotalEntries = totalEntries;
+    m_snapshot.ProcessedEntries = processedEntries;
+    m_snapshot.ImportedEntries = importedEntries;
+    m_snapshot.FailedEntries = failedEntries;
+    m_snapshot.SkippedEntries = skippedEntries;
     m_snapshot.Percent = percent;
     m_snapshot.Message.assign(message);
     PublishSnapshot();
@@ -81,6 +102,23 @@ CImportJobRunner::CImportJobRunner(const Librova::Application::CLibraryImportFac
 std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
     const Librova::Application::SImportResult& importResult)
 {
+    if (importResult.ZipResult.has_value())
+    {
+        const auto wasCancelled = std::ranges::any_of(importResult.ZipResult->Entries, [](const auto& entry) {
+            return entry.Status == Librova::ZipImporting::EZipEntryImportStatus::Cancelled
+                || (entry.SingleFileResult.has_value()
+                    && entry.SingleFileResult->Status == Librova::Importing::ESingleFileImportStatus::Cancelled);
+        });
+
+        if (wasCancelled)
+        {
+            return Librova::Domain::SDomainError{
+                .Code = Librova::Domain::EDomainErrorCode::Cancellation,
+                .Message = "Import was cancelled."
+            };
+        }
+    }
+
     if (importResult.SingleFileResult.has_value())
     {
         const auto& single = *importResult.SingleFileResult;

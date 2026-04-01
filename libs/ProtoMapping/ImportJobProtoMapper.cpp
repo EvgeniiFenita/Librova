@@ -64,6 +64,11 @@ Librova::ApplicationJobs::SImportJobSnapshot CImportJobProtoMapper::FromProto(
     result.Percent = snapshot.percent();
     result.Message = snapshot.message();
     result.Warnings.assign(snapshot.warnings().begin(), snapshot.warnings().end());
+    result.TotalEntries = snapshot.total_entries();
+    result.ProcessedEntries = snapshot.processed_entries();
+    result.ImportedEntries = snapshot.imported_entries();
+    result.FailedEntries = snapshot.failed_entries();
+    result.SkippedEntries = snapshot.skipped_entries();
     return result;
 }
 
@@ -139,6 +144,11 @@ librova::v1::ImportJobSnapshot CImportJobProtoMapper::ToProto(
     message.set_status(ToProto(snapshot.Status));
     message.set_percent(snapshot.Percent);
     message.set_message(snapshot.Message);
+    message.set_total_entries(snapshot.TotalEntries);
+    message.set_processed_entries(snapshot.ProcessedEntries);
+    message.set_imported_entries(snapshot.ImportedEntries);
+    message.set_failed_entries(snapshot.FailedEntries);
+    message.set_skipped_entries(snapshot.SkippedEntries);
 
     for (const auto& warning : snapshot.Warnings)
     {

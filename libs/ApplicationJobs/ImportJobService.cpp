@@ -67,7 +67,12 @@ SImportJobSnapshot CImportJobService::MapSnapshot(
         .Status = MapStatus(snapshot.Status),
         .Percent = snapshot.Percent,
         .Message = snapshot.Message,
-        .Warnings = snapshot.Warnings
+        .Warnings = snapshot.Warnings,
+        .TotalEntries = snapshot.TotalEntries,
+        .ProcessedEntries = snapshot.ProcessedEntries,
+        .ImportedEntries = snapshot.ImportedEntries,
+        .FailedEntries = snapshot.FailedEntries,
+        .SkippedEntries = snapshot.SkippedEntries
     };
 }
 

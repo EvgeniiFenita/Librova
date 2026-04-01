@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <set>
 #include <stdexcept>
 
@@ -19,6 +20,11 @@ namespace {
 {
     const auto extension = ToLower(path.extension().string());
     return extension == ".fb2" || extension == ".epub" || extension == ".zip";
+}
+
+[[nodiscard]] bool IsZipStandalonePath(const std::filesystem::path& path)
+{
+    return ToLower(path.extension().string()) == ".zip";
 }
 
 [[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path)
@@ -53,6 +59,72 @@ struct SExpandedImportSources
 {
     std::vector<std::filesystem::path> Candidates;
     std::vector<std::string> Warnings;
+};
+
+class CScopedStructuredProgressSink final : public Librova::Domain::IProgressSink, public Librova::Domain::IStructuredImportProgressSink
+{
+public:
+    CScopedStructuredProgressSink(
+        Librova::Domain::IProgressSink& innerSink,
+        const std::size_t totalEntries,
+        const std::size_t processedEntries,
+        const std::size_t contributionEntries)
+        : m_innerSink(innerSink)
+        , m_totalEntries(totalEntries)
+        , m_processedEntries(processedEntries)
+        , m_contributionEntries(std::max<std::size_t>(contributionEntries, 1))
+    {
+    }
+
+    void ReportValue(const int percent, std::string_view message) override
+    {
+        m_innerSink.ReportValue(MapPercent(percent), message);
+    }
+
+    bool IsCancellationRequested() const override
+    {
+        return m_innerSink.IsCancellationRequested();
+    }
+
+    void ReportStructuredProgress(
+        const std::size_t totalEntries,
+        const std::size_t processedEntries,
+        const std::size_t importedEntries,
+        const std::size_t failedEntries,
+        const std::size_t skippedEntries,
+        const int percent,
+        std::string_view message) override
+    {
+        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&m_innerSink); structuredSink != nullptr)
+        {
+            structuredSink->ReportStructuredProgress(
+                totalEntries,
+                m_processedEntries + processedEntries,
+                importedEntries,
+                failedEntries,
+                skippedEntries,
+                MapPercent(percent),
+                message);
+            return;
+        }
+
+        m_innerSink.ReportValue(MapPercent(percent), message);
+    }
+
+private:
+    [[nodiscard]] int MapPercent(const int localPercent) const noexcept
+    {
+        const auto clampedLocalPercent = std::clamp(localPercent, 0, 100);
+        const auto scaledProgress = static_cast<long long>(m_processedEntries * 100)
+            + (static_cast<long long>(m_contributionEntries) * clampedLocalPercent);
+        const auto denominator = static_cast<long long>(std::max<std::size_t>(m_totalEntries, 1)) * 100LL;
+        return static_cast<int>(std::clamp((scaledProgress * 100LL) / denominator, 0LL, 100LL));
+    }
+
+    Librova::Domain::IProgressSink& m_innerSink;
+    std::size_t m_totalEntries = 0;
+    std::size_t m_processedEntries = 0;
+    std::size_t m_contributionEntries = 1;
 };
 
 [[nodiscard]] SExpandedImportSources ExpandImportSources(const Librova::Application::SImportRequest& request)
@@ -178,6 +250,27 @@ void MergeWarnings(std::vector<std::string>& target, const std::vector<std::stri
     target.insert(target.end(), source.begin(), source.end());
 }
 
+[[nodiscard]] std::size_t CountPlannedEntries(
+    const std::vector<std::filesystem::path>& candidates,
+    const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator)
+{
+    std::size_t totalEntries = 0;
+
+    for (const auto& sourcePath : candidates)
+    {
+        if (IsZipStandalonePath(sourcePath))
+        {
+            totalEntries += zipImportCoordinator.CountPlannedEntries(sourcePath);
+        }
+        else
+        {
+            ++totalEntries;
+        }
+    }
+
+    return totalEntries;
+}
+
 } // namespace
 
 SImportResult CLibraryImportFacade::Run(
@@ -194,19 +287,40 @@ SImportResult CLibraryImportFacade::Run(
     SImportResult result;
     result.Summary.Mode = DetermineImportMode(request, expandedSources.Candidates);
     result.Summary.Warnings = expandedSources.Warnings;
+    result.Summary.TotalEntries = CountPlannedEntries(expandedSources.Candidates, m_zipImportCoordinator);
+    std::size_t processedEntries = 0;
+
+    if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+    {
+        structuredSink->ReportStructuredProgress(
+            result.Summary.TotalEntries,
+            0,
+            0,
+            0,
+            0,
+            0,
+            result.Summary.TotalEntries == 0 ? "No supported import entries were found." : "Prepared import workload");
+    }
 
     for (const auto& sourcePath : expandedSources.Candidates)
     {
         if (IsZipPath(sourcePath))
         {
+            const auto zipEntryCount = m_zipImportCoordinator.CountPlannedEntries(sourcePath);
+            CScopedStructuredProgressSink zipProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, zipEntryCount);
             const auto zipResult = m_zipImportCoordinator.Run({
                 .ZipPath = sourcePath,
                 .WorkingDirectory = request.WorkingDirectory,
                 .AllowProbableDuplicates = request.AllowProbableDuplicates
-            }, progressSink, stopToken);
+            }, zipProgressSink, stopToken);
 
-            result.Summary.TotalEntries += zipResult.Entries.size();
             result.Summary.ImportedEntries += zipResult.ImportedCount();
+            processedEntries += static_cast<std::size_t>(std::count_if(
+                zipResult.Entries.begin(),
+                zipResult.Entries.end(),
+                [](const auto& entry) {
+                    return entry.Status != Librova::ZipImporting::EZipEntryImportStatus::Cancelled;
+                }));
 
             if (result.Summary.Mode == EImportMode::ZipArchive)
             {
@@ -228,8 +342,21 @@ SImportResult CLibraryImportFacade::Run(
                     }
                     break;
                 case Librova::ZipImporting::EZipEntryImportStatus::Failed:
-                case Librova::ZipImporting::EZipEntryImportStatus::Cancelled:
                     ++result.Summary.FailedEntries;
+                    if (entry.SingleFileResult.has_value())
+                    {
+                        MergeWarnings(result.Summary.Warnings, entry.SingleFileResult->Warnings);
+                        if (!entry.SingleFileResult->Error.empty())
+                        {
+                            result.Summary.Warnings.push_back(entry.SingleFileResult->Error);
+                        }
+                    }
+                    else if (!entry.Error.empty())
+                    {
+                        result.Summary.Warnings.push_back(entry.Error);
+                    }
+                    break;
+                case Librova::ZipImporting::EZipEntryImportStatus::Cancelled:
                     if (entry.SingleFileResult.has_value())
                     {
                         MergeWarnings(result.Summary.Warnings, entry.SingleFileResult->Warnings);
@@ -246,17 +373,31 @@ SImportResult CLibraryImportFacade::Run(
                 }
             }
 
+            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+            {
+                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
+                structuredSink->ReportStructuredProgress(
+                    result.Summary.TotalEntries,
+                    processedEntries,
+                    result.Summary.ImportedEntries,
+                    result.Summary.FailedEntries,
+                    result.Summary.SkippedEntries,
+                    percent,
+                    "Processed archive source");
+            }
+
             continue;
         }
 
+        CScopedStructuredProgressSink singleProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, 1);
         const auto singleFileResult = m_singleFileImporter.Run({
             .SourcePath = sourcePath,
             .WorkingDirectory = request.WorkingDirectory,
             .Sha256Hex = expandedSources.Candidates.size() == 1 ? request.Sha256Hex : std::nullopt,
             .AllowProbableDuplicates = request.AllowProbableDuplicates
-        }, progressSink, stopToken);
+        }, singleProgressSink, stopToken);
 
-        ++result.Summary.TotalEntries;
+        ++processedEntries;
 
         if (result.Summary.Mode == EImportMode::SingleFile)
         {
@@ -266,6 +407,18 @@ SImportResult CLibraryImportFacade::Run(
         if (singleFileResult.IsSuccess())
         {
             ++result.Summary.ImportedEntries;
+            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+            {
+                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
+                structuredSink->ReportStructuredProgress(
+                    result.Summary.TotalEntries,
+                    processedEntries,
+                    result.Summary.ImportedEntries,
+                    result.Summary.FailedEntries,
+                    result.Summary.SkippedEntries,
+                    percent,
+                    "Processed source file");
+            }
             continue;
         }
 
@@ -288,6 +441,19 @@ SImportResult CLibraryImportFacade::Run(
         if (!singleFileResult.Error.empty())
         {
             result.Summary.Warnings.push_back(singleFileResult.Error);
+        }
+
+        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+        {
+            const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
+            structuredSink->ReportStructuredProgress(
+                result.Summary.TotalEntries,
+                processedEntries,
+                result.Summary.ImportedEntries,
+                result.Summary.FailedEntries,
+                result.Summary.SkippedEntries,
+                percent,
+                "Processed source file");
         }
     }
 

@@ -71,6 +71,8 @@ The import flow includes:
 
 The user-facing import screen is intentionally simplified: it centers on selecting or dropping a source file, then shows running progress and cancellation, rather than exposing internal job-management controls.
 
+For multi-file imports, directory imports, and ZIP imports, the running state must surface a deterministic aggregate progress summary with total files, processed files, and the current imported / failed / skipped counts. The terminal result must keep the same aggregate summary visible after the job finishes.
+
 ### 3.3 Library Browsing
 
 The user can:

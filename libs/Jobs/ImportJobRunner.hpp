@@ -27,6 +27,11 @@ struct SJobProgressSnapshot
     int Percent = 0;
     std::string Message;
     std::vector<std::string> Warnings;
+    std::size_t TotalEntries = 0;
+    std::size_t ProcessedEntries = 0;
+    std::size_t ImportedEntries = 0;
+    std::size_t FailedEntries = 0;
+    std::size_t SkippedEntries = 0;
 
     [[nodiscard]] bool IsTerminal() const noexcept
     {
@@ -62,12 +67,20 @@ public:
 private:
     [[nodiscard]] static bool HasNoSuccessfulImports(const Librova::Application::SImportResult& importResult) noexcept;
 
-    class CJobProgressSink final : public Librova::Domain::IProgressSink
+    class CJobProgressSink final : public Librova::Domain::IProgressSink, public Librova::Domain::IStructuredImportProgressSink
     {
     public:
         explicit CJobProgressSink(std::stop_token stopToken, TProgressCallback progressCallback);
 
         void ReportValue(int percent, std::string_view message) override;
+        void ReportStructuredProgress(
+            std::size_t totalEntries,
+            std::size_t processedEntries,
+            std::size_t importedEntries,
+            std::size_t failedEntries,
+            std::size_t skippedEntries,
+            int percent,
+            std::string_view message) override;
         bool IsCancellationRequested() const override;
 
         [[nodiscard]] const SJobProgressSnapshot& GetSnapshot() const noexcept;

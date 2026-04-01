@@ -64,6 +64,9 @@
         <TextBlock FontSize="16"
                    FontWeight="SemiBold"
                    Text="{Binding ImportJobs.StatusText}" />
+        <TextBlock FontWeight="SemiBold"
+                   Text="{Binding ImportJobs.ProgressSummaryText}"
+                   TextWrapping="Wrap" />
         <TextBlock Opacity="0.78"
                    Text="{Binding ImportJobs.SelectedSourcePathText}"
                    TextWrapping="Wrap" />
@@ -89,12 +92,24 @@
                    Text="{Binding ImportJobs.StatusText}" />
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
+                     Text="Summary" />
+          <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Last Known Progress" />
+          <TextBlock Text="{Binding ImportJobs.ProgressSummaryText}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock FontWeight="SemiBold"
                      Text="Imported Source" />
           <TextBlock Text="{Binding ImportJobs.SelectedSourcePathText}"
                      TextWrapping="Wrap" />
         </StackPanel>
-        <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
-                   TextWrapping="Wrap" />
 
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"

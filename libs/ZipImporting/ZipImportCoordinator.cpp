@@ -184,6 +184,72 @@ std::filesystem::path ExtractEntryToWorkspace(
     return destinationPath;
 }
 
+class CScopedStructuredProgressSink final : public Librova::Domain::IProgressSink, public Librova::Domain::IStructuredImportProgressSink
+{
+public:
+    CScopedStructuredProgressSink(
+        Librova::Domain::IProgressSink& innerSink,
+        const std::size_t totalEntries,
+        const std::size_t processedEntries,
+        const std::size_t contributionEntries)
+        : m_innerSink(innerSink)
+        , m_totalEntries(totalEntries)
+        , m_processedEntries(processedEntries)
+        , m_contributionEntries(std::max<std::size_t>(contributionEntries, 1))
+    {
+    }
+
+    void ReportValue(const int percent, std::string_view message) override
+    {
+        m_innerSink.ReportValue(MapPercent(percent), message);
+    }
+
+    bool IsCancellationRequested() const override
+    {
+        return m_innerSink.IsCancellationRequested();
+    }
+
+    void ReportStructuredProgress(
+        const std::size_t totalEntries,
+        const std::size_t processedEntries,
+        const std::size_t importedEntries,
+        const std::size_t failedEntries,
+        const std::size_t skippedEntries,
+        const int percent,
+        std::string_view message) override
+    {
+        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&m_innerSink); structuredSink != nullptr)
+        {
+            structuredSink->ReportStructuredProgress(
+                totalEntries,
+                m_processedEntries + processedEntries,
+                importedEntries,
+                failedEntries,
+                skippedEntries,
+                MapPercent(percent),
+                message);
+            return;
+        }
+
+        m_innerSink.ReportValue(MapPercent(percent), message);
+    }
+
+private:
+    [[nodiscard]] int MapPercent(const int localPercent) const noexcept
+    {
+        const auto clampedLocalPercent = std::clamp(localPercent, 0, 100);
+        const auto scaledProgress = static_cast<long long>(m_processedEntries * 100)
+            + (static_cast<long long>(m_contributionEntries) * clampedLocalPercent);
+        const auto denominator = static_cast<long long>(std::max<std::size_t>(m_totalEntries, 1)) * 100LL;
+        return static_cast<int>(std::clamp((scaledProgress * 100LL) / denominator, 0LL, 100LL));
+    }
+
+    Librova::Domain::IProgressSink& m_innerSink;
+    std::size_t m_totalEntries = 0;
+    std::size_t m_processedEntries = 0;
+    std::size_t m_contributionEntries = 1;
+};
+
 } // namespace
 
 namespace Librova::ZipImporting {
@@ -200,6 +266,24 @@ CZipImportCoordinator::CZipImportCoordinator(const Librova::Importing::ISingleFi
 {
 }
 
+std::size_t CZipImportCoordinator::CountPlannedEntries(const std::filesystem::path& zipPath) const
+{
+    CZipArchive archive(zipPath);
+    std::size_t plannedEntries = 0;
+    const zip_uint64_t entryCount = static_cast<zip_uint64_t>(archive.GetEntryCount());
+
+    for (zip_uint64_t index = 0; index < entryCount; ++index)
+    {
+        const std::string entryName = archive.GetEntryName(index);
+        if (!IsDirectoryEntry(entryName))
+        {
+            ++plannedEntries;
+        }
+    }
+
+    return plannedEntries;
+}
+
 SZipImportResult CZipImportCoordinator::Run(
     const SZipImportRequest& request,
     Librova::Domain::IProgressSink& progressSink,
@@ -213,6 +297,11 @@ SZipImportResult CZipImportCoordinator::Run(
     CZipArchive archive(request.ZipPath);
     SZipImportResult result;
     const zip_uint64_t entryCount = static_cast<zip_uint64_t>(archive.GetEntryCount());
+    const std::size_t totalEntries = CountPlannedEntries(request.ZipPath);
+    std::size_t processedEntries = 0;
+    std::size_t importedEntries = 0;
+    std::size_t failedEntries = 0;
+    std::size_t skippedEntries = 0;
 
     for (zip_uint64_t index = 0; index < entryCount; ++index)
     {
@@ -240,6 +329,20 @@ SZipImportResult CZipImportCoordinator::Run(
                 .Status = EZipEntryImportStatus::NestedArchiveSkipped,
                 .Error = "Nested ZIP archives are not supported."
             });
+            ++processedEntries;
+            ++skippedEntries;
+            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+            {
+                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(totalEntries, 1));
+                structuredSink->ReportStructuredProgress(
+                    totalEntries,
+                    processedEntries,
+                    importedEntries,
+                    failedEntries,
+                    skippedEntries,
+                    percent,
+                    "Skipping nested ZIP entry");
+            }
             continue;
         }
 
@@ -250,6 +353,20 @@ SZipImportResult CZipImportCoordinator::Run(
                 .Status = EZipEntryImportStatus::UnsupportedEntry,
                 .Error = "Unsafe ZIP entry path."
             });
+            ++processedEntries;
+            ++skippedEntries;
+            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+            {
+                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(totalEntries, 1));
+                structuredSink->ReportStructuredProgress(
+                    totalEntries,
+                    processedEntries,
+                    importedEntries,
+                    failedEntries,
+                    skippedEntries,
+                    percent,
+                    "Skipping unsafe ZIP entry");
+            }
             continue;
         }
 
@@ -259,26 +376,66 @@ SZipImportResult CZipImportCoordinator::Run(
                 .ArchivePath = entryPath,
                 .Status = EZipEntryImportStatus::UnsupportedEntry
             });
+            ++processedEntries;
+            ++skippedEntries;
+            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+            {
+                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(totalEntries, 1));
+                structuredSink->ReportStructuredProgress(
+                    totalEntries,
+                    processedEntries,
+                    importedEntries,
+                    failedEntries,
+                    skippedEntries,
+                    percent,
+                    "Skipping unsupported ZIP entry");
+            }
             continue;
         }
 
         const std::filesystem::path extractedPath =
             ExtractEntryToWorkspace(archive, index, entryName, request.WorkingDirectory);
-        progressSink.ReportValue(
-            static_cast<int>(((index + 1) * 100) / std::max<zip_uint64_t>(entryCount, 1)),
-            "Importing ZIP entry");
+        CScopedStructuredProgressSink entryProgressSink(progressSink, totalEntries, processedEntries, 1);
+        entryProgressSink.ReportValue(5, "Importing ZIP entry");
 
         const auto singleFileResult = m_singleFileImporter.Run({
             .SourcePath = extractedPath,
             .WorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem(),
             .AllowProbableDuplicates = request.AllowProbableDuplicates
-        }, progressSink, stopToken);
+        }, entryProgressSink, stopToken);
 
         result.Entries.push_back({
             .ArchivePath = entryPath,
-            .Status = singleFileResult.IsSuccess() ? EZipEntryImportStatus::Imported : EZipEntryImportStatus::Failed,
+            .Status = singleFileResult.IsSuccess()
+                ? EZipEntryImportStatus::Imported
+                : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::Cancelled
+                    ? EZipEntryImportStatus::Cancelled
+                    : EZipEntryImportStatus::Failed),
             .SingleFileResult = std::move(singleFileResult)
         });
+
+        ++processedEntries;
+        if (result.Entries.back().Status == EZipEntryImportStatus::Imported)
+        {
+            ++importedEntries;
+        }
+        else if (result.Entries.back().Status == EZipEntryImportStatus::Failed)
+        {
+            ++failedEntries;
+        }
+
+        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
+        {
+            const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(totalEntries, 1));
+            structuredSink->ReportStructuredProgress(
+                totalEntries,
+                processedEntries,
+                importedEntries,
+                failedEntries,
+                skippedEntries,
+                percent,
+                "Processed ZIP entry");
+        }
     }
 
     return result;
