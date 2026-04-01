@@ -9,6 +9,12 @@
 namespace Librova::Sqlite {
 namespace {
 
+std::string PathToUtf8(const std::filesystem::path& path)
+{
+    const auto utf8Path = path.u8string();
+    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
 std::string BuildErrorMessage(sqlite3* connection, std::string_view prefix)
 {
     const char* errorMessage = connection != nullptr ? sqlite3_errmsg(connection) : "unknown sqlite error";
@@ -23,8 +29,9 @@ std::string BuildErrorMessage(sqlite3* connection, std::string_view prefix)
 CSqliteConnection::CSqliteConnection(const std::filesystem::path& databasePath)
 {
     sqlite3* rawConnection = nullptr;
+    const std::string utf8DatabasePath = PathToUtf8(databasePath);
     const int openResult = sqlite3_open_v2(
-        databasePath.string().c_str(),
+        utf8DatabasePath.c_str(),
         &rawConnection,
         SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
         nullptr);
