@@ -163,6 +163,39 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book repository inserts exactly one search-index row per added book", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-search-index.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.Metadata.DescriptionUtf8 = std::string{"Zone"};
+    book.File.ManagedPath = "Books/0000000003/book.epub";
+    book.File.SizeBytes = 1024;
+    book.File.Sha256Hex = "search-index";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+
+    const auto bookId = repository.Add(book);
+
+    {
+        Librova::Sqlite::CSqliteConnection connection(databasePath);
+        Librova::Sqlite::CSqliteStatement statement(
+            connection.GetNativeHandle(),
+            "SELECT COUNT(*) FROM search_index WHERE rowid = ?;");
+        statement.BindInt64(1, bookId.Value);
+        REQUIRE(statement.Step());
+        REQUIRE(statement.GetColumnInt(0) == 1);
+    }
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository applies structured filters and FTS text search", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-search.db";

@@ -17,6 +17,8 @@ struct SHostOptions
     std::filesystem::path LibraryRoot;
     std::optional<std::uint32_t> ParentProcessId;
     std::size_t MaxSessions = 0;
+    bool ShowHelp = false;
+    bool ShowVersion = false;
     Librova::ConverterConfiguration::SConverterConfiguration ConverterConfiguration;
 };
 

@@ -21,6 +21,32 @@
 namespace Librova::Fb2Parsing {
 namespace {
 
+std::string ReplaceEncodingDeclaration(std::string text)
+{
+    const std::size_t declarationEnd = text.find("?>");
+    if (declarationEnd == std::string::npos)
+    {
+        return text;
+    }
+
+    std::string declaration = text.substr(0, declarationEnd);
+    const auto replaceIfPresent = [&declaration](const std::string_view from, const std::string_view to) {
+        const std::size_t index = declaration.find(from);
+        if (index != std::string::npos)
+        {
+            declaration.replace(index, from.size(), to);
+        }
+    };
+
+    replaceIfPresent(R"(encoding="windows-1251")", R"(encoding="utf-8")");
+    replaceIfPresent(R"(encoding='windows-1251')", R"(encoding='utf-8')");
+    replaceIfPresent(R"(encoding="cp1251")", R"(encoding="utf-8")");
+    replaceIfPresent(R"(encoding='cp1251')", R"(encoding='utf-8')");
+
+    text.replace(0, declarationEnd, declaration);
+    return text;
+}
+
 [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& filePath)
 {
     std::ifstream input(filePath, std::ios::binary);
@@ -101,7 +127,7 @@ namespace {
             throw std::runtime_error("Failed to convert FB2 file to UTF-8.");
         }
 
-        return utf8Text;
+        return ReplaceEncodingDeclaration(std::move(utf8Text));
     }
 #endif
 

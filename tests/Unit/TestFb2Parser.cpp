@@ -154,6 +154,36 @@ TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
     REQUIRE(parsedBook.Metadata.Language == "ru");
 }
 
+TEST_CASE("FB2 parser decodes windows-1251 metadata when XML declaration uses single quotes", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251-single-quotes");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "cp1251-single-quotes.fb2";
+
+    const std::string fb2Text =
+        "<?xml version='1.0' encoding='windows-1251'?>\r\n"
+        "<FictionBook>\r\n"
+        "  <description>\r\n"
+        "    <title-info>\r\n"
+        "      <book-title>\xD2\xF0\xF3\xE4\xED\xEE \xE1\xFB\xF2\xFC \xE1\xEE\xE3\xEE\xEC</book-title>\r\n"
+        "      <author>\r\n"
+        "        <first-name>\xC0\xF0\xEA\xE0\xE4\xE8\xE9</first-name>\r\n"
+        "        <last-name>\xD1\xF2\xF0\xF3\xE3\xE0\xF6\xEA\xE8\xE9</last-name>\r\n"
+        "      </author>\r\n"
+        "      <lang>ru</lang>\r\n"
+        "    </title-info>\r\n"
+        "  </description>\r\n"
+        "</FictionBook>";
+
+    WriteTextFile(fb2Path, fb2Text);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Трудно быть богом");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Аркадий Стругацкий"}));
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+
 TEST_CASE("FB2 parser accepts dot-separated sequence numbers independently from process locale", "[fb2-parsing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-sequence-number");

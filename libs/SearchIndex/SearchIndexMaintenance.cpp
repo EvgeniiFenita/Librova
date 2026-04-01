@@ -61,7 +61,7 @@ void ExecuteDeleteCommand(
 
 } // namespace
 
-void CSearchIndexMaintenance::UpsertBook(
+void CSearchIndexMaintenance::InsertBook(
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::int64_t bookId,
     const Librova::Domain::SBookMetadata& metadata)

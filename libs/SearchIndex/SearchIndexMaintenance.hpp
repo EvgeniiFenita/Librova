@@ -10,7 +10,7 @@ namespace Librova::SearchIndex {
 class CSearchIndexMaintenance final
 {
 public:
-    static void UpsertBook(
+    static void InsertBook(
         const Librova::Sqlite::CSqliteConnection& connection,
         std::int64_t bookId,
         const Librova::Domain::SBookMetadata& metadata);

@@ -65,6 +65,18 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--help" || argument == "-h")
+        {
+            options.ShowHelp = true;
+            continue;
+        }
+
+        if (argument == "--version")
+        {
+            options.ShowVersion = true;
+            continue;
+        }
+
         if (argument == "--library-root")
         {
             if (!HasValue(arguments, index))
@@ -216,6 +228,11 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
         }
 
         throw std::invalid_argument("Unknown host option: " + argument);
+    }
+
+    if (options.ShowHelp || options.ShowVersion)
+    {
+        return options;
     }
 
     if (options.PipePath.empty())

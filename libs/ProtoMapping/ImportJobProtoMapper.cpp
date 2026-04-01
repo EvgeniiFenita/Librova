@@ -9,7 +9,7 @@ namespace {
     return {reinterpret_cast<const char*>(value.data()), value.size()};
 }
 
-[[nodiscard]] std::u8string ToUtf8StringView(const std::string& value)
+[[nodiscard]] std::u8string Utf8BytesToU8String(const std::string& value)
 {
     return {reinterpret_cast<const char8_t*>(value.data()), reinterpret_cast<const char8_t*>(value.data() + value.size())};
 }
@@ -208,7 +208,7 @@ std::string CImportJobProtoMapper::PathToUtf8(const std::filesystem::path& path)
 
 std::filesystem::path CImportJobProtoMapper::PathFromUtf8(const std::string& value)
 {
-    return std::filesystem::path{ToUtf8StringView(value)};
+    return std::filesystem::path{Utf8BytesToU8String(value)};
 }
 
 Librova::Application::EImportMode CImportJobProtoMapper::FromProto(const librova::v1::ImportMode mode) noexcept

@@ -362,7 +362,7 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
     InsertAuthors(connection, bookId, book.Metadata.AuthorsUtf8);
     InsertTags(connection, bookId, book.Metadata.TagsUtf8);
     InsertFormatRow(connection, bookId, book.File);
-    Librova::SearchIndex::CSearchIndexMaintenance::UpsertBook(connection, bookId, book.Metadata);
+    Librova::SearchIndex::CSearchIndexMaintenance::InsertBook(connection, bookId, book.Metadata);
 
     transaction.Commit();
     return Librova::Domain::SBookId{bookId};

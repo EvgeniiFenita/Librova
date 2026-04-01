@@ -148,3 +148,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: made export overwrite behavior explicit in native logs, added rollback-failure diagnostics for trash restore paths, and enabled native `/utf-8` compilation so structured Unicode-safe logging stays available without per-call workarounds.
 - `2026-04-01` Refactor: centralized managed-path safety validation and UTF-8 path conversion into a shared native helper slice, then re-verified export and trash flows with dedicated unit coverage.
 - `2026-04-01` Cleanup: hardened local ZIP archive wrappers against accidental copy and move semantics, and narrowed import-job progress wakeups to `notify_one` on the single-waiter path.
+- `2026-04-01` Cleanup: rewrote decoded FB2 XML declarations to `utf-8`, made search-index insert semantics explicit, added host `--help` and `--version` handling, and removed misleading UTF-8 helper naming in proto mappers.

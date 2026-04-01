@@ -85,3 +85,18 @@ TEST_CASE("Host options reject mixed converter modes", "[core-host]")
         }),
         std::invalid_argument);
 }
+
+TEST_CASE("Host options allow help and version without required runtime arguments", "[core-host]")
+{
+    const auto helpOptions = Librova::CoreHost::CHostOptions::Parse({"--help"});
+    REQUIRE(helpOptions.ShowHelp);
+    REQUIRE_FALSE(helpOptions.ShowVersion);
+    REQUIRE(helpOptions.PipePath.empty());
+    REQUIRE(helpOptions.LibraryRoot.empty());
+
+    const auto versionOptions = Librova::CoreHost::CHostOptions::Parse({"--version"});
+    REQUIRE(versionOptions.ShowVersion);
+    REQUIRE_FALSE(versionOptions.ShowHelp);
+    REQUIRE(versionOptions.PipePath.empty());
+    REQUIRE(versionOptions.LibraryRoot.empty());
+}

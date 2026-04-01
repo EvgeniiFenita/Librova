@@ -14,6 +14,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaBookDatabase
         LibrovaConverterConfiguration
         LibrovaConverterRuntime
+        LibrovaCore
         LibrovaCoreHost
         LibrovaDatabaseRuntime
         LibrovaImporting

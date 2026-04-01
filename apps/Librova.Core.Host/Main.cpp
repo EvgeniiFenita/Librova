@@ -19,6 +19,7 @@
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "ConverterRuntime/ExternalBookConverter.hpp"
+#include "Core/Version.hpp"
 #include "CoreHost/HostOptions.hpp"
 #include "CoreHost/LibraryBootstrap.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
@@ -63,6 +64,24 @@ namespace {
 [[nodiscard]] std::filesystem::path GetLogFilePath(const std::filesystem::path& libraryRoot)
 {
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).LogsDirectory / "host.log";
+}
+
+void PrintUsage()
+{
+    std::cout
+        << "Usage: Librova.Core.Host --pipe <path> --library-root <path> [options]\n"
+        << "Options:\n"
+        << "  --help, -h              Show this help and exit.\n"
+        << "  --version               Show host version and exit.\n"
+        << "  --parent-pid <pid>      Bind host lifetime to the given parent process.\n"
+        << "  --serve-one             Stop after serving a single pipe session.\n"
+        << "  --max-sessions <count>  Stop after serving the specified number of sessions.\n"
+        << "  --fb2cng-exe <path>     Use built-in fb2cng converter profile.\n"
+        << "  --fb2cng-config <path>  Built-in fb2cng configuration path.\n"
+        << "  --converter-exe <path>  Use custom converter executable.\n"
+        << "  --converter-arg <arg>   Append a custom converter argument template item.\n"
+        << "  --converter-output <exact|directory>\n"
+        << "                         Select custom converter output mode.\n";
 }
 
 #ifdef _WIN32
@@ -144,6 +163,18 @@ int main(int argc, char** argv)
     try
     {
         const auto options = Librova::CoreHost::CHostOptions::Parse(CollectArguments(argc, argv));
+
+        if (options.ShowHelp)
+        {
+            PrintUsage();
+            return 0;
+        }
+
+        if (options.ShowVersion)
+        {
+            std::cout << Librova::Core::CVersion::GetValue() << '\n';
+            return 0;
+        }
 
         Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot);
         Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
