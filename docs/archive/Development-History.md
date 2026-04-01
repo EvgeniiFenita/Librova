@@ -155,3 +155,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: restored the import duplicate-override checkbox and re-verified through a host-backed UI test that probable-duplicate imports can create separate managed books with independent ids and files.
 - `2026-04-01` Fix: widened duplicate override so import can continue even after strict duplicate detection, and added native plus host-backed regression coverage for independent duplicate records.
 - `2026-04-01` Fix: changed library details size formatting from raw bytes to megabytes and added ViewModel regression coverage for the displayed metadata string.
+- `2026-04-01` Fix: removed the redundant per-section hero header card from the main shell so `Library`, `Import`, and `Settings` open directly into their working surfaces.
