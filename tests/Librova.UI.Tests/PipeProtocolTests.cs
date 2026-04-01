@@ -6,6 +6,30 @@ namespace Librova.UI.Tests;
 public sealed class PipeProtocolTests
 {
     [Fact]
+    public void PipeMethodValues_StayFixedAcrossCheckpoints()
+    {
+        Assert.Equal(1u, (uint)PipeMethod.StartImport);
+        Assert.Equal(2u, (uint)PipeMethod.ListBooks);
+        Assert.Equal(3u, (uint)PipeMethod.GetBookDetails);
+        Assert.Equal(4u, (uint)PipeMethod.ExportBook);
+        Assert.Equal(5u, (uint)PipeMethod.MoveBookToTrash);
+        Assert.Equal(6u, (uint)PipeMethod.GetImportJobSnapshot);
+        Assert.Equal(7u, (uint)PipeMethod.GetImportJobResult);
+        Assert.Equal(8u, (uint)PipeMethod.WaitImportJob);
+        Assert.Equal(9u, (uint)PipeMethod.CancelImportJob);
+        Assert.Equal(10u, (uint)PipeMethod.RemoveImportJob);
+    }
+
+    [Fact]
+    public void PipeResponseStatusValues_StayFixedAcrossCheckpoints()
+    {
+        Assert.Equal(0u, (uint)PipeResponseStatus.Ok);
+        Assert.Equal(1u, (uint)PipeResponseStatus.InvalidRequest);
+        Assert.Equal(2u, (uint)PipeResponseStatus.UnknownMethod);
+        Assert.Equal(3u, (uint)PipeResponseStatus.InternalError);
+    }
+
+    [Fact]
     public void RequestEnvelope_RoundTripsThroughBinaryFraming()
     {
         var envelope = new PipeRequestEnvelope

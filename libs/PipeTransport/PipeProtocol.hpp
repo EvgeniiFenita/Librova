@@ -29,6 +29,22 @@ enum class EPipeResponseStatus : std::uint32_t
     InternalError = 3
 };
 
+static_assert(static_cast<std::uint32_t>(EPipeMethod::StartImport) == 1);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::ListBooks) == 2);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::GetBookDetails) == 3);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::ExportBook) == 4);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::MoveBookToTrash) == 5);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::GetImportJobSnapshot) == 6);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::GetImportJobResult) == 7);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::WaitImportJob) == 8);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::CancelImportJob) == 9);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::RemoveImportJob) == 10);
+
+static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::Ok) == 0);
+static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::InvalidRequest) == 1);
+static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::UnknownMethod) == 2);
+static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::InternalError) == 3);
+
 struct SPipeRequestEnvelope
 {
     std::uint64_t RequestId = 0;

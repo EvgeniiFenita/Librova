@@ -144,3 +144,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: bound external converter child processes to Windows kill-on-close job objects and added cancellation cleanup coverage so partial output files do not survive aborted conversions.
 - `2026-04-01` Fix: added per-connection SQLite `busy_timeout` hardening and regression coverage for overlapping write transactions so the host does not fail immediately on short-lived write contention.
 - `2026-04-01` Fix: replaced locale-dependent FB2 numeric parsing with exact locale-independent parsing and added regression coverage for dot-separated series numbers plus invalid publish-year rejection.
+- `2026-04-01` Test: added explicit IPC enum invariants and cross-suite transport guardrails so C++ and C# named-pipe method and response-status ids cannot drift silently.

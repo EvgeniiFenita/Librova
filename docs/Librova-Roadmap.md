@@ -81,6 +81,8 @@ Status: completed and verified.
 
 ### Iteration 6 — IPC Contract Guardrails
 
+Status: completed and verified.
+
 - add explicit validation that C++ and C# pipe method enums stay synchronized;
 - treat transport drift checks as part of routine validation for future RPC work.
 

@@ -1,9 +1,32 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "PipeTransport/PipeProtocol.hpp"
+
+TEST_CASE("Pipe method ids stay fixed across checkpoints", "[pipe]")
+{
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::StartImport) == 1);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::ListBooks) == 2);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::GetBookDetails) == 3);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::ExportBook) == 4);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::MoveBookToTrash) == 5);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::GetImportJobSnapshot) == 6);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::GetImportJobResult) == 7);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::WaitImportJob) == 8);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::CancelImportJob) == 9);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::RemoveImportJob) == 10);
+}
+
+TEST_CASE("Pipe response status ids stay fixed across checkpoints", "[pipe]")
+{
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeResponseStatus::Ok) == 0);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeResponseStatus::InvalidRequest) == 1);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeResponseStatus::UnknownMethod) == 2);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeResponseStatus::InternalError) == 3);
+}
 
 TEST_CASE("Pipe request envelopes round-trip through binary framing", "[pipe]")
 {
