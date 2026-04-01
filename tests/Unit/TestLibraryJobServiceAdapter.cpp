@@ -324,6 +324,89 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     std::filesystem::remove_all(sandbox);
 }
 
+TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when converter is configured", "[proto-service][catalog]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converted";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000204");
+
+    const std::filesystem::path databasePath = sandbox / "librova-proto-service-export-converted.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Export Converted";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.ManagedPath = "Books/0000000204/book.fb2";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "export-converted-adapter-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto bookId = writeRepository.Add(book);
+    std::ofstream(sandbox / "Library/Books/0000000204/book.fb2", std::ios::binary) << "fb2-export";
+
+    class CStubBookConverter final : public Librova::Domain::IBookConverter
+    {
+    public:
+        [[nodiscard]] bool CanConvert(
+            const Librova::Domain::EBookFormat sourceFormat,
+            const Librova::Domain::EBookFormat destinationFormat) const override
+        {
+            return sourceFormat == Librova::Domain::EBookFormat::Fb2
+                && destinationFormat == Librova::Domain::EBookFormat::Epub;
+        }
+
+        [[nodiscard]] Librova::Domain::SConversionResult Convert(
+            const Librova::Domain::SConversionRequest& request,
+            Librova::Domain::IProgressSink&,
+            std::stop_token) const override
+        {
+            if (!request.DestinationPath.parent_path().empty())
+            {
+                std::filesystem::create_directories(request.DestinationPath.parent_path());
+            }
+
+            std::ofstream(request.DestinationPath, std::ios::binary) << "converted-export";
+            return {
+                .Status = Librova::Domain::EConversionStatus::Succeeded,
+                .OutputPath = request.DestinationPath
+            };
+        }
+    } converter;
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox / "Library", &converter);
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, sandbox / "Library");
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+
+    librova::v1::ExportBookRequest request;
+    request.set_book_id(bookId.Value);
+    request.set_destination_path((sandbox / "Exports" / "ExportConverted.epub").string());
+    request.set_export_format(librova::v1::BOOK_FORMAT_EPUB);
+
+    const auto response = adapter.ExportBook(request);
+    REQUIRE(response.has_exported_path());
+    REQUIRE(std::filesystem::exists(response.exported_path()));
+
+    {
+        std::ifstream exported(response.exported_path(), std::ios::binary);
+        const std::string text{std::istreambuf_iterator<char>(exported), std::istreambuf_iterator<char>()};
+        REQUIRE(text == "converted-export");
+    }
+
+    std::filesystem::remove_all(sandbox);
+}
+
 TEST_CASE("Library job service adapter moves managed book to trash over protobuf", "[proto-service][catalog]")
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-trash";

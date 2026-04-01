@@ -46,7 +46,8 @@ struct SImportConversionOutcome
     const std::filesystem::path& sourcePath,
     Librova::Domain::EBookFormat sourceFormat,
     const std::filesystem::path& convertedDestinationPath,
-    const Librova::Domain::IBookConverter* converter);
+    const Librova::Domain::IBookConverter* converter,
+    bool forceEpubConversion);
 
 [[nodiscard]] SImportConversionOutcome ResolveImportConversion(
     const SImportConversionPlan& plan,

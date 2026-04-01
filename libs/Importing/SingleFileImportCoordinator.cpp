@@ -227,7 +227,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             request.SourcePath,
             parsedBook.SourceFormat,
             convertedDestinationPath,
-            m_converter);
+            m_converter,
+            request.ForceEpubConversion);
 
         std::optional<Librova::Domain::SConversionResult> conversionResult;
 

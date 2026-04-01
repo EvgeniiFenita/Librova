@@ -14,13 +14,15 @@ public sealed class ImportJobMapperTests
             SourcePaths = [@"C:\Books\book.fb2", @"C:\Books\folder"],
             WorkingDirectory = @"C:\Work",
             Sha256Hex = "abc123",
-            AllowProbableDuplicates = true
+            AllowProbableDuplicates = true,
+            ForceEpubConversionOnImport = true
         });
 
         Assert.Equal([@"C:\Books\book.fb2", @"C:\Books\folder"], proto.SourcePaths);
         Assert.Equal(@"C:\Work", proto.WorkingDirectory);
         Assert.Equal("abc123", proto.Sha256Hex);
         Assert.True(proto.AllowProbableDuplicates);
+        Assert.True(proto.ForceEpubConversion);
     }
 
     [Fact]

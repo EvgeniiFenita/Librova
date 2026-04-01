@@ -17,7 +17,8 @@ public sealed class UiPreferencesSnapshotBuilderTests
             Fb2CngConfigPath = @"C:\Tools\fbc.yaml",
             CustomConverterExecutablePath = @"C:\Tools\custom.exe",
             CustomConverterArguments = ["--source", "{source}"],
-            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory,
+            ForceEpubConversionOnImport = true
         };
 
         var updated = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(existing, @"D:\Librova\New");
@@ -30,5 +31,6 @@ public sealed class UiPreferencesSnapshotBuilderTests
         Assert.NotNull(updated.CustomConverterArguments);
         Assert.Equal(["--source", "{source}"], updated.CustomConverterArguments);
         Assert.Equal(UiConverterOutputMode.SingleFileInDestinationDirectory, updated.CustomConverterOutputMode);
+        Assert.True(updated.ForceEpubConversionOnImport);
     }
 }

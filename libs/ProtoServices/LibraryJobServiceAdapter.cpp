@@ -89,26 +89,24 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
     const librova::v1::ExportBookRequest& request) const
 {
     LogInfoIfInitialized(
-        "ExportBook requested for book {} to '{}'.",
+        "ExportBook requested for book {} to '{}' with format {}.",
         request.book_id(),
-        request.destination_path());
+        request.destination_path(),
+        static_cast<int>(request.export_format()));
 
-    const auto exportedPath = m_libraryExportFacade.ExportBook(
-        Librova::Domain::SBookId{request.book_id()},
-        std::filesystem::path{std::u8string{
-            reinterpret_cast<const char8_t*>(request.destination_path().data()),
-            reinterpret_cast<const char8_t*>(request.destination_path().data() + request.destination_path().size())}});
+    const auto exportRequest = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request);
+    const auto exportedPath = m_libraryExportFacade.ExportBook(exportRequest);
 
     if (exportedPath.has_value())
     {
         LogInfoIfInitialized(
             "ExportBook completed for book {} to '{}'.",
-            request.book_id(),
+            exportRequest.BookId.Value,
             exportedPath->string());
     }
     else
     {
-        LogWarnIfInitialized("ExportBook requested unknown book {}.", request.book_id());
+        LogWarnIfInitialized("ExportBook requested unknown book {}.", exportRequest.BookId.Value);
     }
 
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(

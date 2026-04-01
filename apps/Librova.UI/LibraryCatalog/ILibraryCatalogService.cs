@@ -20,6 +20,7 @@ internal interface ILibraryCatalogService
     Task<string?> ExportBookAsync(
         long bookId,
         string destinationPath,
+        BookFormatModel? exportFormat,
         TimeSpan timeout,
         CancellationToken cancellationToken);
 

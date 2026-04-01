@@ -26,12 +26,6 @@ Working rule:
 
 ### Critical
 
-- `#7` show deterministic import progress for large folders, including total file count, processed count, and final outcome summary.
-  - Status: `Open`
-
-- `#15` wire configured `fbc.exe` / `fb2cng` usage into import and export flows, with UI affordances enabled only when the converter path is configured.
-  - Status: `Open`
-
 ### Major
 
 - `#1` unblock `Export` and `Move to Trash` after the first successful directory import.
@@ -51,9 +45,6 @@ Working rule:
   - Status: `Open`
 
 - `#23` keep cover aspect ratios intact and use a neutral card background instead of exposed color bands.
-  - Status: `Open`
-
-- `#24` add per-file native host logging for skipped and failed entries during multi-file, directory, and ZIP imports so large import diagnostics do not depend only on UI summary warnings.
   - Status: `Open`
 
 ### Minor
@@ -78,6 +69,17 @@ Working rule:
   - Status: `Closed`
 
 - `#20` add a stable hover state for book cards without layout jitter or text flicker.
+  - Status: `Closed`
+
+- `#24` add per-file native host logging for skipped and failed entries during multi-file, directory, and ZIP imports so large import diagnostics do not depend only on UI summary warnings.
+  - Status: `Closed`
+
+### Critical
+
+- `#15` wire configured `fbc.exe` / `fb2cng` usage into import and export flows, with `Export As EPUB` and forced-import-conversion UI affordances enabled only when the converter path is configured for the current session.
+  - Status: `Closed`
+
+- `#7` show deterministic import progress for large folders, including total file count, processed count, and final outcome summary.
   - Status: `Closed`
 
 ### Minor

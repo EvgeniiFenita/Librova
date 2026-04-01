@@ -23,14 +23,15 @@ SImportConversionPlan PlanImportConversion(
     const std::filesystem::path& sourcePath,
     const Librova::Domain::EBookFormat sourceFormat,
     const std::filesystem::path& convertedDestinationPath,
-    const Librova::Domain::IBookConverter* converter)
+    const Librova::Domain::IBookConverter* converter,
+    const bool forceEpubConversion)
 {
     SImportConversionPlan plan{
         .FallbackSourcePath = sourcePath,
         .FallbackFormat = sourceFormat
     };
 
-    if (sourceFormat != Librova::Domain::EBookFormat::Fb2)
+    if (sourceFormat != Librova::Domain::EBookFormat::Fb2 || !forceEpubConversion)
     {
         return plan;
     }

@@ -33,7 +33,8 @@ public sealed class UiPreferencesStoreTests
             ConverterMode = UiConverterMode.CustomCommand,
             CustomConverterExecutablePath = @"C:\Tools\custom.exe",
             CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
-            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory,
+            ForceEpubConversionOnImport = true
         };
 
         store.Save(expected);
@@ -44,6 +45,7 @@ public sealed class UiPreferencesStoreTests
         Assert.Equal(expected.CustomConverterExecutablePath, actual.CustomConverterExecutablePath);
         Assert.Equal(expected.CustomConverterArguments, actual.CustomConverterArguments);
         Assert.Equal(expected.CustomConverterOutputMode, actual.CustomConverterOutputMode);
+        Assert.Equal(expected.ForceEpubConversionOnImport, actual.ForceEpubConversionOnImport);
     }
 
     [Fact]

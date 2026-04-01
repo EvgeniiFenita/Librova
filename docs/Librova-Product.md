@@ -66,7 +66,7 @@ The import flow includes:
 - metadata parsing;
 - duplicate detection;
 - explicit user opt-in when Librova allows a duplicate to be imported as a separate managed record;
-- optional conversion `FB2 -> EPUB`;
+- optional conversion `FB2 -> EPUB`, exposed as a checkbox in `Import` only when the current session has a configured converter;
 - staging before commit;
 - database write;
 - managed storage placement.
@@ -100,6 +100,8 @@ The user can export a selected managed book to any destination path outside the 
 
 The export dialog should suggest a meaningful default filename derived from the book title and author, sanitized for Windows file-name rules.
 
+If the active session has a configured converter, managed `FB2` books can also be exported as `EPUB` through a dedicated `Export As EPUB` action.
+
 ### 3.5 Delete / Recycle
 
 The current MVP keeps a safe user-facing delete action through the managed-library `Trash` flow.
@@ -116,6 +118,12 @@ The user can configure:
   - custom external converter
 - the built-in `fb2cng` executable path through direct text entry or a `Browse...` file picker in `Settings`
 - the custom converter executable path through direct text entry or a `Browse...` file picker in `Settings`
+
+Saving converter settings reloads the current shell session so the active host process immediately picks up the new converter configuration.
+
+That reload keeps the user in the current section instead of forcing a jump back to `Library`.
+
+For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with the managed library `Logs` directory as its process working directory so default `fb2cng.log` output and similar diagnostic artifacts do not pollute import temp folders or user export destinations.
 
 The MVP `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path.
 

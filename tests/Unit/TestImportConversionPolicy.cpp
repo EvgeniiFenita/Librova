@@ -44,7 +44,8 @@ TEST_CASE("Import conversion skips conversion for EPUB input", "[import-conversi
         "C:/books/source.epub",
         Librova::Domain::EBookFormat::Epub,
         "C:/temp/converted.epub",
-        nullptr);
+        nullptr,
+        false);
 
     REQUIRE_FALSE(plan.WillAttemptConversion());
     REQUIRE(plan.FallbackSourcePath == std::filesystem::path("C:/books/source.epub"));
@@ -52,13 +53,28 @@ TEST_CASE("Import conversion skips conversion for EPUB input", "[import-conversi
     REQUIRE(plan.Warnings.empty());
 }
 
-TEST_CASE("Import conversion falls back to original FB2 when converter is unavailable", "[import-conversion]")
+TEST_CASE("Import conversion keeps original FB2 when forced conversion is disabled", "[import-conversion]")
 {
     const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
         Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
-        nullptr);
+        nullptr,
+        false);
+
+    REQUIRE_FALSE(plan.WillAttemptConversion());
+    REQUIRE(plan.FallbackFormat == Librova::Domain::EBookFormat::Fb2);
+    REQUIRE(plan.Warnings.empty());
+}
+
+TEST_CASE("Import conversion falls back to original FB2 when forced conversion is enabled but converter is unavailable", "[import-conversion]")
+{
+    const auto plan = Librova::ImportConversion::PlanImportConversion(
+        "C:/books/source.fb2",
+        Librova::Domain::EBookFormat::Fb2,
+        "C:/temp/converted.epub",
+        nullptr,
+        true);
 
     REQUIRE_FALSE(plan.WillAttemptConversion());
     REQUIRE(plan.FallbackFormat == Librova::Domain::EBookFormat::Fb2);
@@ -67,7 +83,7 @@ TEST_CASE("Import conversion falls back to original FB2 when converter is unavai
     }));
 }
 
-TEST_CASE("Import conversion creates FB2 to EPUB request when converter is available", "[import-conversion]")
+TEST_CASE("Import conversion creates FB2 to EPUB request when converter is available and forced conversion is enabled", "[import-conversion]")
 {
     const CTestConverter converter(true);
 
@@ -75,7 +91,8 @@ TEST_CASE("Import conversion creates FB2 to EPUB request when converter is avail
         "C:/books/source.fb2",
         Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
-        &converter);
+        &converter,
+        true);
 
     REQUIRE(plan.WillAttemptConversion());
     REQUIRE(plan.Request.has_value());
@@ -92,7 +109,8 @@ TEST_CASE("Import conversion stores converted output on successful conversion", 
         "C:/books/source.fb2",
         Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
-        &converter);
+        &converter,
+        true);
 
     const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,
@@ -114,7 +132,8 @@ TEST_CASE("Import conversion falls back to original FB2 after failed conversion"
         "C:/books/source.fb2",
         Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
-        &converter);
+        &converter,
+        true);
 
     const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,
@@ -140,7 +159,8 @@ TEST_CASE("Import conversion preserves cancellation instead of silently falling 
         "C:/books/source.fb2",
         Librova::Domain::EBookFormat::Fb2,
         "C:/temp/converted.epub",
-        &converter);
+        &converter,
+        true);
 
     const auto outcome = Librova::ImportConversion::ResolveImportConversion(
         plan,

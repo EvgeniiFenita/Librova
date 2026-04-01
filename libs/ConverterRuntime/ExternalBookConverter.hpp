@@ -10,6 +10,7 @@ namespace Librova::ConverterRuntime {
 struct SExternalConverterSettings
 {
     Librova::ConverterCommand::SConverterCommandProfile CommandProfile;
+    std::filesystem::path WorkingDirectory;
     std::chrono::milliseconds PollInterval{100};
 
     [[nodiscard]] bool IsValid() const noexcept

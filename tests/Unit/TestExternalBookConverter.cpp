@@ -255,3 +255,45 @@ TEST_CASE("External book converter removes partial output files after cancellati
     REQUIRE(result.IsCancelled());
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
 }
+
+TEST_CASE("External book converter can run with an explicit working directory", "[converter-runtime]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-working-directory");
+    const std::filesystem::path scriptPath = sandbox.GetPath() / "cwd-converter.ps1";
+    const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
+    const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
+    const std::filesystem::path workingDirectory = sandbox.GetPath() / "logs";
+    const std::filesystem::path markerPath = workingDirectory / "cwd-marker.txt";
+
+    WriteTextFile(
+        scriptPath,
+        "$source = $args[0]\n"
+        "$destination = $args[1]\n"
+        "New-Item -ItemType Directory -Force ([System.IO.Path]::GetDirectoryName($destination)) | Out-Null\n"
+        "Set-Content -LiteralPath '"
+            + markerPath.generic_string()
+            + "' -Value (Get-Location).Path\n"
+        "Copy-Item -LiteralPath $source -Destination $destination -Force\n");
+    WriteTextFile(sourcePath, "converted-content");
+
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
+        .CommandProfile = CreatePwshProfile(
+            scriptPath,
+            Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
+            {"{source}", "{destination}"}),
+        .WorkingDirectory = workingDirectory
+    });
+    CTestProgressSink progressSink;
+
+    const Librova::Domain::SConversionResult result = converter.Convert({
+        .SourcePath = sourcePath,
+        .DestinationPath = destinationPath,
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(std::filesystem::exists(destinationPath));
+    REQUIRE(std::filesystem::exists(markerPath));
+    REQUIRE(ReadTextFile(markerPath).find(workingDirectory.string()) != std::string::npos);
+}

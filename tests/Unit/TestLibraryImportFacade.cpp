@@ -226,6 +226,7 @@ TEST_CASE("Library import facade routes regular files into single-file importer"
     REQUIRE(importer.LastRequest->SourcePath == sandbox.SourcePath);
     REQUIRE(importer.LastRequest->Sha256Hex == std::optional<std::string>{"hash"});
     REQUIRE(importer.LastRequest->AllowProbableDuplicates);
+    REQUIRE_FALSE(importer.LastRequest->ForceEpubConversion);
     std::filesystem::remove_all(sandbox.Root);
 }
 
@@ -279,6 +280,30 @@ TEST_CASE("Library import facade batches multiple supported files", "[applicatio
     REQUIRE(result.Summary.ImportedEntries == 2);
     REQUIRE(result.Summary.FailedEntries == 0);
     std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade forwards forced EPUB conversion to single-file imports", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    const auto sandbox = CreateImportSandbox("single-file-force-convert");
+
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory,
+        .ForceEpubConversion = true
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(importer.LastRequest.has_value());
+    REQUIRE(importer.LastRequest->ForceEpubConversion);
+    std::filesystem::remove_all(sandbox.Root);
 }
 
 TEST_CASE("Library import facade expands directories recursively", "[application][import]")

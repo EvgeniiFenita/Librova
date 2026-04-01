@@ -53,6 +53,13 @@
         <TextBlock Opacity="0.72"
                    Text="When enabled, Librova can continue after a probable duplicate warning and store the new book as a separate managed record."
                    TextWrapping="Wrap" />
+        <CheckBox IsVisible="{Binding ImportJobs.ShowForceEpubConversionOption}"
+                  IsChecked="{Binding ImportJobs.ForceEpubConversionOnImport}"
+                  Content="Force conversion to EPUB during import" />
+        <TextBlock IsVisible="{Binding ImportJobs.ShowForceEpubConversionOption}"
+                   Opacity="0.72"
+                   Text="When enabled, FB2 imports use the configured converter and store the managed book as EPUB. When disabled, FB2 files stay FB2 even if a converter is configured."
+                   TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 

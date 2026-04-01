@@ -49,6 +49,7 @@ Use `docs/archive/` only when the active documents are insufficient and historic
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.
+- When implementation state and `docs/Librova-Backlog.md` diverge, update the backlog in the same task instead of leaving stale task statuses behind.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.

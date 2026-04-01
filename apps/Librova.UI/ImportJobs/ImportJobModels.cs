@@ -41,6 +41,7 @@ internal sealed class StartImportRequestModel
     public required string WorkingDirectory { get; init; }
     public string? Sha256Hex { get; init; }
     public bool AllowProbableDuplicates { get; init; }
+    public bool ForceEpubConversionOnImport { get; init; }
 }
 
 internal sealed class ImportSummaryModel

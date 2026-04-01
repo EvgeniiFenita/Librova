@@ -533,6 +533,62 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_StartImportPassesForcedEpubConversionFlag()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work"),
+                HasConfiguredConverter = true,
+                ForceEpubConversionOnImport = true
+            };
+
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
+
+            Assert.NotNull(service.LastStartRequest);
+            Assert.True(service.LastStartRequest!.ForceEpubConversionOnImport);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void ImportJobsViewModel_HidesForcedEpubConversionOptionWithoutConfiguredConverter()
+    {
+        var viewModel = new ImportJobsViewModel(new FakeImportJobsService());
+
+        Assert.False(viewModel.ShowForceEpubConversionOption);
+
+        viewModel.HasConfiguredConverter = true;
+        viewModel.ForceEpubConversionOnImport = true;
+
+        Assert.True(viewModel.ShowForceEpubConversionOption);
+        Assert.True(viewModel.ForceEpubConversionOnImport);
+
+        viewModel.HasConfiguredConverter = false;
+
+        Assert.False(viewModel.ShowForceEpubConversionOption);
+        Assert.False(viewModel.ForceEpubConversionOnImport);
+    }
+
+    [Fact]
     public void ImportJobsViewModel_DisablesStartForMissingSourceFile()
     {
         var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
@@ -873,6 +929,7 @@ public sealed class ViewModelsTests
 
         Assert.Equal(viewModel.SelectedBook!.BookId, service.LastExportBookId);
         Assert.Equal(@"C:\Exports\alpha.epub", service.LastExportPath);
+        Assert.Null(service.LastExportFormat);
         Assert.Equal("Roadside Picnic - Arkady Strugatsky.epub", selectionService.LastSuggestedExportFileName);
         Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
@@ -893,6 +950,42 @@ public sealed class ViewModelsTests
 
         Assert.Equal("Roadside Picnic Director's Cut - Arkady Boris Strugatsky.fb2", selectionService.LastSuggestedExportFileName);
         Assert.Equal(@"C:\Exports\sanitized.fb2", service.LastExportPath);
+        Assert.Null(service.LastExportFormat);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ExportsFb2AsEpubWhenConverterIsConfigured()
+    {
+        var service = new InvalidMetadataLibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\converted.epub"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService, hasConfiguredConverter: true);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        Assert.True(viewModel.ShowExportAsEpubAction);
+        Assert.True(viewModel.ExportSelectedBookAsEpubCommand.CanExecute(null));
+
+        await viewModel.ExportSelectedBookAsEpubAsync();
+
+        Assert.Equal(BookFormatModel.Epub, service.LastExportFormat);
+        Assert.Equal(@"C:\Exports\converted.epub", service.LastExportPath);
+        Assert.Equal("Roadside Picnic Director's Cut - Arkady Boris Strugatsky.epub", selectionService.LastSuggestedExportFileName);
+        Assert.Contains("as EPUB", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_DisablesExportAsEpubWhenConverterIsNotConfigured()
+    {
+        var viewModel = new LibraryBrowserViewModel(new InvalidMetadataLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.True(viewModel.ShowExportAsEpubAction);
+        Assert.False(viewModel.ExportSelectedBookAsEpubCommand.CanExecute(null));
     }
 
     [Fact]
@@ -1318,6 +1411,7 @@ public sealed class ViewModelsTests
     {
         public long? LastExportBookId { get; private set; }
         public string? LastExportPath { get; private set; }
+        public BookFormatModel? LastExportFormat { get; private set; }
         public long? LastTrashedBookId { get; private set; }
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1354,10 +1448,16 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
         {
             LastExportBookId = bookId;
             LastExportPath = destinationPath;
+            LastExportFormat = exportFormat;
             return Task.FromResult<string?>(destinationPath);
         }
 
@@ -1376,7 +1476,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1397,7 +1502,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
         {
             LastExportRequest = (bookId, destinationPath);
             return Task.FromResult<string?>(destinationPath);
@@ -1453,7 +1563,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1492,7 +1607,12 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1502,6 +1622,7 @@ public sealed class ViewModelsTests
     private sealed class InvalidMetadataLibraryCatalogService : ILibraryCatalogService
     {
         public string? LastExportPath { get; private set; }
+        public BookFormatModel? LastExportFormat { get; private set; }
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([
@@ -1531,9 +1652,15 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
         {
             LastExportPath = destinationPath;
+            LastExportFormat = exportFormat;
             return Task.FromResult<string?>(destinationPath);
         }
 
@@ -1609,7 +1736,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1650,7 +1782,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)

@@ -61,17 +61,23 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
     public async Task<string?> ExportBookAsync(
         long bookId,
         string destinationPath,
+        BookFormatModel? exportFormat,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         try
         {
-            var response = await _client.ExportBookAsync(bookId, destinationPath, timeout, cancellationToken).ConfigureAwait(false);
+            var response = await _client.ExportBookAsync(bookId, destinationPath, exportFormat, timeout, cancellationToken).ConfigureAwait(false);
             return LibraryCatalogMapper.FromProto(response);
         }
         catch (Exception error)
         {
-            UiLogging.Error(error, "Failed to export book. BookId={BookId} DestinationPath={DestinationPath}", bookId, destinationPath);
+            UiLogging.Error(
+                error,
+                "Failed to export book. BookId={BookId} DestinationPath={DestinationPath} ExportFormat={ExportFormat}",
+                bookId,
+                destinationPath,
+                exportFormat?.ToString() ?? "original");
             throw;
         }
     }

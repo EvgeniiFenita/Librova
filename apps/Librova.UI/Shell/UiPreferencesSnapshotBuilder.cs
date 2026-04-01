@@ -15,6 +15,7 @@ internal static class UiPreferencesSnapshotBuilder
             Fb2CngConfigPath = existing?.Fb2CngConfigPath,
             CustomConverterExecutablePath = existing?.CustomConverterExecutablePath,
             CustomConverterArguments = existing?.CustomConverterArguments,
-            CustomConverterOutputMode = existing?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath
+            CustomConverterOutputMode = existing?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath,
+            ForceEpubConversionOnImport = existing?.ForceEpubConversionOnImport ?? false
         };
 }

@@ -7,6 +7,7 @@ message ImportRequest {
   string working_directory = 2;
   optional string sha256_hex = 3;
   bool allow_probable_duplicates = 4;
+  bool force_epub_conversion = 5;
 }
 
 enum BookFormat {
@@ -158,6 +159,7 @@ message GetBookDetailsResponse {
 message ExportBookRequest {
   int64 book_id = 1;
   string destination_path = 2;
+  BookFormat export_format = 3;
 }
 
 message ExportBookResponse {

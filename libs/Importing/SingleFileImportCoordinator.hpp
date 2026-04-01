@@ -29,6 +29,7 @@ struct SSingleFileImportRequest
     std::filesystem::path WorkingDirectory;
     std::optional<std::string> Sha256Hex;
     bool AllowProbableDuplicates = false;
+    bool ForceEpubConversion = false;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

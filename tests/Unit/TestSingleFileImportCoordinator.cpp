@@ -278,7 +278,7 @@ public:
 
 } // namespace
 
-TEST_CASE("Single file import imports FB2 with converter fallback to source file", "[importing]")
+TEST_CASE("Single file import imports FB2 without conversion when forced conversion is disabled", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
@@ -305,9 +305,7 @@ TEST_CASE("Single file import imports FB2 with converter fallback to source file
     REQUIRE(result.IsSuccess());
     REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
     REQUIRE(result.StoredFormat == Librova::Domain::EBookFormat::Fb2);
-    REQUIRE(result.Warnings == std::vector<std::string>({
-        "FB2 converter unavailable. Original FB2 will be stored."
-    }));
+    REQUIRE(result.Warnings.empty());
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(bookRepository.AddedBook->Id.Value == 1);
     REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Fb2);
@@ -421,8 +419,7 @@ TEST_CASE("Single file import can continue after strict duplicate when explicitl
     REQUIRE(result.IsSuccess());
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE(result.Warnings == std::vector<std::string>({
-        "Import continued with explicit strict duplicate override.",
-        "FB2 converter unavailable. Original FB2 will be stored."
+        "Import continued with explicit strict duplicate override."
     }));
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(managedStorage.CommitCalled);
@@ -457,7 +454,8 @@ TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "
     const auto result = coordinator.Run({
         .SourcePath = sourcePath,
         .WorkingDirectory = sandbox.GetPath() / "work",
-        .AllowProbableDuplicates = true
+        .AllowProbableDuplicates = true,
+        .ForceEpubConversion = true
     }, progressSink, {});
 
     REQUIRE(result.IsSuccess());
@@ -502,8 +500,7 @@ TEST_CASE("Single file import can continue after probable duplicate when explici
     REQUIRE(result.IsSuccess());
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE(result.Warnings == std::vector<std::string>({
-        "Import continued with explicit probable duplicate override.",
-        "FB2 converter unavailable. Original FB2 will be stored."
+        "Import continued with explicit probable duplicate override."
     }));
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(managedStorage.CommitCalled);
@@ -538,7 +535,8 @@ TEST_CASE("Single file import removes temporary converter output on cancellation
 
     const auto result = coordinator.Run({
         .SourcePath = sourcePath,
-        .WorkingDirectory = sandbox.GetPath() / "work"
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ForceEpubConversion = true
     }, progressSink, {});
 
     REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Cancelled);

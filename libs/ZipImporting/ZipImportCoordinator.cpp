@@ -505,7 +505,8 @@ SZipImportResult CZipImportCoordinator::Run(
         const auto singleFileResult = m_singleFileImporter.Run({
             .SourcePath = extractedPath,
             .WorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem(),
-            .AllowProbableDuplicates = request.AllowProbableDuplicates
+            .AllowProbableDuplicates = request.AllowProbableDuplicates,
+            .ForceEpubConversion = request.ForceEpubConversion
         }, entryProgressSink, stopToken);
 
         result.Entries.push_back({

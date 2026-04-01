@@ -203,8 +203,13 @@ int main(int argc, char** argv)
                 Librova::ConverterConfiguration::TryBuildCommandProfile(options.ConverterConfiguration);
             profile.has_value())
         {
+            const auto libraryLayout = Librova::StoragePlanning::CManagedLibraryLayout::Build(options.LibraryRoot);
             converter.emplace(Librova::ConverterRuntime::SExternalConverterSettings{
-                .CommandProfile = *profile
+                .CommandProfile = *profile,
+                .WorkingDirectory =
+                    options.ConverterConfiguration.Mode == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng
+                        ? libraryLayout.LogsDirectory
+                        : std::filesystem::path{}
             });
         }
 
@@ -224,7 +229,7 @@ int main(int argc, char** argv)
             &bookRepository,
             options.LibraryRoot);
         const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
-        const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot);
+        const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot, converterPtr);
         const Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, options.LibraryRoot);
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);

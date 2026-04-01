@@ -282,6 +282,11 @@
                       Spacing="10">
             <Button Classes="PrimaryAction"
                     HorizontalAlignment="Stretch"
+                    IsVisible="{Binding LibraryBrowser.ShowExportAsEpubAction}"
+                    Command="{Binding LibraryBrowser.ExportSelectedBookAsEpubCommand}"
+                    Content="Export As EPUB" />
+            <Button Classes="PrimaryAction"
+                    HorizontalAlignment="Stretch"
                     Command="{Binding LibraryBrowser.ExportSelectedBookCommand}"
                     Content="Export" />
             <Button Classes="DestructiveAction"

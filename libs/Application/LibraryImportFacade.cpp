@@ -585,7 +585,8 @@ SImportResult CLibraryImportFacade::Run(
                 const auto zipResult = m_zipImportCoordinator.Run({
                     .ZipPath = sourcePath,
                     .WorkingDirectory = request.WorkingDirectory,
-                    .AllowProbableDuplicates = request.AllowProbableDuplicates
+                    .AllowProbableDuplicates = request.AllowProbableDuplicates,
+                    .ForceEpubConversion = request.ForceEpubConversion
                 }, zipProgressSink, stopToken);
 
                 result.Summary.ImportedEntries += zipResult.ImportedCount();
@@ -709,7 +710,8 @@ SImportResult CLibraryImportFacade::Run(
             .SourcePath = sourcePath,
             .WorkingDirectory = request.WorkingDirectory,
             .Sha256Hex = expandedSources.Candidates.size() == 1 ? request.Sha256Hex : std::nullopt,
-            .AllowProbableDuplicates = request.AllowProbableDuplicates
+            .AllowProbableDuplicates = request.AllowProbableDuplicates,
+            .ForceEpubConversion = request.ForceEpubConversion
         }, singleProgressSink, stopToken);
 
         ++processedEntries;

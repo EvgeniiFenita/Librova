@@ -26,6 +26,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private readonly ICoverImageLoader _coverImageLoader;
     private readonly string _libraryRoot;
+    private readonly bool _hasConfiguredConverter;
     private CancellationTokenSource? _refreshDebounce;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
@@ -42,17 +43,20 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         ILibraryCatalogService? libraryCatalogService = null,
         IPathSelectionService? pathSelectionService = null,
         string? libraryRoot = null,
-        ICoverImageLoader? coverImageLoader = null)
+        ICoverImageLoader? coverImageLoader = null,
+        bool hasConfiguredConverter = false)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _coverImageLoader = coverImageLoader ?? new FileCoverImageLoader();
         _libraryRoot = libraryRoot ?? string.Empty;
+        _hasConfiguredConverter = hasConfiguredConverter;
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         NextPageCommand = new AsyncCommand(NextPageAsync, () => !IsBusy && HasMoreResults, HandleCommandErrorAsync);
         PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => HasSelectedBook && !IsLoadingSelectionDetails, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        ExportSelectedBookAsEpubCommand = new AsyncCommand(ExportSelectedBookAsEpubAsync, () => CanExportSelectedBookAsEpub, HandleCommandErrorAsync);
         MoveSelectedBookToTrashCommand = new AsyncCommand(MoveSelectedBookToTrashAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
@@ -66,6 +70,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public AsyncCommand PreviousPageCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
     public AsyncCommand ExportSelectedBookCommand { get; }
+    public AsyncCommand ExportSelectedBookAsEpubCommand { get; }
     public AsyncCommand MoveSelectedBookToTrashCommand { get; }
     public AsyncCommand<BookListItemModel?> SelectBookCommand { get; }
     public AsyncCommand CloseSelectionCommand { get; }
@@ -188,8 +193,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
                 RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
+                RaisePropertyChanged(nameof(ShowExportAsEpubAction));
+                RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
+                ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
                 MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
                 CloseSelectionCommand.RaiseCanExecuteChanged();
             }
@@ -212,6 +220,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
                 RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
+                RaisePropertyChanged(nameof(ShowExportAsEpubAction));
+                RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
+                ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -234,6 +245,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 PreviousPageCommand.RaiseCanExecuteChanged();
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
+                ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
                 MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
                 SelectBookCommand.RaiseCanExecuteChanged();
                 CloseSelectionCommand.RaiseCanExecuteChanged();
@@ -258,6 +270,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
     public bool ShowDetailsPanelLoading => HasSelectedBook && IsLoadingSelectionDetails;
+    public bool ShowExportAsEpubAction => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2;
+    public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction && _hasConfiguredConverter;
     public bool ShowEmptyState => !HasBooks;
     public bool CanGoToPreviousPage => CurrentPage > 1;
     public string PageSizeText => $"{PageSize} per page";
@@ -375,12 +389,22 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public async Task ExportSelectedBookAsync()
     {
+        await ExportSelectedBookCoreAsync(null);
+    }
+
+    public async Task ExportSelectedBookAsEpubAsync()
+    {
+        await ExportSelectedBookCoreAsync(BookFormatModel.Epub);
+    }
+
+    private async Task ExportSelectedBookCoreAsync(BookFormatModel? exportFormat)
+    {
         if (SelectedBook is null)
         {
             return;
         }
 
-        var suggestedFileName = BuildSuggestedExportFileName();
+        var suggestedFileName = BuildSuggestedExportFileName(exportFormat);
         var destinationPath = await _pathSelectionService.PickExportDestinationAsync(suggestedFileName, default);
         if (string.IsNullOrWhiteSpace(destinationPath))
         {
@@ -389,7 +413,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
 
         IsBusy = true;
-        StatusText = $"Exporting '{SelectedBook.Title}'...";
+        StatusText = exportFormat is BookFormatModel.Epub
+            ? $"Exporting '{SelectedBook.Title}' as EPUB..."
+            : $"Exporting '{SelectedBook.Title}'...";
 
         try
         {
@@ -397,12 +423,15 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             var exportedPath = await _libraryCatalogService.ExportBookAsync(
                 SelectedBook.BookId,
                 destinationPath,
+                exportFormat,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
             StatusText = string.IsNullOrWhiteSpace(exportedPath)
                 ? "Selected book could not be exported."
-                : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
+                : exportFormat is BookFormatModel.Epub
+                    ? $"Exported '{SelectedBook.Title}' as EPUB to '{exportedPath}'."
+                    : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
         }
         finally
         {
@@ -691,7 +720,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             $"{megabytes:F2} MB");
     }
 
-    private string BuildSuggestedExportFileName()
+    private BookFormatModel? SelectedBookFormat => SelectedBookDetails?.Format ?? SelectedBook?.Format;
+
+    private string BuildSuggestedExportFileName(BookFormatModel? exportFormat)
     {
         const string fallbackBaseName = "book";
 
@@ -709,7 +740,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                     ? authors
                     : fallbackBaseName;
 
-        var extension = Path.GetExtension(SelectedBook?.ManagedPath);
+        var extension = exportFormat switch
+        {
+            BookFormatModel.Fb2 => ".fb2",
+            BookFormatModel.Epub => ".epub",
+            _ => Path.GetExtension(SelectedBook?.ManagedPath)
+        };
         if (string.IsNullOrWhiteSpace(extension))
         {
             extension = (SelectedBookDetails?.Format ?? SelectedBook?.Format ?? BookFormatModel.Epub) switch

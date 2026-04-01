@@ -155,6 +155,12 @@ internal sealed partial class App : Application
                     preferencesStore,
                     launchOptions,
                     libraryRoot,
+                    cancellationToken),
+                reloadShellAsync: () => ReloadCurrentShellSessionAsync(
+                    mainWindow,
+                    pathSelectionService,
+                    preferencesStore,
+                    launchOptions,
                     cancellationToken));
             await _shellApplication.InitializeAsync();
             ShellWindowConfigurator.Configure(mainWindow, _shellApplication);
@@ -231,6 +237,44 @@ internal sealed partial class App : Application
             preferencesStore.Save(UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
                 preferencesStore.TryLoad(),
                 libraryRoot));
+        }
+    }
+
+    private async Task ReloadCurrentShellSessionAsync(
+        MainWindow mainWindow,
+        IPathSelectionService pathSelectionService,
+        IUiPreferencesStore preferencesStore,
+        ShellLaunchOptions launchOptions,
+        CancellationToken cancellationToken)
+    {
+        var libraryRoot = _shellApplication?.Shell.LibraryRoot;
+        var currentSection = _shellApplication?.Shell.CurrentSection ?? ShellSection.Library;
+        if (string.IsNullOrWhiteSpace(libraryRoot))
+        {
+            return;
+        }
+
+        UiLogging.Information("Reloading shell session to apply updated preferences. LibraryRoot={LibraryRoot}", libraryRoot);
+        ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
+
+        var previousApplication = _shellApplication;
+        _shellApplication = null;
+        if (previousApplication is not null)
+        {
+            await previousApplication.DisposeAsync();
+        }
+
+        await StartShellWithLibraryRootAsync(
+            mainWindow,
+            pathSelectionService,
+            preferencesStore,
+            launchOptions,
+            libraryRoot,
+            cancellationToken);
+
+        if (_shellApplication is not null && currentSection is not ShellSection.Library)
+        {
+            await _shellApplication.Shell.ActivateSectionAsync(currentSection);
         }
     }
 

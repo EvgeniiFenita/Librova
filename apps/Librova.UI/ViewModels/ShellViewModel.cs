@@ -20,6 +20,7 @@ internal sealed class ShellViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private readonly IUiPreferencesStore _preferencesStore;
     private readonly Func<string, Task>? _switchLibraryAsync;
+    private readonly Func<Task>? _reloadShellAsync;
     private UiConverterMode _selectedConverterMode;
     private string _fb2CngExecutablePath = string.Empty;
     private string _customConverterExecutablePath = string.Empty;
@@ -35,20 +36,28 @@ internal sealed class ShellViewModel : ObservableObject
         ShellStateSnapshot? savedState = null,
         IUiPreferencesStore? preferencesStore = null,
         UiPreferencesSnapshot? savedPreferences = null,
-        Func<string, Task>? switchLibraryAsync = null)
+        Func<string, Task>? switchLibraryAsync = null,
+        Func<Task>? reloadShellAsync = null)
     {
         _session = session;
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _switchLibraryAsync = switchLibraryAsync;
+        _reloadShellAsync = reloadShellAsync;
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
-        LibraryBrowser = new LibraryBrowserViewModel(session.LibraryCatalog, _pathSelectionService, session.HostOptions.LibraryRoot);
+        LibraryBrowser = new LibraryBrowserViewModel(
+            session.LibraryCatalog,
+            _pathSelectionService,
+            session.HostOptions.LibraryRoot,
+            hasConfiguredConverter: session.HostOptions.ConverterMode is not UiConverterMode.Disabled);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
         ImportJobs.AllowProbableDuplicates = savedState?.AllowProbableDuplicates ?? false;
+        ImportJobs.HasConfiguredConverter = session.HostOptions.ConverterMode is not UiConverterMode.Disabled;
+        ImportJobs.ForceEpubConversionOnImport = savedPreferences?.ForceEpubConversionOnImport ?? false;
         _selectedConverterMode = savedPreferences?.ConverterMode ?? UiConverterMode.Disabled;
         _fb2CngExecutablePath = savedPreferences?.Fb2CngExecutablePath ?? string.Empty;
         _customConverterExecutablePath = savedPreferences?.CustomConverterExecutablePath ?? string.Empty;
@@ -225,6 +234,12 @@ internal sealed class ShellViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
+    public Task ActivateSectionAsync(ShellSection section)
+    {
+        CurrentSection = section;
+        return Task.CompletedTask;
+    }
+
     private Task ShowLibrarySectionAsync()
     {
         CurrentSection = ShellSection.Library;
@@ -288,10 +303,11 @@ internal sealed class ShellViewModel : ObservableObject
             Fb2CngExecutablePath = IsBuiltInConverterSelected ? Fb2CngExecutablePath : null,
             CustomConverterExecutablePath = IsCustomConverterSelected ? CustomConverterExecutablePath : null,
             CustomConverterArguments = IsCustomConverterSelected ? ParseCustomConverterArguments() : null,
-            CustomConverterOutputMode = SelectedCustomConverterOutputMode
+            CustomConverterOutputMode = SelectedCustomConverterOutputMode,
+            ForceEpubConversionOnImport = ImportJobs.ForceEpubConversionOnImport
         });
         UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
-        return Task.CompletedTask;
+        return _reloadShellAsync is null ? Task.CompletedTask : _reloadShellAsync();
     }
 
     private bool CanSavePreferences() =>

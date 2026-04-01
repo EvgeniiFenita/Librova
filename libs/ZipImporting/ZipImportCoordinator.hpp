@@ -25,6 +25,7 @@ struct SZipImportRequest
     std::filesystem::path ZipPath;
     std::filesystem::path WorkingDirectory;
     bool AllowProbableDuplicates = false;
+    bool ForceEpubConversion = false;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

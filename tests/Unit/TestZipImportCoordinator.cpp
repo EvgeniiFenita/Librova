@@ -189,6 +189,7 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
     REQUIRE(importer.Calls[0].SourcePath.filename() == "first.fb2");
     REQUIRE(importer.Calls[1].SourcePath.filename() == "second.fb2");
     REQUIRE(importer.Calls[0].AllowProbableDuplicates);
+    REQUIRE_FALSE(importer.Calls[0].ForceEpubConversion);
 
     REQUIRE(result.Entries.size() == 4);
     REQUIRE(result.ImportedCount() == 1);
@@ -206,6 +207,26 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
 
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "folder" / "first.fb2"));
     REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "second.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted entries", "[zip-import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-force-convert");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ForceEpubConversion = true
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 4);
+    REQUIRE(importer.Calls.size() == 2);
+    REQUIRE(importer.Calls[0].ForceEpubConversion);
+    REQUIRE(importer.Calls[1].ForceEpubConversion);
 }
 
 TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-import]")

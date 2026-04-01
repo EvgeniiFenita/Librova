@@ -40,6 +40,7 @@ internal sealed class LibraryCatalogClient
     public Task<ExportBookResponse> ExportBookAsync(
         long bookId,
         string destinationPath,
+        BookFormatModel? exportFormat,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
         _pipeClient.CallAsync(
@@ -47,7 +48,13 @@ internal sealed class LibraryCatalogClient
             new ExportBookRequest
             {
                 BookId = bookId,
-                DestinationPath = destinationPath
+                DestinationPath = destinationPath,
+                ExportFormat = exportFormat switch
+                {
+                    BookFormatModel.Fb2 => BookFormat.Fb2,
+                    BookFormatModel.Epub => BookFormat.Epub,
+                    _ => BookFormat.Unspecified
+                }
             },
             ExportBookResponse.Parser,
             timeout,

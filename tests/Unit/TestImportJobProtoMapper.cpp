@@ -10,7 +10,8 @@ TEST_CASE("Import job proto mapper round-trips import request paths and optional
         .SourcePaths = {std::filesystem::path{u8"C:/books/Тест.fb2"}},
         .WorkingDirectory = std::filesystem::path{u8"C:/work/Каталог"},
         .Sha256Hex = std::string{"abc123"},
-        .AllowProbableDuplicates = true
+        .AllowProbableDuplicates = true,
+        .ForceEpubConversion = true
     };
 
     const auto proto = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(request);
@@ -20,6 +21,7 @@ TEST_CASE("Import job proto mapper round-trips import request paths and optional
     REQUIRE(restored.WorkingDirectory == request.WorkingDirectory);
     REQUIRE(restored.Sha256Hex == request.Sha256Hex);
     REQUIRE(restored.AllowProbableDuplicates == request.AllowProbableDuplicates);
+    REQUIRE(restored.ForceEpubConversion == request.ForceEpubConversion);
 }
 
 TEST_CASE("Import job proto mapper maps job result into transport DTO", "[proto-mapping]")

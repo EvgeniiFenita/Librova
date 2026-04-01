@@ -9,4 +9,5 @@ internal sealed class UiPreferencesSnapshot
     public string? CustomConverterExecutablePath { get; init; }
     public string[]? CustomConverterArguments { get; init; }
     public CoreHost.UiConverterOutputMode CustomConverterOutputMode { get; init; }
+    public bool ForceEpubConversionOnImport { get; init; }
 }

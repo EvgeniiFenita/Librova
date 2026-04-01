@@ -476,8 +476,14 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     std::filesystem::remove(command.ExpectedOutputPath);
     const std::unordered_set<std::filesystem::path> outputSnapshot = SnapshotDirectoryFiles(command.ExpectedOutputDirectory);
 
+    const std::filesystem::path processWorkingDirectory =
+        m_settings.WorkingDirectory.empty()
+            ? command.ExpectedOutputDirectory
+            : m_settings.WorkingDirectory;
+    EnsureDirectory(processWorkingDirectory);
+
     std::wstring commandLine = BuildCommandLine(command);
-    std::wstring workingDirectory = PathToWide(command.ExpectedOutputDirectory);
+    std::wstring workingDirectory = PathToWide(processWorkingDirectory);
 
     STARTUPINFOW startupInfo{};
     startupInfo.cb = sizeof(startupInfo);

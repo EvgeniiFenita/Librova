@@ -28,6 +28,9 @@ public:
     [[nodiscard]] static librova::v1::GetBookDetailsResponse ToProtoResponse(
         const Librova::Application::SBookDetails* details);
 
+    [[nodiscard]] static Librova::Application::SExportBookRequest FromProto(
+        const librova::v1::ExportBookRequest& request);
+
     [[nodiscard]] static librova::v1::ExportBookResponse ToProtoResponse(
         const std::filesystem::path* exportedPath);
 

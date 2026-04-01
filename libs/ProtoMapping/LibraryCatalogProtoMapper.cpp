@@ -238,6 +238,22 @@ librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     return response;
 }
 
+Librova::Application::SExportBookRequest CLibraryCatalogProtoMapper::FromProto(
+    const librova::v1::ExportBookRequest& request)
+{
+    Librova::Application::SExportBookRequest result{
+        .BookId = Librova::Domain::SBookId{request.book_id()},
+        .DestinationPath = PathFromUtf8(request.destination_path())
+    };
+
+    if (request.export_format() != librova::v1::BOOK_FORMAT_UNSPECIFIED)
+    {
+        result.ExportFormat = FromProto(request.export_format());
+    }
+
+    return result;
+}
+
 librova::v1::ExportBookResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     const std::filesystem::path* exportedPath)
 {

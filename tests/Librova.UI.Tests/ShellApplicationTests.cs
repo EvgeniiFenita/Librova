@@ -38,6 +38,7 @@ public sealed class ShellApplicationTests
         Assert.Equal(
             Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
             application.Shell.ImportJobs.WorkingDirectory);
+        Assert.False(application.Shell.ImportJobs.ShowForceEpubConversionOption);
     }
 
     [Fact]
@@ -341,6 +342,7 @@ public sealed class ShellApplicationTests
     public async Task ShellSettings_CanSaveCustomConverterPreferences()
     {
         var preferencesStore = new FakePreferencesStore();
+        var reloadCalls = 0;
         var session = new ShellSession(
             new CoreHostProcess(),
             new CoreHostLaunchOptions
@@ -356,11 +358,17 @@ public sealed class ShellApplicationTests
         var application = ShellApplication.Create(
             session,
             stateStore: CreateIsolatedStateStore(),
-            preferencesStore: preferencesStore);
+            preferencesStore: preferencesStore,
+            reloadShellAsync: () =>
+            {
+                reloadCalls++;
+                return Task.CompletedTask;
+            });
         application.Shell.SelectedConverterMode = UiConverterMode.CustomCommand;
         application.Shell.CustomConverterExecutablePath = @"D:\Tools\custom.exe";
         application.Shell.CustomConverterArgumentsText = "--input" + Environment.NewLine + "{source}";
         application.Shell.SelectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
+        application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
 
         await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
@@ -369,6 +377,36 @@ public sealed class ShellApplicationTests
         Assert.Equal(@"D:\Tools\custom.exe", preferencesStore.LastSavedSnapshot?.CustomConverterExecutablePath);
         Assert.NotNull(preferencesStore.LastSavedSnapshot?.CustomConverterArguments);
         Assert.Equal(["--input", "{source}"], preferencesStore.LastSavedSnapshot!.CustomConverterArguments);
+        Assert.True(preferencesStore.LastSavedSnapshot.ForceEpubConversionOnImport);
+        Assert.Equal(1, reloadCalls);
+    }
+
+    [Fact]
+    public void Create_WithConfiguredConverterAndSavedPreferences_EnablesForcedImportConversionOption()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.BuiltInFb2Cng
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore(),
+            savedPreferencesOverride: new UiPreferencesSnapshot
+            {
+                ForceEpubConversionOnImport = true
+            });
+
+        Assert.True(application.Shell.ImportJobs.ShowForceEpubConversionOption);
+        Assert.True(application.Shell.ImportJobs.ForceEpubConversionOnImport);
     }
 
     [Fact]
@@ -679,7 +717,12 @@ public sealed class ShellApplicationTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -711,7 +754,12 @@ public sealed class ShellApplicationTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
