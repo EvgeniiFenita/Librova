@@ -30,11 +30,17 @@ std::string ReplaceEncodingDeclaration(std::string text)
     }
 
     std::string declaration = text.substr(0, declarationEnd);
-    const auto replaceIfPresent = [&declaration](const std::string_view from, const std::string_view to) {
-        const std::size_t index = declaration.find(from);
+    std::string lowerDeclaration = declaration;
+    std::transform(lowerDeclaration.begin(), lowerDeclaration.end(), lowerDeclaration.begin(), [](const unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+
+    const auto replaceIfPresent = [&declaration, &lowerDeclaration](const std::string_view from, const std::string_view to) {
+        const std::size_t index = lowerDeclaration.find(from);
         if (index != std::string::npos)
         {
             declaration.replace(index, from.size(), to);
+            lowerDeclaration.replace(index, from.size(), to);
         }
     };
 

@@ -85,6 +85,5 @@ If any file disagrees with implemented reality, fix it before closing the review
 - [ ] `Debug` and `Release` validation both green
 - [ ] Manual UI test scenarios walked through successfully
 - [ ] Series/genres support implemented and validated
-- [ ] Windows Recycle Bin delete flow implemented and validated
 - [ ] No critical regressions in: startup, import, browser, export, delete, settings
 - [ ] Logs are actionable enough to diagnose startup and runtime problems

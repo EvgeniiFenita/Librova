@@ -219,6 +219,27 @@ private:
     PROCESS_INFORMATION m_processInformation{};
 };
 
+PROCESS_INFORMATION StartProcess(const std::filesystem::path& executablePath, std::wstring commandLine, const DWORD creationFlags = 0)
+{
+    STARTUPINFOW startupInfo{};
+    startupInfo.cb = sizeof(startupInfo);
+    PROCESS_INFORMATION processInformation{};
+
+    REQUIRE(CreateProcessW(
+        executablePath.c_str(),
+        commandLine.data(),
+        nullptr,
+        nullptr,
+        FALSE,
+        creationFlags,
+        nullptr,
+        nullptr,
+        &startupInfo,
+        &processInformation));
+
+    return processInformation;
+}
+
 } // namespace
 
 TEST_CASE("Core host executable serves import job requests over named pipes", "[core-host][process]")
@@ -238,22 +259,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
         + L" --library-root "
         + Quote(libraryRoot);
 
-    STARTUPINFOW startupInfo{};
-    startupInfo.cb = sizeof(startupInfo);
-    PROCESS_INFORMATION processInformation{};
-
-    REQUIRE(CreateProcessW(
-        hostAppPath.c_str(),
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        FALSE,
-        0,
-        nullptr,
-        nullptr,
-        &startupInfo,
-        &processInformation));
-
+    PROCESS_INFORMATION processInformation = StartProcess(hostAppPath, std::move(commandLine));
     CScopedProcess process(processInformation);
     WaitForPipeServerReady(pipePath, processInformation);
 
@@ -299,22 +305,7 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
 
     std::wstring parentCommandLine = Quote(cmdExePath) + L" /C ping -n 2 127.0.0.1 >nul";
 
-    STARTUPINFOW parentStartupInfo{};
-    parentStartupInfo.cb = sizeof(parentStartupInfo);
-    PROCESS_INFORMATION parentProcessInformation{};
-
-    REQUIRE(CreateProcessW(
-        cmdExePath.c_str(),
-        parentCommandLine.data(),
-        nullptr,
-        nullptr,
-        FALSE,
-        CREATE_NO_WINDOW,
-        nullptr,
-        nullptr,
-        &parentStartupInfo,
-        &parentProcessInformation));
-
+    PROCESS_INFORMATION parentProcessInformation = StartProcess(cmdExePath, std::move(parentCommandLine), CREATE_NO_WINDOW);
     CScopedProcess parentProcess(parentProcessInformation);
 
     std::wstring hostCommandLine = Quote(hostAppPath)
@@ -325,22 +316,7 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
         + L" --parent-pid "
         + std::to_wstring(parentProcessInformation.dwProcessId);
 
-    STARTUPINFOW hostStartupInfo{};
-    hostStartupInfo.cb = sizeof(hostStartupInfo);
-    PROCESS_INFORMATION hostProcessInformation{};
-
-    REQUIRE(CreateProcessW(
-        hostAppPath.c_str(),
-        hostCommandLine.data(),
-        nullptr,
-        nullptr,
-        FALSE,
-        0,
-        nullptr,
-        nullptr,
-        &hostStartupInfo,
-        &hostProcessInformation));
-
+    PROCESS_INFORMATION hostProcessInformation = StartProcess(hostAppPath, std::move(hostCommandLine));
     CScopedProcess hostProcess(hostProcessInformation);
     WaitForPipeServerReady(pipePath, hostProcessInformation);
 
@@ -354,4 +330,24 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
     const std::string logText = ReadTextFile(logFilePath);
     REQUIRE(logText.find("Parent process") != std::string::npos);
     REQUIRE(logText.find("Librova.Core.Host stopped after serving 0 sessions.") != std::string::npos);
+}
+
+TEST_CASE("Core host process supports help and version flags without runtime arguments", "[core-host][process]")
+{
+    const auto hostAppPath = GetHostAppPath();
+    REQUIRE(std::filesystem::exists(hostAppPath));
+
+    {
+        std::wstring helpCommandLine = Quote(hostAppPath) + L" --help";
+        CScopedProcess helpProcess(StartProcess(hostAppPath, std::move(helpCommandLine)));
+        REQUIRE(helpProcess.WaitForExit(std::chrono::seconds(5)));
+        REQUIRE(helpProcess.TryGetExitCode() == std::optional<DWORD>{0});
+    }
+
+    {
+        std::wstring versionCommandLine = Quote(hostAppPath) + L" --version";
+        CScopedProcess versionProcess(StartProcess(hostAppPath, std::move(versionCommandLine)));
+        REQUIRE(versionProcess.WaitForExit(std::chrono::seconds(5)));
+        REQUIRE(versionProcess.TryGetExitCode() == std::optional<DWORD>{0});
+    }
 }

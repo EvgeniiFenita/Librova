@@ -249,6 +249,17 @@ void AssignProcessToKillOnCloseJob(const HANDLE jobHandle, const HANDLE processH
     }
 }
 
+void TerminateProcessNoThrow(const HANDLE processHandle) noexcept
+{
+    if (processHandle == nullptr)
+    {
+        return;
+    }
+
+    TerminateProcess(processHandle, 1);
+    WaitForSingleObject(processHandle, INFINITE);
+}
+
 std::unordered_set<std::filesystem::path> SnapshotDirectoryFiles(const std::filesystem::path& directoryPath)
 {
     std::unordered_set<std::filesystem::path> snapshot;
@@ -482,7 +493,7 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
             nullptr,
             nullptr,
             FALSE,
-            CREATE_NO_WINDOW,
+            CREATE_NO_WINDOW | CREATE_SUSPENDED,
             nullptr,
             workingDirectory.c_str(),
             &startupInfo,
@@ -492,7 +503,23 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     }
 
     CProcessInfo process(processInformation);
-    AssignProcessToKillOnCloseJob(jobHandle.Get(), process.GetProcessHandle());
+
+    try
+    {
+        AssignProcessToKillOnCloseJob(jobHandle.Get(), process.GetProcessHandle());
+    }
+    catch (...)
+    {
+        TerminateProcessNoThrow(process.GetProcessHandle());
+        throw;
+    }
+
+    if (ResumeThread(processInformation.hThread) == static_cast<DWORD>(-1))
+    {
+        TerminateProcessNoThrow(process.GetProcessHandle());
+        throw std::runtime_error("Failed to resume external converter process.");
+    }
+
     const DWORD exitCode = WaitForProcessWithCancellation(process.GetProcessHandle(), progressSink, stopToken, m_settings.PollInterval);
 
     if (stopToken.stop_requested() || progressSink.IsCancellationRequested())
