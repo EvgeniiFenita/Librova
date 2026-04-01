@@ -120,6 +120,47 @@ public sealed class RuntimeEnvironmentTests
         });
     }
 
+    [Fact]
+    public void CoreHostDevelopmentDefaults_Create_DoesNotSurfaceLegacyFb2CngConfigFromPreferences()
+    {
+        var preferencesFile = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-preferences.json");
+        var expectedExecutable = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "out",
+            "build",
+            "x64-debug",
+            "apps",
+            "Librova.Core.Host",
+            "Debug",
+            "LibrovaCoreHostApp.exe"));
+
+        Directory.CreateDirectory(Path.GetDirectoryName(preferencesFile)!);
+        new UiPreferencesStore(preferencesFile).Save(new UiPreferencesSnapshot
+        {
+            PreferredLibraryRoot = @"D:\Librova\PreferredLibrary",
+            ConverterMode = UiConverterMode.BuiltInFb2Cng,
+            Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
+            Fb2CngConfigPath = @"C:\Tools\fbc.yaml"
+        });
+
+        WithEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, preferencesFile, () =>
+        {
+            WithEnvironmentVariable(RuntimeEnvironment.LibraryRootEnvVar, null, () =>
+            {
+                WithEnvironmentVariable(RuntimeEnvironment.CoreHostExecutableEnvVar, expectedExecutable, () =>
+                {
+                    var options = CoreHostDevelopmentDefaults.Create();
+                    Assert.Equal(@"C:\Tools\fbc.exe", options.Fb2CngExecutablePath);
+                    Assert.Null(options.Fb2CngConfigPath);
+                });
+            });
+        });
+    }
+
     private static void WithEnvironmentVariable(string variableName, string? value, Action action)
     {
         var previousValue = Environment.GetEnvironmentVariable(variableName);

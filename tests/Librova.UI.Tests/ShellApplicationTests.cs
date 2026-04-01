@@ -403,6 +403,37 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task ShellSettings_BrowseCustomConverterExecutablePathCommand_AppliesSelectedExecutable()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            new FakePathSelectionService
+            {
+                SelectedExecutablePath = @"D:\Tools\custom.exe"
+            },
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        application.Shell.SelectedConverterMode = UiConverterMode.CustomCommand;
+
+        await application.Shell.BrowseCustomConverterExecutablePathCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(@"D:\Tools\custom.exe", application.Shell.CustomConverterExecutablePath);
+    }
+
+    [Fact]
     public void Create_ExposesDiagnosticsPathsForCurrentSession()
     {
         var session = new ShellSession(

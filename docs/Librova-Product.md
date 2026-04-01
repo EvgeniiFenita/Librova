@@ -107,6 +107,9 @@ The user can configure:
   - built-in `fb2cng`
   - custom external converter
 - the built-in `fb2cng` executable path through direct text entry or a `Browse...` file picker in `Settings`
+- the custom converter executable path through direct text entry or a `Browse...` file picker in `Settings`
+
+The MVP `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path.
 
 ## 4. What Is Included In The MVP
 

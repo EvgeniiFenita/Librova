@@ -45,7 +45,6 @@ internal static class CoreHostDevelopmentDefaults
             ParentProcessId = Environment.ProcessId,
             ConverterMode = preferences?.ConverterMode ?? UiConverterMode.Disabled,
             Fb2CngExecutablePath = preferences?.Fb2CngExecutablePath,
-            Fb2CngConfigPath = preferences?.Fb2CngConfigPath,
             CustomConverterExecutablePath = preferences?.CustomConverterExecutablePath,
             CustomConverterArguments = preferences?.CustomConverterArguments ?? [],
             CustomConverterOutputMode = preferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath

@@ -160,3 +160,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: unified the `Select Files...` and `Select Folder...` import actions under the same primary styling so both source-selection paths read as equivalent actions.
 - `2026-04-01` Fix: normalized shell button semantics by making `Save` a primary action and introducing a distinct destructive style for `Move To Trash`, while keeping navigation and browse flows secondary.
 - `2026-04-01` Fix: added a dedicated `Browse...` picker for the built-in `fb2cng` executable path in `Settings`, wired through the shell path-selection abstraction with C# coverage.
+- `2026-04-01` Fix: removed the MVP YAML config path from the built-in `fb2cng` settings flow and stopped the UI defaults layer from surfacing legacy saved config paths back into host launch options.
+- `2026-04-01` Fix: added the same executable `Browse...` picker affordance to the custom converter settings path so both converter modes can be configured without manual path typing.
