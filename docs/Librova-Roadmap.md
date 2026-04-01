@@ -95,6 +95,7 @@ Status: completed and verified.
 
 ### Iteration 8 — Code Health Cleanup
 
+- Status: completed and verified.
 - remove duplicated path-safety and UTF-8 helper logic where it creates maintenance risk;
 - harden ZIP archive wrappers against accidental copy semantics;
 - clean up smaller review-pass issues that are real but not release-blocking.

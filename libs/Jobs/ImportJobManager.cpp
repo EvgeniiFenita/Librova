@@ -60,7 +60,7 @@ SImportJobHandle CImportJobManager::Start(const Librova::Application::SImportReq
                 record->Snapshot = snapshot;
             }
 
-            record->Condition.notify_all();
+            record->Condition.notify_one();
         };
 
         publishSnapshot({
@@ -76,7 +76,7 @@ SImportJobHandle CImportJobManager::Start(const Librova::Application::SImportReq
             record->Result = std::move(result);
         }
 
-        record->Condition.notify_all();
+        record->Condition.notify_one();
     });
 
     return {.Id = jobId};

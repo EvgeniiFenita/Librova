@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include <pugixml.hpp>
@@ -49,6 +50,11 @@ public:
         }
     }
 
+    CZipArchive(const CZipArchive&) = delete;
+    CZipArchive& operator=(const CZipArchive&) = delete;
+    CZipArchive(CZipArchive&&) = delete;
+    CZipArchive& operator=(CZipArchive&&) = delete;
+
     [[nodiscard]] std::string ReadText(const std::string_view entryPath) const
     {
         const std::vector<std::byte> bytes = ReadBytes(entryPath);
@@ -86,6 +92,9 @@ public:
 private:
     zip_t* m_archive = nullptr;
 };
+
+static_assert(!std::is_copy_constructible_v<CZipArchive>);
+static_assert(!std::is_move_constructible_v<CZipArchive>);
 
 [[nodiscard]] pugi::xml_document ParseXml(const std::string& text, const std::string_view label)
 {

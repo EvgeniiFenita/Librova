@@ -22,6 +22,7 @@ target_link_libraries(LibrovaApplication
         LibrovaZipImporting
     PRIVATE
         LibrovaLogging
+        LibrovaManagedPaths
 )
 
 target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

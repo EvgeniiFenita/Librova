@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 #include <zip.h>
 
@@ -44,6 +45,11 @@ public:
             zip_close(m_archive);
         }
     }
+
+    CZipArchive(const CZipArchive&) = delete;
+    CZipArchive& operator=(const CZipArchive&) = delete;
+    CZipArchive(CZipArchive&&) = delete;
+    CZipArchive& operator=(CZipArchive&&) = delete;
 
     [[nodiscard]] zip_int64_t GetEntryCount() const
     {
@@ -93,6 +99,9 @@ public:
 private:
     zip_t* m_archive = nullptr;
 };
+
+static_assert(!std::is_copy_constructible_v<CZipArchive>);
+static_assert(!std::is_move_constructible_v<CZipArchive>);
 
 [[nodiscard]] std::string ToLower(std::string value)
 {

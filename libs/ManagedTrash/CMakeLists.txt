@@ -9,6 +9,7 @@ target_include_directories(LibrovaManagedTrash PUBLIC
 
 target_link_libraries(LibrovaManagedTrash PUBLIC
     LibrovaDomain
+    LibrovaManagedPaths
     LibrovaStoragePlanning
 )
 

@@ -4,67 +4,11 @@
 #include <stdexcept>
 #include <string>
 
+#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
 namespace Librova::ManagedTrash {
 namespace {
-
-[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
-{
-    if (path.empty() || path.is_absolute())
-    {
-        return false;
-    }
-
-    const auto normalized = path.lexically_normal();
-    if (normalized.empty() || normalized.is_absolute())
-    {
-        return false;
-    }
-
-    for (const auto& part : normalized)
-    {
-        if (part == "..")
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-[[nodiscard]] bool IsPathWithinRoot(
-    const std::filesystem::path& root,
-    const std::filesystem::path& candidate)
-{
-    const auto normalizedRoot = root.lexically_normal();
-    const auto normalizedCandidate = candidate.lexically_normal();
-
-    auto rootIt = normalizedRoot.begin();
-    auto candidateIt = normalizedCandidate.begin();
-
-    for (; rootIt != normalizedRoot.end(); ++rootIt, ++candidateIt)
-    {
-        if (candidateIt == normalizedCandidate.end() || *rootIt != *candidateIt)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-[[nodiscard]] std::filesystem::path CanonicalizeExistingPath(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    const auto canonicalPath = std::filesystem::weakly_canonical(path, errorCode);
-    if (errorCode)
-    {
-        throw std::runtime_error("Managed trash path could not be canonicalized.");
-    }
-
-    return canonicalPath.lexically_normal();
-}
 
 void EnsureDirectory(const std::filesystem::path& path)
 {
@@ -162,36 +106,12 @@ void CManagedTrashService::RestoreFromTrash(
 
 std::filesystem::path CManagedTrashService::ResolveManagedPath(const std::filesystem::path& path) const
 {
-    const auto normalizedPath = path.lexically_normal();
-    std::filesystem::path candidatePath;
-
-    if (normalizedPath.is_absolute())
-    {
-        candidatePath = normalizedPath;
-    }
-    else
-    {
-        if (!IsSafeRelativeManagedPath(normalizedPath))
-        {
-            throw std::runtime_error("Managed trash path is unsafe.");
-        }
-
-        candidatePath = (m_libraryRoot / normalizedPath).lexically_normal();
-    }
-
-    if (!std::filesystem::exists(candidatePath))
-    {
-        throw std::runtime_error("Managed source path does not exist.");
-    }
-
-    const auto canonicalRoot = CanonicalizeExistingPath(m_libraryRoot);
-    const auto canonicalCandidate = CanonicalizeExistingPath(candidatePath);
-    if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
-    {
-        throw std::runtime_error("Managed trash path is unsafe.");
-    }
-
-    return canonicalCandidate;
+    return Librova::ManagedPaths::ResolveExistingPathWithinRoot(
+        m_libraryRoot,
+        path,
+        "Managed source path does not exist.",
+        "Managed trash path is unsafe.",
+        "Managed trash path could not be canonicalized.");
 }
 
 std::filesystem::path CManagedTrashService::BuildTrashDestination(const std::filesystem::path& sourcePath) const
