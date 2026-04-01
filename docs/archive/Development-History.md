@@ -142,3 +142,4 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: made SQLite database opening Unicode-safe on Windows by switching native connection paths to explicit UTF-8 and added regression coverage for Cyrillic database paths.
 - `2026-04-01` Fix: replaced watchdog-driven `ExitProcess` host termination with graceful shutdown signaling and added process-level verification that parent-process death still stops the host with flushed logs.
 - `2026-04-01` Fix: bound external converter child processes to Windows kill-on-close job objects and added cancellation cleanup coverage so partial output files do not survive aborted conversions.
+- `2026-04-01` Fix: added per-connection SQLite `busy_timeout` hardening and regression coverage for overlapping write transactions so the host does not fail immediately on short-lived write contention.

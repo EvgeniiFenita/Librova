@@ -67,6 +67,8 @@ Status: completed and verified.
 
 ### Iteration 4 — SQLite Runtime Hardening
 
+Status: completed and verified.
+
 - add `busy_timeout` protection for concurrent read/write access patterns;
 - verify search and import behavior under overlapping database access.
 
