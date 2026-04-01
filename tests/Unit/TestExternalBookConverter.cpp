@@ -210,3 +210,50 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
     REQUIRE(result.Warnings == std::vector<std::string>({"Conversion cancelled."}));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
 }
+
+TEST_CASE("External book converter removes partial output files after cancellation", "[converter-runtime]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-cancel-cleanup");
+    const std::filesystem::path scriptPath = sandbox.GetPath() / "partial-converter.ps1";
+    const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
+    const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
+
+    WriteTextFile(
+        scriptPath,
+        "$source = $args[0]\n"
+        "$destination = $args[1]\n"
+        "New-Item -ItemType Directory -Force ([System.IO.Path]::GetDirectoryName($destination)) | Out-Null\n"
+        "Set-Content -LiteralPath $destination -Value 'partial-output'\n"
+        "Start-Sleep -Seconds 5\n");
+    WriteTextFile(sourcePath, "cancel-me");
+
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
+        .CommandProfile = CreatePwshProfile(
+            scriptPath,
+            Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath,
+            {"{source}", "{destination}"}),
+        .PollInterval = std::chrono::milliseconds{50}
+    });
+    CTestProgressSink progressSink;
+    std::stop_source stopSource;
+
+    Librova::Domain::SConversionResult result;
+    std::jthread worker([&] {
+        result = converter.Convert({
+            .SourcePath = sourcePath,
+            .DestinationPath = destinationPath,
+            .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+            .DestinationFormat = Librova::Domain::EBookFormat::Epub
+        }, progressSink, stopSource.get_token());
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds{200});
+    REQUIRE(std::filesystem::exists(destinationPath));
+
+    stopSource.request_stop();
+    worker.join();
+
+    REQUIRE_FALSE(result.IsSuccess());
+    REQUIRE(result.IsCancelled());
+    REQUIRE_FALSE(std::filesystem::exists(destinationPath));
+}

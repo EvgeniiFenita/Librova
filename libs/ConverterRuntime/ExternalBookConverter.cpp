@@ -150,6 +150,54 @@ private:
     HANDLE m_handle = nullptr;
 };
 
+class CJobHandle final
+{
+public:
+    explicit CJobHandle(HANDLE handle = nullptr)
+        : m_handle(handle)
+    {
+    }
+
+    ~CJobHandle()
+    {
+        if (m_handle != nullptr)
+        {
+            CloseHandle(m_handle);
+        }
+    }
+
+    CJobHandle(const CJobHandle&) = delete;
+    CJobHandle& operator=(const CJobHandle&) = delete;
+
+    CJobHandle(CJobHandle&& other) noexcept
+        : m_handle(std::exchange(other.m_handle, nullptr))
+    {
+    }
+
+    CJobHandle& operator=(CJobHandle&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_handle != nullptr)
+            {
+                CloseHandle(m_handle);
+            }
+
+            m_handle = std::exchange(other.m_handle, nullptr);
+        }
+
+        return *this;
+    }
+
+    [[nodiscard]] HANDLE Get() const noexcept
+    {
+        return m_handle;
+    }
+
+private:
+    HANDLE m_handle = nullptr;
+};
+
 class CProcessInfo final
 {
 public:
@@ -168,6 +216,38 @@ private:
     CProcessHandle m_process;
     CProcessHandle m_thread;
 };
+
+CJobHandle CreateKillOnCloseJob()
+{
+    HANDLE rawJobHandle = CreateJobObjectW(nullptr, nullptr);
+    if (rawJobHandle == nullptr)
+    {
+        throw std::runtime_error("Failed to create converter job object.");
+    }
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limitInformation{};
+    limitInformation.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    if (!SetInformationJobObject(
+            rawJobHandle,
+            JobObjectExtendedLimitInformation,
+            &limitInformation,
+            sizeof(limitInformation)))
+    {
+        CloseHandle(rawJobHandle);
+        throw std::runtime_error("Failed to configure converter job object.");
+    }
+
+    return CJobHandle(rawJobHandle);
+}
+
+void AssignProcessToKillOnCloseJob(const HANDLE jobHandle, const HANDLE processHandle)
+{
+    if (!AssignProcessToJobObject(jobHandle, processHandle))
+    {
+        throw std::runtime_error("Failed to assign converter process to job object.");
+    }
+}
 
 std::unordered_set<std::filesystem::path> SnapshotDirectoryFiles(const std::filesystem::path& directoryPath)
 {
@@ -257,6 +337,43 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(std::string{"Failed to create converter directory: "} + path.string());
+    }
+}
+
+void CleanupProducedFiles(
+    const std::filesystem::path& directoryPath,
+    const std::unordered_set<std::filesystem::path>& beforeSnapshot,
+    const std::filesystem::path& expectedOutputPath) noexcept
+{
+    std::error_code errorCode;
+    std::filesystem::remove(expectedOutputPath, errorCode);
+
+    if (!std::filesystem::exists(directoryPath))
+    {
+        return;
+    }
+
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(directoryPath, errorCode))
+    {
+        if (errorCode)
+        {
+            return;
+        }
+
+        if (!entry.is_regular_file(errorCode) || errorCode)
+        {
+            errorCode.clear();
+            continue;
+        }
+
+        const std::filesystem::path currentPath = entry.path().lexically_normal();
+        if (beforeSnapshot.contains(currentPath))
+        {
+            continue;
+        }
+
+        std::filesystem::remove(currentPath, errorCode);
+        errorCode.clear();
     }
 }
 
@@ -355,6 +472,7 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     startupInfo.cb = sizeof(startupInfo);
 
     PROCESS_INFORMATION processInformation{};
+    const CJobHandle jobHandle = CreateKillOnCloseJob();
 
     progressSink.ReportValue(0, "Starting converter process");
 
@@ -374,10 +492,12 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     }
 
     CProcessInfo process(processInformation);
+    AssignProcessToKillOnCloseJob(jobHandle.Get(), process.GetProcessHandle());
     const DWORD exitCode = WaitForProcessWithCancellation(process.GetProcessHandle(), progressSink, stopToken, m_settings.PollInterval);
 
     if (stopToken.stop_requested() || progressSink.IsCancellationRequested())
     {
+        CleanupProducedFiles(command.ExpectedOutputDirectory, outputSnapshot, command.ExpectedOutputPath);
         return BuildCancelledResult();
     }
 

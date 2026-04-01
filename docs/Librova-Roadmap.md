@@ -32,11 +32,11 @@ Library browsing polish that is explicitly deferred until a later library UX ite
 
 ## 3. MVP Blockers From Review Pass
 
-The review-pass blocker list has been reduced, but one release-blocking runtime issue still remains before MVP can be treated as stable:
+The release-blocking runtime issues confirmed by the review pass have now been closed and re-verified:
 
-- external converter child processes are not yet bound to a Windows `Job Object`, so crashed or abruptly terminated sessions may leave converter processes alive.
-
-The earlier blocker items around SQLite Unicode path handling and watchdog-driven `ExitProcess` shutdown have now been closed and re-verified through automated tests.
+- SQLite database opening is Unicode-safe on Windows.
+- Host shutdown no longer relies on watchdog-driven `ExitProcess`.
+- External converter child processes are bound to a Windows `Job Object`, and cancellation cleans up produced output files.
 
 ## 4. Iterative Stabilization Plan
 
@@ -59,7 +59,7 @@ Status: completed and verified.
 
 ### Iteration 3 — Converter Lifetime Safety
 
-Status: current highest-priority blocker.
+Status: completed and verified.
 
 - bind external converter processes to a Windows `Job Object` with kill-on-close semantics;
 - keep cancellation as a distinct outcome and clean up converter outputs after cancellation;
