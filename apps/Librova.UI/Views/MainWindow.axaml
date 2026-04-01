@@ -264,7 +264,7 @@
                        FontWeight="Bold"
                        Text="Librova" />
             <TextBlock Opacity="0.78"
-                       Text="A focused desktop library manager over the native core."
+                       Text="A personal desktop library for your books."
                        TextWrapping="Wrap" />
           </StackPanel>
 
