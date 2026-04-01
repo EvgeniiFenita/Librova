@@ -40,6 +40,74 @@ namespace {
     };
 }
 
+[[nodiscard]] std::string JoinWarningsAndError(
+    const std::vector<std::string>& warnings,
+    const std::string& error)
+{
+    std::string combined;
+
+    for (const auto& warning : warnings)
+    {
+        if (warning.empty())
+        {
+            continue;
+        }
+
+        if (!combined.empty())
+        {
+            combined += " | ";
+        }
+
+        combined += warning;
+    }
+
+    if (!error.empty())
+    {
+        if (!combined.empty())
+        {
+            combined += " | ";
+        }
+
+        combined += error;
+    }
+
+    return combined;
+}
+
+void LogImportSourceIssueIfInitialized(
+    const std::filesystem::path& sourcePath,
+    std::string_view stage,
+    std::string_view outcome,
+    std::string_view status,
+    std::string_view reason)
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    const auto utf8SourcePath = PathToUtf8(sourcePath);
+    if (outcome == "failed")
+    {
+        Librova::Logging::Error(
+            "Import source failed: source='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+            utf8SourcePath,
+            stage,
+            outcome,
+            status,
+            reason);
+        return;
+    }
+
+    Librova::Logging::Warn(
+        "Import source skipped: source='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+        utf8SourcePath,
+        stage,
+        outcome,
+        status,
+        reason);
+}
+
 [[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
 {
     if (path.empty() || path.is_absolute())
@@ -336,8 +404,15 @@ private:
 
             if (discoveredSupportedEntries == 0)
             {
-                expanded.Warnings.push_back(
-                    "Directory '" + PathToUtf8(sourcePath) + "' does not contain supported .fb2, .epub, or .zip files.");
+                const auto warning =
+                    "Directory '" + PathToUtf8(sourcePath) + "' does not contain supported .fb2, .epub, or .zip files.";
+                expanded.Warnings.push_back(warning);
+                LogImportSourceIssueIfInitialized(
+                    sourcePath,
+                    "source-selection",
+                    "skipped",
+                    "empty-directory",
+                    warning);
             }
 
             continue;
@@ -347,8 +422,15 @@ private:
         {
             if (!IsSupportedStandaloneImportPath(sourcePath))
             {
-                expanded.Warnings.push_back(
-                    "Unsupported selected source '" + PathToUtf8(sourcePath) + "'. Only .fb2, .epub, and .zip are supported.");
+                const auto warning =
+                    "Unsupported selected source '" + PathToUtf8(sourcePath) + "'. Only .fb2, .epub, and .zip are supported.";
+                expanded.Warnings.push_back(warning);
+                LogImportSourceIssueIfInitialized(
+                    sourcePath,
+                    "source-selection",
+                    "skipped",
+                    "unsupported-source",
+                    warning);
                 continue;
             }
 
@@ -361,8 +443,14 @@ private:
             continue;
         }
 
-        expanded.Warnings.push_back(
-            "Selected import source '" + PathToUtf8(sourcePath) + "' does not exist.");
+        const auto warning = "Selected import source '" + PathToUtf8(sourcePath) + "' does not exist.";
+        expanded.Warnings.push_back(warning);
+        LogImportSourceIssueIfInitialized(
+            sourcePath,
+            "source-selection",
+            "failed",
+            "missing-source",
+            warning);
     }
 
     return expanded;
@@ -430,8 +518,15 @@ void MergeWarnings(std::vector<std::string>& target, const std::vector<std::stri
             {
                 workload.PlannedEntriesBySource.emplace(sourcePath, 1);
                 ++workload.TotalEntries;
-                workload.Warnings.push_back(
-                    "Failed to inspect ZIP archive '" + PathToUtf8(sourcePath) + "': " + error.what());
+                const auto warning =
+                    "Failed to inspect ZIP archive '" + PathToUtf8(sourcePath) + "': " + error.what();
+                workload.Warnings.push_back(warning);
+                LogImportSourceIssueIfInitialized(
+                    sourcePath,
+                    "zip-inspection",
+                    "failed",
+                    "source-inspection-failed",
+                    error.what());
             }
         }
         else
@@ -585,6 +680,12 @@ SImportResult CLibraryImportFacade::Run(
                 result.Summary.FailedEntries += zipEntryCount;
                 result.Summary.Warnings.push_back(
                     "ZIP archive '" + PathToUtf8(sourcePath) + "' failed: " + error.what());
+                LogImportSourceIssueIfInitialized(
+                    sourcePath,
+                    "zip-import",
+                    "failed",
+                    "archive-run-failed",
+                    error.what());
 
                 if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
                 {
@@ -660,6 +761,51 @@ SImportResult CLibraryImportFacade::Run(
         if (!singleFileResult.Error.empty())
         {
             result.Summary.Warnings.push_back(singleFileResult.Error);
+        }
+
+        if (result.Summary.Mode == EImportMode::Batch)
+        {
+            std::string_view stage = "single-file-import";
+            std::string_view outcome = "failed";
+            std::string_view status = "failed";
+
+            switch (singleFileResult.Status)
+            {
+            case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
+                stage = "duplicate-check";
+                outcome = "skipped";
+                status = "rejected-duplicate";
+                break;
+            case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
+                stage = "duplicate-check";
+                outcome = "skipped";
+                status = "decision-required";
+                break;
+            case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
+                stage = "format-detection";
+                outcome = "skipped";
+                status = "unsupported-format";
+                break;
+            case Librova::Importing::ESingleFileImportStatus::Cancelled:
+                stage = "single-file-import";
+                outcome = "failed";
+                status = "cancelled";
+                break;
+            case Librova::Importing::ESingleFileImportStatus::Failed:
+                stage = "single-file-import";
+                outcome = "failed";
+                status = "failed";
+                break;
+            case Librova::Importing::ESingleFileImportStatus::Imported:
+                break;
+            }
+
+            LogImportSourceIssueIfInitialized(
+                sourcePath,
+                stage,
+                outcome,
+                status,
+                JoinWarningsAndError(singleFileResult.Warnings, singleFileResult.Error));
         }
 
         if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)

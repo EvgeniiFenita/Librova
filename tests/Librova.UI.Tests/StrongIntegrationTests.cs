@@ -3,6 +3,7 @@ using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
+using System.IO.Compression;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -307,6 +308,59 @@ public sealed class StrongIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ImportJobs_ZipImport_WritesPerEntryFailuresAndSkipsIntoHostLog()
+    {
+        var sandboxRoot = CreateSandboxRoot("zip-import-host-log");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "ZipImportHostLog");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            var zipPath = CreateZipImportFixture(sandboxRoot, "diagnostics.zip");
+            var jobId = await session.ImportJobs.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [zipPath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await session.ImportJobs.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(20),
+                cancellation.Token));
+
+            var result = await session.ImportJobs.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
+            Assert.NotNull(result);
+            Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
+            Assert.NotNull(result.Summary);
+            Assert.Equal(1UL, result.Summary!.ImportedEntries);
+            Assert.Equal(1UL, result.Summary.FailedEntries);
+            Assert.Equal(2UL, result.Summary.SkippedEntries);
+
+            var hostLogPath = Path.Combine(options.LibraryRoot, "Logs", "host.log");
+            Assert.True(File.Exists(hostLogPath));
+
+            var hostLog = await ReadAllTextSharedAsync(hostLogPath, cancellation.Token);
+            Assert.Contains("ZIP entry failed", hostLog, StringComparison.Ordinal);
+            Assert.Contains("broken.fb2", hostLog, StringComparison.Ordinal);
+            Assert.Contains("Failed to parse FB2 XML", hostLog, StringComparison.Ordinal);
+            Assert.Contains("ZIP entry skipped", hostLog, StringComparison.Ordinal);
+            Assert.Contains("notes.txt", hostLog, StringComparison.Ordinal);
+            Assert.Contains("nested/archive.zip", hostLog, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static ShellApplication CreateApplication(ShellSession session, string sandboxRoot) =>
         ShellApplication.Create(
             session,
@@ -363,6 +417,68 @@ public sealed class StrongIntegrationTests
         Assert.Equal(1UL, result.Summary!.ImportedEntries);
     }
 
+    private static string CreateZipImportFixture(string sandboxRoot, string fileName)
+    {
+        var zipPath = Path.Combine(sandboxRoot, fileName);
+        using var stream = File.Create(zipPath);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+
+        WriteZipEntry(
+            archive,
+            "good.fb2",
+            CreateFb2Document("Good Book", "Arkady", "Strugatsky"));
+        WriteZipEntry(
+            archive,
+            "broken.fb2",
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook>
+              <description>
+                <title-info>
+                  <book-title>Broken Book</book-title>
+            """);
+        WriteZipEntry(archive, "notes.txt", "ignore me");
+        WriteZipEntry(archive, "nested/archive.zip", "nested-not-supported");
+
+        return zipPath;
+    }
+
+    private static void WriteZipEntry(ZipArchive archive, string entryPath, string text)
+    {
+        var entry = archive.CreateEntry(entryPath);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write(text);
+    }
+
+    private static string CreateFb2Document(
+        string title,
+        string authorFirstName,
+        string authorLastName,
+        string? isbn = null) =>
+        $$"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
+          <description>
+            <title-info>
+              <book-title>{{title}}</book-title>
+              <author>
+                <first-name>{{authorFirstName}}</first-name>
+                <last-name>{{authorLastName}}</last-name>
+              </author>
+              <lang>en</lang>
+            </title-info>
+            {{(string.IsNullOrWhiteSpace(isbn) ? string.Empty : $"""
+            <publish-info>
+              <isbn>{isbn}</isbn>
+            </publish-info>
+            """)}}
+          </description>
+          <body>
+            <section><p>Body</p></section>
+          </body>
+        </FictionBook>
+        """;
+
     private static string CreateFb2File(
         string sandboxRoot,
         string fileName,
@@ -372,31 +488,7 @@ public sealed class StrongIntegrationTests
         string? isbn = null)
     {
         var sourcePath = Path.Combine(sandboxRoot, fileName);
-        File.WriteAllText(
-            sourcePath,
-            $$"""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
-              <description>
-                <title-info>
-                  <book-title>{{title}}</book-title>
-                  <author>
-                    <first-name>{{authorFirstName}}</first-name>
-                    <last-name>{{authorLastName}}</last-name>
-                  </author>
-                  <lang>en</lang>
-                </title-info>
-                {{(string.IsNullOrWhiteSpace(isbn) ? string.Empty : $"""
-                <publish-info>
-                  <isbn>{isbn}</isbn>
-                </publish-info>
-                """)}}
-              </description>
-              <body>
-                <section><p>Body</p></section>
-              </body>
-            </FictionBook>
-            """);
+        File.WriteAllText(sourcePath, CreateFb2Document(title, authorFirstName, authorLastName, isbn));
         return sourcePath;
     }
 
@@ -412,6 +504,17 @@ public sealed class StrongIntegrationTests
         catch (UnauthorizedAccessException)
         {
         }
+    }
+
+    private static async Task<string> ReadAllTextSharedAsync(string path, CancellationToken cancellationToken)
+    {
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     private static IReadOnlyList<string> EnumerateAllFiles(string root) =>

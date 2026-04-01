@@ -330,6 +330,11 @@
 - host log содержит host/runtime-side operational entries.
 - логи полезны для диагностики и не зашумлены частым polling.
 - при уже открытой библиотеке оба runtime log-файла лежат в `LibraryRoot\Logs`.
+4. Выполни batch, directory или `.zip` import, где есть хотя бы один skipped или failed source/entry.
+Ожидаемое поведение:
+- `host.log` содержит отдельные записи с конкретными именами проблемных файлов или ZIP entry, а не только общий итоговый summary;
+- для skipped/failed ZIP entry в `host.log` видны имя архива, имя entry и причина;
+- для failed или skipped source в batch / directory import в `host.log` видны путь источника и причина.
 
 ## 16. Relaunch State Persistence
 

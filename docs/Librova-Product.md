@@ -39,6 +39,8 @@ On first launch, the user chooses a library root. Under that root Librova stores
 
 Once a library is active, both UI and native host logs are kept under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders.
 
+For multi-file, directory, and ZIP imports, the native host log must also record per-source and per-entry skipped/failed diagnostics with concrete file names, so large import investigations do not depend only on the UI warning summary.
+
 The native host is treated as a child runtime of the UI session. Normal shutdown and abnormal UI termination are both expected to stop the host process instead of leaving it orphaned in the background.
 
 If the configured library root is invalid or unavailable on a later launch, Librova opens a startup recovery screen and lets the user choose a different library root before retrying startup.

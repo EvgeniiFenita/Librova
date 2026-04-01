@@ -13,6 +13,7 @@
 #include <zip.h>
 
 #include "Application/LibraryImportFacade.hpp"
+#include "Logging/Logging.hpp"
 
 namespace {
 
@@ -157,6 +158,44 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 
     return outputPath;
 }
+
+std::string ReadTextFile(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
+}
+
+class CSelectiveSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const auto fileName = request.SourcePath.filename().string();
+        if (fileName == "duplicate.fb2")
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
+                .Warnings = {"Import rejected because a strict duplicate already exists."}
+            };
+        }
+
+        if (fileName == "broken.fb2")
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::Failed,
+                .Error = "Parser exploded."
+            };
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{11}
+        };
+    }
+};
 
 } // namespace
 
@@ -364,6 +403,46 @@ TEST_CASE("Library import facade continues batch import after unreadable ZIP sou
         return warning.find("Failed to inspect ZIP archive") != std::string::npos
             || warning.find("ZIP archive") != std::string::npos;
     }));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade logs skipped and failed batch sources into host log", "[application][import][logging]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-logging";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    const auto logPath = sandbox / "Logs" / "host.log";
+    std::ofstream(sandbox / "duplicate.fb2").put('a');
+    std::ofstream(sandbox / "broken.fb2").put('b');
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+    {
+        CSelectiveSingleFileImporter importer;
+        Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+        CTestProgressSink progressSink;
+
+        const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+        const auto result = facade.Run({
+            .SourcePaths = {sandbox / "duplicate.fb2", sandbox / "broken.fb2"},
+            .WorkingDirectory = sandbox / "work"
+        }, progressSink, {});
+
+        REQUIRE(result.Summary.SkippedEntries == 1);
+        REQUIRE(result.Summary.FailedEntries == 1);
+    }
+
+    Librova::Logging::CLogging::Shutdown();
+
+    REQUIRE(std::filesystem::exists(logPath));
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(logText.find("Import source skipped") != std::string::npos);
+    REQUIRE(logText.find("duplicate.fb2") != std::string::npos);
+    REQUIRE(logText.find("rejected-duplicate") != std::string::npos);
+    REQUIRE(logText.find("Import source failed") != std::string::npos);
+    REQUIRE(logText.find("broken.fb2") != std::string::npos);
+    REQUIRE(logText.find("Parser exploded.") != std::string::npos);
 
     std::filesystem::remove_all(sandbox);
 }

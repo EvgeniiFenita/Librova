@@ -15,6 +15,8 @@ target_link_libraries(LibrovaZipImporting
         LibrovaDomain
         LibrovaImporting
         libzip::zip
+    PRIVATE
+        LibrovaLogging
 )
 
 target_compile_features(LibrovaZipImporting PUBLIC cxx_std_20)

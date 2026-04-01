@@ -11,12 +11,86 @@
 
 #include <zip.h>
 
+#include "Logging/Logging.hpp"
+
 namespace {
 
 [[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path)
 {
     const auto utf8Path = path.generic_u8string();
     return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
+}
+
+[[nodiscard]] std::string JoinWarningsAndError(
+    const std::vector<std::string>& warnings,
+    const std::string& error)
+{
+    std::string combined;
+
+    for (const auto& warning : warnings)
+    {
+        if (warning.empty())
+        {
+            continue;
+        }
+
+        if (!combined.empty())
+        {
+            combined += " | ";
+        }
+
+        combined += warning;
+    }
+
+    if (!error.empty())
+    {
+        if (!combined.empty())
+        {
+            combined += " | ";
+        }
+
+        combined += error;
+    }
+
+    return combined;
+}
+
+void LogZipEntryIssueIfInitialized(
+    const std::filesystem::path& zipPath,
+    const std::filesystem::path& entryPath,
+    std::string_view stage,
+    std::string_view outcome,
+    std::string_view status,
+    std::string_view reason)
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    const auto utf8ZipPath = PathToUtf8(zipPath);
+    const auto utf8EntryPath = PathToUtf8(entryPath);
+    if (outcome == "failed")
+    {
+        Librova::Logging::Error(
+            "ZIP entry failed: archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+            utf8ZipPath,
+            utf8EntryPath,
+            stage,
+            outcome,
+            status,
+            reason);
+        return;
+    }
+
+    Librova::Logging::Warn(
+        "ZIP entry skipped: archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+        utf8ZipPath,
+        utf8EntryPath,
+        stage,
+        outcome,
+        status,
+        reason);
 }
 
 class CZipArchive final
@@ -337,6 +411,13 @@ SZipImportResult CZipImportCoordinator::Run(
                 .Status = EZipEntryImportStatus::NestedArchiveSkipped,
                 .Error = "Nested ZIP archives are not supported."
             });
+            LogZipEntryIssueIfInitialized(
+                request.ZipPath,
+                entryPath,
+                "zip-entry-filter",
+                "skipped",
+                "nested-archive-skipped",
+                result.Entries.back().Error);
             ++processedEntries;
             ++skippedEntries;
             if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
@@ -361,6 +442,13 @@ SZipImportResult CZipImportCoordinator::Run(
                 .Status = EZipEntryImportStatus::UnsupportedEntry,
                 .Error = "Unsafe ZIP entry path."
             });
+            LogZipEntryIssueIfInitialized(
+                request.ZipPath,
+                entryPath,
+                "zip-entry-filter",
+                "skipped",
+                "unsafe-entry-path",
+                result.Entries.back().Error);
             ++processedEntries;
             ++skippedEntries;
             if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
@@ -382,8 +470,16 @@ SZipImportResult CZipImportCoordinator::Run(
         {
             result.Entries.push_back({
                 .ArchivePath = entryPath,
-                .Status = EZipEntryImportStatus::UnsupportedEntry
+                .Status = EZipEntryImportStatus::UnsupportedEntry,
+                .Error = "Unsupported ZIP entry format."
             });
+            LogZipEntryIssueIfInitialized(
+                request.ZipPath,
+                entryPath,
+                "zip-entry-filter",
+                "skipped",
+                "unsupported-entry-format",
+                result.Entries.back().Error);
             ++processedEntries;
             ++skippedEntries;
             if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
@@ -430,6 +526,22 @@ SZipImportResult CZipImportCoordinator::Run(
         else if (result.Entries.back().Status == EZipEntryImportStatus::Failed)
         {
             ++failedEntries;
+            LogZipEntryIssueIfInitialized(
+                request.ZipPath,
+                entryPath,
+                singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
+                    || singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
+                    ? "duplicate-check"
+                    : "single-file-import",
+                "failed",
+                singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
+                    ? "rejected-duplicate"
+                    : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
+                        ? "decision-required"
+                        : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::UnsupportedFormat
+                            ? "unsupported-format"
+                            : "failed")),
+                JoinWarningsAndError(singleFileResult.Warnings, singleFileResult.Error));
         }
 
         if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)

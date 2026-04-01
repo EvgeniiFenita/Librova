@@ -11,6 +11,7 @@
 #include <zip.h>
 
 #include "Importing/SingleFileImportCoordinator.hpp"
+#include "Logging/Logging.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
 namespace {
@@ -162,6 +163,12 @@ std::filesystem::path CreateUnsafeZipFixture(const std::filesystem::path& output
     return outputPath;
 }
 
+std::string ReadTextFile(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
+}
+
 } // namespace
 
 TEST_CASE("ZIP import coordinator imports supported entries and keeps partial success", "[zip-import]")
@@ -239,4 +246,38 @@ TEST_CASE("ZIP import coordinator opens Unicode archive paths on Windows", "[zip
 
     REQUIRE(result.ImportedCount() == 1);
     REQUIRE(importer.Calls.size() == 2);
+}
+
+TEST_CASE("ZIP import coordinator logs skipped and failed entries into host log", "[zip-import][logging]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-logging");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    const auto logPath = sandbox.GetPath() / "Logs" / "host.log";
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+    {
+        const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+        const auto result = coordinator.Run({
+            .ZipPath = zipPath,
+            .WorkingDirectory = sandbox.GetPath() / "work",
+            .AllowProbableDuplicates = true
+        }, progressSink, {});
+
+        REQUIRE(result.Entries.size() == 4);
+    }
+
+    Librova::Logging::CLogging::Shutdown();
+
+    REQUIRE(std::filesystem::exists(logPath));
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(logText.find("ZIP entry failed") != std::string::npos);
+    REQUIRE(logText.find("books.zip") != std::string::npos);
+    REQUIRE(logText.find("second.fb2") != std::string::npos);
+    REQUIRE(logText.find("ZIP entry skipped") != std::string::npos);
+    REQUIRE(logText.find("notes.txt") != std::string::npos);
+    REQUIRE(logText.find("nested/archive.zip") != std::string::npos);
+    REQUIRE(logText.find("Nested ZIP archives are not supported.") != std::string::npos);
 }
