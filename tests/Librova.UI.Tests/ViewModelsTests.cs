@@ -816,6 +816,7 @@ public sealed class ViewModelsTests
 
         Assert.NotNull(viewModel.SelectedBookDetails);
         Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Publisher" && pair.Value == "Macmillan");
+        Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Size" && pair.Value == "0.00 MB");
         Assert.Equal("Aliens land only in one city.", viewModel.SelectedBookAnnotationText);
     }
 

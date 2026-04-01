@@ -6,6 +6,7 @@ using Librova.UI.Mvvm;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,7 @@ namespace Librova.UI.ViewModels;
 
 internal sealed class LibraryBrowserViewModel : ObservableObject
 {
+    private const double BytesPerMegabyte = 1024d * 1024d;
     private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#FFF9F1"));
     private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#D8CCBD"));
     private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#F7E9D8"));
@@ -663,7 +665,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             pairs.Add(new("Genres", tags));
         }
 
-        pairs.Add(new("Size", $"{SelectedBook.SizeBytes:N0} bytes"));
+        pairs.Add(new("Size", FormatSizeInMegabytes(SelectedBook.SizeBytes)));
         return pairs;
     }
 
@@ -680,6 +682,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private static string BuildAuthorsText(IReadOnlyList<string> authors) =>
         authors.Count == 0 ? "Unknown author" : string.Join(", ", authors);
+
+    private static string FormatSizeInMegabytes(ulong sizeBytes)
+    {
+        var megabytes = sizeBytes / BytesPerMegabyte;
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{megabytes:F2} MB");
+    }
 
     private string BuildSuggestedExportFileName()
     {
