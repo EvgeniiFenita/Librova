@@ -18,7 +18,6 @@ Already implemented end-to-end:
 The remaining active MVP scope is:
 
 - stronger support for series and genres across parsing, storage, details, and browser filtering;
-- replacing the current managed-library `Trash` implementation with Windows `Recycle Bin` integration;
 - broad review passes on runtime behavior and crash safety;
 - final cleanup of logging and error surfaces;
 - manual UI verification against the maintained scenario checklist;
@@ -107,7 +106,7 @@ Librova can be treated as MVP-ready when:
 - `Debug` and `Release` validation stay green;
 - the confirmed MVP blockers from the review pass are closed and re-verified;
 - manual UI test scenarios have been walked through successfully;
-- series/genres support and Windows `Recycle Bin` delete flow are implemented and validated;
+- series/genres support is implemented and validated;
 - no critical runtime regressions remain in startup, import, browser, export, delete, or settings flows;
 - logs are actionable enough to diagnose startup and runtime problems.
 
@@ -120,6 +119,7 @@ Not on the active MVP path:
 - cloud or sync features;
 - multiple libraries;
 - plugin system;
+- Windows `Recycle Bin` integration as a future delete-flow feature;
 - storage sharding and other storage-layout refactors without a proven MVP need;
 - large convenience features that do not reduce MVP risk.
 

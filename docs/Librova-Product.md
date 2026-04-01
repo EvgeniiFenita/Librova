@@ -91,7 +91,9 @@ The user can export a selected managed book to any destination path outside the 
 
 ### 3.5 Delete / Recycle
 
-The product direction for MVP is to keep a safe user-facing delete action, but align it with the Windows desktop model by sending deleted managed files to the system `Recycle Bin` instead of maintaining a long-term internal library-local trash folder.
+The current MVP keeps a safe user-facing delete action through the managed-library `Trash` flow.
+
+Windows `Recycle Bin` integration is tracked as a future feature rather than an active MVP requirement.
 
 ### 3.6 Settings
 
@@ -120,7 +122,7 @@ The current MVP includes:
 The active MVP backlog still includes:
 
 - richer series and genres support;
-- Windows `Recycle Bin` integration for delete.
+- release-candidate stabilization and validation.
 
 ## 5. What Is Not Included In The MVP
 
@@ -131,6 +133,7 @@ The following are currently outside MVP scope:
 - cloud sync;
 - multiple libraries;
 - plugin ecosystem work;
+- Windows `Recycle Bin` integration for delete;
 - richer post-MVP library management features such as ratings, shelves, and favorites.
 
 ## 6. High-Level Technical Picture
@@ -164,8 +167,11 @@ Already implemented:
 Most remaining work now belongs to:
 
 - series and genres support;
-- Windows `Recycle Bin` integration;
 - stabilization and release-candidate hardening.
+
+Planned future features include:
+
+- Windows `Recycle Bin` integration.
 
 ## 8. Related Documents
 

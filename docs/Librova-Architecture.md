@@ -29,7 +29,7 @@ The native core is responsible for:
 Near-term MVP work still targets three product-facing extensions on top of that baseline:
 
 - series and genres as stronger first-class metadata;
-- replacing the current managed delete path with Windows `Recycle Bin` integration.
+- broader stabilization and release hardening around the current baseline.
 
 ## 2. IPC Boundary
 
@@ -68,7 +68,7 @@ One managed library root contains:
 
 Managed paths are stable and `BookId`-based.
 
-The current `Trash` directory is an implementation detail of the present baseline, not a frozen product decision. The active MVP direction is to replace that behavior with a Windows `Recycle Bin` backed delete flow rather than invest in a more complex internal trash or storage-sharding design.
+The current `Trash` directory is part of the implemented MVP baseline. A Windows `Recycle Bin` backed delete flow remains a future feature, not an active MVP requirement.
 
 ### 3.3 Import Safety
 
@@ -155,7 +155,6 @@ Testing is layered:
 Current architectural focus is:
 
 - strengthening series/genres support as end-to-end metadata;
-- replacing internal trash handling with Windows `Recycle Bin` integration;
 - stabilization;
 - release hardening;
 - runtime review;
