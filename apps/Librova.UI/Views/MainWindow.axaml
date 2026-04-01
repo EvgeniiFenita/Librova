@@ -257,7 +257,8 @@
               Background="#DCCBB8"
               CornerRadius="28"
               Padding="22">
-        <StackPanel Spacing="18">
+        <Grid RowDefinitions="Auto,Auto,*,Auto"
+              RowSpacing="18">
           <StackPanel Spacing="8">
             <TextBlock FontSize="34"
                        FontWeight="Bold"
@@ -267,7 +268,8 @@
                        TextWrapping="Wrap" />
           </StackPanel>
 
-          <StackPanel Spacing="10">
+          <StackPanel Grid.Row="1"
+                      Spacing="10">
             <Button Classes="SecondaryAction"
                     HorizontalAlignment="Stretch"
                     Command="{Binding Shell.ShowLibrarySectionCommand}"
@@ -276,13 +278,10 @@
                     HorizontalAlignment="Stretch"
                     Command="{Binding Shell.ShowImportSectionCommand}"
                     Content="Import" />
-            <Button Classes="SecondaryAction"
-                    HorizontalAlignment="Stretch"
-                    Command="{Binding Shell.ShowSettingsSectionCommand}"
-                    Content="Settings" />
           </StackPanel>
 
-          <Border Background="#FFF8EF"
+          <Border Grid.Row="2"
+                  Background="#FFF8EF"
                   CornerRadius="18"
                   Padding="16">
             <StackPanel Spacing="10">
@@ -301,7 +300,13 @@
                       Content="Create Library..." />
             </StackPanel>
           </Border>
-        </StackPanel>
+
+          <Button Grid.Row="3"
+                  Classes="SecondaryAction"
+                  HorizontalAlignment="Stretch"
+                  Command="{Binding Shell.ShowSettingsSectionCommand}"
+                  Content="Settings" />
+        </Grid>
       </Border>
 
       <Grid Grid.Column="1"
