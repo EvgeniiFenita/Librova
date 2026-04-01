@@ -53,6 +53,9 @@ Working rule:
 - `#23` keep cover aspect ratios intact and use a neutral card background instead of exposed color bands.
   - Status: `Open`
 
+- `#24` add per-file native host logging for skipped and failed entries during multi-file, directory, and ZIP imports so large import diagnostics do not depend only on UI summary warnings.
+  - Status: `Open`
+
 ### Minor
 
 - `#19` replace the current palette with a modern dark theme using one bright accent color across the shell.
