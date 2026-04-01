@@ -157,3 +157,5 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: changed library details size formatting from raw bytes to megabytes and added ViewModel regression coverage for the displayed metadata string.
 - `2026-04-01` Fix: removed the redundant per-section hero header card from the main shell so `Library`, `Import`, and `Settings` open directly into their working surfaces.
 - `2026-04-01` Fix: increased the spacing between the `Select Files...` and `Select Folder...` import actions to reduce visual crowding in the import source card.
+- `2026-04-01` Fix: unified the `Select Files...` and `Select Folder...` import actions under the same primary styling so both source-selection paths read as equivalent actions.
+- `2026-04-01` Fix: normalized shell button semantics by making `Save` a primary action and introducing a distinct destructive style for `Move To Trash`, while keeping navigation and browse flows secondary.

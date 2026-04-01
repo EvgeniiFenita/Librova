@@ -49,6 +49,13 @@
       <Setter Property="MinHeight" Value="44" />
       <Setter Property="CornerRadius" Value="14" />
     </Style>
+    <Style Selector="Button.DestructiveAction">
+      <Setter Property="Background" Value="#C35A3C" />
+      <Setter Property="Foreground" Value="#FFF9F1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="CornerRadius" Value="14" />
+    </Style>
     <Style Selector="TextBox.ImportField">
       <Setter Property="MinHeight" Value="44" />
       <Setter Property="CornerRadius" Value="14" />

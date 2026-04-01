@@ -34,7 +34,7 @@
                       HorizontalAlignment="Left"
                       Command="{Binding ImportJobs.SelectSourceAndImportCommand}"
                       Content="Select Files..." />
-              <Button Classes="SecondaryAction"
+              <Button Classes="PrimaryAction"
                       Width="180"
                       HorizontalAlignment="Left"
                       Command="{Binding ImportJobs.SelectDirectoryAndImportCommand}"

@@ -270,7 +270,7 @@
                     HorizontalAlignment="Stretch"
                     Command="{Binding LibraryBrowser.ExportSelectedBookCommand}"
                     Content="Export" />
-            <Button Classes="SecondaryAction"
+            <Button Classes="DestructiveAction"
                     HorizontalAlignment="Stretch"
                     Command="{Binding LibraryBrowser.MoveSelectedBookToTrashCommand}"
                     Content="Move To Trash" />
