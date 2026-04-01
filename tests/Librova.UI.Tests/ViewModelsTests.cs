@@ -733,6 +733,36 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_SearchRefreshesAsTextChangesAndRestoresBooksAfterClearing()
+    {
+        var service = new QueryFilteringLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(2, viewModel.Books.Count);
+
+        viewModel.SearchText = "road";
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.Count == 1);
+
+        Assert.Single(viewModel.Books);
+        Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
+        Assert.Equal("1 shown", viewModel.BookCountText);
+
+        viewModel.SearchText = "missing";
+        await WaitForConditionAsync(() => service.ListCalls >= 3 && viewModel.Books.Count == 0);
+
+        Assert.False(viewModel.HasBooks);
+        Assert.Equal("Nothing found", viewModel.EmptyStateTitle);
+
+        viewModel.SearchText = string.Empty;
+        await WaitForConditionAsync(() => service.ListCalls >= 4 && viewModel.Books.Count == 2);
+
+        Assert.Equal(2, viewModel.Books.Count);
+        Assert.Equal("2 books", viewModel.BookCountText);
+        Assert.Equal("Loaded 2 book(s).", viewModel.StatusText);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_PaginatesForwardAndBackward()
     {
         var service = new PagingLibraryCatalogService();
@@ -1115,6 +1145,22 @@ public sealed class ViewModelsTests
         return sourcePath;
     }
 
+    private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMilliseconds = 3000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(25);
+        }
+
+        Assert.True(condition(), "Timed out waiting for the expected state.");
+    }
+
     private sealed class FakeLibraryCatalogService : ILibraryCatalogService
     {
         public long? LastExportBookId { get; private set; }
@@ -1203,6 +1249,59 @@ public sealed class ViewModelsTests
             LastExportRequest = (bookId, destinationPath);
             return Task.FromResult<string?>(destinationPath);
         }
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class QueryFilteringLibraryCatalogService : ILibraryCatalogService
+    {
+        private static readonly IReadOnlyList<BookListItemModel> AllBooks =
+        [
+            new BookListItemModel
+            {
+                BookId = 1,
+                Title = "Roadside Picnic",
+                Authors = ["Arkady Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/roadside.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new BookListItemModel
+            {
+                BookId = 2,
+                Title = "Monday Begins on Saturday",
+                Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000002/monday.fb2",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public int ListCalls { get; private set; }
+
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            ListCalls++;
+
+            if (string.IsNullOrWhiteSpace(request.Text))
+            {
+                return Task.FromResult(AllBooks);
+            }
+
+            var filtered = AllBooks
+                .Where(book => book.Title.Contains(request.Text, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<BookListItemModel>>(filtered);
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

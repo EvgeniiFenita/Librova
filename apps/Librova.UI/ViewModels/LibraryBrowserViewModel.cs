@@ -458,22 +458,25 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         _refreshDebounce?.Cancel();
         _refreshDebounce?.Dispose();
         _refreshDebounce = new CancellationTokenSource();
-        var token = _refreshDebounce.Token;
 
-        _ = Task.Run(async () =>
+        _ = RefreshAfterDebounceAsync(_refreshDebounce.Token);
+    }
+
+    private async Task RefreshAfterDebounceAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            try
-            {
-                await Task.Delay(250, token);
-                if (!token.IsCancellationRequested)
-                {
-                    await RefreshPageAsync(1);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, token);
+            await Task.Delay(250, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            await RefreshPageAsync(1);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception error)
+        {
+            await HandleCommandErrorAsync(error);
+        }
     }
 
     private async Task RefreshPageAsync(int pageNumber)

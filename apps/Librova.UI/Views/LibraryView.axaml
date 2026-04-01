@@ -51,7 +51,7 @@
             ColumnSpacing="12">
         <TextBox Classes="ImportField"
                  Watermark="Search by title or author..."
-                 Text="{Binding LibraryBrowser.SearchText}" />
+                 Text="{Binding LibraryBrowser.SearchText, UpdateSourceTrigger=PropertyChanged}" />
         <ComboBox Grid.Column="1"
                   MinHeight="44"
                   SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
