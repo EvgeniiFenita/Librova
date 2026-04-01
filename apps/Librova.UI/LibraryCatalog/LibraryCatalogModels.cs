@@ -44,7 +44,7 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
     private bool _isSelected;
     private IBrush? _cardBackgroundBrush;
     private IBrush? _cardBorderBrush;
-    private Thickness _cardBorderThickness = new(1);
+    private Thickness _cardBorderThickness = new(0);
 
     public long BookId { get; init; }
     public string Title { get; init; } = string.Empty;

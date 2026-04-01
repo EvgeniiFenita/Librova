@@ -768,7 +768,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     {
         item.CardBackgroundBrush = isSelected ? SelectedCardBackground : DefaultCardBackground;
         item.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
-        item.CardBorderThickness = new Thickness(2);
+        item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
     }
 
     private static IBrush CreateGradientBrush(long bookId, string title, string authorsText)

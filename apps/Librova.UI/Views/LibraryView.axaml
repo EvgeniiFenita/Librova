@@ -29,10 +29,18 @@
     </Style>
     <Style Selector="Border.BookCard">
       <Setter Property="CornerRadius" Value="18" />
-      <Setter Property="Padding" Value="12" />
+      <Setter Property="Padding" Value="0" />
     </Style>
-    <Style Selector="Button.BookCardButton:pointerover Border.BookCard">
-      <Setter Property="Opacity" Value="0.97" />
+    <Style Selector="Border.BookCardHoverChrome">
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Background" Value="#00FFFFFF" />
+      <Setter Property="BorderBrush" Value="#00FFFFFF" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.BookCardButton:pointerover Border.BookCardHoverChrome:not(.Selected)">
+      <Setter Property="Background" Value="#14FFF8EF" />
+      <Setter Property="BorderBrush" Value="#C68F684C" />
+      <Setter Property="BorderThickness" Value="2" />
     </Style>
     <Style Selector="Border.CoverSlot">
       <Setter Property="CornerRadius" Value="16" />
@@ -127,38 +135,44 @@
                       <Border.BorderThickness>
                         <Binding Path="CardBorderThickness" />
                       </Border.BorderThickness>
-                      <Grid RowDefinitions="Auto,*"
-                            RowSpacing="10">
-                        <Border Classes="CoverSlot"
-                                Width="160"
-                                Height="240"
-                                HorizontalAlignment="Center"
-                                Background="{Binding CoverBackgroundBrush}">
-                          <Grid>
-                            <Image IsVisible="{Binding HasResolvedCover}"
-                                   Source="{Binding ResolvedCoverImage}"
-                                   Stretch="Uniform"
-                                   HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Stretch" />
-                            <TextBlock IsVisible="{Binding ShowCoverPlaceholder}"
-                                       FontSize="42"
-                                       FontWeight="Bold"
-                                       Foreground="#FFF8EF"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Text="{Binding CoverPlaceholderText}" />
-                          </Grid>
-                        </Border>
-                        <TextBlock Grid.Row="1"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"
-                                   TextAlignment="Center"
-                                   MaxWidth="160"
-                                   MinHeight="42"
-                                   MaxHeight="42"
-                                   Text="{Binding Title}"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis" />
+                      <Grid>
+                        <Border Classes="BookCardHoverChrome"
+                                Classes.Selected="{Binding IsSelected}"
+                                IsHitTestVisible="False" />
+                        <Grid Margin="12"
+                              RowDefinitions="Auto,*"
+                              RowSpacing="10">
+                          <Border Classes="CoverSlot"
+                                  Width="160"
+                                  Height="240"
+                                  HorizontalAlignment="Center"
+                                  Background="{Binding CoverBackgroundBrush}">
+                            <Grid>
+                              <Image IsVisible="{Binding HasResolvedCover}"
+                                     Source="{Binding ResolvedCoverImage}"
+                                     Stretch="Uniform"
+                                     HorizontalAlignment="Stretch"
+                                     VerticalAlignment="Stretch" />
+                              <TextBlock IsVisible="{Binding ShowCoverPlaceholder}"
+                                         FontSize="42"
+                                         FontWeight="Bold"
+                                         Foreground="#FFF8EF"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Text="{Binding CoverPlaceholderText}" />
+                            </Grid>
+                          </Border>
+                          <TextBlock Grid.Row="1"
+                                     FontWeight="SemiBold"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     MaxWidth="160"
+                                     MinHeight="42"
+                                     MaxHeight="42"
+                                     Text="{Binding Title}"
+                                     TextWrapping="Wrap"
+                                     TextTrimming="CharacterEllipsis" />
+                        </Grid>
                       </Grid>
                     </Border>
                   </Button>

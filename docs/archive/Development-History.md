@@ -165,3 +165,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: moved `Settings` to a bottom-anchored position in the left navigation rail so system configuration is visually separated from the primary `Library` and `Import` workflows.
 - `2026-04-01` Fix: replaced the technical left-rail subtitle with the product-facing slogan `A personal desktop library for your books.`
 - `2026-04-01` Fix: added a first application icon asset and wired it into the Avalonia window plus the Windows application manifest path.
+- `2026-04-01` Fix: removed the library-card hover opacity effect so pointer movement no longer dims the entire card and produces visible flicker across text and cover content.
+- `2026-04-01` Fix: restored a clearer but stable library-card hover affordance through an outer shadow instead of whole-card opacity changes, keeping pointer feedback visible without flicker.
+- `2026-04-01` Fix: refined library-card hover again to use rounded in-card highlight and border treatment aligned with the card shape, avoiding the rectangular shadow artifact behind rounded cards.
+- `2026-04-01` Fix: removed the double-outline conflict between hover and selected library cards by suppressing hover chrome on selected items and keeping the non-selected base card border at zero thickness.
