@@ -143,6 +143,7 @@ Rules:
 - Prefer `std::unique_ptr`, `std::shared_ptr`, and `std::weak_ptr` over raw owning pointers.
 - Avoid `new` and `delete` in application code.
 - Use RAII for every acquired resource.
+- RAII wrappers around native handles or third-party library resources must explicitly delete copy and move operations unless shared ownership is intentional and documented.
 - Use `nullptr` instead of `NULL` or `0`.
 - Use `[[nodiscard]]` when ignoring a return value is likely a bug.
 - Prefer in-class initialization and constructor initializer lists.
@@ -162,6 +163,7 @@ Logging rules:
 - Important execution paths in both C++ and C# must have actionable logs at startup, shutdown, IPC boundaries, long-running operations, and failure paths.
 - Do not write directly to `std::cout` or `std::cerr` from reusable library code.
 - When a project logging facade is introduced, use it consistently instead of mixing direct framework calls.
+- Command-line entry points may print usage or version text to standard output, but ordinary runtime diagnostics still belong in the logging facade.
 
 ## 10. Unicode and Path Handling
 
@@ -170,6 +172,8 @@ Logging rules:
 - Prefer `std::filesystem::path` for file-system APIs instead of raw strings.
 - Convert between UTF-8 text and OS-native paths only at explicit infrastructure boundaries.
 - Avoid `path.string()` when Unicode correctness matters; prefer keeping values as `std::filesystem::path` or using Unicode-safe conversions.
+- If the same Unicode/path-safety helper logic is needed in more than one module, extract a shared helper instead of copying anonymous-namespace utilities.
+- If bytes are transcoded from a legacy encoding into UTF-8, any retained XML or text encoding declaration must be rewritten to match the new UTF-8 content.
 
 ## 11. C# / Avalonia Rules
 
@@ -190,6 +194,7 @@ Logging rules:
 - Do not leak internal database or file-layout assumptions into public DTOs unless explicitly part of the contract.
 - Prefer additive contract evolution; avoid breaking field renames or number reuse.
 - Treat named-pipe method ids as append-only and keep C++ and C# transport enums synchronized in the same checkpoint.
+- Helper names must reflect actual ownership and return types; do not use names like `*View` for functions that return owning UTF-8 strings.
 
 ## 13. Testing Style
 

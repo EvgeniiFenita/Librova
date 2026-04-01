@@ -57,6 +57,8 @@ Add a new test when:
 - rollback or partial-failure semantics are introduced
 - a review found a bug class not covered by current tests
 - C++ and C# contracts can drift independently
+- a fix changes Unicode, encoding, path, or filesystem-boundary behavior
+- a fix changes startup, shutdown, or command-line control flow
 
 ## 4. Fake-Test Smell
 
@@ -66,6 +68,15 @@ Be suspicious when:
 - a fake implementation never models the real failure mode
 - a test checks that a method was called but not the user-visible outcome
 - a ViewModel test uses invalid paths or impossible state unless that is the scenario under test
+
+Specific regression classes that should remain covered once fixed:
+
+- Unicode or Cyrillic filesystem paths
+- legacy text encodings such as `windows-1251`
+- rollback and cancellation cleanup
+- cross-language enum or transport drift
+- search-index and database side effects, not only returned DTOs
+- CLI parsing for non-runtime flags such as `--help` and `--version`
 
 ## 5. UI Test Policy
 
@@ -82,3 +93,5 @@ For a meaningful vertical slice, prefer this order:
 3. strong host-backed test if the feature crosses `C# -> pipe -> C++`
 
 Do not add a strong integration test if existing lower-level tests already fully protect the change.
+
+When a review-pass bug is fixed, add the narrowest regression test that proves the original failure mode stays closed.

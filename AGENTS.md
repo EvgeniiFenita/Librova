@@ -58,6 +58,8 @@ Use `docs/archive/` only when the active documents are insufficient and historic
 - External converter integration stays user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive.
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
 - Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade.
+- If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
+- When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 
 ---
 
