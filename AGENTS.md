@@ -6,7 +6,7 @@ Librova is a Windows-first desktop e-book library manager.
 Two-process architecture: `Librova.UI` (C# / .NET / Avalonia) ↔ `Librova.Core` (C++20).  
 IPC: Protobuf over Windows named pipes. Storage: SQLite + FTS5. Build: CMake + vcpkg (native), .csproj (managed).
 
-Full product, architecture, and roadmap context lives in `docs/`. Read them before any substantive change.
+Full product, architecture, and backlog context lives in `docs/`. Read them before any substantive change.
 
 ---
 
@@ -16,7 +16,7 @@ Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
 2. `docs/Librova-Architecture.md` — frozen architectural decisions
-3. `docs/Librova-Roadmap.md` — active MVP buckets and release criteria
+3. `docs/Librova-Backlog.md` — active backlog and task priorities
 4. `docs/engineering/CodeStyleGuidelines.md` — naming and style rules
 5. `docs/engineering/CommitMessageGuidelines.md` — commit format
 6. `docs/engineering/TestStrategy.md` — what tests to add and when
@@ -48,8 +48,8 @@ Use `docs/archive/` only when the active documents are insufficient and historic
 - Do not invent architecture that conflicts with frozen decisions in `docs/Librova-Architecture.md`.
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
-- Map every new task to an open roadmap bucket in `docs/Librova-Roadmap.md` before starting.
-- Do not start convenience or side-feature work unless it directly closes an active roadmap item.
+- Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.
+- Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
 - In native libraries: keep `.hpp` and `.cpp` together unless a different layout is clearly necessary.
@@ -85,7 +85,7 @@ When a task completes, update docs **in the same task** if any of the following 
 |---|---|
 | Product scope or user-visible behavior | `docs/Librova-Product.md` |
 | Architecture decision | `docs/Librova-Architecture.md` |
-| Roadmap bucket closed or added | `docs/Librova-Roadmap.md` |
+| Backlog item closed, added, or reprioritized | `docs/Librova-Backlog.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | `docs/archive/Development-History.md` |
 | UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` |

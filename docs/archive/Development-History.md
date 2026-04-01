@@ -169,3 +169,6 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: restored a clearer but stable library-card hover affordance through an outer shadow instead of whole-card opacity changes, keeping pointer feedback visible without flicker.
 - `2026-04-01` Fix: refined library-card hover again to use rounded in-card highlight and border treatment aligned with the card shape, avoiding the rectangular shadow artifact behind rounded cards.
 - `2026-04-01` Fix: removed the double-outline conflict between hover and selected library cards by suppressing hover chrome on selected items and keeping the non-selected base card border at zero thickness.
+- `2026-04-01` Docs: replaced the mixed roadmap / MVP-remediation terminology with a single priority-based project backlog model, keeping the remaining manual-test remarks under one active backlog with `Critical`, `Major`, `Minor`, and `Low` priorities.
+- `2026-04-01` Docs: renamed the active backlog document from `Librova-Roadmap.md` to `Librova-Backlog.md` and updated project instructions plus reusable skill checklists to reference the new canonical path.
+- `2026-04-01` Docs: translated the active backlog document to English and cleaned up remaining plan / skill references so the repo consistently uses backlog-item terminology instead of roadmap buckets.

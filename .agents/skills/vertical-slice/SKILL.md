@@ -9,8 +9,8 @@ description: End-to-end implementation checklist for any new Librova feature. Us
 
 Before writing any code:
 
-1. Open `docs/Librova-Roadmap.md` and confirm the task maps to an open MVP bucket.
-2. If no bucket matches, **stop** and confirm with the user whether to proceed.
+1. Open `docs/Librova-Backlog.md` and confirm the task maps to an open backlog item.
+2. If no backlog item matches, **stop** and confirm with the user whether to proceed.
 3. Identify the slice category: read-side query / mutation-use-case / transport-contract / UI-shell-workflow.
 
 ---
@@ -81,7 +81,7 @@ Before marking the task done:
 
 - [ ] `Debug` and `Release` build both pass
 - [ ] All new tests are green
-- [ ] `docs/` updated for any changed product / architecture / roadmap reality
+- [ ] `docs/` updated for any changed product / architecture / backlog reality
 - [ ] `docs/archive/Development-History.md` has the verified checkpoint entry
 - [ ] No decorative tests added (see `docs/engineering/TestStrategy.md`)
 - [ ] No commits made unless explicitly requested

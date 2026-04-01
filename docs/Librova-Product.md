@@ -126,10 +126,7 @@ The current MVP includes:
 - diagnostics and logging;
 - a native host process behind the UI.
 
-The active MVP backlog still includes:
-
-- richer series and genres support;
-- release-candidate stabilization and validation.
+The active open work is tracked in the single project backlog document.
 
 ## 5. What Is Not Included In The MVP
 
@@ -173,6 +170,7 @@ Already implemented:
 
 Most remaining work now belongs to:
 
+- the open backlog items in [Librova Backlog](Librova-Backlog.md);
 - series and genres support;
 - stabilization and release-candidate hardening.
 
@@ -183,6 +181,6 @@ Planned future features include:
 ## 8. Related Documents
 
 - [Librova-Architecture](Librova-Architecture.md)
-- [Librova-Roadmap](Librova-Roadmap.md)
+- [Librova Backlog](Librova-Backlog.md)
 - [ManualUiTestScenarios](ManualUiTestScenarios.md)
 - [Development-History](archive/Development-History.md)

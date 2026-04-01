@@ -20,7 +20,7 @@ Copy this template to `.agent/plans/<task-name>.md` and fill in the sections.
 What is in scope. What is explicitly out of scope.
 
 ## Why It Matters
-Why this task closes a real MVP gap (link to Librova-Roadmap.md bucket).
+Why this task closes a real backlog gap (link to the relevant item in `docs/Librova-Backlog.md`).
 
 ## Steps
 
@@ -42,7 +42,7 @@ Concrete, verifiable criteria. Examples:
 - docs/ updated to match implemented reality
 
 ## Related Files
-- docs/Librova-Roadmap.md (bucket: ...)
+- docs/Librova-Backlog.md (item: ...)
 - docs/Librova-Architecture.md (section: ...)
 - docs/archive/Development-History.md (checkpoint to add on completion)
 ```
@@ -60,7 +60,7 @@ parser output → persistence → transport contracts → browser filter → det
 Out of scope: ratings, shelves, reading lists.
 
 ## Why It Matters
-Closes the open "series and genres" MVP bucket in docs/Librova-Roadmap.md.
+Closes the open "series and genres" backlog item in docs/Librova-Backlog.md.
 
 ## Steps
 
@@ -86,6 +86,6 @@ Closes the open "series and genres" MVP bucket in docs/Librova-Roadmap.md.
 - Manual UI scenario walked through
 
 ## Related Files
-- docs/Librova-Roadmap.md (Remaining MVP Work)
+- docs/Librova-Backlog.md (open item: series and genres)
 - docs/Librova-Architecture.md (Section 5: Search Model)
 ```

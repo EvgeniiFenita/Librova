@@ -12,7 +12,7 @@ optional conversion (FB2→EPUB) → staging → commit → database write → m
 
 ## Pre-Start
 
-- [ ] Confirm the task maps to an open roadmap bucket in `docs/Librova-Roadmap.md`
+- [ ] Confirm the task maps to an open backlog item in `docs/Librova-Backlog.md`
 - [ ] Identify which stage of the pipeline is changing
 
 ---

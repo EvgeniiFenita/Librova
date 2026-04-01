@@ -1,6 +1,6 @@
 ---
 name: review-pass
-description: Pre-release review and verification checklist for Librova. Use before starting a new major bucket, after closing a risky vertical slice, or when preparing for MVP release-candidate hardening.
+description: Pre-release review and verification checklist for Librova. Use before starting a new major backlog item, after closing a risky vertical slice, or when preparing for MVP release-candidate hardening.
 ---
 
 # Review Pass Checklist
@@ -71,7 +71,7 @@ Verify these files match implemented reality:
 
 - [ ] `docs/Librova-Product.md`
 - [ ] `docs/Librova-Architecture.md`
-- [ ] `docs/Librova-Roadmap.md`
+- [ ] `docs/Librova-Backlog.md`
 - [ ] `docs/ManualUiTestScenarios.md` (Russian, UI labels in English as-is)
 - [ ] `docs/archive/Development-History.md`
 - [ ] `AGENTS.md`
@@ -80,7 +80,7 @@ If any file disagrees with implemented reality, fix it before closing the review
 
 ---
 
-## 8. MVP Release Readiness Criteria (from Roadmap)
+## 8. MVP Release Readiness Criteria (from Backlog)
 
 - [ ] `Debug` and `Release` validation both green
 - [ ] Manual UI test scenarios walked through successfully
