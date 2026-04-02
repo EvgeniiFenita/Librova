@@ -32,13 +32,11 @@ Working rule:
   - Status: `Needs Reproduction`
   - Note: defect was reported in manual testing, but could not be reproduced again during follow-up verification.
 
+- `#19` rework the visual style around a modern dark media-app direction, covering palette, typography, and a unified icon set.
+  - Status: `Open`
+  - Note: target a modern dark look inspired by current media apps such as `Plex`, `Infuse`, and `Stremio`, with a dark gray or black base, one bright accent color, a modern readable font pairing for dark UI, and a consistent icon set for standard shell actions such as close window, export, move to trash, and settings.
+
 ### Minor
-
-- `#19` replace the current palette with a modern dark theme using one bright accent color across the shell.
-  - Status: `Open`
-
-- `#21` refresh typography using fonts that are practically available in Avalonia packaging and deployment for Windows.
-  - Status: `Open`
 
 ## 4. Closed Backlog
 
