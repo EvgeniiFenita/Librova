@@ -13,6 +13,8 @@ internal sealed partial class MainWindow : Window
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        MinWidth = ShellLayoutMetrics.MinimumWindowWidth;
+        MinHeight = ShellLayoutMetrics.MinimumWindowHeight;
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
     }

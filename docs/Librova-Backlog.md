@@ -35,9 +35,6 @@ Working rule:
 - `#6` keep the selected card visible when the details panel opens or closes by centering it in the visible viewport.
   - Status: `Open`
 
-- `#11` define and enforce minimum window dimensions that preserve multiple visible cards and at least two columns with the details panel open.
-  - Status: `Open`
-
 - `#23` keep cover aspect ratios intact and use a neutral card background instead of exposed color bands.
   - Status: `Open`
 
@@ -74,6 +71,9 @@ Working rule:
 - `#10` add explicit search mode selection: title or author, defaulting to title.
   - Status: `Closed`
   - Note: superseded by the accepted global full-text search model that matches title, authors, tags, and description through one field.
+
+- `#11` define and enforce minimum window dimensions that preserve multiple visible cards and at least two columns with the details panel open.
+  - Status: `Closed`
 
 ### Critical
 

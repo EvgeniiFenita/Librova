@@ -8,8 +8,6 @@
         x:DataType="viewModels:ShellWindowViewModel"
         Width="1240"
         Height="820"
-        MinWidth="980"
-        MinHeight="680"
         Icon="/Assets/librova.ico"
         DragDrop.AllowDrop="True"
         Background="#E9E1D6"
