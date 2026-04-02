@@ -83,7 +83,7 @@ If the user cancels a multi-file, directory, or ZIP import after some books were
 
 The user can:
 
-- search books by title or author through a single search field;
+- search books through a single full-text field that matches title, authors, tags, and description;
 - filter the grid by language;
 - see a library summary in the left `Current Library` panel with total managed-book count and total managed-book size in megabytes, excluding the database;
 - browse books as cover-driven cards in a responsive grid;

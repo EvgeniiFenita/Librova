@@ -35,9 +35,6 @@ Working rule:
 - `#6` keep the selected card visible when the details panel opens or closes by centering it in the visible viewport.
   - Status: `Open`
 
-- `#10` add explicit search mode selection: title or author, defaulting to title.
-  - Status: `Open`
-
 - `#11` define and enforce minimum window dimensions that preserve multiple visible cards and at least two columns with the details panel open.
   - Status: `Open`
 
@@ -73,6 +70,10 @@ Working rule:
 
 - `#12` show current library book count and managed-book size total in megabytes, excluding the database.
   - Status: `Closed`
+
+- `#10` add explicit search mode selection: title or author, defaulting to title.
+  - Status: `Closed`
+  - Note: superseded by the accepted global full-text search model that matches title, authors, tags, and description through one field.
 
 ### Critical
 
