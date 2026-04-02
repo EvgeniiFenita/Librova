@@ -87,7 +87,7 @@ The user can:
 - filter the grid by language;
 - see a library summary in the left `Current Library` panel with total managed-book count and total managed-book size in megabytes, excluding the database;
 - browse books as cover-driven cards in a responsive grid;
-- see stable-size book cards with a generated gradient placeholder when a cover is missing;
+- see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
 - open a right-hand details panel without leaving the `Library` section;
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;
 - inspect richer metadata for the selected book;

@@ -1,3 +1,5 @@
+using Avalonia;
+using Avalonia.Media;
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
@@ -800,6 +802,61 @@ public sealed class ViewModelsTests
 
         Assert.False(viewModel.HasBooks);
         Assert.Equal("No books found for the current filter.", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesGradientPlaceholderBackgroundWhenCoverIsMissing()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+
+        Assert.True(viewModel.Books[0].ShowCoverPlaceholder);
+        Assert.IsType<LinearGradientBrush>(viewModel.Books[0].CoverBackgroundBrush);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesNeutralBackgroundWhenRealCoverIsLoaded()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        var coversRoot = Path.Combine(sandboxRoot, "Covers");
+        Directory.CreateDirectory(coversRoot);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(coversRoot, "0000000001.png"), "stub-cover-file");
+
+            var loader = new StubCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(
+                new CoverAwareLibraryCatalogService(),
+                libraryRoot: sandboxRoot,
+                coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
+            var gridCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.Books[0].CoverBackgroundBrush);
+            Assert.Equal(Color.Parse("#E9E2D8"), gridCoverBackground.Color);
+
+            await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+            Assert.False(viewModel.ShowSelectedBookCoverPlaceholder);
+            var detailsCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.SelectedBookCoverBackgroundBrush);
+            Assert.Equal(Color.Parse("#E9E2D8"), detailsCoverBackground.Color);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -1745,6 +1802,20 @@ public sealed class ViewModelsTests
         {
             LoadedPaths.Add(absolutePath);
             return null;
+        }
+    }
+
+    private sealed class StubCoverImageLoader : ICoverImageLoader
+    {
+        public Avalonia.Media.IImage? Load(string absolutePath) => new StubCoverImage();
+    }
+
+    private sealed class StubCoverImage : IImage
+    {
+        public Size Size => new(1, 1);
+
+        public void Draw(DrawingContext context, Rect sourceRect, Rect destRect)
+        {
         }
     }
 

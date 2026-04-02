@@ -22,6 +22,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#D8CCBD"));
     private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#F7E9D8"));
     private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#BA5A2A"));
+    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#E9E2D8"));
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly ICoverImageLoader _coverImageLoader;
@@ -596,7 +597,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private BookListItemModel Prepare(BookListItemModel item)
     {
         item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, item.AuthorsText);
+        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(item.ResolvedCoverImage, item.BookId, item.Title, item.AuthorsText);
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         item.IsSelected = false;
         ApplySelectionStyle(item, isSelected: false);
@@ -606,7 +607,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private BookDetailsModel Prepare(BookDetailsModel item)
     {
         item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateGradientBrush(item.BookId, item.Title, BuildAuthorsText(item.Authors));
+        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(
+            item.ResolvedCoverImage,
+            item.BookId,
+            item.Title,
+            BuildAuthorsText(item.Authors));
         item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         return item;
     }
@@ -837,6 +842,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         item.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
         item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
     }
+
+    private static IBrush CreateCoverBackgroundBrush(IImage? resolvedCoverImage, long bookId, string title, string authorsText) =>
+        resolvedCoverImage is null
+            ? CreateGradientBrush(bookId, title, authorsText)
+            : RealCoverBackground;
 
     private static IBrush CreateGradientBrush(long bookId, string title, string authorsText)
     {
