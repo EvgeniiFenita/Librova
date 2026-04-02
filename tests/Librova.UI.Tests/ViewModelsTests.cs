@@ -836,13 +836,13 @@ public sealed class ViewModelsTests
 
             Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
             var gridCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.Books[0].CoverBackgroundBrush);
-            Assert.Equal(Color.Parse("#E9E2D8"), gridCoverBackground.Color);
+            Assert.Equal(Color.Parse("#0F141C"), gridCoverBackground.Color);
 
             await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
             Assert.False(viewModel.ShowSelectedBookCoverPlaceholder);
             var detailsCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.SelectedBookCoverBackgroundBrush);
-            Assert.Equal(Color.Parse("#E9E2D8"), detailsCoverBackground.Color);
+            Assert.Equal(Color.Parse("#0F141C"), detailsCoverBackground.Color);
         }
         finally
         {
@@ -1059,6 +1059,7 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
         await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
         Assert.True(viewModel.ShowExportAsEpubAction);
+        Assert.False(viewModel.ShowExportAsEpubHint);
         Assert.True(viewModel.ExportSelectedBookAsEpubCommand.CanExecute(null));
 
         await viewModel.ExportSelectedBookAsEpubAsync();
@@ -1070,15 +1071,31 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_DisablesExportAsEpubWhenConverterIsNotConfigured()
+    public async Task LibraryBrowserViewModel_ShowsExportAsEpubHintWhenConverterIsNotConfigured()
     {
         var viewModel = new LibraryBrowserViewModel(new InvalidMetadataLibraryCatalogService());
 
         await viewModel.RefreshAsync();
         await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
-        Assert.True(viewModel.ShowExportAsEpubAction);
+        Assert.False(viewModel.ShowExportAsEpubAction);
+        Assert.True(viewModel.ShowExportAsEpubHint);
+        Assert.Contains("Settings", viewModel.ExportAsEpubHintText, StringComparison.Ordinal);
         Assert.False(viewModel.ExportSelectedBookAsEpubCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_KeepsLanguageFilterWhenComboBoxSelectionTemporarilyClears()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
+        {
+            LanguageFilter = "ru"
+        };
+
+        viewModel.SelectedLanguageFilter = null!;
+
+        Assert.Equal("ru", viewModel.LanguageFilter);
+        Assert.Equal("ru", viewModel.SelectedLanguageFilter);
     }
 
     [Fact]

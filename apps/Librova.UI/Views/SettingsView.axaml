@@ -7,15 +7,17 @@
              x:DataType="viewModels:ShellViewModel"
              mc:Ignorable="d">
   <StackPanel Spacing="18">
-    <Border Classes="SurfaceCard">
+    <Border Classes="AppPanel">
       <StackPanel Spacing="12">
-        <TextBlock Classes="SectionTitle"
+        <TextBlock Classes="SectionEyebrow"
+                   Text="Preferences" />
+        <TextBlock Classes="ViewTitle"
                    Text="Converter" />
-        <TextBlock Opacity="0.72"
+        <TextBlock Classes="BodyMuted"
                    Text="Converter settings are applied on the next app launch. Disable conversion to keep imported FB2 files as FB2 when fallback rules allow it."
                    TextWrapping="Wrap" />
 
-        <ComboBox MinHeight="44"
+        <ComboBox Classes="AppComboBox"
                   SelectedItem="{Binding SelectedConverterMode}"
                   ItemsSource="{Binding AvailableConverterModes}" />
 
@@ -23,7 +25,7 @@
                     Spacing="10">
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="10">
-            <TextBox Classes="ImportField"
+            <TextBox Classes="AppTextInput"
                      Watermark="C:\Tools\fbc.exe"
                      Text="{Binding Fb2CngExecutablePath}" />
             <Button Grid.Column="1"
@@ -38,7 +40,7 @@
                     Spacing="10">
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="10">
-            <TextBox Classes="ImportField"
+            <TextBox Classes="AppTextInput"
                      Watermark="C:\Tools\custom-converter.exe"
                      Text="{Binding CustomConverterExecutablePath}" />
             <Button Grid.Column="1"
@@ -47,23 +49,23 @@
                     Command="{Binding BrowseCustomConverterExecutablePathCommand}"
                     Content="Browse..." />
           </Grid>
-          <ComboBox MinHeight="44"
+          <ComboBox Classes="AppComboBox"
                     SelectedItem="{Binding SelectedCustomConverterOutputMode}"
                     ItemsSource="{Binding AvailableConverterOutputModes}" />
           <TextBox AcceptsReturn="True"
                    MinHeight="120"
                    TextWrapping="Wrap"
+                   Classes="AppTextArea"
                    Watermark="One argument template per line, for example:&#10;--input&#10;{source}&#10;--output-dir&#10;{destination_dir}"
                    Text="{Binding CustomConverterArgumentsText}" />
         </StackPanel>
 
         <TextBlock FontSize="12"
-                   Foreground="#A04628"
+                   Foreground="{DynamicResource AppWarningBrush}"
                    IsVisible="{Binding HasConverterValidationError}"
                    Text="{Binding ConverterValidationMessage}"
                    TextWrapping="Wrap" />
-        <TextBlock FontSize="12"
-                   Opacity="0.64"
+        <TextBlock Classes="Caption"
                    IsVisible="{Binding ShowConverterHelperText}"
                    Text="Built-in mode targets fb2cng. Custom mode expects the same placeholder-based argument contract used by the native converter runtime."
                    TextWrapping="Wrap" />
@@ -77,13 +79,13 @@
       </StackPanel>
     </Border>
 
-    <Border Classes="TintedCard"
-            Background="#E7ECE6"
-            BorderBrush="#C6D3C1">
+    <Border Classes="AppPanelMuted">
       <StackPanel Spacing="10">
-        <TextBlock Classes="SectionTitle"
+        <TextBlock Classes="SectionEyebrow"
                    Text="Diagnostics" />
-        <TextBlock Opacity="0.74"
+        <TextBlock Classes="SectionTitle"
+                   Text="Runtime Paths" />
+        <TextBlock Classes="BodyMuted"
                    Text="{Binding DiagnosticsHintText}"
                    TextWrapping="Wrap" />
         <Grid ColumnDefinitions="Auto,*"
@@ -92,6 +94,7 @@
           <TextBlock FontWeight="SemiBold"
                      Text="UI log" />
           <TextBlock Grid.Column="1"
+                     Classes="BodyMuted"
                      Text="{Binding UiLogFilePath}"
                      TextWrapping="Wrap" />
           <TextBlock Grid.Row="1"
@@ -99,6 +102,7 @@
                      Text="Host log" />
           <TextBlock Grid.Row="1"
                      Grid.Column="1"
+                     Classes="BodyMuted"
                      Text="{Binding HostLogFilePath}"
                      TextWrapping="Wrap" />
           <TextBlock Grid.Row="2"
@@ -106,6 +110,7 @@
                      Text="UI state" />
           <TextBlock Grid.Row="2"
                      Grid.Column="1"
+                     Classes="BodyMuted"
                      Text="{Binding UiStateFilePath}"
                      TextWrapping="Wrap" />
           <TextBlock Grid.Row="3"
@@ -113,12 +118,14 @@
                      Text="Preferences" />
           <TextBlock Grid.Row="3"
                      Grid.Column="1"
+                     Classes="BodyMuted"
                      Text="{Binding UiPreferencesFilePath}"
                      TextWrapping="Wrap" />
         </Grid>
         <TextBlock FontWeight="SemiBold"
                    Text="Host executable" />
-        <TextBlock Text="{Binding HostExecutablePath}"
+        <TextBlock Classes="BodyMuted"
+                   Text="{Binding HostExecutablePath}"
                    TextWrapping="Wrap" />
       </StackPanel>
     </Border>

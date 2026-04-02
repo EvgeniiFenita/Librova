@@ -45,5 +45,6 @@ internal static class ShellLayoutMetrics
         + LibraryToolbarFootprintHeight
         + LibraryToolbarRowGap
         + (LibraryGridCardPadding * 2)
-        + ((LibraryCardHeight + LibraryCardVerticalGap) * LibraryVisibleCardRowCount);
+        + ((LibraryCardHeight + LibraryCardVerticalGap) * LibraryVisibleCardRowCount)
+        + 140;
 }

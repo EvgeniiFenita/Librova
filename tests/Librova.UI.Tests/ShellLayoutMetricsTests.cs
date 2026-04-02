@@ -34,9 +34,10 @@ public sealed class ShellLayoutMetricsTests
             + ShellLayoutMetrics.LibraryToolbarRowGap
             + (ShellLayoutMetrics.LibraryGridCardPadding * 2)
             + ((ShellLayoutMetrics.LibraryCardHeight + ShellLayoutMetrics.LibraryCardVerticalGap)
-                * ShellLayoutMetrics.LibraryVisibleCardRowCount);
+                * ShellLayoutMetrics.LibraryVisibleCardRowCount)
+            + 140;
 
         Assert.Equal(ShellLayoutMetrics.MinimumWindowHeight, requiredHeight);
-        Assert.True(ShellLayoutMetrics.MinimumWindowHeight > 820);
+        Assert.True(ShellLayoutMetrics.MinimumWindowHeight > 960);
     }
 }

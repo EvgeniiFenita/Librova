@@ -10,75 +10,22 @@
         Height="820"
         Icon="/Assets/librova.ico"
         DragDrop.AllowDrop="True"
-        Background="#E9E1D6"
-        Foreground="#211B17"
         mc:Ignorable="d">
-  <Window.Styles>
-    <Style Selector="Button">
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-    <Style Selector="TextBlock.SectionTitle">
-      <Setter Property="FontSize" Value="18" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="#2A241F" />
-    </Style>
-    <Style Selector="Border.SurfaceCard">
-      <Setter Property="CornerRadius" Value="22" />
-      <Setter Property="Padding" Value="22" />
-      <Setter Property="Background" Value="#FFF9F1" />
-      <Setter Property="BorderBrush" Value="#D8CCBD" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
-    <Style Selector="Border.TintedCard">
-      <Setter Property="CornerRadius" Value="22" />
-      <Setter Property="Padding" Value="22" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
-    <Style Selector="Button.PrimaryAction">
-      <Setter Property="Background" Value="#BA5A2A" />
-      <Setter Property="Foreground" Value="#FFF9F1" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="CornerRadius" Value="14" />
-    </Style>
-    <Style Selector="Button.SecondaryAction">
-      <Setter Property="Background" Value="#E7DDD1" />
-      <Setter Property="Foreground" Value="#2F2822" />
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="CornerRadius" Value="14" />
-    </Style>
-    <Style Selector="Button.DestructiveAction">
-      <Setter Property="Background" Value="#C35A3C" />
-      <Setter Property="Foreground" Value="#FFF9F1" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="CornerRadius" Value="14" />
-    </Style>
-    <Style Selector="TextBox.ImportField">
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="CornerRadius" Value="14" />
-      <Setter Property="Background" Value="#FFFDFC" />
-    </Style>
-  </Window.Styles>
-
   <Grid Margin="26">
-    <Border IsVisible="{Binding IsStartingUp}"
-            Background="#FFF8EF"
-            BorderBrush="#D9C7AE"
-            BorderThickness="1"
-            CornerRadius="28"
-            Padding="30">
+    <Border Classes="AppPanel"
+            IsVisible="{Binding IsStartingUp}">
       <ScrollViewer HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="14">
-          <TextBlock FontSize="34"
-                     FontWeight="Bold"
+        <StackPanel Spacing="18">
+          <TextBlock Classes="SectionEyebrow"
+                     Text="Launching" />
+          <TextBlock Classes="DisplayTitle"
                      Text="Librova is starting" />
           <TextBlock FontSize="16"
                      FontWeight="SemiBold"
                      Text="{Binding StatusText}" />
-          <TextBlock MaxWidth="760"
+          <TextBlock Classes="BodyMuted"
+                     MaxWidth="760"
                      FontSize="15"
                      Text="{Binding StartupGuidanceText}"
                      TextWrapping="Wrap" />
@@ -86,38 +33,31 @@
       </ScrollViewer>
     </Border>
 
-    <Border IsVisible="{Binding IsShowingFirstRunSetup}"
-            Background="#FFF8EF"
-            BorderBrush="#D9C7AE"
-            BorderThickness="1"
-            CornerRadius="28"
-            Padding="30">
+    <Border Classes="AppPanel"
+            IsVisible="{Binding IsShowingFirstRunSetup}">
       <ScrollViewer HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="18">
+        <StackPanel Spacing="22">
           <StackPanel Spacing="10">
-            <TextBlock FontSize="34"
-                       FontWeight="Bold"
+            <TextBlock Classes="SectionEyebrow"
+                       Text="First Launch" />
+            <TextBlock Classes="DisplayTitle"
                        Text="Set up your Librova library" />
             <TextBlock FontSize="16"
                        FontWeight="SemiBold"
                        Text="{Binding StatusText}" />
           </StackPanel>
 
-          <Border Background="#FFF9F1"
-                  BorderBrush="#E0CAB4"
-                  BorderThickness="1"
-                  CornerRadius="20"
-                  Padding="20">
+          <Border Classes="AccentPanel">
             <StackPanel Spacing="14">
               <TextBlock Classes="SectionTitle"
                          Text="Managed Library Root" />
-              <TextBlock Opacity="0.74"
+              <TextBlock Classes="BodyMuted"
                          Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
                          TextWrapping="Wrap" />
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="10">
-                <TextBox Classes="ImportField"
+                <TextBox Classes="AppTextInput"
                          Watermark="C:\Libraries\Librova"
                          Text="{Binding Setup.LibraryRoot}" />
                 <Button Grid.Column="1"
@@ -127,12 +67,11 @@
                         Content="Browse..." />
               </Grid>
               <TextBlock FontSize="12"
-                         Foreground="#A04628"
+                         Foreground="{DynamicResource AppWarningBrush}"
                          IsVisible="{Binding Setup.HasValidationError}"
                          Text="{Binding Setup.ValidationMessage}"
                          TextWrapping="Wrap" />
-              <TextBlock FontSize="12"
-                         Opacity="0.64"
+              <TextBlock Classes="Caption"
                          IsVisible="{Binding Setup.ShowHelperText}"
                          Text="Choose an absolute directory path. The folder may be new; Librova will create its managed structure on first launch."
                          TextWrapping="Wrap" />
@@ -149,17 +88,14 @@
       </ScrollViewer>
     </Border>
 
-    <Border IsVisible="{Binding HasStartupError}"
-            Background="#FFF4EC"
-            BorderBrush="#D97C49"
-            BorderThickness="1"
-            CornerRadius="28"
-            Padding="30">
+    <Border Classes="DangerPanel"
+            IsVisible="{Binding HasStartupError}">
       <ScrollViewer HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="14">
-          <TextBlock FontSize="34"
-                     FontWeight="Bold"
+        <StackPanel Spacing="18">
+          <TextBlock Classes="SectionEyebrow"
+                     Text="Recovery" />
+          <TextBlock Classes="DisplayTitle"
                      Text="Librova startup failed" />
           <TextBlock FontSize="16"
                      FontWeight="SemiBold"
@@ -168,15 +104,12 @@
                      FontSize="15"
                      Text="{Binding StartupError}"
                      TextWrapping="Wrap" />
-          <Border Background="#FFF9F1"
-                  BorderBrush="#E0CAB4"
-                  BorderThickness="1"
-                  CornerRadius="18"
-                  Padding="18">
+          <Border Classes="AppPanelMuted">
             <StackPanel Spacing="10">
               <TextBlock FontWeight="SemiBold"
                          Text="What to do next" />
-              <TextBlock Text="{Binding StartupGuidanceText}"
+              <TextBlock Classes="BodyMuted"
+                         Text="{Binding StartupGuidanceText}"
                          TextWrapping="Wrap" />
               <Grid ColumnDefinitions="Auto,*"
                     ColumnSpacing="10"
@@ -184,6 +117,7 @@
                 <TextBlock FontWeight="SemiBold"
                            Text="UI log" />
                 <TextBlock Grid.Column="1"
+                           Classes="BodyMuted"
                            Text="{Binding UiLogFilePath}"
                            TextWrapping="Wrap" />
                 <TextBlock Grid.Row="1"
@@ -191,6 +125,7 @@
                            Text="UI state" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
+                           Classes="BodyMuted"
                            Text="{Binding UiStateFilePath}"
                            TextWrapping="Wrap" />
                 <TextBlock Grid.Row="2"
@@ -198,27 +133,24 @@
                            Text="Preferences" />
                 <TextBlock Grid.Row="2"
                            Grid.Column="1"
+                           Classes="BodyMuted"
                            Text="{Binding UiPreferencesFilePath}"
                            TextWrapping="Wrap" />
               </Grid>
             </StackPanel>
           </Border>
 
-          <Border Background="#FFF9F1"
-                  BorderBrush="#E0CAB4"
-                  BorderThickness="1"
-                  CornerRadius="20"
-                  Padding="20"
+          <Border Classes="AccentPanel"
                   IsVisible="{Binding HasStartupRecoverySetup}">
             <StackPanel Spacing="14">
               <TextBlock Classes="SectionTitle"
                          Text="Choose Another Library Root" />
-              <TextBlock Opacity="0.74"
+              <TextBlock Classes="BodyMuted"
                          Text="If startup failed because the configured library root is unavailable or invalid, pick a different managed library root and retry startup from here."
                          TextWrapping="Wrap" />
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="10">
-                <TextBox Classes="ImportField"
+                <TextBox Classes="AppTextInput"
                          Watermark="C:\Libraries\Librova"
                          Text="{Binding Setup.LibraryRoot}" />
                 <Button Grid.Column="1"
@@ -228,12 +160,11 @@
                         Content="Browse..." />
               </Grid>
               <TextBlock FontSize="12"
-                         Foreground="#A04628"
+                         Foreground="{DynamicResource AppWarningBrush}"
                          IsVisible="{Binding Setup.HasValidationError}"
                          Text="{Binding Setup.ValidationMessage}"
                          TextWrapping="Wrap" />
-              <TextBlock FontSize="12"
-                         Opacity="0.64"
+              <TextBlock Classes="Caption"
                          IsVisible="{Binding Setup.ShowHelperText}"
                          Text="{Binding Setup.HelperText}"
                          TextWrapping="Wrap" />
@@ -250,66 +181,115 @@
     </Border>
 
     <Grid IsVisible="{Binding HasShell}"
-          ColumnDefinitions="250,*"
+          ColumnDefinitions="268,*"
           ColumnSpacing="20">
       <Border Grid.Column="0"
-              Background="#DCCBB8"
-              CornerRadius="28"
-              Padding="22">
+              Classes="AppPanel">
         <Grid RowDefinitions="Auto,Auto,*,Auto"
               RowSpacing="18">
-          <StackPanel Spacing="8">
-            <TextBlock FontSize="34"
-                       FontWeight="Bold"
+          <StackPanel Spacing="10">
+            <TextBlock Classes="SectionEyebrow"
+                       Text="Desktop Library Manager" />
+            <TextBlock Classes="DisplayTitle"
                        Text="Librova" />
-            <TextBlock Opacity="0.78"
+            <TextBlock Classes="BodyMuted"
                        Text="A personal desktop library for your books."
                        TextWrapping="Wrap" />
           </StackPanel>
 
           <StackPanel Grid.Row="1"
                       Spacing="10">
-            <Button Classes="SecondaryAction"
+            <Button Classes="NavItem"
+                    Classes.Active="{Binding Shell.IsLibrarySectionActive}"
                     HorizontalAlignment="Stretch"
-                    Command="{Binding Shell.ShowLibrarySectionCommand}"
-                    Content="Library" />
-            <Button Classes="SecondaryAction"
+                    Command="{Binding Shell.ShowLibrarySectionCommand}">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="12">
+                <PathIcon Classes="AppIcon"
+                          Data="{StaticResource IconLibrary}" />
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="Library" />
+                <PathIcon Grid.Column="2"
+                          Classes="AppIcon"
+                          Data="{StaticResource IconChevronRight}" />
+              </Grid>
+            </Button>
+            <Button Classes="NavItem"
+                    Classes.Active="{Binding Shell.IsImportSectionActive}"
                     HorizontalAlignment="Stretch"
-                    Command="{Binding Shell.ShowImportSectionCommand}"
-                    Content="Import" />
+                    Command="{Binding Shell.ShowImportSectionCommand}">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="12">
+                <PathIcon Classes="AppIcon"
+                          Data="{StaticResource IconImport}" />
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="Import" />
+                <PathIcon Grid.Column="2"
+                          Classes="AppIcon"
+                          Data="{StaticResource IconChevronRight}" />
+              </Grid>
+            </Button>
           </StackPanel>
 
           <Border Grid.Row="2"
-                  Background="#FFF8EF"
-                  CornerRadius="18"
-                  Padding="16">
-            <StackPanel Spacing="10">
-              <TextBlock FontWeight="SemiBold"
+                  Classes="AppPanelMuted">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="SectionEyebrow"
                          Text="Current Library" />
-              <TextBlock FontSize="12"
+              <TextBlock Classes="Caption"
                          Text="{Binding Shell.LibraryRoot}"
                          TextWrapping="Wrap" />
               <TextBlock FontSize="12"
                          FontWeight="SemiBold"
-                         Opacity="0.78"
+                         Foreground="{DynamicResource AppTextSecondaryBrush}"
                          Text="{Binding Shell.CurrentLibraryStatisticsText}"
                          TextWrapping="Wrap" />
               <Button Classes="SecondaryAction"
                       HorizontalAlignment="Stretch"
-                      Command="{Binding Shell.OpenLibraryCommand}"
-                      Content="Open Library..." />
+                      Command="{Binding Shell.OpenLibraryCommand}">
+                <Grid ColumnDefinitions="Auto,*"
+                      ColumnSpacing="10">
+                  <PathIcon Classes="AppIconAccent"
+                            Data="{StaticResource IconFolderOpen}" />
+                  <TextBlock Grid.Column="1"
+                             VerticalAlignment="Center"
+                             Text="Open Library..." />
+                </Grid>
+              </Button>
               <Button Classes="SecondaryAction"
                       HorizontalAlignment="Stretch"
-                      Command="{Binding Shell.CreateLibraryCommand}"
-                      Content="Create Library..." />
+                      Command="{Binding Shell.CreateLibraryCommand}">
+                <Grid ColumnDefinitions="Auto,*"
+                      ColumnSpacing="10">
+                  <PathIcon Classes="AppIconAccent"
+                            Data="{StaticResource IconAddFolder}" />
+                  <TextBlock Grid.Column="1"
+                             VerticalAlignment="Center"
+                             Text="Create Library..." />
+                </Grid>
+              </Button>
             </StackPanel>
           </Border>
 
           <Button Grid.Row="3"
-                  Classes="SecondaryAction"
+                  Classes="NavItem"
+                  Classes.Active="{Binding Shell.IsSettingsSectionActive}"
                   HorizontalAlignment="Stretch"
-                  Command="{Binding Shell.ShowSettingsSectionCommand}"
-                  Content="Settings" />
+                  Command="{Binding Shell.ShowSettingsSectionCommand}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="12">
+              <PathIcon Classes="AppIcon"
+                        Data="{StaticResource IconSettings}" />
+              <TextBlock Grid.Column="1"
+                         VerticalAlignment="Center"
+                         Text="Settings" />
+              <PathIcon Grid.Column="2"
+                        Classes="AppIcon"
+                        Data="{StaticResource IconChevronRight}" />
+            </Grid>
+          </Button>
         </Grid>
       </Border>
 

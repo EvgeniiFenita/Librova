@@ -7,25 +7,40 @@
              x:DataType="viewModels:ShellViewModel"
              mc:Ignorable="d">
   <StackPanel Spacing="18">
-    <Border Classes="SurfaceCard">
+    <Border Classes="AppPanel">
       <StackPanel Spacing="18">
         <StackPanel Spacing="6">
-          <TextBlock Classes="SectionTitle"
+          <TextBlock Classes="SectionEyebrow"
+                     Text="Ingest" />
+          <TextBlock Classes="ViewTitle"
                      Text="Import Books" />
-          <TextBlock Opacity="0.72"
+          <TextBlock Classes="BodyMuted"
                      Text="Drop local `.fb2`, `.epub`, or `.zip` files and folders onto the window, or use `Select Files...` / `Select Folder...` to import them into the managed library."
                      TextWrapping="Wrap" />
         </StackPanel>
 
-        <Border Classes="TintedCard"
-                Background="#F6E8D7"
-                BorderBrush="#D9BE98">
-          <StackPanel Spacing="12">
-            <TextBlock FontWeight="SemiBold"
-                       Text="Drop files or folders here" />
-            <TextBlock Opacity="0.82"
-                       Text="Librova accepts `.fb2`, `.epub`, `.zip`, multiple selected files, and recursive folder imports. Selecting or dropping sources starts the import flow immediately."
-                       TextWrapping="Wrap" />
+        <Border Classes="AccentPanel">
+          <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="12">
+              <Border Classes="MetricPill"
+                      Width="44"
+                      Height="44"
+                      Padding="0">
+                <PathIcon Classes="AppIconAccent"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Data="{StaticResource IconImport}" />
+              </Border>
+              <StackPanel Grid.Column="1"
+                          Spacing="6">
+                <TextBlock Classes="SectionTitle"
+                           Text="Drop files or folders here" />
+                <TextBlock Classes="BodyMuted"
+                           Text="Librova accepts `.fb2`, `.epub`, `.zip`, multiple selected files, and recursive folder imports. Selecting or dropping sources starts the import flow immediately."
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
             <WrapPanel Orientation="Horizontal"
                        ItemSpacing="14"
                        ItemHeight="44">
@@ -34,7 +49,7 @@
                       HorizontalAlignment="Left"
                       Command="{Binding ImportJobs.SelectSourceAndImportCommand}"
                       Content="Select Files..." />
-              <Button Classes="PrimaryAction"
+              <Button Classes="SecondaryAction"
                       Width="180"
                       HorizontalAlignment="Left"
                       Command="{Binding ImportJobs.SelectDirectoryAndImportCommand}"
@@ -44,28 +59,30 @@
         </Border>
 
         <TextBlock FontSize="12"
-                   Foreground="#A04628"
+                   Foreground="{DynamicResource AppWarningBrush}"
                    IsVisible="{Binding ImportJobs.HasSourceValidationError}"
                    Text="{Binding ImportJobs.SourceValidationMessage}"
                    TextWrapping="Wrap" />
         <CheckBox IsChecked="{Binding ImportJobs.AllowProbableDuplicates}"
                   Content="Allow duplicate import" />
-        <TextBlock Opacity="0.72"
+        <TextBlock Classes="BodyMuted"
                    Text="When enabled, Librova can continue after a probable duplicate warning and store the new book as a separate managed record."
                    TextWrapping="Wrap" />
         <CheckBox IsVisible="{Binding ImportJobs.ShowForceEpubConversionOption}"
                   IsChecked="{Binding ImportJobs.ForceEpubConversionOnImport}"
                   Content="Force conversion to EPUB during import" />
         <TextBlock IsVisible="{Binding ImportJobs.ShowForceEpubConversionOption}"
-                   Opacity="0.72"
+                   Classes="BodyMuted"
                    Text="When enabled, FB2 imports use the configured converter and store the managed book as EPUB. When disabled, FB2 files stay FB2 even if a converter is configured."
                    TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 
-    <Border Classes="SurfaceCard"
+    <Border Classes="SuccessPanel"
             IsVisible="{Binding ImportJobs.ShowRunningImportState}">
       <StackPanel Spacing="14">
+        <TextBlock Classes="SectionEyebrow"
+                   Text="Running" />
         <TextBlock Classes="SectionTitle"
                    Text="Import In Progress" />
         <TextBlock FontSize="16"
@@ -74,10 +91,10 @@
         <TextBlock FontWeight="SemiBold"
                    Text="{Binding ImportJobs.ProgressSummaryText}"
                    TextWrapping="Wrap" />
-        <TextBlock Opacity="0.78"
+        <TextBlock Classes="BodyMuted"
                    Text="{Binding ImportJobs.SelectedSourcePathText}"
                    TextWrapping="Wrap" />
-        <TextBlock Opacity="0.78"
+        <TextBlock Classes="BodyMuted"
                    Text="The import pipeline is running. Navigation and other actions stay locked until the import finishes or is cancelled."
                    TextWrapping="Wrap" />
         <WrapPanel>
@@ -89,9 +106,11 @@
       </StackPanel>
     </Border>
 
-    <Border Classes="SurfaceCard"
+    <Border Classes="AppPanel"
             IsVisible="{Binding ImportJobs.HasImportResult}">
       <StackPanel Spacing="14">
+        <TextBlock Classes="SectionEyebrow"
+                   Text="Result" />
         <TextBlock Classes="SectionTitle"
                    Text="Last Import Result" />
         <TextBlock FontSize="16"
@@ -100,35 +119,40 @@
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Summary" />
-          <TextBlock Text="{Binding ImportJobs.ResultSummaryText}"
+          <TextBlock Classes="BodyMuted"
+                     Text="{Binding ImportJobs.ResultSummaryText}"
                      TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Last Known Progress" />
-          <TextBlock Text="{Binding ImportJobs.ProgressSummaryText}"
+          <TextBlock Classes="BodyMuted"
+                     Text="{Binding ImportJobs.ProgressSummaryText}"
                      TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Imported Source" />
-          <TextBlock Text="{Binding ImportJobs.SelectedSourcePathText}"
+          <TextBlock Classes="BodyMuted"
+                     Text="{Binding ImportJobs.SelectedSourcePathText}"
                      TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Warnings" />
-          <TextBlock Text="{Binding ImportJobs.WarningsText}"
+          <TextBlock Classes="BodyMuted"
+                     Text="{Binding ImportJobs.WarningsText}"
                      TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock FontWeight="SemiBold"
                      Text="Error" />
-          <TextBlock Text="{Binding ImportJobs.ErrorText}"
+          <TextBlock Classes="BodyMuted"
+                     Text="{Binding ImportJobs.ErrorText}"
                      TextWrapping="Wrap" />
         </StackPanel>
       </StackPanel>

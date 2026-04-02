@@ -1,0 +1,341 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI, sans-serif" />
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.AppPanel">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.Card}" />
+  </Style>
+
+  <Style Selector="Border.AppPanelCompact">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.CardCompact}" />
+  </Style>
+
+  <Style Selector="Border.AppPanelMuted">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.CardCompact}" />
+  </Style>
+
+  <Style Selector="Border.AccentPanel">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentMutedBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.CardCompact}" />
+  </Style>
+
+  <Style Selector="Border.SuccessPanel">
+    <Setter Property="Background" Value="{DynamicResource AppSuccessSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppSuccessBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.CardCompact}" />
+  </Style>
+
+  <Style Selector="Border.DangerPanel">
+    <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding.CardCompact}" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="#06141E" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction:pointerover">
+    <Setter Property="Background" Value="#8EDDFF" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="#06141E" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#8EDDFF" />
+    <Setter Property="Foreground" Value="#041018" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction:disabled">
+    <Setter Property="Background" Value="#2A5570" />
+    <Setter Property="Foreground" Value="#D6E7F3" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="Button.PrimaryAction:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="#2A5570" />
+    <Setter Property="Foreground" Value="#D6E7F3" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="Button.SecondaryAction">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.SecondaryAction:pointerover">
+    <Setter Property="Background" Value="#344359" />
+  </Style>
+
+  <Style Selector="Button.SecondaryAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.SecondaryAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.AccentAction">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentMutedBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.AccentAction:pointerover">
+    <Setter Property="Background" Value="#183247" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.AccentAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.AccentAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#183247" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.DestructiveAction">
+    <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />
+    <Setter Property="Foreground" Value="#FFE8E8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.DestructiveAction:pointerover">
+    <Setter Property="Background" Value="#5B2C39" />
+  </Style>
+
+  <Style Selector="Button.DestructiveAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />
+    <Setter Property="Foreground" Value="#FFE8E8" />
+  </Style>
+
+  <Style Selector="Button.DestructiveAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#5B2C39" />
+    <Setter Property="Foreground" Value="#FFF2F2" />
+  </Style>
+
+  <Style Selector="Button.IconAction">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.IconAction:pointerover">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.IconAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.IconAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.NavItem">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="BorderBrush" Value="#00FFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="Button.NavItem:pointerover">
+    <Setter Property="Background" Value="#324154" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+  </Style>
+
+  <Style Selector="Button.NavItem /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.NavItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#324154" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.NavItem.Active">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.AppTextInput">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="14,0" />
+  </Style>
+
+  <Style Selector="TextBox.AppTextArea">
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox:pointerover">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox /template/ ToggleButton">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox:pointerover /template/ ToggleButton">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox:focus /template/ ToggleButton">
+    <Setter Property="Background" Value="#344359" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox.AppComboBox /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem:pointerover">
+    <Setter Property="Background" Value="#324154" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="CheckBox:pointerover /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Border.MetricPill">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="16,10" />
+  </Style>
+
+  <Style Selector="Border.CoverMatte">
+    <Setter Property="Background" Value="{DynamicResource AppMatteBrush}" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <Style Selector="PathIcon.AppIcon">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="PathIcon.AppIconAccent">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+</Styles>

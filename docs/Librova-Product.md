@@ -105,6 +105,8 @@ The export dialog should suggest a meaningful default filename derived from the 
 
 If the active session has a configured converter, managed `FB2` books can also be exported as `EPUB` through a dedicated `Export As EPUB` action.
 
+If a selected managed book is `FB2` but the current session has no configured converter, the details panel does not show the `Export As EPUB` action and instead points the user to `Settings` to configure a converter.
+
 ### 3.5 Delete / Recycle
 
 The current product keeps a safe user-facing delete action through the managed-library `Trash` flow.

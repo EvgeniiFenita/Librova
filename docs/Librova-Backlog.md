@@ -44,15 +44,15 @@ Working rule:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section.
 
-- `#19` rework the visual style around a modern dark media-app direction, covering palette, typography, and a unified icon set.
-  - Status: `Open`
-  - Note: target a modern dark look inspired by current media apps such as `Plex`, `Infuse`, and `Stremio`, with a dark gray or black base, one bright accent color, a modern readable font pairing for dark UI, and a consistent icon set for standard shell actions such as close window, export, move to trash, and settings.
-
 ### Minor
 
 ## 4. Closed Backlog
 
 ### Major
+
+- `#19` rework the visual style around a modern dark media-app direction, covering palette, typography, and a unified icon set.
+  - Status: `Closed`
+  - Note: completed in `apps/Librova.UI` with a unified dark shell, shared style tokens, refreshed iconography, and accepted manual UI verification across `Library`, `Import`, `Settings`, startup/recovery states, and the application icon.
 
 - `#2` restore live search filtering and full-list recovery after clearing the query.
   - Status: `Closed`

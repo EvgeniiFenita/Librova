@@ -99,4 +99,5 @@ if ($NoLaunch) {
     return
 }
 
-& $uiExecutable
+$process = Start-Process -FilePath $uiExecutable -PassThru
+Write-Host ("==> Librova UI started. PID: {0}" -f $process.Id)

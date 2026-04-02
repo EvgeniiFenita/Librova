@@ -18,11 +18,11 @@ namespace Librova.UI.ViewModels;
 internal sealed class LibraryBrowserViewModel : ObservableObject
 {
     private const double BytesPerMegabyte = 1024d * 1024d;
-    private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#FFF9F1"));
-    private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#D8CCBD"));
-    private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#F7E9D8"));
-    private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#BA5A2A"));
-    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#E9E2D8"));
+    private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#171D27"));
+    private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#2B3647"));
+    private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#1A2634"));
+    private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#4CC2FF"));
+    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#0F141C"));
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly ICoverImageLoader _coverImageLoader;
@@ -111,6 +111,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         get => string.IsNullOrWhiteSpace(LanguageFilter) ? "All languages" : LanguageFilter;
         set
         {
+            if (value is null)
+            {
+                RaisePropertyChanged(nameof(SelectedLanguageFilter));
+                return;
+            }
+
             var effectiveValue = string.Equals(value, "All languages", StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
                 : value;
@@ -197,6 +203,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
                 RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
                 RaisePropertyChanged(nameof(ShowExportAsEpubAction));
+                RaisePropertyChanged(nameof(ShowExportAsEpubHint));
+                RaisePropertyChanged(nameof(ExportAsEpubHintText));
                 RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
@@ -224,6 +232,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 RaisePropertyChanged(nameof(HasSelectedBookCover));
                 RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
                 RaisePropertyChanged(nameof(ShowExportAsEpubAction));
+                RaisePropertyChanged(nameof(ShowExportAsEpubHint));
+                RaisePropertyChanged(nameof(ExportAsEpubHintText));
                 RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
             }
@@ -273,8 +283,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
     public bool ShowDetailsPanelLoading => HasSelectedBook && IsLoadingSelectionDetails;
-    public bool ShowExportAsEpubAction => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2;
-    public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction && _hasConfiguredConverter;
+    public bool ShowExportAsEpubAction => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2 && _hasConfiguredConverter;
+    public bool ShowExportAsEpubHint => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2 && !_hasConfiguredConverter;
+    public string ExportAsEpubHintText => "Configure a converter in Settings to enable EPUB export.";
+    public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction;
     public bool ShowEmptyState => !HasBooks;
     public bool CanGoToPreviousPage => CurrentPage > 1;
     public string PageSizeText => $"{PageSize} per page";
@@ -658,13 +670,49 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             items.Add(LanguageFilter);
         }
 
-        AvailableLanguageFilters.Clear();
-        foreach (var item in items.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            AvailableLanguageFilters.Add(item);
-        }
+        SynchronizeLanguageFilters(items.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
 
         RaisePropertyChanged(nameof(SelectedLanguageFilter));
+    }
+
+    private void SynchronizeLanguageFilters(IReadOnlyList<string> desiredItems)
+    {
+        for (var index = AvailableLanguageFilters.Count - 1; index >= 0; index--)
+        {
+            if (!desiredItems.Contains(AvailableLanguageFilters[index], StringComparer.OrdinalIgnoreCase))
+            {
+                AvailableLanguageFilters.RemoveAt(index);
+            }
+        }
+
+        for (var desiredIndex = 0; desiredIndex < desiredItems.Count; desiredIndex++)
+        {
+            var desiredItem = desiredItems[desiredIndex];
+            var existingIndex = IndexOfLanguageFilter(desiredItem);
+            if (existingIndex < 0)
+            {
+                AvailableLanguageFilters.Insert(desiredIndex, desiredItem);
+                continue;
+            }
+
+            if (existingIndex != desiredIndex)
+            {
+                AvailableLanguageFilters.Move(existingIndex, desiredIndex);
+            }
+        }
+    }
+
+    private int IndexOfLanguageFilter(string value)
+    {
+        for (var index = 0; index < AvailableLanguageFilters.Count; index++)
+        {
+            if (string.Equals(AvailableLanguageFilters[index], value, StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private IReadOnlyList<MetadataPair> BuildSelectedBookMetadataPairs()
