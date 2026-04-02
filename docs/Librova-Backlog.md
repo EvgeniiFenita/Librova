@@ -17,7 +17,7 @@ Working rule:
 
 ## 2. Priority Meanings
 
-- `Critical`: breaks a core user flow or leaves the MVP functionally incomplete.
+- `Critical`: breaks a core user flow or leaves the current release scope functionally incomplete.
 - `Major`: a strong UX or layout defect that noticeably hurts day-to-day use.
 - `Minor`: local polish or visual consistency work without a broken flow.
 - `Low`: useful but least urgent polish.
@@ -31,6 +31,18 @@ Working rule:
 - `#1` unblock `Export` and `Move to Trash` after the first successful directory import.
   - Status: `Needs Reproduction`
   - Note: defect was reported in manual testing, but could not be reproduced again during follow-up verification.
+
+- `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
+  - Status: `Open`
+  - Note: treat `series` and `genres` as first-class metadata end-to-end instead of incidental parser output.
+
+- `#25` add Windows `Recycle Bin` integration as a first-class delete flow instead of limiting delete to the managed-library `Trash` area.
+  - Status: `Open`
+  - Note: keep deletion safety explicit, preserve rollback-aware behavior where needed, and define how `Recycle Bin` integration coexists with or supersedes the current managed `Trash` flow.
+
+- `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
+  - Status: `Open`
+  - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section.
 
 - `#19` rework the visual style around a modern dark media-app direction, covering palette, typography, and a unified icon set.
   - Status: `Open`
@@ -98,7 +110,7 @@ Working rule:
 - `#13` add a file-picker button for choosing the converter executable path.
   - Status: `Closed`
 
-- `#14` remove the optional YAML config field for `fbc.exe` from the MVP UI.
+- `#14` remove the optional YAML config field for `fbc.exe` from the Settings UI.
   - Status: `Closed`
 
 - `#16` move `Settings` to the bottom of the left navigation rail.
@@ -110,16 +122,7 @@ Working rule:
 - `#22` add an application icon for the window title bar and Windows taskbar.
   - Status: `Closed`
 
-## 5. Standing Product Work
-
-Separate from the manual-test remarks, a few standing product tasks remain:
-
-- strengthen series and genres support across parsing, storage, details, and browser filtering;
-- final release-candidate stabilization, diagnostics hardening, and manual verification.
-
-They are still part of the product direction, but for day-to-day work in the current flow, the backlog above is the primary working list.
-
-## 6. Done Criteria
+## 5. Done Criteria
 
 A task can be considered closed only when:
 
@@ -128,7 +131,7 @@ A task can be considered closed only when:
 - documentation is updated if user-visible behavior or working rules changed;
 - the user confirms manual verification when the task comes from UI or manual-test remarks.
 
-## 7. History
+## 6. History
 
 Verified change history is maintained in:
 

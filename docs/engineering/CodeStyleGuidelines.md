@@ -21,7 +21,7 @@ If a rule conflicts with generated code requirements, generated files may be exe
 - Prefer readability and explicitness over cleverness.
 - Keep domain logic independent from UI, transport, database, and OS-specific code.
 - Prefer small, testable units over large multipurpose classes.
-- Use English only in code, comments, logs, docs, commit messages, and UI source strings for MVP.
+- Use English only in code, comments, logs, docs, commit messages, and UI source strings.
 - Treat Unicode and UTF-8 as first-class concerns from day one.
 
 ## 3. C++ Naming Rules

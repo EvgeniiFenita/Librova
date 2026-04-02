@@ -73,7 +73,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Feature: added the first protobuf service adapter over `ApplicationJobs` for `LibraryJobService` operations.
 - `2026-03-30` Feature: extended the shared protobuf and named-pipe surface with read-side `ListBooks`, a dedicated catalog proto mapper, and end-to-end adapter/dispatcher coverage against the real SQLite query path.
 - `2026-03-30` Build: enabled protobuf tooling through manifest `vcpkg` and added a local `protoc` validation script.
-- `2026-03-30` Docs: revised the IPC baseline from mandatory `gRPC` runtime to transport-neutral `Protobuf over Windows named pipes` for the MVP.
+- `2026-03-30` Docs: revised the IPC baseline from mandatory `gRPC` runtime to transport-neutral `Protobuf over Windows named pipes` for the initial release scope.
 - `2026-03-30` Feature: added the first pipe transport foundation with binary envelope framing and protobuf request dispatch over the job service adapter.
 - `2026-03-30` Feature: added the first Win32 named-pipe channel with real message round-trip coverage.
 - `2026-03-30` Fix: hardened import job manager teardown by joining worker threads and removed nondeterministic test-process crashes during shutdown.
@@ -133,8 +133,8 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-03-30` Refactor: removed stale `ProtoGrpcServices` scaffolding and added the first native `spdlog`-backed logging facade with host file logging.
 - `2026-03-30` Feature: added the first UI `Serilog`-backed logging baseline with file/debug sinks, lifecycle logging across host bootstrap and import-job service calls, and `xUnit` file-output coverage.
 - `2026-03-30` Docs: archived the original long-form architecture plan and reduced `docs/Librova-Architecture-Master.md` to a concise active architecture summary with only frozen decisions and the remaining roadmap.
-- `2026-03-30` Docs: resynchronized the active roadmap, stable project documentation, and session rules so only the real remaining MVP gaps stay on the forward path.
-- `2026-03-30` Docs: added permanent MVP scope, feature-playbook, test-strategy, transport-invariant, and review-checklist documents to standardize future vertical slices and reduce roadmap drift.
+- `2026-03-30` Docs: resynchronized the active roadmap, stable project documentation, and session rules so only the real remaining release-scope gaps stay on the forward path.
+- `2026-03-30` Docs: added permanent release-scope, feature-playbook, test-strategy, transport-invariant, and review-checklist documents to standardize future vertical slices and reduce roadmap drift.
 - `2026-03-30` Fix: corrected the restructured UI shell so section switching affects the main content area correctly and the running-shell workspace uses vertical scrolling instead of overlapping views.
 - `2026-03-30` Build: validated the full `x64-release` path, fixed the native process-level host test to work outside `Debug`, hardened `Run-Tests.ps1` to stop on failing external commands, and verified `Run-Librova.ps1` against `Release` runtime paths without launching the UI.
 - `2026-03-30` Fix: hardened startup recovery by persisting first-run library settings only after successful shell startup, exposing a recovery setup path on the startup-error screen, and aligning development defaults with the injected UI preferences store.
@@ -149,7 +149,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Refactor: centralized managed-path safety validation and UTF-8 path conversion into a shared native helper slice, then re-verified export and trash flows with dedicated unit coverage.
 - `2026-04-01` Cleanup: hardened local ZIP archive wrappers against accidental copy and move semantics, and narrowed import-job progress wakeups to `notify_one` on the single-waiter path.
 - `2026-04-01` Cleanup: rewrote decoded FB2 XML declarations to `utf-8`, made search-index insert semantics explicit, added host `--help` and `--version` handling, and removed misleading UTF-8 helper naming in proto mappers.
-- `2026-04-01` Fix: assigned external converter processes to kill-on-close job objects before resuming execution, made FB2 encoding-declaration rewrite case-insensitive, added host process smoke coverage for `--help` and `--version`, and synchronized the review-pass skill with the active MVP roadmap.
+- `2026-04-01` Fix: assigned external converter processes to kill-on-close job objects before resuming execution, made FB2 encoding-declaration rewrite case-insensitive, added host process smoke coverage for `--help` and `--version`, and synchronized the review-pass skill with the active roadmap.
 - `2026-04-01` Fix: restored live library search updates on each keystroke, made clearing the search box reload the full catalog immediately, and added ViewModel regression coverage plus a manual UI expectation update.
 - `2026-04-01` Fix: changed export dialog suggestions to use sanitized `title + author` filenames instead of the generic `book` placeholder, with ViewModel regression coverage and updated product/manual UI docs.
 - `2026-04-01` Fix: restored the import duplicate-override checkbox and re-verified through a host-backed UI test that probable-duplicate imports can create separate managed books with independent ids and files.
@@ -160,7 +160,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: unified the `Select Files...` and `Select Folder...` import actions under the same primary styling so both source-selection paths read as equivalent actions.
 - `2026-04-01` Fix: normalized shell button semantics by making `Save` a primary action and introducing a distinct destructive style for `Move To Trash`, while keeping navigation and browse flows secondary.
 - `2026-04-01` Fix: added a dedicated `Browse...` picker for the built-in `fb2cng` executable path in `Settings`, wired through the shell path-selection abstraction with C# coverage.
-- `2026-04-01` Fix: removed the MVP YAML config path from the built-in `fb2cng` settings flow and stopped the UI defaults layer from surfacing legacy saved config paths back into host launch options.
+- `2026-04-01` Fix: removed the YAML config path from the built-in `fb2cng` settings flow and stopped the UI defaults layer from surfacing legacy saved config paths back into host launch options.
 - `2026-04-01` Fix: added the same executable `Browse...` picker affordance to the custom converter settings path so both converter modes can be configured without manual path typing.
 - `2026-04-01` Fix: moved `Settings` to a bottom-anchored position in the left navigation rail so system configuration is visually separated from the primary `Library` and `Import` workflows.
 - `2026-04-01` Fix: replaced the technical left-rail subtitle with the product-facing slogan `A personal desktop library for your books.`
@@ -169,7 +169,7 @@ Update it when a logical step is finished, verified, and ready to be treated as 
 - `2026-04-01` Fix: restored a clearer but stable library-card hover affordance through an outer shadow instead of whole-card opacity changes, keeping pointer feedback visible without flicker.
 - `2026-04-01` Fix: refined library-card hover again to use rounded in-card highlight and border treatment aligned with the card shape, avoiding the rectangular shadow artifact behind rounded cards.
 - `2026-04-01` Fix: removed the double-outline conflict between hover and selected library cards by suppressing hover chrome on selected items and keeping the non-selected base card border at zero thickness.
-- `2026-04-01` Docs: replaced the mixed roadmap / MVP-remediation terminology with a single priority-based project backlog model, keeping the remaining manual-test remarks under one active backlog with `Critical`, `Major`, `Minor`, and `Low` priorities.
+- `2026-04-01` Docs: replaced the mixed roadmap / remediation terminology with a single priority-based project backlog model, keeping the remaining manual-test remarks under one active backlog with `Critical`, `Major`, `Minor`, and `Low` priorities.
 - `2026-04-01` Docs: renamed the active backlog document from `Librova-Roadmap.md` to `Librova-Backlog.md` and updated project instructions plus reusable skill checklists to reference the new canonical path.
 - `2026-04-01` Docs: translated the active backlog document to English and cleaned up remaining plan / skill references so the repo consistently uses backlog-item terminology instead of roadmap buckets.
 - `2026-04-01` Fix: added deterministic aggregate import progress across multi-file, directory, and ZIP import flows by carrying total/processed/imported/failed/skipped counts through the job snapshot transport, surfacing them in the UI running/result states, and re-verifying native plus managed regression coverage.

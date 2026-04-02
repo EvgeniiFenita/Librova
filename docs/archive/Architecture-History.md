@@ -6,7 +6,7 @@ Librova is a desktop application for managing a personal library of e-books. The
 
 The system is designed for:
 
-- Windows-only MVP;
+- Windows-only initial release scope;
 - single user;
 - exactly one managed library;
 - offline operation;
@@ -15,7 +15,7 @@ The system is designed for:
 - clean separation between C# UI and C++ core;
 - future portability to Linux/macOS after the first release.
 
-## 2. MVP Scope
+## 2. Initial Release Scope
 
 ### Included
 
@@ -33,7 +33,7 @@ The system is designed for:
 - progress reporting and cancellation for long-running jobs;
 - first-run setup wizard.
 
-### Excluded from MVP
+### Excluded from Initial Release Scope
 
 - reading books inside the app;
 - metadata editing;
@@ -48,7 +48,7 @@ These excluded items should remain supported as future extension points in the a
 
 ### 3.1 Supported formats
 
-Input formats in MVP:
+Input formats in the initial release scope:
 
 - `EPUB`
 - `FB2`
@@ -63,7 +63,7 @@ ZIP rules:
 
 ### 3.2 Library storage rule
 
-The MVP stores one managed file per logical book.
+The initial release scope stores one managed file per logical book.
 
 - imported `EPUB` is stored as `EPUB`;
 - imported `FB2` is converted to `EPUB` when conversion succeeds;
@@ -92,7 +92,7 @@ Behavior:
 
 ### 3.4 Metadata model
 
-Normalized metadata for MVP includes:
+Normalized metadata for the initial release scope includes:
 
 - title;
 - authors;
@@ -110,7 +110,7 @@ Normalized metadata for MVP includes:
 Rules:
 
 - authors are normalized into a separate entity with many-to-many relation;
-- one language per book in MVP;
+- one language per book in the initial release scope;
 - no metadata history;
 - no raw metadata snapshot in the domain model;
 - cover is stored as a file on disk.
@@ -122,7 +122,7 @@ Required search behavior:
 - case-insensitive;
 - Cyrillic `e` and `yo` treated as equivalent;
 - prefix search supported;
-- no morphology or stemming in MVP.
+- no morphology or stemming in the initial release scope.
 
 Required filters:
 
@@ -147,7 +147,7 @@ Expected scale is a few thousand books, so maintainability and correctness are m
 ## 4. UX Constraints
 
 - UI framework is Avalonia.
-- UI language is English in MVP.
+- UI language is English in the initial release scope.
 - book metadata must support Unicode and Cyrillic correctly;
 - main library view must support a cover grid;
 - drag and drop must work for files, folders, and ZIP archives;
@@ -195,7 +195,7 @@ Deliberate decisions:
 - no C++ Modules;
 - no C++/CLI;
 - no in-process native interop as the main architecture;
-- no mandatory gRPC runtime in the MVP transport path;
+- no mandatory gRPC runtime in the initial release transport path;
 - external converter is not bundled by architecture, it is configured by the user.
 - `fb2cng` / `fbc` is the first built-in converter profile, but converter integration must remain user-configurable through an explicit command-template contract.
 
@@ -295,7 +295,7 @@ Rules:
 
 - Protobuf for DTOs and contracts;
 - transport-neutral service adapters over protobuf request/response messages;
-- named pipes as the Windows transport in MVP;
+- named pipes as the Windows transport in the initial release scope;
 - transport-level client or framing failures must be isolated to the current pipe session and must not terminate the whole host process;
 - client-side pipe calls must use a bounded RPC timeout instead of waiting indefinitely for a response;
 - cancellation propagated from UI to core job engine.
@@ -312,15 +312,15 @@ Direct native interop would reduce startup complexity but creates tighter coupli
 
 Because future portability matters, a service boundary is the more stable choice.
 
-### Why not mandatory gRPC runtime in MVP
+### Why not mandatory gRPC runtime in the initial release scope
 
-`gRPC` remains a valid future transport option, but it is not required for the MVP runtime boundary.
+`gRPC` remains a valid future transport option, but it is not required for the initial release runtime boundary.
 
 Reasons:
 
 - the contract value comes from `Protobuf`, not specifically from `gRPC`;
 - current operations are unary request/reply and job-poll oriented, so streaming is not required for the first release;
-- Windows named pipes are the real transport requirement for MVP;
+- Windows named pipes are the real transport requirement for the initial release scope;
 - avoiding a mandatory `gRPC C++` runtime keeps the toolchain simpler and more stable on the current Windows stack.
 
 ## 10. Domain Model
@@ -475,7 +475,7 @@ Notes:
 
 - `ICoverProvider` exists from day one, but the default implementation is a null object;
 - `IBookConverter` is an abstraction over any external conversion engine, not one concrete tool;
-- `ITrashService` is cross-platform by contract, Windows-specific in MVP implementation.
+- `ITrashService` is cross-platform by contract, Windows-specific in the current implementation.
 
 ## 12. Import, Conversion, And Job Model
 
@@ -581,7 +581,7 @@ Recommended logical schema:
 
 Notes:
 
-- `formats` is future-friendly even though MVP stores one file per book;
+- `formats` is future-friendly even though the initial release scope stores one file per book;
 - `books` stores normalized metadata and references to managed file and cover;
 - author and tag normalization should be enforced at repository level;
 - search should combine indexed relational filters and FTS-backed text lookup.
@@ -637,7 +637,7 @@ Recommended operation set:
 - `VerifyLibrary`
 - `CancelJob`
 
-For the MVP runtime transport, these operations may be carried over named-pipe request/reply envelopes instead of a full `gRPC` server.
+For the initial release runtime transport, these operations may be carried over named-pipe request/reply envelopes instead of a full `gRPC` server.
 
 The contract should return structured error codes and user-safe messages, not raw exception text.
 
@@ -719,7 +719,7 @@ Why this is preferred:
 
 - `fb2cng` is a strong default for `FB2 -> EPUB`;
 - the project should not be locked to one executable forever;
-- argument-template configuration is simpler and more transparent than inventing a scripting DSL for MVP;
+- argument-template configuration is simpler and more transparent than inventing a scripting DSL for the initial release scope;
 - the setup wizard can validate one explicit executable path and one explicit command shape.
 
 ## 23. Testing Strategy
@@ -926,16 +926,16 @@ This section records decisions that should be treated as fixed unless explicitly
 
 ### Product scope
 
-- MVP target platform is Windows only.
-- MVP supports one user and one managed library only.
+- The initial release target platform is Windows only.
+- The initial release scope supports one user and one managed library only.
 - Librova is a library manager, not a reading application.
-- Metadata editing is out of scope for MVP.
-- Collections, favorites, shelves, and ratings are out of scope for MVP, but future support must remain possible.
+- Metadata editing is out of scope for the initial release scope.
+- Collections, favorites, shelves, and ratings are out of scope for the initial release scope, but future support must remain possible.
 
 ### UI
 
 - UI framework is Avalonia.
-- UI language is English only in MVP.
+- UI language is English only in the initial release scope.
 - Main browsing mode includes a cover grid.
 - Book details open in a right-side panel.
 - Drag-and-drop import is required.
@@ -949,13 +949,13 @@ This section records decisions that should be treated as fixed unless explicitly
 - `C++/CLI` is forbidden.
 - Architecture uses a separate native core process.
 - UI and core communicate through `Protobuf` messages over a transport boundary.
-- Windows transport in MVP is named pipes.
-- `gRPC` is not part of the required MVP runtime stack.
+- Windows transport in the initial release scope is named pipes.
+- `gRPC` is not part of the required initial release runtime stack.
 
 ### Storage and import rules
 
 - Imported files are always copied into managed storage.
-- MVP stores exactly one managed file per logical book.
+- The initial release scope stores exactly one managed file per logical book.
 - Preferred stored format is `EPUB` when available.
 - If `FB2` conversion is unavailable or fails, the original `FB2` is stored with a warning.
 - ZIP archives may contain folders, but not nested archives.
@@ -985,7 +985,7 @@ This section records decisions that should be treated as fixed unless explicitly
 - Core development follows TDD-first.
 - C++ unit tests use Catch2.
 - IPC integration tests are required.
-- Portable folder deployment is sufficient for MVP.
+- Portable folder deployment is sufficient for the initial release scope.
 - Local build and local tests are enough for the initial roadmap; CI/CD is not required yet.
 
 ## 28. Working Agreements

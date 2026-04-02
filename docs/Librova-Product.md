@@ -4,7 +4,7 @@
 
 Librova is a Windows-first desktop application for managing a personal e-book library.
 
-The product is intentionally narrower and simpler than Calibre. The MVP is meant to provide a reliable and understandable tool for:
+The product is intentionally narrower and simpler than Calibre. Librova is meant to provide a reliable and understandable tool for:
 
 - importing books into a managed library;
 - storing metadata and covers;
@@ -17,7 +17,7 @@ Librova is not a reader. The application manages a library rather than reading b
 
 ## 2. Target User And Usage Model
 
-The current MVP is built for:
+The current product direction is built for:
 
 - one user;
 - one managed library;
@@ -95,7 +95,7 @@ The user can:
 - export the selected book;
 - move the selected book to trash.
 
-Series and genres are part of the active MVP direction and are expected to become first-class browsing metadata rather than incidental parser output.
+Series and genres are expected to become first-class browsing metadata rather than incidental parser output.
 
 ### 3.4 Export
 
@@ -107,9 +107,9 @@ If the active session has a configured converter, managed `FB2` books can also b
 
 ### 3.5 Delete / Recycle
 
-The current MVP keeps a safe user-facing delete action through the managed-library `Trash` flow.
+The current product keeps a safe user-facing delete action through the managed-library `Trash` flow.
 
-Windows `Recycle Bin` integration is tracked as a future feature rather than an active MVP requirement.
+Windows `Recycle Bin` integration is tracked as active backlog work rather than already-implemented behavior.
 
 ### 3.6 Settings
 
@@ -128,11 +128,11 @@ That reload keeps the user in the current section instead of forcing a jump back
 
 For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with the managed library `Logs` directory as its process working directory so default `fb2cng.log` output and similar diagnostic artifacts do not pollute import temp folders or user export destinations.
 
-The MVP `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path.
+The `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path.
 
-## 4. What Is Included In The MVP
+## 4. Current Included Scope
 
-The current MVP includes:
+The current implemented scope includes:
 
 - import of `EPUB`, `FB2`, and `ZIP`;
 - duplicate handling;
@@ -145,19 +145,18 @@ The current MVP includes:
 - diagnostics and logging;
 - a native host process behind the UI.
 
-The active open work is tracked in the single project backlog document.
+The active open work is tracked only in the single project backlog document.
 
-## 5. What Is Not Included In The MVP
+## 5. Currently Not Included
 
-The following are currently outside MVP scope:
+The following are currently outside the implemented scope:
 
 - built-in book reading;
 - metadata editing;
 - cloud sync;
 - multiple libraries;
 - plugin ecosystem work;
-- Windows `Recycle Bin` integration for delete;
-- richer post-MVP library management features such as ratings, shelves, and favorites.
+- richer library management features such as ratings, shelves, and favorites.
 
 ## 6. High-Level Technical Picture
 
@@ -173,7 +172,7 @@ They communicate through:
 
 ## 7. Current Project State
 
-The MVP is now functionally close to completion.
+The current product baseline is now functionally close to completion.
 
 Already implemented:
 
@@ -187,15 +186,7 @@ Already implemented:
 - a strong automated test baseline;
 - a manual UI validation checklist.
 
-Most remaining work now belongs to:
-
-- the open backlog items in [Librova Backlog](Librova-Backlog.md);
-- series and genres support;
-- stabilization and release-candidate hardening.
-
-Planned future features include:
-
-- Windows `Recycle Bin` integration.
+Any remaining implementation work belongs in [Librova Backlog](Librova-Backlog.md).
 
 ## 8. Related Documents
 

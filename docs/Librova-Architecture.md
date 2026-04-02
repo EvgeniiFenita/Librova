@@ -26,14 +26,11 @@ The native core is responsible for:
 - search;
 - file export and delete-to-trash behavior.
 
-Near-term MVP work still targets three product-facing extensions on top of that baseline:
-
-- series and genres as stronger first-class metadata;
-- broader stabilization and release hardening around the current baseline.
+Any remaining implementation work on top of that baseline is tracked in the project backlog.
 
 ## 2. IPC Boundary
 
-The MVP transport is:
+The transport is:
 
 - `Protobuf` contracts
 - over Windows named pipes
@@ -42,7 +39,7 @@ This is the canonical runtime boundary between UI and core.
 
 For process lifetime safety on Windows, the UI also passes its parent process id to the native host and binds the host lifetime to the UI session, so the host is not expected to survive a crashed or abruptly terminated UI process.
 
-The MVP deliberately does not depend on:
+The runtime deliberately does not depend on:
 
 - `gRPC` runtime
 - `P/Invoke` as the main architecture
@@ -68,7 +65,7 @@ One managed library root contains:
 
 Managed paths are stable and `BookId`-based.
 
-The current `Trash` directory is part of the implemented MVP baseline. A Windows `Recycle Bin` backed delete flow remains a future feature, not an active MVP requirement.
+The current `Trash` directory is part of the implemented baseline. A Windows `Recycle Bin` backed delete flow is tracked as active backlog work and is not yet part of the implemented delete path.
 
 ### 3.3 Import Safety
 
@@ -101,7 +98,7 @@ Search is hybrid:
 
 The UI browser is read-side oriented and goes through application facades and transport contracts rather than querying storage directly.
 
-Series and genres are part of the active MVP metadata direction and are expected to be supported coherently through parser output, persistence, transport contracts, and UI-facing filters/details.
+Series and genres are expected to be supported coherently through parser output, persistence, transport contracts, and UI-facing filters/details.
 
 ## 6. Build And Repository Layout
 
@@ -150,15 +147,11 @@ Testing is layered:
 - targeted integration tests on IPC, storage, SQLite, and host boundaries;
 - manual UI validation through a maintained scenario checklist.
 
-## 8. Current Architectural Focus
+## 8. Backlog Reference
 
-Current architectural focus is:
+Any remaining implementation or hardening work is tracked in:
 
-- strengthening series/genres support as end-to-end metadata;
-- stabilization;
-- release hardening;
-- runtime review;
-- keeping docs and validation current.
+- [Librova Backlog](Librova-Backlog.md)
 
 ## 9. History
 
