@@ -53,6 +53,15 @@ std::optional<SBookDetails> CLibraryCatalogFacade::GetBookDetails(const Librova:
     return ToDetails(*book);
 }
 
+SLibraryStatistics CLibraryCatalogFacade::GetLibraryStatistics() const
+{
+    const auto statistics = m_bookQueryRepository.GetLibraryStatistics();
+    return {
+        .BookCount = statistics.BookCount,
+        .TotalManagedBookSizeBytes = statistics.TotalManagedBookSizeBytes
+    };
+}
+
 Librova::Domain::SSearchQuery CLibraryCatalogFacade::ToDomainQuery(const SBookListRequest& request)
 {
     return {

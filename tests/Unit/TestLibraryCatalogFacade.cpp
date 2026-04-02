@@ -149,6 +149,11 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
         {
             return {};
         }
+
+        [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+        {
+            return {};
+        }
     };
 
     const CUnusedQueryRepository repository;
@@ -200,6 +205,46 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
     REQUIRE(details->Identifier == std::optional<std::string>{"details-id-1"});
     REQUIRE(details->Sha256Hex == "details-hash-1");
     REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Covers/0000001201.jpg")});
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Library catalog facade returns aggregate library statistics", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-statistics.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook = MakeBook(
+        "Alpha",
+        {"Author One"},
+        "en",
+        Librova::Domain::EBookFormat::Epub,
+        "Books/0000001301/alpha.epub",
+        "stats-hash-1",
+        std::chrono::sys_days{std::chrono::March / 30 / 2026});
+    firstBook.File.SizeBytes = 1024;
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook = MakeBook(
+        "Beta",
+        {"Author Two"},
+        "en",
+        Librova::Domain::EBookFormat::Fb2,
+        "Books/0000001302/beta.fb2",
+        "stats-hash-2",
+        std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
+    secondBook.File.SizeBytes = 2048;
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
+    const auto statistics = facade.GetLibraryStatistics();
+
+    REQUIRE(statistics.BookCount == 2);
+    REQUIRE(statistics.TotalManagedBookSizeBytes == 3072);
 
     std::filesystem::remove(databasePath);
 }

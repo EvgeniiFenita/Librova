@@ -204,6 +204,108 @@ public sealed class LibraryCatalogServiceTests
     }
 
     [Fact]
+    public async Task LibraryCatalogService_LoadsAggregateLibraryStatisticsWithoutGeneratedProtoTypes()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-library-service-statistics",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.LibraryServiceStatisticsTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+            };
+
+            var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
+            await File.WriteAllTextAsync(sourcePath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook>
+                  <description>
+                    <title-info>
+                      <book-title>Statistics Through Service</book-title>
+                      <author>
+                        <first-name>Arkady</first-name>
+                        <last-name>Strugatsky</last-name>
+                      </author>
+                      <lang>en</lang>
+                    </title-info>
+                  </description>
+                  <body>
+                    <section><p>Body</p></section>
+                  </body>
+                </FictionBook>
+                """);
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var importService = new ImportJobsService(options.PipePath);
+            var jobId = await importService.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [sourcePath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await importService.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(2),
+                cancellation.Token));
+
+            var service = new LibraryCatalogService(options.PipePath);
+            var items = await service.ListBooksAsync(
+                new BookListRequestModel
+                {
+                    Limit = 10
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var statistics = await service.GetLibraryStatisticsAsync(
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var expectedManagedBookSizeBytes = items
+                .Select(item => ResolveLibraryPath(options.LibraryRoot, item.ManagedPath))
+                .Aggregate(0UL, (total, path) => total + (ulong)new FileInfo(path).Length);
+            var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
+            var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
+
+            Assert.Equal(1UL, statistics.BookCount);
+            Assert.Single(items);
+            Assert.True(databaseSizeBytes > 0);
+            Assert.Equal(expectedManagedBookSizeBytes, statistics.TotalManagedBookSizeBytes);
+            Assert.NotEqual(expectedManagedBookSizeBytes + databaseSizeBytes, statistics.TotalManagedBookSizeBytes);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task LibraryCatalogService_ExportsFb2AsEpubWhenConverterIsConfigured()
     {
         var sandboxRoot = Path.Combine(
@@ -432,4 +534,9 @@ public sealed class LibraryCatalogServiceTests
             }
         }
     }
+
+    private static string ResolveLibraryPath(string libraryRoot, string managedPath) =>
+        Path.IsPathFullyQualified(managedPath)
+            ? managedPath
+            : Path.GetFullPath(Path.Combine(libraryRoot, managedPath));
 }

@@ -73,6 +73,12 @@ SPipeResponseEnvelope CPipeRequestDispatcher::Dispatch(const SPipeRequestEnvelop
             [this](const auto& typedRequest) {
                 return m_adapter.RemoveImportJob(typedRequest);
             });
+    case EPipeMethod::GetLibraryStatistics:
+        return DispatchTyped<librova::v1::GetLibraryStatisticsRequest, librova::v1::GetLibraryStatisticsResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.GetLibraryStatistics(typedRequest);
+            });
     default:
         return {
             .RequestId = request.RequestId,

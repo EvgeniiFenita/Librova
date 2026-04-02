@@ -18,6 +18,7 @@ TEST_CASE("Pipe method ids stay fixed across checkpoints", "[pipe]")
     REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::WaitImportJob) == 8);
     REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::CancelImportJob) == 9);
     REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::RemoveImportJob) == 10);
+    REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::GetLibraryStatistics) == 11);
 }
 
 TEST_CASE("Pipe response status ids stay fixed across checkpoints", "[pipe]")

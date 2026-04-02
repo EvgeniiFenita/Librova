@@ -149,6 +149,11 @@ public:
         return Duplicates;
     }
 
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {};
+    }
+
     std::vector<Librova::Domain::SDuplicateMatch> Duplicates;
 };
 

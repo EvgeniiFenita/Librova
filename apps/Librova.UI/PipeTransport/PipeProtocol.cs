@@ -16,7 +16,8 @@ internal enum PipeMethod : uint
     GetImportJobResult = 7,
     WaitImportJob = 8,
     CancelImportJob = 9,
-    RemoveImportJob = 10
+    RemoveImportJob = 10,
+    GetLibraryStatistics = 11
 }
 
 internal enum PipeResponseStatus : uint

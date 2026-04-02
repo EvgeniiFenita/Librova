@@ -19,6 +19,11 @@ internal sealed class NullLibraryCatalogService : ILibraryCatalogService
         CancellationToken cancellationToken) =>
         Task.FromResult<BookDetailsModel?>(null);
 
+    public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(
+        TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(new LibraryStatisticsModel());
+
     public Task<string?> ExportBookAsync(
         long bookId,
         string destinationPath,

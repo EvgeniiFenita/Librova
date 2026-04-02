@@ -238,6 +238,23 @@ librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     return response;
 }
 
+librova::v1::LibraryStatistics CLibraryCatalogProtoMapper::ToProto(
+    const Librova::Application::SLibraryStatistics& statistics)
+{
+    librova::v1::LibraryStatistics proto;
+    proto.set_book_count(statistics.BookCount);
+    proto.set_total_managed_book_size_bytes(statistics.TotalManagedBookSizeBytes);
+    return proto;
+}
+
+librova::v1::GetLibraryStatisticsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
+    const Librova::Application::SLibraryStatistics& statistics)
+{
+    librova::v1::GetLibraryStatisticsResponse response;
+    *response.mutable_statistics() = ToProto(statistics);
+    return response;
+}
+
 Librova::Application::SExportBookRequest CLibraryCatalogProtoMapper::FromProto(
     const librova::v1::ExportBookRequest& request)
 {

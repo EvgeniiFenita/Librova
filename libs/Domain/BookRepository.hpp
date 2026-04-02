@@ -26,8 +26,15 @@ class IBookQueryRepository
 public:
     virtual ~IBookQueryRepository() = default;
 
+    struct SLibraryStatistics
+    {
+        std::uint64_t BookCount = 0;
+        std::uint64_t TotalManagedBookSizeBytes = 0;
+    };
+
     virtual std::vector<SBook> Search(const SSearchQuery& query) const = 0;
     virtual std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) const = 0;
+    [[nodiscard]] virtual SLibraryStatistics GetLibraryStatistics() const = 0;
 };
 
 } // namespace Librova::Domain

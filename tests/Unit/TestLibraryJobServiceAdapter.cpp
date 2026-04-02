@@ -93,6 +93,11 @@ public:
     {
         return {};
     }
+
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {};
+    }
 };
 
 class CEmptyBookRepository final : public Librova::Domain::IBookRepository
@@ -322,6 +327,56 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     REQUIRE(std::filesystem::exists(response.exported_path()));
 
     std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library job service adapter exposes aggregate library statistics over protobuf", "[proto-service][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-proto-service-statistics.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Alpha";
+    firstBook.Metadata.AuthorsUtf8 = {"Author One"};
+    firstBook.Metadata.Language = "en";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000205/alpha.epub";
+    firstBook.File.SizeBytes = 1024;
+    firstBook.File.Sha256Hex = "stats-adapter-hash-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook = firstBook;
+    secondBook.Metadata.TitleUtf8 = "Beta";
+    secondBook.File.ManagedPath = "Books/0000000206/beta.epub";
+    secondBook.File.SizeBytes = 2048;
+    secondBook.File.Sha256Hex = "stats-adapter-hash-2";
+    secondBook.AddedAtUtc += std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+
+    librova::v1::GetLibraryStatisticsRequest request;
+    const auto response = adapter.GetLibraryStatistics(request);
+
+    REQUIRE(response.has_statistics());
+    REQUIRE(response.statistics().book_count() == 2);
+    REQUIRE(response.statistics().total_managed_book_size_bytes() == 3072);
+
+    std::filesystem::remove(databasePath);
 }
 
 TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when converter is configured", "[proto-service][catalog]")

@@ -3,6 +3,7 @@ using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Shell;
+using Librova.UI.ViewModels;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -111,6 +112,7 @@ public sealed class ShellApplicationTests
 
         Assert.Equal(1, catalogService.ListCalls);
         Assert.Single(application.Shell.LibraryBrowser.Books);
+        Assert.Equal("Library: 0 books, 0.00 MB", application.Shell.CurrentLibraryStatisticsText);
     }
 
     [Fact]
@@ -145,6 +147,14 @@ public sealed class ShellApplicationTests
             session,
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: new FakePreferencesStore());
+        var statisticsNotifications = 0;
+        application.Shell.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName is nameof(ShellViewModel.CurrentLibraryStatisticsText))
+            {
+                statisticsNotifications++;
+            }
+        };
 
         await application.InitializeAsync();
         Assert.Empty(application.Shell.LibraryBrowser.Books);
@@ -156,6 +166,7 @@ public sealed class ShellApplicationTests
         Assert.Equal(2, catalogService.ListCalls);
         Assert.Single(application.Shell.LibraryBrowser.Books);
         Assert.Equal("Fresh Import", application.Shell.LibraryBrowser.Books[0].Title);
+        Assert.True(statisticsNotifications > 0);
     }
 
     [Fact]
@@ -707,6 +718,7 @@ public sealed class ShellApplicationTests
     {
         public int ListCalls { get; private set; }
         public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
+        public LibraryStatisticsModel Statistics { get; init; } = new();
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -716,6 +728,9 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(Statistics);
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -732,9 +747,16 @@ public sealed class ShellApplicationTests
     private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
     {
         private readonly Queue<IReadOnlyList<BookListItemModel>> _responses;
+        private readonly LibraryStatisticsModel _statistics;
 
         public SequencedLibraryCatalogService(params IReadOnlyList<BookListItemModel>[] responses)
+            : this(new LibraryStatisticsModel(), responses)
         {
+        }
+
+        public SequencedLibraryCatalogService(LibraryStatisticsModel statistics, params IReadOnlyList<BookListItemModel>[] responses)
+        {
+            _statistics = statistics;
             _responses = new Queue<IReadOnlyList<BookListItemModel>>(responses);
         }
 
@@ -753,6 +775,9 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(_statistics);
 
         public Task<string?> ExportBookAsync(
             long bookId,

@@ -77,6 +77,12 @@ struct SBookDetails
     std::chrono::system_clock::time_point AddedAtUtc{};
 };
 
+struct SLibraryStatistics
+{
+    std::uint64_t BookCount = 0;
+    std::uint64_t TotalManagedBookSizeBytes = 0;
+};
+
 class CLibraryCatalogFacade final
 {
 public:
@@ -86,6 +92,7 @@ public:
 
     [[nodiscard]] SBookListResult ListBooks(const SBookListRequest& request) const;
     [[nodiscard]] std::optional<SBookDetails> GetBookDetails(Librova::Domain::SBookId id) const;
+    [[nodiscard]] SLibraryStatistics GetLibraryStatistics() const;
 
 private:
     [[nodiscard]] static Librova::Domain::SSearchQuery ToDomainQuery(const SBookListRequest& request);

@@ -56,6 +56,11 @@ public:
     {
         return {};
     }
+
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {};
+    }
 };
 
 class CEmptyBookRepository final : public Librova::Domain::IBookRepository

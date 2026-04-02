@@ -189,3 +189,9 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
         }
     }
 }
+
+internal sealed class LibraryStatisticsModel
+{
+    public ulong BookCount { get; init; }
+    public ulong TotalManagedBookSizeBytes { get; init; }
+}

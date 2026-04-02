@@ -68,6 +68,14 @@ public:
         return {};
     }
 
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {
+            .BookCount = 1,
+            .TotalManagedBookSizeBytes = 4096
+        };
+    }
+
     Librova::Domain::SBook m_book{
         .Id = {1},
         .Metadata = {.TitleUtf8 = "Roadside Picnic", .AuthorsUtf8 = {"Arkady Strugatsky"}},

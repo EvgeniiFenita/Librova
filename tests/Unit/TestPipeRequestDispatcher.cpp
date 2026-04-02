@@ -71,6 +71,11 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
         {
             return {};
         }
+
+        [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+        {
+            return {};
+        }
     } queryRepository;
     Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     class CEmptyBookRepository final : public Librova::Domain::IBookRepository
@@ -129,6 +134,11 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
         }
 
         [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
         {
             return {};
         }
@@ -279,4 +289,59 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
     REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
 
     std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapter", "[pipe][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-statistics.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Statistics";
+    book.Metadata.AuthorsUtf8 = {"Author"};
+    book.Metadata.Language = "en";
+    book.File.ManagedPath = "Books/0000000303/book.epub";
+    book.File.SizeBytes = 1536;
+    book.File.Sha256Hex = "pipe-stats-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(book));
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+
+    librova::v1::GetLibraryStatisticsRequest typedRequest;
+
+    std::string payload;
+    REQUIRE(typedRequest.SerializeToString(&payload));
+
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
+        .RequestId = 3005,
+        .Method = Librova::PipeTransport::EPipeMethod::GetLibraryStatistics,
+        .Payload = payload
+    };
+
+    const auto response = dispatcher.Dispatch(request);
+    REQUIRE(response.RequestId == request.RequestId);
+    REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
+
+    librova::v1::GetLibraryStatisticsResponse typedResponse;
+    REQUIRE(typedResponse.ParseFromString(response.Payload));
+    REQUIRE(typedResponse.statistics().book_count() == 1);
+    REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 1536);
+
+    std::filesystem::remove(databasePath);
 }

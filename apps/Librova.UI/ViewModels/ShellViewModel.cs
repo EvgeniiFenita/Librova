@@ -52,6 +52,7 @@ internal sealed class ShellViewModel : ObservableObject
             hasConfiguredConverter: session.HostOptions.ConverterMode is not UiConverterMode.Disabled);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
+        LibraryBrowser.PropertyChanged += OnLibraryBrowserPropertyChanged;
         ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
@@ -88,6 +89,7 @@ internal sealed class ShellViewModel : ObservableObject
     }
 
     public string LibraryRoot => _session.HostOptions.LibraryRoot;
+    public string CurrentLibraryStatisticsText => LibraryBrowser.LibraryStatisticsText;
     public string PipePath => _session.HostOptions.PipePath;
     public ImportJobsViewModel ImportJobs { get; }
     public LibraryBrowserViewModel LibraryBrowser { get; }
@@ -402,5 +404,13 @@ internal sealed class ShellViewModel : ObservableObject
         ShowLibrarySectionCommand.RaiseCanExecuteChanged();
         ShowImportSectionCommand.RaiseCanExecuteChanged();
         ShowSettingsSectionCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OnLibraryBrowserPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.LibraryStatisticsText))
+        {
+            RaisePropertyChanged(nameof(CurrentLibraryStatisticsText));
+        }
     }
 }

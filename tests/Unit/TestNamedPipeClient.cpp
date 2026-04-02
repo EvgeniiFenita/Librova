@@ -56,6 +56,33 @@ public:
     {
         return {};
     }
+
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {};
+    }
+};
+
+class CStatisticsQueryRepository final : public Librova::Domain::IBookQueryRepository
+{
+public:
+    [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
+    [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+    {
+        return {};
+    }
+
+    [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+    {
+        return {
+            .BookCount = 42,
+            .TotalManagedBookSizeBytes = 5ULL * 1024ULL * 1024ULL
+        };
+    }
 };
 
 class CEmptyBookRepository final : public Librova::Domain::IBookRepository
@@ -183,6 +210,57 @@ TEST_CASE("Named pipe client raises transport error on invalid pipe response", "
     };
 
     REQUIRE_THROWS_AS(failingCall(), Librova::PipeClient::CPipeTransportError);
+
+    serverThread.join();
+    REQUIRE(serverFailure == nullptr);
+}
+
+TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through host", "[pipe-client]")
+{
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const CStatisticsQueryRepository queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+    Librova::PipeHost::CNamedPipeHost host(dispatcher);
+
+    const auto pipePath = BuildTestPipePath();
+    std::exception_ptr serverFailure;
+
+    std::jthread serverThread([&] {
+        try
+        {
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            host.RunSingleSession(server.WaitForClient());
+        }
+        catch (...)
+        {
+            serverFailure = std::current_exception();
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    Librova::PipeClient::CNamedPipeClient client(pipePath);
+    librova::v1::GetLibraryStatisticsRequest request;
+
+    const auto response = client.Call<librova::v1::GetLibraryStatisticsRequest, librova::v1::GetLibraryStatisticsResponse>(
+        Librova::PipeTransport::EPipeMethod::GetLibraryStatistics,
+        request,
+        std::chrono::seconds(2));
+
+    REQUIRE(response.has_statistics());
+    REQUIRE(response.statistics().book_count() == 42);
+    REQUIRE(response.statistics().total_managed_book_size_bytes() == 5ULL * 1024ULL * 1024ULL);
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);

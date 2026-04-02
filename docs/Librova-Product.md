@@ -85,6 +85,7 @@ The user can:
 
 - search books by title or author through a single search field;
 - filter the grid by language;
+- see a library summary in the left `Current Library` panel with total managed-book count and total managed-book size in megabytes, excluding the database;
 - browse books as cover-driven cards in a responsive grid;
 - see stable-size book cards with a generated gradient placeholder when a cover is missing;
 - open a right-hand details panel without leaving the `Library` section;

@@ -41,9 +41,6 @@ Working rule:
 - `#11` define and enforce minimum window dimensions that preserve multiple visible cards and at least two columns with the details panel open.
   - Status: `Open`
 
-- `#12` show current library book count and managed-book size total in megabytes, excluding the database.
-  - Status: `Open`
-
 - `#23` keep cover aspect ratios intact and use a neutral card background instead of exposed color bands.
   - Status: `Open`
 
@@ -72,6 +69,9 @@ Working rule:
   - Status: `Closed`
 
 - `#24` add per-file native host logging for skipped and failed entries during multi-file, directory, and ZIP imports so large import diagnostics do not depend only on UI summary warnings.
+  - Status: `Closed`
+
+- `#12` show current library book count and managed-book size total in megabytes, excluding the database.
   - Status: `Closed`
 
 ### Critical

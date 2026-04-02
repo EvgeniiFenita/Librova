@@ -28,6 +28,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private readonly string _libraryRoot;
     private readonly bool _hasConfiguredConverter;
     private CancellationTokenSource? _refreshDebounce;
+    private bool _isLibraryStatisticsUnavailable;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
     private string _statusText = "Library view is idle.";
@@ -38,6 +39,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private bool _hasMoreResults;
     private BookListItemModel? _selectedBook;
     private BookDetailsModel? _selectedBookDetails;
+    private LibraryStatisticsModel _libraryStatistics = new();
 
     public LibraryBrowserViewModel(
         ILibraryCatalogService? libraryCatalogService = null,
@@ -279,6 +281,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public string BookCountText => HasActiveFilters
         ? $"{Books.Count:N0} shown"
         : $"{Books.Count:N0} books";
+    public string LibraryStatisticsText =>
+        _isLibraryStatisticsUnavailable
+            ? "Library summary unavailable."
+            : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalManagedBookSizeBytes)}";
     public string EmptyStateTitle => HasActiveFilters ? "Nothing found" : "Library is empty";
     public string EmptyStateDescription => HasActiveFilters
         ? "Try a different search query or clear the current language filter."
@@ -520,6 +526,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 BuildRequest(pageNumber),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+            var libraryStatisticsUnavailable = false;
+
+            try
+            {
+                _libraryStatistics = await _libraryCatalogService.GetLibraryStatisticsAsync(
+                    TimeSpan.FromSeconds(5),
+                    cancellation.Token);
+            }
+            catch (Exception)
+            {
+                libraryStatisticsUnavailable = true;
+            }
 
             var visibleItems = items.Take(PageSize).Select(Prepare).ToArray();
             Books.Clear();
@@ -545,14 +563,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 SelectedBook = null;
             }
 
+            _isLibraryStatisticsUnavailable = libraryStatisticsUnavailable;
             RaisePropertyChanged(nameof(HasBooks));
             RaisePropertyChanged(nameof(ShowEmptyState));
             RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(LibraryStatisticsText));
             RaisePropertyChanged(nameof(EmptyStateTitle));
             RaisePropertyChanged(nameof(EmptyStateDescription));
-            StatusText = Books.Count == 0
-                ? "No books found for the current filter."
-                : $"Loaded {Books.Count} book(s).";
+            StatusText = BuildRefreshStatusText(Books.Count, _isLibraryStatisticsUnavailable);
         }
         finally
         {
@@ -712,12 +730,25 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private static string BuildAuthorsText(IReadOnlyList<string> authors) =>
         authors.Count == 0 ? "Unknown author" : string.Join(", ", authors);
 
+    private static string FormatBookCount(ulong bookCount) =>
+        bookCount == 1 ? "1 book" : $"{bookCount:N0} books";
+
     private static string FormatSizeInMegabytes(ulong sizeBytes)
     {
         var megabytes = sizeBytes / BytesPerMegabyte;
         return string.Create(
             CultureInfo.InvariantCulture,
             $"{megabytes:F2} MB");
+    }
+
+    private static string BuildRefreshStatusText(int visibleBookCount, bool libraryStatisticsUnavailable)
+    {
+        var baseText = visibleBookCount == 0
+            ? "No books found for the current filter."
+            : $"Loaded {visibleBookCount} book(s).";
+        return libraryStatisticsUnavailable
+            ? baseText + " Library summary unavailable."
+            : baseText;
     }
 
     private BookFormatModel? SelectedBookFormat => SelectedBookDetails?.Format ?? SelectedBook?.Format;

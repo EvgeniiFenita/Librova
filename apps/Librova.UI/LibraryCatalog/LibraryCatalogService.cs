@@ -58,6 +58,22 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
         }
     }
 
+    public async Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _client.GetLibraryStatisticsAsync(timeout, cancellationToken).ConfigureAwait(false);
+            return LibraryCatalogMapper.FromProto(response);
+        }
+        catch (Exception error)
+        {
+            UiLogging.Error(error, "Failed to load library statistics.");
+            throw;
+        }
+    }
+
     public async Task<string?> ExportBookAsync(
         long bookId,
         string destinationPath,

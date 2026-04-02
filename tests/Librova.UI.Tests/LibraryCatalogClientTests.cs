@@ -214,6 +214,104 @@ public sealed class LibraryCatalogClientTests
     }
 
     [Fact]
+    public async Task LibraryCatalogClient_LoadsAggregateLibraryStatisticsThroughNativeHost()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-library-client-statistics",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.LibraryStatisticsTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+            };
+
+            var sourceOnePath = Path.Combine(sandboxRoot, "one.fb2");
+            var sourceTwoPath = Path.Combine(sandboxRoot, "two.fb2");
+            await File.WriteAllTextAsync(sourceOnePath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook><description><title-info><book-title>One</book-title><author><first-name>A</first-name><last-name>One</last-name></author><lang>en</lang></title-info></description><body><section><p>Body One</p></section></body></FictionBook>
+                """);
+            await File.WriteAllTextAsync(sourceTwoPath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook><description><title-info><book-title>Two</book-title><author><first-name>B</first-name><last-name>Two</last-name></author><lang>en</lang></title-info></description><body><section><p>Body Two</p></section></body></FictionBook>
+                """);
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var importService = new ImportJobsService(options.PipePath);
+            foreach (var sourcePath in new[] { sourceOnePath, sourceTwoPath })
+            {
+                var jobId = await importService.StartAsync(
+                    new StartImportRequestModel
+                    {
+                        SourcePaths = [sourcePath],
+                        WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                    },
+                    TimeSpan.FromSeconds(5),
+                    cancellation.Token);
+
+                Assert.True(await importService.WaitAsync(
+                    jobId,
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromSeconds(2),
+                    cancellation.Token));
+            }
+
+            var client = new LibraryCatalogClient(options.PipePath);
+            var listResponse = await client.ListBooksAsync(
+                LibraryCatalogMapper.ToProto(new BookListRequestModel
+                {
+                    Limit = 10
+                }),
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var response = await client.GetLibraryStatisticsAsync(
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var expectedManagedBookSizeBytes = listResponse.Items
+                .Select(item => ResolveLibraryPath(options.LibraryRoot, item.ManagedPath))
+                .Aggregate(0UL, (total, path) => total + (ulong)new FileInfo(path).Length);
+            var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
+            var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
+
+            Assert.NotNull(response.Statistics);
+            Assert.Equal(2UL, response.Statistics.BookCount);
+            Assert.Equal(2, listResponse.Items.Count);
+            Assert.True(databaseSizeBytes > 0);
+            Assert.Equal(expectedManagedBookSizeBytes, response.Statistics.TotalManagedBookSizeBytes);
+            Assert.NotEqual(expectedManagedBookSizeBytes + databaseSizeBytes, response.Statistics.TotalManagedBookSizeBytes);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task LibraryCatalogClient_ExportsSelectedBookThroughNativeHost()
     {
         var sandboxRoot = Path.Combine(
@@ -537,4 +635,9 @@ public sealed class LibraryCatalogClientTests
             }
         }
     }
+
+    private static string ResolveLibraryPath(string libraryRoot, string managedPath) =>
+        Path.IsPathFullyQualified(managedPath)
+            ? managedPath
+            : Path.GetFullPath(Path.Combine(libraryRoot, managedPath));
 }

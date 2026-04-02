@@ -291,6 +291,11 @@
               <TextBlock FontSize="12"
                          Text="{Binding Shell.LibraryRoot}"
                          TextWrapping="Wrap" />
+              <TextBlock FontSize="12"
+                         FontWeight="SemiBold"
+                         Opacity="0.78"
+                         Text="{Binding Shell.CurrentLibraryStatisticsText}"
+                         TextWrapping="Wrap" />
               <Button Classes="SecondaryAction"
                       HorizontalAlignment="Stretch"
                       Command="{Binding Shell.OpenLibraryCommand}"

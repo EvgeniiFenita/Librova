@@ -26,6 +26,9 @@ public:
     [[nodiscard]] librova::v1::GetBookDetailsResponse GetBookDetails(
         const librova::v1::GetBookDetailsRequest& request) const;
 
+    [[nodiscard]] librova::v1::GetLibraryStatisticsResponse GetLibraryStatistics(
+        const librova::v1::GetLibraryStatisticsRequest& request) const;
+
     [[nodiscard]] librova::v1::ExportBookResponse ExportBook(
         const librova::v1::ExportBookRequest& request) const;
 

@@ -85,6 +85,17 @@ librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
         details.has_value() ? &*details : nullptr);
 }
 
+librova::v1::GetLibraryStatisticsResponse CLibraryJobServiceAdapter::GetLibraryStatistics(
+    const librova::v1::GetLibraryStatisticsRequest&) const
+{
+    const auto statistics = m_libraryCatalogFacade.GetLibraryStatistics();
+    LogInfoIfInitialized(
+        "GetLibraryStatistics returned BookCount={} TotalManagedBookSizeBytes={}.",
+        statistics.BookCount,
+        statistics.TotalManagedBookSizeBytes);
+    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(statistics);
+}
+
 librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
     const librova::v1::ExportBookRequest& request) const
 {

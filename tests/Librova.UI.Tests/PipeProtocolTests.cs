@@ -18,6 +18,7 @@ public sealed class PipeProtocolTests
         Assert.Equal(8u, (uint)PipeMethod.WaitImportJob);
         Assert.Equal(9u, (uint)PipeMethod.CancelImportJob);
         Assert.Equal(10u, (uint)PipeMethod.RemoveImportJob);
+        Assert.Equal(11u, (uint)PipeMethod.GetLibraryStatistics);
     }
 
     [Fact]

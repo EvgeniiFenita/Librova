@@ -316,4 +316,22 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
     return matches;
 }
 
+Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryRepository::GetLibraryStatistics() const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT COUNT(*), COALESCE(SUM(file_size_bytes), 0) FROM books;");
+
+    if (!statement.Step())
+    {
+        return {};
+    }
+
+    return {
+        .BookCount = static_cast<std::uint64_t>(statement.GetColumnInt64(0)),
+        .TotalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1))
+    };
+}
+
 } // namespace Librova::BookDatabase

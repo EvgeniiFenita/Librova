@@ -63,6 +63,13 @@ internal static class LibraryCatalogMapper
     public static BookDetailsModel? FromProto(GetBookDetailsResponse response) =>
         response.Details is null ? null : FromProto(response.Details);
 
+    public static LibraryStatisticsModel FromProto(GetLibraryStatisticsResponse response) =>
+        new()
+        {
+            BookCount = response.Statistics?.BookCount ?? 0,
+            TotalManagedBookSizeBytes = response.Statistics?.TotalManagedBookSizeBytes ?? 0
+        };
+
     public static string? FromProto(ExportBookResponse response) =>
         response.HasExportedPath ? response.ExportedPath : null;
 

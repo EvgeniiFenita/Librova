@@ -746,6 +746,7 @@ public sealed class ViewModelsTests
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
         Assert.Null(viewModel.SelectedBook);
         Assert.Equal("1 shown", viewModel.BookCountText);
+        Assert.Equal("Library: 1 book, 0.00 MB", viewModel.LibraryStatisticsText);
         Assert.True(viewModel.Books[0].ShowCoverPlaceholder);
     }
 
@@ -851,7 +852,42 @@ public sealed class ViewModelsTests
 
         Assert.Equal(2, viewModel.Books.Count);
         Assert.Equal("2 books", viewModel.BookCountText);
+        Assert.Equal("Library: 2 books, 0.00 MB", viewModel.LibraryStatisticsText);
         Assert.Equal("Loaded 2 book(s).", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowsAggregateLibraryStatisticsSeparatelyFromVisiblePage()
+    {
+        var service = new FakeLibraryCatalogService
+        {
+            Statistics = new LibraryStatisticsModel
+            {
+                BookCount = 42,
+                TotalManagedBookSizeBytes = 5UL * 1024UL * 1024UL
+            }
+        };
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Single(viewModel.Books);
+        Assert.Equal("1 books", viewModel.BookCountText);
+        Assert.Equal("Library: 42 books, 5.00 MB", viewModel.LibraryStatisticsText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_StillLoadsBooksWhenLibraryStatisticsFail()
+    {
+        var viewModel = new LibraryBrowserViewModel(new StatisticsFailureLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+
+        Assert.True(viewModel.HasBooks);
+        Assert.Single(viewModel.Books);
+        Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
+        Assert.Equal("Library summary unavailable.", viewModel.LibraryStatisticsText);
+        Assert.Equal("Loaded 1 book(s). Library summary unavailable.", viewModel.StatusText);
     }
 
     [Fact]
@@ -1413,6 +1449,10 @@ public sealed class ViewModelsTests
         public string? LastExportPath { get; private set; }
         public BookFormatModel? LastExportFormat { get; private set; }
         public long? LastTrashedBookId { get; private set; }
+        public LibraryStatisticsModel Statistics { get; init; } = new()
+        {
+            BookCount = 1
+        };
 
         public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<BookListItemModel>>([
@@ -1448,6 +1488,9 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(Statistics);
+
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1476,6 +1519,9 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel());
+
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1501,6 +1547,9 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel());
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -1563,6 +1612,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = (ulong)AllBooks.Count
+            });
+
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1605,6 +1660,13 @@ public sealed class ViewModelsTests
                 SizeBytes = 1024,
                 Sha256Hex = "hash",
                 AddedAtUtc = DateTimeOffset.UtcNow
+            });
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = 1,
+                TotalManagedBookSizeBytes = 1024
             });
 
         public Task<string?> ExportBookAsync(
@@ -1652,6 +1714,13 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = 1,
+                TotalManagedBookSizeBytes = 512
+            });
+
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1677,6 +1746,40 @@ public sealed class ViewModelsTests
             LoadedPaths.Add(absolutePath);
             return null;
         }
+    }
+
+    private sealed class StatisticsFailureLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
+                new BookListItemModel
+                {
+                    BookId = 1,
+                    Title = "Roadside Picnic",
+                    Authors = ["Arkady Strugatsky"],
+                    Language = "en",
+                    Format = BookFormatModel.Epub,
+                    ManagedPath = "Books/0000000001/book.epub",
+                    AddedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("statistics transport failed");
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
@@ -1736,6 +1839,12 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = 3
+            });
+
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1781,6 +1890,12 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = 2
+            });
 
         public Task<string?> ExportBookAsync(
             long bookId,
