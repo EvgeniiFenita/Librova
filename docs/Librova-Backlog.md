@@ -32,9 +32,6 @@ Working rule:
   - Status: `Needs Reproduction`
   - Note: defect was reported in manual testing, but could not be reproduced again during follow-up verification.
 
-- `#6` keep the selected card visible when the details panel opens or closes by centering it in the visible viewport.
-  - Status: `Open`
-
 ### Minor
 
 - `#19` replace the current palette with a modern dark theme using one bright accent color across the shell.
@@ -73,6 +70,9 @@ Working rule:
   - Status: `Closed`
 
 - `#23` keep cover aspect ratios intact and use a neutral card background instead of exposed color bands.
+  - Status: `Closed`
+
+- `#6` keep the selected card visible when the details panel opens or closes by centering it in the visible viewport.
   - Status: `Closed`
 
 ### Critical

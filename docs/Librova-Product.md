@@ -89,6 +89,7 @@ The user can:
 - browse books as cover-driven cards in a responsive grid;
 - see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
 - open a right-hand details panel without leaving the `Library` section;
+- keep the selected card visible by re-centering it in the scroll viewport when the details panel opens or closes and the grid reflows;
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;
 - inspect richer metadata for the selected book;
 - export the selected book;
