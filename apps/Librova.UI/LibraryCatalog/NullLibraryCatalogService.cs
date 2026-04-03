@@ -32,9 +32,9 @@ internal sealed class NullLibraryCatalogService : ILibraryCatalogService
         CancellationToken cancellationToken) =>
         Task.FromResult<string?>(null);
 
-    public Task<bool> MoveBookToTrashAsync(
+    public Task<DeleteBookResultModel?> MoveBookToTrashAsync(
         long bookId,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
-        Task.FromResult(false);
+        Task.FromResult<DeleteBookResultModel?>(null);
 }

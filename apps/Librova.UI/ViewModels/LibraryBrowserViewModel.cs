@@ -450,27 +450,29 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
 
         IsBusy = true;
-        StatusText = $"Moving '{SelectedBook.Title}' to trash...";
+        StatusText = $"Moving '{SelectedBook.Title}' to Recycle Bin...";
 
         try
         {
             var deletedTitle = SelectedBook.Title;
             var loadedPageCount = Math.Max(_loadedPageCount, 1);
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var moved = await _libraryCatalogService.MoveBookToTrashAsync(
+            var deleteResult = await _libraryCatalogService.MoveBookToTrashAsync(
                 SelectedBook.BookId,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            if (!moved)
+            if (deleteResult is null)
             {
-                StatusText = "Selected book could not be moved to trash.";
+                StatusText = "Selected book could not be moved to Recycle Bin.";
                 return;
             }
 
             await RefreshLoadedRangeAsync(loadedPageCount);
 
-            StatusText = $"Moved '{deletedTitle}' to trash.";
+            StatusText = deleteResult.Destination == DeleteDestinationModel.RecycleBin
+                ? $"Moved '{deletedTitle}' to Recycle Bin."
+                : $"Moved '{deletedTitle}' to library Trash because Windows Recycle Bin was unavailable.";
         }
         finally
         {

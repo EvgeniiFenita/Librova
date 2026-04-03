@@ -202,3 +202,15 @@ internal sealed class LibraryStatisticsModel
     public ulong BookCount { get; init; }
     public ulong TotalManagedBookSizeBytes { get; init; }
 }
+
+internal enum DeleteDestinationModel
+{
+    RecycleBin,
+    ManagedTrash
+}
+
+internal sealed class DeleteBookResultModel
+{
+    public long BookId { get; init; }
+    public DeleteDestinationModel Destination { get; init; }
+}

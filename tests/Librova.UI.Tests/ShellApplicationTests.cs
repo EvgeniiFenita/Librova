@@ -866,8 +866,12 @@ public sealed class ShellApplicationTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class SequencedLibraryCatalogService : ILibraryCatalogService
@@ -918,8 +922,12 @@ public sealed class ShellApplicationTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService

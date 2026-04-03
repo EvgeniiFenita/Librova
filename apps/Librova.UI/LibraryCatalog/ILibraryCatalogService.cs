@@ -28,7 +28,7 @@ internal interface ILibraryCatalogService
         TimeSpan timeout,
         CancellationToken cancellationToken);
 
-    Task<bool> MoveBookToTrashAsync(
+    Task<DeleteBookResultModel?> MoveBookToTrashAsync(
         long bookId,
         TimeSpan timeout,
         CancellationToken cancellationToken);

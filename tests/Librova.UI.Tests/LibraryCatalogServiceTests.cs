@@ -512,12 +512,13 @@ public sealed class LibraryCatalogServiceTests
             Assert.Single(page.Items);
             Assert.Equal(1UL, page.TotalCount);
 
-            var moved = await service.MoveBookToTrashAsync(
+            var deleteResult = await service.MoveBookToTrashAsync(
                 page.Items[0].BookId,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.True(moved);
+            Assert.NotNull(deleteResult);
+            Assert.Equal(DeleteDestinationModel.RecycleBin, deleteResult!.Destination);
 
             var afterDelete = await service.ListBooksAsync(
                 new BookListRequestModel

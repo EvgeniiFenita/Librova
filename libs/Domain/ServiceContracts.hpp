@@ -207,6 +207,14 @@ public:
         const std::filesystem::path& destinationPath) = 0;
 };
 
+class IRecycleBinService
+{
+public:
+    virtual ~IRecycleBinService() = default;
+
+    virtual void MoveToRecycleBin(const std::vector<std::filesystem::path>& paths) = 0;
+};
+
 class ICoverProvider
 {
 public:

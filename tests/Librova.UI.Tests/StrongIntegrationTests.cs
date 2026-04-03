@@ -266,7 +266,7 @@ public sealed class StrongIntegrationTests
             await viewModel.MoveSelectedBookToTrashAsync();
 
             Assert.Empty(viewModel.Books);
-            Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Recycle Bin", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -306,7 +306,7 @@ public sealed class StrongIntegrationTests
 
             Assert.Single(viewModel.Books);
             Assert.Equal("Keep Book", viewModel.Books[0].Title);
-            Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Recycle Bin", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

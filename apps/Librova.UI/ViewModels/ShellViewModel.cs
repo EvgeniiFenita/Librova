@@ -213,7 +213,7 @@ internal sealed class ShellViewModel : ObservableObject
     };
     public string CurrentSectionDescription => CurrentSection switch
     {
-        ShellSection.Library => "Browse the managed library as a visual grid, inspect book metadata, export books, and move books to trash.",
+        ShellSection.Library => "Browse the managed library as a visual grid, inspect book metadata, export books, and move books to Recycle Bin.",
         ShellSection.Import => "Bring EPUB, FB2, and ZIP sources into the managed library through the native import pipeline.",
         ShellSection.Settings => "Adjust converter preferences and inspect runtime diagnostics.",
         _ => string.Empty

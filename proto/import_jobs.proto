@@ -184,8 +184,15 @@ message MoveBookToTrashRequest {
   int64 book_id = 1;
 }
 
+enum DeleteDestination {
+  DELETE_DESTINATION_UNSPECIFIED = 0;
+  DELETE_DESTINATION_RECYCLE_BIN = 1;
+  DELETE_DESTINATION_MANAGED_TRASH = 2;
+}
+
 message MoveBookToTrashResponse {
   optional int64 trashed_book_id = 1;
+  DeleteDestination destination = 2;
 }
 
 message StartImportRequest {

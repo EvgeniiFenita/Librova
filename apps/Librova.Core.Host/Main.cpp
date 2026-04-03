@@ -35,6 +35,7 @@
 #include "PipeTransport/NamedPipeChannel.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
+#include "RecycleBin/WindowsRecycleBinService.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
@@ -289,6 +290,7 @@ int main(int argc, char** argv)
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
         Librova::ManagedStorage::CManagedFileStorage managedStorage(options.LibraryRoot);
         Librova::ManagedTrash::CManagedTrashService trashService(options.LibraryRoot);
+        Librova::RecycleBin::CWindowsRecycleBinService recycleBinService;
 
         std::optional<Librova::ConverterRuntime::CExternalBookConverter> converter;
         if (const auto profile =
@@ -324,7 +326,11 @@ int main(int argc, char** argv)
             options.LibraryRoot);
         const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
         const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot, converterPtr);
-        const Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, options.LibraryRoot);
+        const Librova::Application::CLibraryTrashFacade trashFacade(
+            bookRepository,
+            trashService,
+            options.LibraryRoot,
+            &recycleBinService);
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);
         Librova::ApplicationJobs::CImportJobService jobService(jobManager);

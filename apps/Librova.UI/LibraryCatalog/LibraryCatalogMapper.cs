@@ -78,8 +78,18 @@ internal static class LibraryCatalogMapper
     public static string? FromProto(ExportBookResponse response) =>
         response.HasExportedPath ? response.ExportedPath : null;
 
-    public static bool FromProto(MoveBookToTrashResponse response) =>
-        response.HasTrashedBookId;
+    public static DeleteBookResultModel? FromProto(MoveBookToTrashResponse response) =>
+        !response.HasTrashedBookId
+            ? null
+            : new DeleteBookResultModel
+            {
+                BookId = response.TrashedBookId,
+                Destination = response.Destination switch
+                {
+                    DeleteDestination.ManagedTrash => DeleteDestinationModel.ManagedTrash,
+                    _ => DeleteDestinationModel.RecycleBin
+                }
+            };
 
     public static BookListItemModel FromProto(BookListItem item) =>
         new()

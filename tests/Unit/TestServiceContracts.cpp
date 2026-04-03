@@ -131,6 +131,17 @@ public:
     }
 };
 
+class CStubRecycleBinService final : public Librova::Domain::IRecycleBinService
+{
+public:
+    void MoveToRecycleBin(const std::vector<std::filesystem::path>& paths) override
+    {
+        LastMovedPaths = paths;
+    }
+
+    std::vector<std::filesystem::path> LastMovedPaths;
+};
+
 } // namespace
 
 TEST_CASE("Domain service contract value types expose minimal validity helpers", "[domain][services]")
@@ -183,6 +194,7 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
 {
     CStubManagedStorage storage;
     CStubTrashService trash;
+    CStubRecycleBinService recycleBin;
     const CStubCoverProvider coverProvider;
 
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
@@ -196,6 +208,7 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     storage.RollbackImport(prepared);
     const auto trashPath = trash.MoveToTrash("Books/9/book.epub");
     trash.RestoreFromTrash(trashPath, "Books/9/book.epub");
+    recycleBin.MoveToRecycleBin({trashPath});
 
     const auto cover = coverProvider.TryResolve({
         .TitleUtf8 = "Roadside Picnic",
@@ -210,6 +223,7 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
     REQUIRE(trash.LastTrashDestination == std::filesystem::path{"Trash/book.epub"});
     REQUIRE(trash.LastRestoredFromPath == std::filesystem::path{"Trash/book.epub"});
     REQUIRE(trash.LastRestoredToPath == std::filesystem::path{"Books/9/book.epub"});
+    REQUIRE(recycleBin.LastMovedPaths == std::vector<std::filesystem::path>{std::filesystem::path{"Trash/book.epub"}});
     REQUIRE(cover.has_value());
     REQUIRE_FALSE(cover->IsEmpty());
 }

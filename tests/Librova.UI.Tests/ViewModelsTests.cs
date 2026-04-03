@@ -1196,7 +1196,7 @@ public sealed class ViewModelsTests
         await viewModel.MoveSelectedBookToTrashAsync();
 
         Assert.Equal(selectedBookId, service.LastTrashedBookId);
-        Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recycle Bin", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1668,10 +1668,14 @@ public sealed class ViewModelsTests
             return Task.FromResult<string?>(destinationPath);
         }
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             LastTrashedBookId = bookId;
-            return Task.FromResult(true);
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
         }
     }
 
@@ -1694,8 +1698,8 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(false);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(null);
     }
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
@@ -1726,8 +1730,12 @@ public sealed class ViewModelsTests
             return Task.FromResult<string?>(destinationPath);
         }
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class QueryFilteringLibraryCatalogService : ILibraryCatalogService
@@ -1803,8 +1811,12 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class CoverAwareLibraryCatalogService : ILibraryCatalogService
@@ -1860,8 +1872,12 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class InvalidMetadataLibraryCatalogService : ILibraryCatalogService
@@ -1922,8 +1938,12 @@ public sealed class ViewModelsTests
             return Task.FromResult<string?>(destinationPath);
         }
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class RecordingCoverImageLoader : ICoverImageLoader
@@ -1987,8 +2007,12 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
@@ -2064,8 +2088,12 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class ExactPageLibraryCatalogService : ILibraryCatalogService
@@ -2122,8 +2150,12 @@ public sealed class ViewModelsTests
             CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class FailingLoadMoreLibraryCatalogService : ILibraryCatalogService
@@ -2174,8 +2206,12 @@ public sealed class ViewModelsTests
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class PagedLanguageLibraryCatalogService : ILibraryCatalogService
@@ -2241,8 +2277,12 @@ public sealed class ViewModelsTests
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
     }
 
     private sealed class LanguageDeletionLibraryCatalogService : ILibraryCatalogService
@@ -2301,10 +2341,14 @@ public sealed class ViewModelsTests
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             _books.RemoveAll(book => book.BookId == bookId);
-            return Task.FromResult(true);
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
         }
     }
 
@@ -2383,10 +2427,14 @@ public sealed class ViewModelsTests
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
-        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             _books.RemoveAll(book => book.BookId == bookId);
-            return Task.FromResult(true);
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
         }
     }
 }

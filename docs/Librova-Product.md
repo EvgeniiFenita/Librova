@@ -10,7 +10,7 @@ The product is intentionally narrower and simpler than Calibre. Librova is meant
 - storing metadata and covers;
 - searching and browsing the library;
 - exporting books;
-- moving books to trash;
+- moving books to the Windows `Recycle Bin`, with managed-library `Trash` fallback when handoff fails;
 - working with `EPUB`, `FB2`, and `ZIP`.
 
 Librova is not a reader. The application manages a library rather than reading books inside the UI.
@@ -98,7 +98,7 @@ The user can:
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;
 - inspect richer metadata for the selected book;
 - export the selected book;
-- move the selected book to trash.
+- move the selected book to the Windows `Recycle Bin`.
 
 Series and genres are expected to become first-class browsing metadata rather than incidental parser output.
 
@@ -114,9 +114,11 @@ If a selected managed book is `FB2` but the current session has no configured co
 
 ### 3.5 Delete / Recycle
 
-The current product keeps a safe user-facing delete action through the managed-library `Trash` flow.
+The primary user-facing delete action now sends managed books to the Windows `Recycle Bin`.
 
-Windows `Recycle Bin` integration is tracked as active backlog work rather than already-implemented behavior.
+Delete still stages files through the managed-library `Trash` area first so rollback remains explicit until the database row is removed.
+
+If the final handoff into the Windows `Recycle Bin` fails, Librova keeps the deleted files in the managed-library `Trash` area and reports that fallback explicitly in the UI status text.
 
 ### 3.6 Settings
 
@@ -146,7 +148,7 @@ The current implemented scope includes:
 - local managed storage;
 - SQLite-based metadata storage and search;
 - export;
-- move to trash;
+- move to the Windows `Recycle Bin`, with managed-library `Trash` fallback if needed;
 - a UI shell with sections `Library`, `Import`, and `Settings`;
 - first-run setup;
 - diagnostics and logging;
@@ -186,7 +188,7 @@ Already implemented:
 - import pipeline;
 - browser and details with a card-grid `Library` view;
 - export;
-- delete-to-trash;
+- delete through the Windows `Recycle Bin`, with managed-library `Trash` fallback;
 - first-run setup;
 - converter settings and diagnostics;
 - logging;

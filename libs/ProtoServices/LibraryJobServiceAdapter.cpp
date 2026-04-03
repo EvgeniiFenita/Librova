@@ -134,7 +134,12 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
 
     if (result.has_value())
     {
-        LogInfoIfInitialized("MoveBookToTrash completed for book {}.", request.book_id());
+        LogInfoIfInitialized(
+            "MoveBookToTrash completed for book {} with destination {}.",
+            request.book_id(),
+            result->Destination == Librova::Application::ETrashDestination::RecycleBin
+                ? "RecycleBin"
+                : "ManagedTrash");
     }
     else
     {

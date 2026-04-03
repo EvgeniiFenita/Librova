@@ -306,6 +306,7 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
     REQUIRE(typedResponse.ParseFromString(response.Payload));
     REQUIRE(typedResponse.has_trashed_book_id());
     REQUIRE(typedResponse.trashed_book_id() == bookId.Value);
+    REQUIRE(typedResponse.destination() == librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
     REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
 
     std::filesystem::remove_all(sandbox);

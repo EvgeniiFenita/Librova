@@ -126,11 +126,12 @@ TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-
 {
     const Librova::Application::STrashedBookResult result{
         .BookId = Librova::Domain::SBookId{17},
-        .TrashedBookPath = std::filesystem::path(u8"Trash/Books/0000000017/book.epub")
+        .Destination = Librova::Application::ETrashDestination::RecycleBin
     };
 
     const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(&result);
 
     REQUIRE(response.has_trashed_book_id());
     REQUIRE(response.trashed_book_id() == 17);
+    REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_RECYCLE_BIN);
 }

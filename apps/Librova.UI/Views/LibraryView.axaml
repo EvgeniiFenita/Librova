@@ -333,7 +333,7 @@
                 <TextBlock Grid.Column="1"
                            VerticalAlignment="Center"
                            Foreground="#FFE8E8"
-                           Text="Move To Trash" />
+                           Text="Move To Recycle Bin" />
               </Grid>
             </Button>
           </StackPanel>

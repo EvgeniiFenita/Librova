@@ -24,7 +24,7 @@ The native core is responsible for:
 - managed storage;
 - jobs;
 - search;
-- file export and delete-to-trash behavior.
+- file export and staged delete behavior that targets the Windows `Recycle Bin`.
 
 Any remaining implementation work on top of that baseline is tracked in the project backlog.
 
@@ -67,7 +67,11 @@ One managed library root contains:
 
 Managed paths are stable and `BookId`-based.
 
-The current `Trash` directory is part of the implemented baseline. A Windows `Recycle Bin` backed delete flow is tracked as active backlog work and is not yet part of the implemented delete path.
+The `Trash` directory remains part of the implemented baseline as rollback-safe staging for delete operations.
+
+The user-facing delete path now removes managed books from the catalog, stages their files under `Trash`, and then hands those staged files off to the Windows `Recycle Bin`.
+
+If the Windows handoff fails, the delete remains committed in the catalog and the staged files stay in `Trash` as an explicit managed fallback.
 
 Library-root bootstrap is mode-specific:
 

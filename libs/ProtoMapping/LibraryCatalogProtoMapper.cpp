@@ -287,6 +287,10 @@ librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse
     if (result != nullptr)
     {
         response.set_trashed_book_id(result->BookId.Value);
+        response.set_destination(
+            result->Destination == Librova::Application::ETrashDestination::RecycleBin
+                ? librova::v1::DELETE_DESTINATION_RECYCLE_BIN
+                : librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
     }
 
     return response;

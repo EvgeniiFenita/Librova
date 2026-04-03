@@ -31,6 +31,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaStoragePlanning
         LibrovaUnicode
         LibrovaZipImporting
+        LibrovaRecycleBin
 )
 
 target_compile_features(LibrovaCoreHostApp PRIVATE cxx_std_20)

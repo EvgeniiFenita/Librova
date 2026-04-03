@@ -98,7 +98,7 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
         }
     }
 
-    public async Task<bool> MoveBookToTrashAsync(
+    public async Task<DeleteBookResultModel?> MoveBookToTrashAsync(
         long bookId,
         TimeSpan timeout,
         CancellationToken cancellationToken)
@@ -110,7 +110,7 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
         }
         catch (Exception error)
         {
-            UiLogging.Error(error, "Failed to move book to trash. BookId={BookId}", bookId);
+            UiLogging.Error(error, "Failed to move book to Recycle Bin. BookId={BookId}", bookId);
             throw;
         }
     }

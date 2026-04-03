@@ -32,10 +32,6 @@ Working rule:
   - Status: `Open`
   - Note: treat `series` and `genres` as first-class metadata end-to-end instead of incidental parser output.
 
-- `#25` add Windows `Recycle Bin` integration as a first-class delete flow instead of limiting delete to the managed-library `Trash` area.
-  - Status: `Open`
-  - Note: keep deletion safety explicit, preserve rollback-aware behavior where needed, and define how `Recycle Bin` integration coexists with or supersedes the current managed `Trash` flow.
-
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
@@ -92,6 +88,10 @@ Working rule:
 - `#29` replace fixed first-page library browsing with infinite scroll and total-result counts.
   - Status: `Closed`
   - Note: the `Library` grid now appends additional pages on scroll, the counter shows the total matching result count instead of the currently loaded page size, language-filter options come from the full matching result set instead of only the already loaded cards, and delete refresh reloads the visible range in one read-side request instead of replaying paged RPC calls.
+
+- `#25` add Windows `Recycle Bin` integration as a first-class delete flow instead of limiting delete to the managed-library `Trash` area.
+  - Status: `Closed`
+  - Note: delete now stages through managed `Trash` for rollback safety, hands staged files off to the Windows `Recycle Bin`, reports managed-`Trash` fallback explicitly if that handoff fails, and cleans up empty `Trash` subfolders after successful handoff.
 
 ### Critical
 
