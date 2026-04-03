@@ -9,6 +9,7 @@ target_include_directories(LibrovaBookDatabase PUBLIC
 
 target_link_libraries(LibrovaBookDatabase PUBLIC
     LibrovaDomain
+    LibrovaManagedPaths
     LibrovaSearchIndex
     LibrovaSqlite
 )

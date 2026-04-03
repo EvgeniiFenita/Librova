@@ -355,6 +355,69 @@ TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-t
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book query repository hydrates multi-book search results without losing order or metadata", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-bulk-hydration.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Alpha Title";
+    firstBook.Metadata.AuthorsUtf8 = {"Primary Author", "Second Author"};
+    firstBook.Metadata.Language = "en";
+    firstBook.Metadata.TagsUtf8 = {"tag-b", "tag-a"};
+    firstBook.Metadata.SeriesUtf8 = std::string{"Series A"};
+    firstBook.Metadata.SeriesIndex = 2.0;
+    firstBook.Metadata.DescriptionUtf8 = std::string{"First description"};
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = std::filesystem::path(u8"Books/0000000601/alpha.epub");
+    firstBook.File.SizeBytes = 600;
+    firstBook.File.Sha256Hex = "hash-bulk-1";
+    firstBook.CoverPath = std::filesystem::path(u8"Covers/0000000601.jpg");
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Beta Title";
+    secondBook.Metadata.AuthorsUtf8 = {"Solo Author"};
+    secondBook.Metadata.Language = "en";
+    secondBook.Metadata.TagsUtf8 = {"tag-c"};
+    secondBook.Metadata.DescriptionUtf8 = std::string{"Second description"};
+    secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    secondBook.File.ManagedPath = std::filesystem::path(u8"Books/0000000602/beta.fb2");
+    secondBook.File.SizeBytes = 700;
+    secondBook.File.Sha256Hex = "hash-bulk-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
+        .Language = std::string{"en"},
+        .SortBy = Librova::Domain::EBookSort::Title
+    });
+
+    REQUIRE(books.size() == 2);
+    REQUIRE(books[0].Metadata.TitleUtf8 == "Alpha Title");
+    REQUIRE(books[0].Metadata.AuthorsUtf8 == std::vector<std::string>({"Primary Author", "Second Author"}));
+    REQUIRE(books[0].Metadata.TagsUtf8 == std::vector<std::string>({"tag-a", "tag-b"}));
+    REQUIRE(books[0].Metadata.SeriesUtf8 == std::optional<std::string>{"Series A"});
+    REQUIRE(books[0].Metadata.SeriesIndex == std::optional<double>{2.0});
+    REQUIRE(books[0].Metadata.DescriptionUtf8 == std::optional<std::string>{"First description"});
+    REQUIRE(books[0].CoverPath == std::optional<std::filesystem::path>{std::filesystem::path(u8"Covers/0000000601.jpg")});
+    REQUIRE(books[0].File.ManagedPath == std::filesystem::path(u8"Books/0000000601/alpha.epub"));
+
+    REQUIRE(books[1].Metadata.TitleUtf8 == "Beta Title");
+    REQUIRE(books[1].Metadata.AuthorsUtf8 == std::vector<std::string>({"Solo Author"}));
+    REQUIRE(books[1].Metadata.TagsUtf8 == std::vector<std::string>({"tag-c"}));
+    REQUIRE(books[1].Metadata.DescriptionUtf8 == std::optional<std::string>{"Second description"});
+    REQUIRE(books[1].File.ManagedPath == std::filesystem::path(u8"Books/0000000602/beta.fb2"));
+    REQUIRE_FALSE(books[1].CoverPath.has_value());
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-duplicates.db";
@@ -409,6 +472,54 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
     REQUIRE(probableMatches.front().Severity == Librova::Domain::EDuplicateSeverity::Probable);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
     REQUIRE(probableMatches.front().ExistingBookId.Value == storedId.Value);
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository probable duplicate detection requires the full normalized author set", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-probable-author-set.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook matchingBook;
+    matchingBook.Metadata.TitleUtf8 = "Roadside Picnic";
+    matchingBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
+    matchingBook.Metadata.Language = "ru";
+    matchingBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    matchingBook.File.ManagedPath = "Books/0000000701/match.epub";
+    matchingBook.File.SizeBytes = 800;
+    matchingBook.File.Sha256Hex = "hash-probable-1";
+    matchingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+
+    const auto matchingBookId = writeRepository.Add(matchingBook);
+
+    Librova::Domain::SBook extraAuthorBook;
+    extraAuthorBook.Metadata.TitleUtf8 = "Roadside Picnic";
+    extraAuthorBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky", "Translator Name"};
+    extraAuthorBook.Metadata.Language = "ru";
+    extraAuthorBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    extraAuthorBook.File.ManagedPath = "Books/0000000702/extra.epub";
+    extraAuthorBook.File.SizeBytes = 900;
+    extraAuthorBook.File.Sha256Hex = "hash-probable-2";
+    extraAuthorBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(extraAuthorBook));
+
+    const std::vector<Librova::Domain::SDuplicateMatch> probableMatches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "  roadside   picnic ",
+            .AuthorsUtf8 = {"BORIS STRUGATSKY", "arkady strugatsky"},
+            .Language = "ru"
+        },
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(probableMatches.size() == 1);
+    REQUIRE(probableMatches.front().ExistingBookId.Value == matchingBookId.Value);
+    REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
     std::filesystem::remove(databasePath);
 }

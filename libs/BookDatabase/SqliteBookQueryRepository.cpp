@@ -1,16 +1,21 @@
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 
+#include <chrono>
+#include <format>
 #include <optional>
 #include <cctype>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "BookDatabase/SqliteBookRepository.hpp"
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
+#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
@@ -80,6 +85,222 @@ std::string BuildFtsQuery(const std::string_view text)
     }
 
     return query;
+}
+
+std::chrono::system_clock::time_point ParseTimePoint(const std::string_view value)
+{
+    std::istringstream input{std::string{value}};
+    std::chrono::sys_seconds parsedValue{};
+    input >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", parsedValue);
+
+    if (input.fail())
+    {
+        throw std::runtime_error(std::string{"Failed to parse sqlite timestamp: "} + std::string{value});
+    }
+
+    return parsedValue;
+}
+
+std::string BuildIdInClause(const std::size_t count)
+{
+    std::string sql = "(";
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        if (index > 0)
+        {
+            sql += ", ";
+        }
+
+        sql += "?";
+    }
+
+    sql += ")";
+    return sql;
+}
+
+void BindBookIds(Librova::Sqlite::CSqliteStatement& statement, const std::vector<std::int64_t>& bookIds, int firstParameterIndex = 1)
+{
+    int parameterIndex = firstParameterIndex;
+
+    for (const std::int64_t bookId : bookIds)
+    {
+        statement.BindInt64(parameterIndex++, bookId);
+    }
+}
+
+std::unordered_map<std::int64_t, std::vector<std::string>> ReadAuthorsByBookId(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    if (bookIds.empty())
+    {
+        return {};
+    }
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        std::format(
+            "SELECT ba.book_id, a.display_name "
+            "FROM book_authors ba "
+            "INNER JOIN authors a ON a.id = ba.author_id "
+            "WHERE ba.book_id IN {} "
+            "ORDER BY ba.book_id ASC, ba.author_order ASC;",
+            BuildIdInClause(bookIds.size())));
+    BindBookIds(statement, bookIds);
+
+    std::unordered_map<std::int64_t, std::vector<std::string>> authorsByBookId;
+
+    while (statement.Step())
+    {
+        authorsByBookId[statement.GetColumnInt64(0)].push_back(statement.GetColumnText(1));
+    }
+
+    return authorsByBookId;
+}
+
+std::unordered_map<std::int64_t, std::vector<std::string>> ReadTagsByBookId(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    if (bookIds.empty())
+    {
+        return {};
+    }
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        std::format(
+            "SELECT bt.book_id, t.display_name "
+            "FROM book_tags bt "
+            "INNER JOIN tags t ON t.id = bt.tag_id "
+            "WHERE bt.book_id IN {} "
+            "ORDER BY bt.book_id ASC, t.display_name ASC;",
+            BuildIdInClause(bookIds.size())));
+    BindBookIds(statement, bookIds);
+
+    std::unordered_map<std::int64_t, std::vector<std::string>> tagsByBookId;
+
+    while (statement.Step())
+    {
+        tagsByBookId[statement.GetColumnInt64(0)].push_back(statement.GetColumnText(1));
+    }
+
+    return tagsByBookId;
+}
+
+std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    if (bookIds.empty())
+    {
+        return {};
+    }
+
+    const auto authorsByBookId = ReadAuthorsByBookId(connection, bookIds);
+    const auto tagsByBookId = ReadTagsByBookId(connection, bookIds);
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        std::format(
+            "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
+            "FROM books WHERE id IN {};",
+            BuildIdInClause(bookIds.size())));
+    BindBookIds(statement, bookIds);
+
+    std::unordered_map<std::int64_t, Librova::Domain::SBook> booksById;
+    booksById.reserve(bookIds.size());
+
+    while (statement.Step())
+    {
+        const std::optional<Librova::Domain::EBookFormat> format = Librova::Domain::TryParseBookFormat(statement.GetColumnText(10));
+
+        if (!format.has_value())
+        {
+            throw std::runtime_error("Failed to parse stored book format.");
+        }
+
+        Librova::Domain::SBook book;
+        book.Id = Librova::Domain::SBookId{statement.GetColumnInt64(0)};
+        book.Metadata.TitleUtf8 = statement.GetColumnText(1);
+        book.Metadata.Language = statement.GetColumnText(2);
+        book.Metadata.SeriesUtf8 = statement.IsColumnNull(3) ? std::nullopt : std::make_optional(statement.GetColumnText(3));
+        book.Metadata.SeriesIndex = statement.IsColumnNull(4) ? std::nullopt : std::make_optional(statement.GetColumnDouble(4));
+        book.Metadata.PublisherUtf8 = statement.IsColumnNull(5) ? std::nullopt : std::make_optional(statement.GetColumnText(5));
+        book.Metadata.Year = statement.IsColumnNull(6) ? std::nullopt : std::make_optional(statement.GetColumnInt(6));
+        book.Metadata.Isbn = statement.IsColumnNull(7) ? std::nullopt : std::make_optional(statement.GetColumnText(7));
+        book.Metadata.DescriptionUtf8 = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
+        book.Metadata.Identifier = statement.IsColumnNull(9) ? std::nullopt : std::make_optional(statement.GetColumnText(9));
+        if (const auto authorIterator = authorsByBookId.find(book.Id.Value); authorIterator != authorsByBookId.end())
+        {
+            book.Metadata.AuthorsUtf8 = authorIterator->second;
+        }
+
+        if (const auto tagIterator = tagsByBookId.find(book.Id.Value); tagIterator != tagsByBookId.end())
+        {
+            book.Metadata.TagsUtf8 = tagIterator->second;
+        }
+
+        book.File.Format = *format;
+        book.File.ManagedPath = Librova::ManagedPaths::PathFromUtf8(statement.GetColumnText(11));
+        book.CoverPath = statement.IsColumnNull(12)
+            ? std::nullopt
+            : std::make_optional(Librova::ManagedPaths::PathFromUtf8(statement.GetColumnText(12)));
+        book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(13));
+        book.File.Sha256Hex = statement.GetColumnText(14);
+        book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(15));
+
+        booksById.emplace(book.Id.Value, std::move(book));
+    }
+
+    return booksById;
+}
+
+struct SDuplicateCandidateMetadata
+{
+    std::int64_t BookId = 0;
+    std::string TitleUtf8;
+    std::vector<std::string> AuthorsUtf8;
+};
+
+std::vector<SDuplicateCandidateMetadata> ReadDuplicateCandidates(const std::filesystem::path& databasePath)
+{
+    Librova::Sqlite::CSqliteConnection connection(databasePath);
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT id, title FROM books;");
+
+    std::vector<std::int64_t> bookIds;
+    std::unordered_map<std::int64_t, std::string> titlesByBookId;
+
+    while (statement.Step())
+    {
+        const std::int64_t bookId = statement.GetColumnInt64(0);
+        bookIds.push_back(bookId);
+        titlesByBookId.emplace(bookId, statement.GetColumnText(1));
+    }
+
+    const auto authorsByBookId = ReadAuthorsByBookId(connection, bookIds);
+    std::vector<SDuplicateCandidateMetadata> books;
+    books.reserve(bookIds.size());
+
+    for (const std::int64_t bookId : bookIds)
+    {
+        SDuplicateCandidateMetadata book{
+            .BookId = bookId,
+            .TitleUtf8 = titlesByBookId.at(bookId)
+        };
+
+        if (const auto authorIterator = authorsByBookId.find(bookId); authorIterator != authorsByBookId.end())
+        {
+            book.AuthorsUtf8 = authorIterator->second;
+        }
+
+        books.push_back(std::move(book));
+    }
+
+    return books;
 }
 
 void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& parameterIndex, const Librova::Domain::SSearchQuery& query)
@@ -249,17 +470,22 @@ std::vector<Librova::Domain::SBook> CSqliteBookQueryRepository::Search(const Lib
     int parameterIndex = 1;
     BindTextFilters(statement, parameterIndex, query);
 
-    CSqliteBookRepository repository(m_databasePath);
-    std::vector<Librova::Domain::SBook> books;
+    std::vector<std::int64_t> bookIds;
 
     while (statement.Step())
     {
-        const Librova::Domain::SBookId bookId{statement.GetColumnInt64(0)};
-        const std::optional<Librova::Domain::SBook> book = repository.GetById(bookId);
+        bookIds.push_back(statement.GetColumnInt64(0));
+    }
 
-        if (book.has_value())
+    const auto booksById = ReadBooksById(connection, bookIds);
+    std::vector<Librova::Domain::SBook> books;
+    books.reserve(bookIds.size());
+
+    for (const std::int64_t bookId : bookIds)
+    {
+        if (const auto bookIterator = booksById.find(bookId); bookIterator != booksById.end())
         {
-            books.push_back(*book);
+            books.push_back(bookIterator->second);
         }
     }
 
@@ -304,27 +530,19 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
         if (!candidateDuplicateKey.empty())
         {
-            Librova::Sqlite::CSqliteConnection connection(m_databasePath);
-            Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT id FROM books;");
-            CSqliteBookRepository repository(m_databasePath);
-
-            while (statement.Step())
+            for (const SDuplicateCandidateMetadata& existingBook : ReadDuplicateCandidates(m_databasePath))
             {
-                const Librova::Domain::SBookId bookId{statement.GetColumnInt64(0)};
+                const Librova::Domain::SBookId bookId{existingBook.BookId};
 
                 if (seenIds.contains(bookId.Value))
                 {
                     continue;
                 }
 
-                const std::optional<Librova::Domain::SBook> existingBook = repository.GetById(bookId);
-
-                if (!existingBook.has_value())
-                {
-                    continue;
-                }
-
-                if (Librova::Domain::BuildDuplicateKey(existingBook->Metadata) == candidateDuplicateKey)
+                if (Librova::Domain::BuildDuplicateKey({
+                        .TitleUtf8 = existingBook.TitleUtf8,
+                        .AuthorsUtf8 = existingBook.AuthorsUtf8
+                    }) == candidateDuplicateKey)
                 {
                     matches.push_back({
                         .Severity = Librova::Domain::EDuplicateSeverity::Probable,
