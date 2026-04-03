@@ -8,6 +8,7 @@ target_include_directories(LibrovaManagedStorage PUBLIC
 
 target_link_libraries(LibrovaManagedStorage PUBLIC
     LibrovaDomain
+    LibrovaManagedPaths
     LibrovaStoragePlanning
 )
 

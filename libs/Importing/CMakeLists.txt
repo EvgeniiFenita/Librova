@@ -12,6 +12,7 @@ target_link_libraries(LibrovaImporting
     PUBLIC
         LibrovaDomain
         LibrovaImportConversion
+        LibrovaManagedPaths
         LibrovaParserRegistry
 )
 

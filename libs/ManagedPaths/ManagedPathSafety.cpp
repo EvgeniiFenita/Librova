@@ -112,4 +112,13 @@ std::string PathToUtf8(const std::filesystem::path& path)
     return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
 }
 
+std::filesystem::path PathFromUtf8(const std::string_view path)
+{
+    const auto utf8Path = std::u8string{
+        reinterpret_cast<const char8_t*>(path.data()),
+        reinterpret_cast<const char8_t*>(path.data()) + path.size()
+    };
+    return std::filesystem::path{utf8Path};
+}
+
 } // namespace Librova::ManagedPaths

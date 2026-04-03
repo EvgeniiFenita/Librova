@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
+#include "ManagedPaths/ManagedPathSafety.hpp"
 
 namespace Librova::CoreHost {
 namespace {
@@ -61,7 +62,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --pipe.");
             }
 
-            options.PipePath = arguments[++index];
+            options.PipePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -84,7 +85,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --library-root.");
             }
 
-            options.LibraryRoot = arguments[++index];
+            options.LibraryRoot = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -155,7 +156,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
-            options.ConverterConfiguration.Fb2Cng.ExecutablePath = arguments[++index];
+            options.ConverterConfiguration.Fb2Cng.ExecutablePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -174,7 +175,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
-            options.ConverterConfiguration.Fb2Cng.ConfigPath = std::filesystem::path{arguments[++index]};
+            options.ConverterConfiguration.Fb2Cng.ConfigPath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -193,7 +194,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
-            options.ConverterConfiguration.Custom.ExecutablePath = arguments[++index];
+            options.ConverterConfiguration.Custom.ExecutablePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
             continue;
         }
 

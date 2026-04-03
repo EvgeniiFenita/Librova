@@ -12,7 +12,11 @@ target_include_directories(LibrovaLogging
 
 target_link_libraries(LibrovaLogging
     PUBLIC
-        spdlog::spdlog
+        spdlog::spdlog_header_only
 )
+
+if(WIN32)
+    target_compile_definitions(LibrovaLogging PUBLIC SPDLOG_WCHAR_FILENAMES)
+endif()
 
 target_compile_features(LibrovaLogging PUBLIC cxx_std_20)

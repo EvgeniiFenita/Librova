@@ -27,6 +27,7 @@
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "Logging/Logging.hpp"
+#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
@@ -39,12 +40,73 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <shellapi.h>
 #endif
 
 namespace {
 
 [[nodiscard]] std::vector<std::string> CollectArguments(const int argc, char** argv)
 {
+#ifdef _WIN32
+    int wideArgc = 0;
+    LPWSTR* wideArgv = ::CommandLineToArgvW(::GetCommandLineW(), &wideArgc);
+    if (wideArgv == nullptr)
+    {
+        throw std::runtime_error("Failed to read Unicode command-line arguments.");
+    }
+
+    auto wideToUtf8 = [](const std::wstring_view value) {
+        if (value.empty())
+        {
+            return std::string{};
+        }
+
+        const int length = ::WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            value.data(),
+            static_cast<int>(value.size()),
+            nullptr,
+            0,
+            nullptr,
+            nullptr);
+        if (length <= 0)
+        {
+            throw std::runtime_error("Failed to convert Unicode command-line argument to UTF-8.");
+        }
+
+        std::string utf8Value(static_cast<std::size_t>(length), '\0');
+        ::WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            value.data(),
+            static_cast<int>(value.size()),
+            utf8Value.data(),
+            length,
+            nullptr,
+            nullptr);
+        return utf8Value;
+    };
+
+    std::vector<std::string> arguments;
+    arguments.reserve(wideArgc > 1 ? static_cast<std::size_t>(wideArgc - 1) : 0);
+
+    try
+    {
+        for (int index = 1; index < wideArgc; ++index)
+        {
+            arguments.push_back(wideToUtf8(wideArgv[index]));
+        }
+    }
+    catch (...)
+    {
+        ::LocalFree(wideArgv);
+        throw;
+    }
+
+    ::LocalFree(wideArgv);
+    return arguments;
+#else
     std::vector<std::string> arguments;
     arguments.reserve(argc > 1 ? static_cast<std::size_t>(argc - 1) : 0);
 
@@ -54,6 +116,7 @@ namespace {
     }
 
     return arguments;
+#endif
 }
 
 [[nodiscard]] std::filesystem::path GetDatabasePath(const std::filesystem::path& libraryRoot)
@@ -180,7 +243,9 @@ int main(int argc, char** argv)
 
         Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot, options.LibraryOpenMode);
         Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
-        Librova::Logging::Info("Starting Librova.Core.Host for library root '{}'.", options.LibraryRoot.string());
+        Librova::Logging::Info(
+            "Starting Librova.Core.Host for library root '{}'.",
+            Librova::ManagedPaths::PathToUtf8(options.LibraryRoot));
 
 #ifdef _WIN32
         SHostShutdownState shutdownState;
@@ -250,7 +315,9 @@ int main(int argc, char** argv)
             try
             {
                 Librova::PipeTransport::CNamedPipeServer server(options.PipePath);
-                Librova::Logging::Info("Waiting for pipe session on '{}'.", options.PipePath.string());
+                Librova::Logging::Info(
+                    "Waiting for pipe session on '{}'.",
+                    Librova::ManagedPaths::PathToUtf8(options.PipePath));
                 auto connection = server.WaitForClient();
 
 #ifdef _WIN32

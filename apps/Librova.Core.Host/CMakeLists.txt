@@ -20,6 +20,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaImporting
         LibrovaJobs
         LibrovaLogging
+        LibrovaManagedPaths
         LibrovaManagedStorage
         LibrovaManagedTrash
         LibrovaParserRegistry

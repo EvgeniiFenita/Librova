@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include "ManagedPaths/ManagedPathSafety.hpp"
+
 namespace Librova::ConverterRuntime {
 namespace {
 
@@ -336,7 +338,10 @@ void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to move converter output from "} + sourcePath.string() + " to " + destinationPath.string());
+            std::string{"Failed to move converter output from "}
+            + Librova::ManagedPaths::PathToUtf8(sourcePath)
+            + " to "
+            + Librova::ManagedPaths::PathToUtf8(destinationPath));
     }
 }
 
@@ -347,7 +352,8 @@ void EnsureDirectory(const std::filesystem::path& path)
 
     if (errorCode)
     {
-        throw std::runtime_error(std::string{"Failed to create converter directory: "} + path.string());
+        throw std::runtime_error(
+            std::string{"Failed to create converter directory: "} + Librova::ManagedPaths::PathToUtf8(path));
     }
 }
 

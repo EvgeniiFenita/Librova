@@ -14,6 +14,7 @@ target_link_libraries(LibrovaZipImporting
     PUBLIC
         LibrovaDomain
         LibrovaImporting
+        LibrovaManagedPaths
         libzip::zip
     PRIVATE
         LibrovaLogging

@@ -98,3 +98,13 @@ TEST_CASE("Managed path safety converts Cyrillic paths to UTF-8", "[managed-path
 
     REQUIRE(Librova::ManagedPaths::PathToUtf8(path) == expected);
 }
+
+TEST_CASE("Managed path safety restores Cyrillic paths from UTF-8", "[managed-paths]")
+{
+    const auto utf8Bytes = std::filesystem::path(u8"Books/Автор/Книга.fb2").generic_u8string();
+    const std::string utf8Path(
+        reinterpret_cast<const char*>(utf8Bytes.data()),
+        utf8Bytes.size());
+
+    REQUIRE(Librova::ManagedPaths::PathFromUtf8(utf8Path) == std::filesystem::path(u8"Books/Автор/Книга.fb2"));
+}

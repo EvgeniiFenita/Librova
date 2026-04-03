@@ -7,6 +7,7 @@
 
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "CoreHost/HostOptions.hpp"
+#include "ManagedPaths/ManagedPathSafety.hpp"
 
 TEST_CASE("Host options parse required pipe and library root", "[core-host]")
 {
@@ -32,6 +33,32 @@ TEST_CASE("Host options parse explicit library creation mode", "[core-host]")
     });
 
     REQUIRE(options.LibraryOpenMode == Librova::CoreHost::ELibraryOpenMode::CreateNew);
+}
+
+TEST_CASE("Host options parse UTF-8 encoded Unicode paths", "[core-host]")
+{
+    const auto utf8PipePathBytes = std::filesystem::path(u8R"(\\.\pipe\Librova.Тест)").generic_u8string();
+    const auto utf8LibraryRootBytes = std::filesystem::path(u8"C:/Библиотека/Librova").generic_u8string();
+    const auto utf8ExecutableBytes = std::filesystem::path(u8"C:/Конвертеры/fbc.exe").generic_u8string();
+    const auto utf8ConfigBytes = std::filesystem::path(u8"C:/Конвертеры/fbc.yaml").generic_u8string();
+
+    const std::string utf8PipePath(reinterpret_cast<const char*>(utf8PipePathBytes.data()), utf8PipePathBytes.size());
+    const std::string utf8LibraryRoot(reinterpret_cast<const char*>(utf8LibraryRootBytes.data()), utf8LibraryRootBytes.size());
+    const std::string utf8Executable(reinterpret_cast<const char*>(utf8ExecutableBytes.data()), utf8ExecutableBytes.size());
+    const std::string utf8Config(reinterpret_cast<const char*>(utf8ConfigBytes.data()), utf8ConfigBytes.size());
+
+    const auto options = Librova::CoreHost::CHostOptions::Parse({
+        "--pipe", utf8PipePath,
+        "--library-root", utf8LibraryRoot,
+        "--fb2cng-exe", utf8Executable,
+        "--fb2cng-config", utf8Config
+    });
+
+    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.PipePath) == utf8PipePath);
+    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.LibraryRoot) == utf8LibraryRoot);
+    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.ConverterConfiguration.Fb2Cng.ExecutablePath) == utf8Executable);
+    REQUIRE(options.ConverterConfiguration.Fb2Cng.ConfigPath.has_value());
+    REQUIRE(Librova::ManagedPaths::PathToUtf8(*options.ConverterConfiguration.Fb2Cng.ConfigPath) == utf8Config);
 }
 
 TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")

@@ -15,6 +15,15 @@ std::mutex LoggerMutex;
 std::shared_ptr<spdlog::logger> LoggerInstance;
 constexpr std::string_view HostLoggerName = "Librova.Core.Host";
 
+[[nodiscard]] spdlog::filename_t ToSpdlogFilename(const std::filesystem::path& path)
+{
+#ifdef _WIN32
+    return path.native();
+#else
+    return path.string();
+#endif
+}
+
 } // namespace
 
 void CLogging::InitializeHostLogger(const std::filesystem::path& logFilePath)
@@ -23,7 +32,7 @@ void CLogging::InitializeHostLogger(const std::filesystem::path& logFilePath)
 
     std::filesystem::create_directories(logFilePath.parent_path());
 
-    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.string(), true);
+    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(ToSpdlogFilename(logFilePath), true);
     auto stderrSink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
 
     fileSink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");

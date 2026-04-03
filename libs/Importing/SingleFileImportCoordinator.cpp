@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include "ManagedPaths/ManagedPathSafety.hpp"
+
 namespace {
 
 constexpr auto GStrictDuplicateWarning = "Import rejected because a strict duplicate already exists.";
@@ -21,7 +23,8 @@ void EnsureDirectory(const std::filesystem::path& path)
 
     if (errorCode)
     {
-        throw std::runtime_error(std::string{"Failed to create directory: "} + path.string());
+        throw std::runtime_error(
+            std::string{"Failed to create directory: "} + Librova::ManagedPaths::PathToUtf8(path));
     }
 }
 

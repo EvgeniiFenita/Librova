@@ -135,6 +135,7 @@ Native code is organized as one static library per logical slice under `libs/<Sl
 - native logging uses `spdlog`
 - UI logging uses `Serilog`
 - once a library session is active, both log streams are written under `LibraryRoot/Logs`
+- on Windows, native CLI path arguments and native log-file paths must preserve UTF-8 / Unicode library roots instead of falling back to the active ANSI code page
 
 Important runtime paths should log actionable information, especially:
 
