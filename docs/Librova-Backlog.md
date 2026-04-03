@@ -54,6 +54,10 @@ Working rule:
   - Status: `Open`
   - Note: decide whether the UI should show a single total-library-size metric or an explicit breakdown for `Books`, `Covers`, and `Database`, then align product docs and statistics contracts with that choice.
 
+- `#39` show the application version in the UI and define it in exactly one source of truth.
+  - Status: `Open`
+  - Note: the displayed UI version must come from a single shared version definition used across the application instead of duplicated constants or per-project version strings, so native host, managed UI, packaging, and any future version display cannot drift apart.
+
 - `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
   - Status: `Open`
   - Note: current replacement logic can re-expand `{output_format}` and similar tokens if they appear in the source or destination path text; keep placeholder substitution explicit and add a regression test for filenames containing literal placeholder-like fragments.
