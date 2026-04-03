@@ -11,6 +11,7 @@
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace {
 
@@ -642,4 +643,33 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
     REQUIRE_FALSE(std::filesystem::exists(managedStorage.LastPreparedStorage->StagedBookPath));
     REQUIRE(bookRepository.RemovedIds.size() == 1);
     REQUIRE(bookRepository.RemovedIds.front().Value == 1);
+}
+
+TEST_CASE("Single file import keeps detailed parser diagnostics out of transport-facing error text", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-parser-diagnostics");
+    const auto sourcePath = sandbox.GetPath() / "invalid.fb2";
+    WriteTextFile(sourcePath, "");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error == "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(sourcePath) + ": No document element found");
+    REQUIRE(result.DiagnosticError.find("xml_preview=\"<empty>\"") != std::string::npos);
 }

@@ -14,6 +14,7 @@ namespace Librova::ZipImporting {
 enum class EZipEntryImportStatus
 {
     Imported,
+    Skipped,
     UnsupportedEntry,
     NestedArchiveSkipped,
     Failed,

@@ -27,6 +27,12 @@ void Info(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
 }
 
 template <typename... TArgs>
+void Debug(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    CLogging::GetLogger()->debug(format, std::forward<TArgs>(args)...);
+}
+
+template <typename... TArgs>
 void Warn(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
 {
     CLogging::GetLogger()->warn(format, std::forward<TArgs>(args)...);

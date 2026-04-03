@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
@@ -93,6 +94,24 @@ bool IsCancellationRequested(
     const Librova::Domain::IProgressSink& progressSink)
 {
     return stopToken.stop_requested() || progressSink.IsCancellationRequested();
+}
+
+[[nodiscard]] std::string SanitizeTransportErrorMessage(const std::string_view message)
+{
+    constexpr std::string_view detailedAuthorMessage =
+        "FB2 metadata must contain at least one non-empty title-info/author.";
+
+    if (message.starts_with(detailedAuthorMessage))
+    {
+        return std::string{detailedAuthorMessage};
+    }
+
+    if (const auto diagnosticsIndex = message.find(" ["); diagnosticsIndex != std::string_view::npos)
+    {
+        return std::string{message.substr(0, diagnosticsIndex)};
+    }
+
+    return std::string{message};
 }
 
 } // namespace
@@ -325,6 +344,17 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
     }
     catch (const std::exception& error)
     {
+        const std::string diagnosticError = error.what();
+        const std::string transportError = SanitizeTransportErrorMessage(diagnosticError);
+
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Error(
+                "Single file import failed: source='{}' reason='{}'",
+                Librova::Unicode::PathToUtf8(request.SourcePath),
+                diagnosticError);
+        }
+
         if (addedBookId.has_value())
         {
             try
@@ -346,7 +376,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         return {
             .Status = ESingleFileImportStatus::Failed,
-            .Error = error.what()
+            .Error = std::move(transportError),
+            .DiagnosticError = std::move(diagnosticError)
         };
     }
 }

@@ -1,5 +1,6 @@
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
+using System.IO.Compression;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -347,6 +348,105 @@ public sealed class ImportJobsServiceTests
         }
     }
 
+    [Fact]
+    public async Task Service_ReturnsCompletedZipResult_WhenWarningsContainLongCyrillicXmlPreview()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-import-service-zip-preview",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.ZipPreview.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
+            };
+
+            var zipPath = Path.Combine(sandboxRoot, "problematic.zip");
+            using (var stream = File.Create(zipPath))
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
+            {
+                var longTitle = string.Concat(Enumerable.Repeat("Журнал «Цигун и жизнь» ", 30));
+                WriteZipEntry(
+                    archive,
+                    "empty-author.fb2",
+                    $$"""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
+                      <description>
+                        <title-info>
+                          <genre>periodic</genre>
+                          <author>
+                            <first-name></first-name>
+                            <last-name></last-name>
+                          </author>
+                          <book-title>{{longTitle}}</book-title>
+                          <annotation><p>Проверка длинного preview с кириллицей.</p></annotation>
+                          <lang>ru</lang>
+                        </title-info>
+                        <document-info>
+                          <author>
+                            <nickname>Сканировщик</nickname>
+                          </author>
+                        </document-info>
+                      </description>
+                    </FictionBook>
+                    """);
+            }
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await process.StartAsync(options, cancellation.Token);
+
+            var service = new ImportJobsService(options.PipePath);
+            var jobId = await service.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [zipPath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await service.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(10),
+                cancellation.Token));
+
+            var result = await service.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
+            Assert.NotNull(result);
+            Assert.Equal(ImportJobStatusModel.Failed, result!.Snapshot.Status);
+            Assert.NotNull(result.Summary);
+            Assert.Equal(1UL, result.Summary!.TotalEntries);
+            Assert.Equal(1UL, result.Summary.FailedEntries);
+            Assert.Contains(result.Summary.Warnings, warning => warning.Contains("title_info_preview", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     private static string CreateFb2(string title) =>
         $$"""
         <?xml version="1.0" encoding="UTF-8"?>
@@ -366,4 +466,11 @@ public sealed class ImportJobsServiceTests
           </body>
         </FictionBook>
         """;
+
+    private static void WriteZipEntry(ZipArchive archive, string entryPath, string text)
+    {
+        var entry = archive.CreateEntry(entryPath);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write(text);
+    }
 }

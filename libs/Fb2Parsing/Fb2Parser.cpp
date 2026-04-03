@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iterator>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -55,6 +56,129 @@ std::string ReplaceEncodingDeclaration(std::string text)
     return text;
 }
 
+[[nodiscard]] std::uintmax_t TryGetFileSize(const std::filesystem::path& filePath) noexcept
+{
+    std::error_code errorCode;
+    const auto fileSize = std::filesystem::file_size(filePath, errorCode);
+    return errorCode ? 0 : fileSize;
+}
+
+[[nodiscard]] std::string Trim(const std::string_view value);
+
+[[nodiscard]] std::string TruncateUtf8(std::string_view value, const std::size_t maxBytes)
+{
+    if (value.size() <= maxBytes)
+    {
+        return std::string{value};
+    }
+
+    std::size_t index = 0;
+    std::size_t lastValidEnd = 0;
+
+    while (index < value.size() && index < maxBytes)
+    {
+        const unsigned char lead = static_cast<unsigned char>(value[index]);
+        std::size_t sequenceLength = 1;
+
+        if ((lead & 0x80u) == 0)
+        {
+            sequenceLength = 1;
+        }
+        else if ((lead & 0xE0u) == 0xC0u)
+        {
+            sequenceLength = 2;
+        }
+        else if ((lead & 0xF0u) == 0xE0u)
+        {
+            sequenceLength = 3;
+        }
+        else if ((lead & 0xF8u) == 0xF0u)
+        {
+            sequenceLength = 4;
+        }
+        else
+        {
+            break;
+        }
+
+        if (index + sequenceLength > value.size() || index + sequenceLength > maxBytes)
+        {
+            break;
+        }
+
+        bool hasValidContinuationBytes = true;
+        for (std::size_t offset = 1; offset < sequenceLength; ++offset)
+        {
+            const unsigned char continuation = static_cast<unsigned char>(value[index + offset]);
+            if ((continuation & 0xC0u) != 0x80u)
+            {
+                hasValidContinuationBytes = false;
+                break;
+            }
+        }
+
+        if (!hasValidContinuationBytes)
+        {
+            break;
+        }
+
+        lastValidEnd = index + sequenceLength;
+        index += sequenceLength;
+    }
+
+    if (lastValidEnd == 0)
+    {
+        return {};
+    }
+
+    return std::string{value.substr(0, lastValidEnd)};
+}
+
+[[nodiscard]] std::string CompactPreview(std::string text, const std::size_t maxBytes = 320)
+{
+    for (char& value : text)
+    {
+        if (value == '\r' || value == '\n' || value == '\t')
+        {
+            value = ' ';
+        }
+    }
+
+    bool previousWasWhitespace = false;
+    text.erase(
+        std::remove_if(text.begin(), text.end(), [&previousWasWhitespace](const char value) {
+            const bool isWhitespace = std::isspace(static_cast<unsigned char>(value)) != 0;
+            if (!isWhitespace)
+            {
+                previousWasWhitespace = false;
+                return false;
+            }
+
+            if (previousWasWhitespace)
+            {
+                return true;
+            }
+
+            previousWasWhitespace = true;
+            return false;
+        }),
+        text.end());
+
+    text = Trim(text);
+    if (text.empty())
+    {
+        return "<empty>";
+    }
+
+    if (text.size() > maxBytes)
+    {
+        text = TruncateUtf8(text, maxBytes);
+        text.append("...");
+    }
+
+    return text;
+}
+
 [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& filePath)
 {
     std::ifstream input(filePath, std::ios::binary);
@@ -99,7 +223,11 @@ std::string ReplaceEncodingDeclaration(std::string text)
 
     if (!result)
     {
-        throw std::runtime_error("Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath) + ": " + result.description());
+        throw std::runtime_error(
+            "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath)
+            + ": " + result.description()
+            + " [size_bytes=" + std::to_string(TryGetFileSize(filePath))
+            + ", xml_preview=\"" + CompactPreview(text) + "\"]");
     }
 
     return document;
@@ -173,6 +301,33 @@ std::string ReplaceEncodingDeclaration(std::string text)
     }
 
     return author;
+}
+
+[[nodiscard]] std::size_t CountAuthorNodes(const pugi::xml_node& parent)
+{
+    std::size_t count = 0;
+
+    for (const pugi::xml_node childNode : parent.children())
+    {
+        if (MatchesLocalName(childNode, "author"))
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+[[nodiscard]] std::string BuildNodePreview(const pugi::xml_node& node)
+{
+    if (!node)
+    {
+        return "<missing>";
+    }
+
+    std::ostringstream stream;
+    node.print(stream, "", pugi::format_raw);
+    return CompactPreview(stream.str());
 }
 
 [[nodiscard]] std::optional<std::string> TryReadTextChild(const pugi::xml_node& parent, const char* childName)
@@ -429,7 +584,8 @@ bool CFb2Parser::CanParse(const Librova::Domain::EBookFormat format) const
 
 Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& filePath) const
 {
-    const pugi::xml_document document = ParseXml(ReadTextFile(filePath), filePath);
+    const std::string text = ReadTextFile(filePath);
+    const pugi::xml_document document = ParseXml(text, filePath);
     const pugi::xml_node rootNode = FindFirstChildByLocalName(document, "FictionBook");
     const pugi::xml_node descriptionNode = FindFirstChildByLocalName(rootNode, "description");
     const pugi::xml_node titleInfoNode = FindFirstChildByLocalName(descriptionNode, "title-info");
@@ -468,7 +624,11 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
     if (parsedBook.Metadata.AuthorsUtf8.empty())
     {
-        throw std::runtime_error("FB2 metadata must contain at least one author.");
+        throw std::runtime_error(
+            "FB2 metadata must contain at least one non-empty title-info/author."
+            " [title_info_author_nodes=" + std::to_string(CountAuthorNodes(titleInfoNode))
+            + ", title_info_preview=\"" + BuildNodePreview(titleInfoNode) + "\""
+            + ", document_info_preview=\"" + BuildNodePreview(FindFirstChildByLocalName(descriptionNode, "document-info")) + "\"]");
     }
 
     if (const std::optional<std::string> sequenceName = TryReadTextChild(titleInfoNode.child("sequence"), "name"))

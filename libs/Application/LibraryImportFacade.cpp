@@ -66,6 +66,13 @@ namespace {
     return combined;
 }
 
+[[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
+{
+    return JoinWarningsAndError(
+        result.Warnings,
+        result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
+}
+
 void LogImportSourceIssueIfInitialized(
     const std::filesystem::path& sourcePath,
     std::string_view stage,
@@ -608,10 +615,19 @@ SImportResult CLibraryImportFacade::Run(
                     {
                     case Librova::ZipImporting::EZipEntryImportStatus::Imported:
                         break;
+                    case Librova::ZipImporting::EZipEntryImportStatus::Skipped:
                     case Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry:
                     case Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped:
                         ++result.Summary.SkippedEntries;
-                        if (!entry.Error.empty())
+                        if (entry.SingleFileResult.has_value())
+                        {
+                            MergeWarnings(result.Summary.Warnings, entry.SingleFileResult->Warnings);
+                            if (!entry.SingleFileResult->Error.empty())
+                            {
+                                result.Summary.Warnings.push_back(entry.SingleFileResult->Error);
+                            }
+                        }
+                        else if (!entry.Error.empty())
                         {
                             result.Summary.Warnings.push_back(entry.Error);
                         }
@@ -799,7 +815,7 @@ SImportResult CLibraryImportFacade::Run(
                 stage,
                 outcome,
                 status,
-                JoinWarningsAndError(singleFileResult.Warnings, singleFileResult.Error));
+                GetSingleFileLogReason(singleFileResult));
         }
 
         if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)

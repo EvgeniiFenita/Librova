@@ -50,6 +50,49 @@ namespace {
     return combined;
 }
 
+[[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
+{
+    return JoinWarningsAndError(
+        result.Warnings,
+        result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
+}
+
+[[nodiscard]] bool IsSkippedSingleFileResult(const Librova::Importing::SSingleFileImportResult& result) noexcept
+{
+    return result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
+        || result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
+        || result.Status == Librova::Importing::ESingleFileImportStatus::UnsupportedFormat;
+}
+
+[[nodiscard]] std::string_view GetSingleFileStage(const Librova::Importing::SSingleFileImportResult& result) noexcept
+{
+    return result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
+            || result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
+        ? "duplicate-check"
+        : "single-file-import";
+}
+
+[[nodiscard]] std::string_view GetSingleFileStatus(const Librova::Importing::SSingleFileImportResult& result) noexcept
+{
+    switch (result.Status)
+    {
+    case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
+        return "rejected-duplicate";
+    case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
+        return "decision-required";
+    case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
+        return "unsupported-format";
+    case Librova::Importing::ESingleFileImportStatus::Cancelled:
+        return "cancelled";
+    case Librova::Importing::ESingleFileImportStatus::Failed:
+        return "failed";
+    case Librova::Importing::ESingleFileImportStatus::Imported:
+        return "imported";
+    }
+
+    return "failed";
+}
+
 void LogZipEntryIssueIfInitialized(
     const std::filesystem::path& zipPath,
     const std::filesystem::path& entryPath,
@@ -511,7 +554,9 @@ SZipImportResult CZipImportCoordinator::Run(
                 ? EZipEntryImportStatus::Imported
                 : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::Cancelled
                     ? EZipEntryImportStatus::Cancelled
-                    : EZipEntryImportStatus::Failed),
+                    : (IsSkippedSingleFileResult(singleFileResult)
+                        ? EZipEntryImportStatus::Skipped
+                        : EZipEntryImportStatus::Failed)),
             .SingleFileResult = std::move(singleFileResult)
         });
 
@@ -526,19 +571,21 @@ SZipImportResult CZipImportCoordinator::Run(
             LogZipEntryIssueIfInitialized(
                 request.ZipPath,
                 entryPath,
-                singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
-                    || singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
-                    ? "duplicate-check"
-                    : "single-file-import",
+                GetSingleFileStage(singleFileResult),
                 "failed",
-                singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
-                    ? "rejected-duplicate"
-                    : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
-                        ? "decision-required"
-                        : (singleFileResult.Status == Librova::Importing::ESingleFileImportStatus::UnsupportedFormat
-                            ? "unsupported-format"
-                            : "failed")),
-                JoinWarningsAndError(singleFileResult.Warnings, singleFileResult.Error));
+                GetSingleFileStatus(singleFileResult),
+                GetSingleFileLogReason(singleFileResult));
+        }
+        else if (result.Entries.back().Status == EZipEntryImportStatus::Skipped)
+        {
+            ++skippedEntries;
+            LogZipEntryIssueIfInitialized(
+                request.ZipPath,
+                entryPath,
+                GetSingleFileStage(singleFileResult),
+                "skipped",
+                GetSingleFileStatus(singleFileResult),
+                GetSingleFileLogReason(singleFileResult));
         }
 
         if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)

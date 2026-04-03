@@ -124,6 +124,69 @@ TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
     REQUIRE_THROWS(parser.Parse(fb2Path));
 }
 
+TEST_CASE("FB2 parser includes XML preview when the file is empty", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-empty");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "empty.fb2";
+    WriteTextFile(fb2Path, "");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+
+    try
+    {
+        static_cast<void>(parser.Parse(fb2Path));
+        FAIL("Expected parser to reject empty FB2 input.");
+    }
+    catch (const std::exception& error)
+    {
+        const std::string message = error.what();
+        REQUIRE(message.find("size_bytes=0") != std::string::npos);
+        REQUIRE(message.find("xml_preview=\"<empty>\"") != std::string::npos);
+    }
+}
+
+TEST_CASE("FB2 parser includes title-info preview when all author nodes are empty", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-empty-author");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "empty-author.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Magazine Issue</book-title>
+      <author>
+        <first-name></first-name>
+        <last-name></last-name>
+      </author>
+      <lang>ru</lang>
+    </title-info>
+    <document-info>
+      <author>
+        <nickname>Scanner Team</nickname>
+      </author>
+    </document-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+
+    try
+    {
+        static_cast<void>(parser.Parse(fb2Path));
+        FAIL("Expected parser to reject FB2 without non-empty title-info author.");
+    }
+    catch (const std::exception& error)
+    {
+        const std::string message = error.what();
+        REQUIRE(message.find("title_info_author_nodes=1") != std::string::npos);
+        REQUIRE(message.find("Magazine Issue") != std::string::npos);
+        REQUIRE(message.find("Scanner Team") != std::string::npos);
+    }
+}
+
 TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251");

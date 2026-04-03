@@ -192,7 +192,7 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
     REQUIRE(result.Entries[0].ArchivePath == std::filesystem::path("folder/first.fb2"));
     REQUIRE(result.Entries[0].Status == Librova::ZipImporting::EZipEntryImportStatus::Imported);
     REQUIRE(result.Entries[1].ArchivePath == std::filesystem::path("second.fb2"));
-    REQUIRE(result.Entries[1].Status == Librova::ZipImporting::EZipEntryImportStatus::Failed);
+    REQUIRE(result.Entries[1].Status == Librova::ZipImporting::EZipEntryImportStatus::Skipped);
     REQUIRE(result.Entries[1].SingleFileResult.has_value());
     REQUIRE(result.Entries[1].SingleFileResult->Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(result.Entries[2].ArchivePath == std::filesystem::path("notes.txt"));
@@ -289,10 +289,9 @@ TEST_CASE("ZIP import coordinator logs skipped and failed entries into host log"
 
     REQUIRE(std::filesystem::exists(logPath));
     const auto logText = ReadTextFile(logPath);
-    REQUIRE(logText.find("ZIP entry failed") != std::string::npos);
+    REQUIRE(logText.find("ZIP entry skipped") != std::string::npos);
     REQUIRE(logText.find("books.zip") != std::string::npos);
     REQUIRE(logText.find("second.fb2") != std::string::npos);
-    REQUIRE(logText.find("ZIP entry skipped") != std::string::npos);
     REQUIRE(logText.find("notes.txt") != std::string::npos);
     REQUIRE(logText.find("nested/archive.zip") != std::string::npos);
     REQUIRE(logText.find("Nested ZIP archives are not supported.") != std::string::npos);

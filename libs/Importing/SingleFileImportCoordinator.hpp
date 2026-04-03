@@ -45,6 +45,7 @@ struct SSingleFileImportResult
     std::vector<Librova::Domain::SDuplicateMatch> DuplicateMatches;
     std::vector<std::string> Warnings;
     std::string Error;
+    std::string DiagnosticError;
 
     [[nodiscard]] bool IsSuccess() const noexcept
     {

@@ -339,7 +339,7 @@ int main(int argc, char** argv)
             try
             {
                 Librova::PipeTransport::CNamedPipeServer server(options.PipePath);
-                Librova::Logging::Info(
+                Librova::Logging::Debug(
                     "Waiting for pipe session on '{}'.",
                     Librova::Unicode::PathToUtf8(options.PipePath));
                 auto connection = server.WaitForClient();
@@ -362,7 +362,7 @@ int main(int argc, char** argv)
                 }
 #endif
 
-                Librova::Logging::Info("Pipe session completed successfully.");
+                Librova::Logging::Debug("Pipe session completed successfully.");
                 ++servedSessions;
             }
             catch (const std::exception& error)
