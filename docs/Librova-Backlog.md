@@ -30,6 +30,10 @@ Working rule:
   - Status: `Open`
   - Note: define the canonical packaging script, output layout, self-contained vs framework-dependent UI publish model, and a verification step on a clean Windows environment so the produced folder can be launched without repo-local build prerequisites.
 
+- `#33` harden `CoreHostProcess` command-line quoting so core startup survives Windows paths with trailing backslashes and embedded quotes.
+  - Status: `Open`
+  - Note: replace the naive `Quote()` implementation with Windows-correct escaping for `CommandLineToArgvW`, and add regression tests for trailing `\`, embedded `"`, and Cyrillic paths in host launch arguments.
+
 ### Major
 
 - `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
@@ -40,11 +44,31 @@ Working rule:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 
+- `#34` extend metadata normalization beyond Russian-only case folding so search and duplicate detection stay correct for broader Cyrillic text.
+  - Status: `Open`
+  - Note: current normalization handles ASCII plus part of Russian Cyrillic, but misses characters such as `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`; fix the shared normalization path and add regression tests that prove search-indexing and duplicate keys remain case-insensitive for these inputs.
+
+- `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
+  - Status: `Open`
+  - Note: `FindDuplicates` currently reads every stored title/author pair into memory on each import and opens multiple SQLite connections for one duplicate check; collapse that into a tighter database-backed path and keep strict/probable duplicate semantics unchanged under tests.
+
+- `#36` separate language-list SQL binding from count-query binding in `SqliteBookQueryRepository`.
+  - Status: `Open`
+  - Note: `ListAvailableLanguages` currently reuses `BindSearchCountFilters` even though its SQL intentionally omits the `language` placeholder; the current UI path resets `Language` before calling it, but the repository method is still internally inconsistent and should get its own binder plus coverage for combined filters.
+
+- `#37` remove fixed-sleep readiness from named-pipe tests and replace it with deterministic synchronization.
+  - Status: `Open`
+  - Note: several IPC tests still rely on `sleep_for(20ms)` before connecting clients; replace those sleeps with explicit readiness signaling so host/channel/client tests follow the repository rule against fixed waits.
+
 ### Minor
 
 - `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
   - Status: `Open`
   - Note: decide whether the UI should show a single total-library-size metric or an explicit breakdown for `Books`, `Covers`, and `Database`, then align product docs and statistics contracts with that choice.
+
+- `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
+  - Status: `Open`
+  - Note: current replacement logic can re-expand `{output_format}` and similar tokens if they appear in the source or destination path text; keep placeholder substitution explicit and add a regression test for filenames containing literal placeholder-like fragments.
 
 - `#28` downscale oversized imported covers before storing them in the managed library.
   - Status: `Closed`
