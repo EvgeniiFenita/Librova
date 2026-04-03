@@ -72,7 +72,8 @@ public:
         Librova::Domain::IBookRepository& bookRepository,
         const Librova::Domain::IBookQueryRepository& queryRepository,
         Librova::Domain::IManagedStorage& managedStorage,
-        const Librova::Domain::IBookConverter* converter);
+        const Librova::Domain::IBookConverter* converter,
+        const Librova::Domain::ICoverImageProcessor* coverImageProcessor = nullptr);
 
     [[nodiscard]] SSingleFileImportResult Run(
         const SSingleFileImportRequest& request,
@@ -89,6 +90,7 @@ private:
     const Librova::Domain::IBookQueryRepository& m_queryRepository;
     Librova::Domain::IManagedStorage& m_managedStorage;
     const Librova::Domain::IBookConverter* m_converter;
+    const Librova::Domain::ICoverImageProcessor* m_coverImageProcessor;
 };
 
 } // namespace Librova::Importing

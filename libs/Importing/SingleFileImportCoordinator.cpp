@@ -1,6 +1,7 @@
 #include "Importing/SingleFileImportCoordinator.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -16,6 +17,8 @@ constexpr auto GStrictDuplicateWarning = "Import rejected because a strict dupli
 constexpr auto GProbableDuplicateWarning = "Import requires user confirmation because a probable duplicate was found.";
 constexpr auto GForcedStrictDuplicateWarning = "Import continued with explicit strict duplicate override.";
 constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit probable duplicate override.";
+constexpr std::uint32_t GManagedCoverMaxWidth = 512;
+constexpr std::uint32_t GManagedCoverMaxHeight = 768;
 
 void EnsureDirectory(const std::filesystem::path& path)
 {
@@ -114,6 +117,73 @@ bool IsCancellationRequested(
     return std::string{message};
 }
 
+[[nodiscard]] Librova::Domain::SCoverData BuildSourceCoverData(const Librova::Domain::SParsedBook& parsedBook)
+{
+    return {
+        .Extension = *parsedBook.CoverExtension,
+        .Bytes = parsedBook.CoverBytes
+    };
+}
+
+[[nodiscard]] Librova::Domain::SCoverData ResolveManagedCoverData(
+    const Librova::Domain::SParsedBook& parsedBook,
+    const Librova::Domain::ICoverImageProcessor* coverImageProcessor,
+    const std::filesystem::path& sourcePath)
+{
+    const auto sourceCover = BuildSourceCoverData(parsedBook);
+
+    if (coverImageProcessor == nullptr)
+    {
+        return sourceCover;
+    }
+
+    const auto processingResult = coverImageProcessor->ProcessForManagedStorage({
+        .Cover = sourceCover,
+        .MaxWidth = GManagedCoverMaxWidth,
+        .MaxHeight = GManagedCoverMaxHeight,
+        .PreserveSmallerImages = true,
+        .AllowFormatConversion = false
+    });
+
+    switch (processingResult.Status)
+    {
+    case Librova::Domain::ECoverProcessingStatus::Processed:
+    case Librova::Domain::ECoverProcessingStatus::Unchanged:
+        if (processingResult.HasOutputCover())
+        {
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Info(
+                    "Prepared managed cover for '{}': status='{}' output_extension='{}' dimensions={}x{} bytes={}",
+                    Librova::Unicode::PathToUtf8(sourcePath),
+                    processingResult.Status == Librova::Domain::ECoverProcessingStatus::Processed ? "processed" : "unchanged",
+                    processingResult.Cover.Extension,
+                    processingResult.PixelWidth,
+                    processingResult.PixelHeight,
+                    processingResult.Cover.Bytes.size());
+            }
+
+            return processingResult.Cover;
+        }
+
+        break;
+    case Librova::Domain::ECoverProcessingStatus::Unsupported:
+    case Librova::Domain::ECoverProcessingStatus::Failed:
+        break;
+    }
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Warn(
+            "Managed cover optimization skipped for '{}': status='{}' reason='{}'",
+            Librova::Unicode::PathToUtf8(sourcePath),
+            processingResult.Status == Librova::Domain::ECoverProcessingStatus::Unsupported ? "unsupported" : "failed",
+            processingResult.DiagnosticMessage);
+    }
+
+    return sourceCover;
+}
+
 } // namespace
 
 namespace Librova::Importing {
@@ -123,12 +193,14 @@ CSingleFileImportCoordinator::CSingleFileImportCoordinator(
     Librova::Domain::IBookRepository& bookRepository,
     const Librova::Domain::IBookQueryRepository& queryRepository,
     Librova::Domain::IManagedStorage& managedStorage,
-    const Librova::Domain::IBookConverter* converter)
+    const Librova::Domain::IBookConverter* converter,
+    const Librova::Domain::ICoverImageProcessor* coverImageProcessor)
     : m_parserRegistry(parserRegistry)
     , m_bookRepository(bookRepository)
     , m_queryRepository(queryRepository)
     , m_managedStorage(managedStorage)
     , m_converter(converter)
+    , m_coverImageProcessor(coverImageProcessor)
 {
 }
 
@@ -280,11 +352,12 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (parsedBook.HasCover())
         {
+            const auto managedCover = ResolveManagedCoverData(parsedBook, m_coverImageProcessor, request.SourcePath);
             temporaryCoverPath = WriteCoverTempFile(
                 request.WorkingDirectory,
                 reservedBookId,
-                *parsedBook.CoverExtension,
-                parsedBook.CoverBytes);
+                managedCover.Extension,
+                managedCover.Bytes);
         }
 
         if (IsCancellationRequested(stopToken, progressSink))

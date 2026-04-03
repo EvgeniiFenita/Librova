@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -45,6 +47,21 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     output << text;
+}
+
+[[nodiscard]] std::vector<std::byte> ReadBinaryFile(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    std::vector<char> rawBytes{
+        std::istreambuf_iterator<char>(input),
+        std::istreambuf_iterator<char>()
+    };
+
+    std::vector<std::byte> bytes(rawBytes.size());
+    std::ranges::transform(rawBytes, bytes.begin(), [](char value) {
+        return static_cast<std::byte>(static_cast<unsigned char>(value));
+    });
+    return bytes;
 }
 
 std::filesystem::path CreateFb2Fixture(const std::filesystem::path& outputPath)
@@ -145,6 +162,16 @@ public:
         return {};
     }
 
+    [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery&) const override
+    {
+        return 0;
+    }
+
+    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return Duplicates;
@@ -195,7 +222,11 @@ public:
                 *plan.CoverSourcePath,
                 *stagedCoverPath,
                 std::filesystem::copy_options::overwrite_existing);
-            finalCoverPath = Root / "Covers" / std::to_string(plan.BookId.Value) / "cover.jpg";
+            finalCoverPath =
+                Root
+                / "Covers"
+                / std::to_string(plan.BookId.Value)
+                / std::filesystem::path{"cover"}.replace_extension(plan.CoverSourcePath->extension());
         }
 
         return {
@@ -282,6 +313,20 @@ public:
     Librova::Domain::SConversionResult Result;
 };
 
+class CStubCoverImageProcessor final : public Librova::Domain::ICoverImageProcessor
+{
+public:
+    [[nodiscard]] Librova::Domain::SCoverProcessingResult ProcessForManagedStorage(
+        const Librova::Domain::SCoverProcessingRequest& request) const override
+    {
+        LastRequest = request;
+        return Result;
+    }
+
+    mutable std::optional<Librova::Domain::SCoverProcessingRequest> LastRequest;
+    Librova::Domain::SCoverProcessingResult Result;
+};
+
 } // namespace
 
 TEST_CASE("Single file import imports FB2 without conversion when forced conversion is disabled", "[importing]")
@@ -322,6 +367,94 @@ TEST_CASE("Single file import imports FB2 without conversion when forced convers
     REQUIRE(managedStorage.CommitCalled);
     REQUIRE_FALSE(managedStorage.RollbackCalled);
     REQUIRE(progressSink.LastPercent == 100);
+}
+
+TEST_CASE("Single file import stores optimized cover bytes returned by the cover processor", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cover-optimized");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubCoverImageProcessor coverImageProcessor;
+    coverImageProcessor.Result = {
+        .Status = Librova::Domain::ECoverProcessingStatus::Processed,
+        .Cover = {
+            .Extension = "jpg",
+            .Bytes = {std::byte{'O'}, std::byte{'P'}, std::byte{'T'}}
+        },
+        .PixelWidth = 512,
+        .PixelHeight = 768,
+        .WasResized = true
+    };
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr,
+        &coverImageProcessor);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(coverImageProcessor.LastRequest.has_value());
+    REQUIRE(coverImageProcessor.LastRequest->MaxWidth == 512);
+    REQUIRE(coverImageProcessor.LastRequest->MaxHeight == 768);
+    REQUIRE(managedStorage.LastPreparedStorage.has_value());
+    REQUIRE(managedStorage.LastPreparedStorage->FinalCoverPath.has_value());
+    REQUIRE(ReadBinaryFile(*managedStorage.LastPreparedStorage->FinalCoverPath) == std::vector<std::byte>({
+        std::byte{'O'},
+        std::byte{'P'},
+        std::byte{'T'}
+    }));
+}
+
+TEST_CASE("Single file import falls back to original cover bytes when cover optimization fails", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cover-fallback");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubCoverImageProcessor coverImageProcessor;
+    coverImageProcessor.Result = {
+        .Status = Librova::Domain::ECoverProcessingStatus::Failed,
+        .DiagnosticMessage = "Decoder failure."
+    };
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr,
+        &coverImageProcessor);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(coverImageProcessor.LastRequest.has_value());
+    REQUIRE(managedStorage.LastPreparedStorage.has_value());
+    REQUIRE(managedStorage.LastPreparedStorage->FinalCoverPath.has_value());
+    REQUIRE(ReadBinaryFile(*managedStorage.LastPreparedStorage->FinalCoverPath) == std::vector<std::byte>({
+        std::byte{0x01},
+        std::byte{0x23},
+        std::byte{0x45}
+    }));
 }
 
 TEST_CASE("Single file import rejects strict duplicates before reserving storage", "[importing]")

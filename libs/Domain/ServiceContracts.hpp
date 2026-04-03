@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <cstdint>
 #include <optional>
 #include <stop_token>
 #include <string>
@@ -74,6 +75,43 @@ struct SCoverData
     [[nodiscard]] bool IsEmpty() const noexcept
     {
         return Extension.empty() || Bytes.empty();
+    }
+};
+
+enum class ECoverProcessingStatus
+{
+    Processed,
+    Unchanged,
+    Unsupported,
+    Failed
+};
+
+struct SCoverProcessingRequest
+{
+    SCoverData Cover;
+    std::uint32_t MaxWidth = 0;
+    std::uint32_t MaxHeight = 0;
+    bool PreserveSmallerImages = true;
+    bool AllowFormatConversion = false;
+
+    [[nodiscard]] bool IsValid() const noexcept
+    {
+        return !Cover.IsEmpty() && MaxWidth > 0 && MaxHeight > 0;
+    }
+};
+
+struct SCoverProcessingResult
+{
+    ECoverProcessingStatus Status = ECoverProcessingStatus::Failed;
+    SCoverData Cover;
+    std::uint32_t PixelWidth = 0;
+    std::uint32_t PixelHeight = 0;
+    bool WasResized = false;
+    std::string DiagnosticMessage;
+
+    [[nodiscard]] bool HasOutputCover() const noexcept
+    {
+        return !Cover.IsEmpty();
     }
 };
 
@@ -175,6 +213,14 @@ public:
     virtual ~ICoverProvider() = default;
 
     virtual std::optional<SCoverData> TryResolve(const SBookMetadata& metadata) const = 0;
+};
+
+class ICoverImageProcessor
+{
+public:
+    virtual ~ICoverImageProcessor() = default;
+
+    [[nodiscard]] virtual SCoverProcessingResult ProcessForManagedStorage(const SCoverProcessingRequest& request) const = 0;
 };
 
 } // namespace Librova::Domain

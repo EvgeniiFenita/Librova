@@ -52,6 +52,7 @@ if(BUILD_TESTING)
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
+        TestWicCoverImageProcessor.cpp
         TestZipImportCoordinator.cpp
     )
 
@@ -65,6 +66,7 @@ if(BUILD_TESTING)
             LibrovaConverterCommand
             LibrovaConverterConfiguration
             LibrovaConverterRuntime
+            LibrovaCoverProcessingWic
             LibrovaDomain
             LibrovaCore
             LibrovaCoreHost
