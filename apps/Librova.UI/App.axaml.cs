@@ -142,10 +142,10 @@ internal sealed partial class App : Application
 
         try
         {
-            UiLogging.Reinitialize(RuntimeEnvironment.GetUiLogFilePathForLibrary(hostOptions.LibraryRoot));
             UiLogging.Information("Starting Avalonia desktop shell.");
             var session = await ShellBootstrap.StartSessionAsync(hostOptions, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            UiLogging.Reinitialize(RuntimeEnvironment.GetUiLogFilePathForLibrary(hostOptions.LibraryRoot));
             _shellApplication = ShellApplication.Create(
                 session,
                 pathSelectionService,

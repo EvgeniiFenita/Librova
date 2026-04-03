@@ -1,4 +1,5 @@
 using Librova.UI.Logging;
+using Librova.UI.Shell;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -70,6 +71,43 @@ public sealed class UiLoggingTests
             var contents = await File.ReadAllTextAsync(libraryLogPath);
             Assert.Contains("Bootstrap message", contents);
             Assert.Contains("Library message", contents);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void BootstrapLogging_DoesNotPolluteEmptyCreateLibraryTarget()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-logging-tests",
+            Guid.NewGuid().ToString("N"));
+        var bootstrapLogPath = Path.Combine(sandboxRoot, "bootstrap-ui.log");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(libraryRoot);
+
+        try
+        {
+            UiLogging.ReinitializeForTests(bootstrapLogPath);
+            UiLogging.Information("Bootstrap validation message");
+            UiLogging.Shutdown();
+
+            Assert.Equal(string.Empty, LibraryRootInspection.BuildCreateNewValidationMessage(libraryRoot));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(libraryRoot));
         }
         finally
         {
