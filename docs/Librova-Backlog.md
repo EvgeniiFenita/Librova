@@ -26,6 +26,10 @@ Working rule:
 
 ### Critical
 
+- `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
+  - Status: `Open`
+  - Note: define the canonical packaging script, output layout, self-contained vs framework-dependent UI publish model, and a verification step on a clean Windows environment so the produced folder can be launched without repo-local build prerequisites.
+
 ### Major
 
 - `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
@@ -38,9 +42,19 @@ Working rule:
 
 ### Minor
 
+- `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
+  - Status: `Open`
+  - Note: decide whether the UI should show a single total-library-size metric or an explicit breakdown for `Books`, `Covers`, and `Database`, then align product docs and statistics contracts with that choice.
+
 - `#28` downscale oversized imported covers before storing them in the managed library.
   - Status: `Closed`
   - Note: run cover optimization during import behind a native image-processing interface, keep aspect ratio, avoid upscaling, and keep the backend swappable so the initial Windows-only implementation does not leak into import policy.
+
+### Low
+
+- `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
+  - Status: `Open`
+  - Note: scope this explicitly to `FB2` first instead of a generic “all uncompressed formats”, and define whether compression is an internal storage detail or a surfaced managed-format variant across database, transport, statistics, and export flows.
 
 ## 4. Closed Backlog
 
