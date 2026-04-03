@@ -100,5 +100,9 @@ if(BUILD_TESTING)
         LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe"
         LIBROVA_TEST_CONFIGURATION="$<CONFIG>"
     )
+    if(MSVC)
+        target_compile_options(LibrovaCoreTests PRIVATE /FS)
+    endif()
+
     add_test(NAME LibrovaCoreTests COMMAND LibrovaCoreTests)
 endif()

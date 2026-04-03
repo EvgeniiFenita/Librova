@@ -31,8 +31,8 @@ Working rule:
   - Note: define the canonical packaging script, output layout, self-contained vs framework-dependent UI publish model, and a verification step on a clean Windows environment so the produced folder can be launched without repo-local build prerequisites.
 
 - `#33` harden `CoreHostProcess` command-line quoting so core startup survives Windows paths with trailing backslashes and embedded quotes.
-  - Status: `Open`
-  - Note: replace the naive `Quote()` implementation with Windows-correct escaping for `CommandLineToArgvW`, and add regression tests for trailing `\`, embedded `"`, and Cyrillic paths in host launch arguments.
+  - Status: `Closed`
+  - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
 
 ### Major
 

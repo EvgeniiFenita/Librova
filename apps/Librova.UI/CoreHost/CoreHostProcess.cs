@@ -155,7 +155,50 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         return builder.ToString();
     }
 
-    private static string Quote(string value) => "\"" + value + "\"";
+    private static string Quote(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        var builder = new StringBuilder(value.Length + 2);
+        builder.Append('"');
+        var backslashCount = 0;
+
+        foreach (var character in value)
+        {
+            if (character == '\\')
+            {
+                backslashCount++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                builder.Append('\\', backslashCount * 2 + 1);
+                builder.Append('"');
+                backslashCount = 0;
+                continue;
+            }
+
+            if (backslashCount > 0)
+            {
+                builder.Append('\\', backslashCount);
+                backslashCount = 0;
+            }
+
+            builder.Append(character);
+        }
+
+        if (backslashCount > 0)
+        {
+            builder.Append('\\', backslashCount * 2);
+        }
+
+        builder.Append('"');
+        return builder.ToString();
+    }
 
     private static async Task WaitForPipeReadyAsync(
         Process process,
