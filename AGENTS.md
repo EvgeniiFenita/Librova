@@ -8,6 +8,8 @@ IPC: Protobuf over Windows named pipes. Storage: SQLite + FTS5. Build: CMake + v
 
 Full product, architecture, and backlog context lives in `docs/`. Read them before any substantive change.
 
+Repository-level overview lives in `README.md`. Keep it aligned with the current implemented project state.
+
 ---
 
 ## Mandatory Read Order
@@ -89,6 +91,7 @@ When a task completes, update docs **in the same task** if any of the following 
 | Product scope or user-visible behavior | `docs/Librova-Product.md` |
 | Architecture decision | `docs/Librova-Architecture.md` |
 | Backlog item closed, added, or reprioritized | `docs/Librova-Backlog.md` |
+| Repository overview or project-status summary visible from the root | `README.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | `docs/archive/Development-History.md` |
 | UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` |
@@ -96,6 +99,8 @@ When a task completes, update docs **in the same task** if any of the following 
 `docs/ManualUiTestScenarios.md` must be written in **Russian**. UI labels, button names, and on-screen strings must appear exactly as they are in the English UI.
 
 If a file stops matching implemented reality, fix it before closing the task — not later.
+
+This applies to `README.md` as well: keep it current when project scope, architecture summary, or top-level usage framing changes.
 
 ---
 
