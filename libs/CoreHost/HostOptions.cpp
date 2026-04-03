@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::CoreHost {
 namespace {
@@ -62,7 +62,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --pipe.");
             }
 
-            options.PipePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
+            options.PipePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -85,7 +85,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --library-root.");
             }
 
-            options.LibraryRoot = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
+            options.LibraryRoot = Librova::Unicode::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -167,7 +167,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
-            options.ConverterConfiguration.Fb2Cng.ExecutablePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
+            options.ConverterConfiguration.Fb2Cng.ExecutablePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -186,7 +186,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
-            options.ConverterConfiguration.Fb2Cng.ConfigPath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
+            options.ConverterConfiguration.Fb2Cng.ConfigPath = Librova::Unicode::PathFromUtf8(arguments[++index]);
             continue;
         }
 
@@ -205,7 +205,7 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
 
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
-            options.ConverterConfiguration.Custom.ExecutablePath = Librova::ManagedPaths::PathFromUtf8(arguments[++index]);
+            options.ConverterConfiguration.Custom.ExecutablePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
             continue;
         }
 

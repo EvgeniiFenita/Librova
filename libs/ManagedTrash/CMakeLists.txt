@@ -11,6 +11,7 @@ target_link_libraries(LibrovaManagedTrash PUBLIC
     LibrovaDomain
     LibrovaManagedPaths
     LibrovaStoragePlanning
+    LibrovaUnicode
 )
 
 target_compile_features(LibrovaManagedTrash PUBLIC cxx_std_20)

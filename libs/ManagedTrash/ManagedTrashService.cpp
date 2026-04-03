@@ -6,6 +6,7 @@
 
 #include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ManagedTrash {
 namespace {
@@ -18,7 +19,7 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::ManagedPaths::PathToUtf8(path));
+            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
     }
 }
 
@@ -31,9 +32,9 @@ void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
     {
         throw std::runtime_error(
             std::string{"Failed to move file from "}
-            + Librova::ManagedPaths::PathToUtf8(sourcePath)
+            + Librova::Unicode::PathToUtf8(sourcePath)
             + " to "
-            + Librova::ManagedPaths::PathToUtf8(destinationPath));
+            + Librova::Unicode::PathToUtf8(destinationPath));
     }
 }
 

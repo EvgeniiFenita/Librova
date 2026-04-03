@@ -12,15 +12,10 @@
 
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "Logging/Logging.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
 namespace {
-
-std::string PathToUtf8(const std::filesystem::path& path)
-{
-    const auto utf8Path = path.generic_u8string();
-    return std::string(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
-}
 
 class CScopedDirectory final
 {
@@ -120,7 +115,7 @@ void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string
 std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
-    const auto utf8Path = PathToUtf8(outputPath);
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
     zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
 
     if (archive == nullptr)
@@ -144,7 +139,7 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 std::filesystem::path CreateUnsafeZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
-    const auto utf8Path = PathToUtf8(outputPath);
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
     zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
 
     if (archive == nullptr)

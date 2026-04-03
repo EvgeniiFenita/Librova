@@ -13,7 +13,4 @@ namespace Librova::ManagedPaths {
     std::string_view unsafePathMessage,
     std::string_view canonicalizationErrorMessage);
 
-[[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path);
-[[nodiscard]] std::filesystem::path PathFromUtf8(std::string_view path);
-
 } // namespace Librova::ManagedPaths

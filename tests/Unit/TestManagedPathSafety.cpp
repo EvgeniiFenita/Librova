@@ -87,24 +87,3 @@ TEST_CASE("Managed path safety rejects symlinked path escaping library root", "[
             "canonicalize"),
         Catch::Matchers::ContainsSubstring("unsafe"));
 }
-
-TEST_CASE("Managed path safety converts Cyrillic paths to UTF-8", "[managed-paths]")
-{
-    const std::filesystem::path path = std::filesystem::path(u8"Books/Автор/Книга.fb2");
-    const auto expectedUtf8 = path.generic_u8string();
-    const std::string expected(
-        reinterpret_cast<const char*>(expectedUtf8.data()),
-        expectedUtf8.size());
-
-    REQUIRE(Librova::ManagedPaths::PathToUtf8(path) == expected);
-}
-
-TEST_CASE("Managed path safety restores Cyrillic paths from UTF-8", "[managed-paths]")
-{
-    const auto utf8Bytes = std::filesystem::path(u8"Books/Автор/Книга.fb2").generic_u8string();
-    const std::string utf8Path(
-        reinterpret_cast<const char*>(utf8Bytes.data()),
-        utf8Bytes.size());
-
-    REQUIRE(Librova::ManagedPaths::PathFromUtf8(utf8Path) == std::filesystem::path(u8"Books/Автор/Книга.fb2"));
-}

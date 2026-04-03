@@ -15,9 +15,9 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::BookDatabase {
 namespace {
@@ -243,10 +243,10 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
         }
 
         book.File.Format = *format;
-        book.File.ManagedPath = Librova::ManagedPaths::PathFromUtf8(statement.GetColumnText(11));
+        book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(11));
         book.CoverPath = statement.IsColumnNull(12)
             ? std::nullopt
-            : std::make_optional(Librova::ManagedPaths::PathFromUtf8(statement.GetColumnText(12)));
+            : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(12)));
         book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(13));
         book.File.Sha256Hex = statement.GetColumnText(14);
         book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(15));

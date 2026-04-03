@@ -4,14 +4,10 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "Unicode/UnicodeConversion.hpp"
+
 namespace Librova::ConverterCommand {
 namespace {
-
-std::string PathToUtf8(const std::filesystem::path& path)
-{
-    const std::u8string utf8Value = path.generic_u8string();
-    return std::string{reinterpret_cast<const char*>(utf8Value.data()), utf8Value.size()};
-}
 
 std::string ToConverterFormat(const Librova::Domain::EBookFormat format)
 {
@@ -72,7 +68,7 @@ SConverterCommandProfile CConverterCommandBuilder::CreateFb2CngProfile(
     if (configPath.has_value())
     {
         profile.ArgumentTemplate.push_back("-c");
-        profile.ArgumentTemplate.push_back(PathToUtf8(*configPath));
+        profile.ArgumentTemplate.push_back(Librova::Unicode::PathToUtf8(*configPath));
     }
 
     profile.ArgumentTemplate.push_back("convert");
@@ -100,9 +96,9 @@ SResolvedConverterCommand CConverterCommandBuilder::Build(
     }
 
     const std::unordered_map<std::string, std::string> replacements{
-        {"{source}", PathToUtf8(request.SourcePath)},
-        {"{destination}", PathToUtf8(request.DestinationPath)},
-        {"{destination_dir}", PathToUtf8(request.DestinationPath.parent_path())},
+        {"{source}", Librova::Unicode::PathToUtf8(request.SourcePath)},
+        {"{destination}", Librova::Unicode::PathToUtf8(request.DestinationPath)},
+        {"{destination_dir}", Librova::Unicode::PathToUtf8(request.DestinationPath.parent_path())},
         {"{output_format}", ToConverterFormat(request.DestinationFormat)}
     };
 

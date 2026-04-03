@@ -14,6 +14,7 @@ target_link_libraries(LibrovaCoreHost
     PUBLIC
         LibrovaConverterConfiguration
         LibrovaStoragePlanning
+        LibrovaUnicode
 )
 
 target_compile_features(LibrovaCoreHost PUBLIC cxx_std_20)

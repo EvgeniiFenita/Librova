@@ -60,6 +60,7 @@ Use `docs/archive/` only when the active documents are insufficient and historic
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
 - Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade.
 - If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
+- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice.
 - When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 - When the user asks for a code review or review-pass style findings, write the review results in Russian by default.
 

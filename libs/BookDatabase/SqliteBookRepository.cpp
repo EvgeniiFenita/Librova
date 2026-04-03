@@ -18,21 +18,10 @@
 #include "SearchIndex/SearchIndexMaintenance.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::BookDatabase {
 namespace {
-
-std::string PathToUtf8(const std::filesystem::path& path)
-{
-    const std::u8string utf8Path = path.generic_u8string();
-    return std::string{reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size()};
-}
-
-std::filesystem::path Utf8ToPath(const std::string_view value)
-{
-    const auto* begin = reinterpret_cast<const char8_t*>(value.data());
-    return std::filesystem::path(std::u8string{begin, begin + value.size()});
-}
 
 std::string SerializeTimePoint(const std::chrono::system_clock::time_point value)
 {
@@ -208,7 +197,7 @@ void InsertFormatRow(
         "INSERT INTO formats (book_id, format, managed_path, file_size_bytes, sha256_hex) VALUES (?, ?, ?, ?, ?);");
     statement.BindInt64(1, bookId);
     statement.BindText(2, Librova::Domain::ToString(fileInfo.Format));
-    statement.BindText(3, PathToUtf8(fileInfo.ManagedPath));
+    statement.BindText(3, Librova::Unicode::PathToUtf8(fileInfo.ManagedPath));
     statement.BindInt64(4, static_cast<std::int64_t>(fileInfo.SizeBytes));
     statement.BindText(5, fileInfo.Sha256Hex);
     static_cast<void>(statement.Step());
@@ -301,9 +290,9 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
 
     const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(book.Metadata.Isbn);
     const std::string addedAtUtc = SerializeTimePoint(book.AddedAtUtc);
-    const std::string managedPath = PathToUtf8(book.File.ManagedPath);
+    const std::string managedPath = Librova::Unicode::PathToUtf8(book.File.ManagedPath);
     const std::optional<std::string> coverPath = book.CoverPath.has_value()
-        ? std::make_optional(PathToUtf8(*book.CoverPath))
+        ? std::make_optional(Librova::Unicode::PathToUtf8(*book.CoverPath))
         : std::nullopt;
 
     std::int64_t bookId = book.Id.Value;
@@ -428,8 +417,8 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     book.Metadata.AuthorsUtf8 = ReadAuthors(connection, book.Id.Value);
     book.Metadata.TagsUtf8 = ReadTags(connection, book.Id.Value);
     book.File.Format = *format;
-    book.File.ManagedPath = Utf8ToPath(statement.GetColumnText(11));
-    book.CoverPath = statement.IsColumnNull(12) ? std::nullopt : std::make_optional(Utf8ToPath(statement.GetColumnText(12)));
+    book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(11));
+    book.CoverPath = statement.IsColumnNull(12) ? std::nullopt : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(12)));
     book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(13));
     book.File.Sha256Hex = statement.GetColumnText(14);
     book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(15));

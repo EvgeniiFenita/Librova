@@ -4,6 +4,7 @@
 
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::Application {
 namespace {
@@ -89,7 +90,7 @@ std::filesystem::path CLibraryExportFacade::ExportManagedFile(
     {
         Librova::Logging::Warn(
             "Export destination already exists and will be overwritten. Destination='{}'.",
-            Librova::ManagedPaths::PathToUtf8(destinationPath));
+            Librova::Unicode::PathToUtf8(destinationPath));
     }
 
     std::filesystem::copy_file(
@@ -101,7 +102,7 @@ std::filesystem::path CLibraryExportFacade::ExportManagedFile(
     {
         Librova::Logging::Info(
             "Exported managed book to '{}'.",
-            Librova::ManagedPaths::PathToUtf8(destinationPath));
+            Librova::Unicode::PathToUtf8(destinationPath));
     }
 
     return destinationPath;
@@ -132,7 +133,7 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
     {
         Librova::Logging::Warn(
             "Converted export destination already exists and will be overwritten. Destination='{}'.",
-            Librova::ManagedPaths::PathToUtf8(destinationPath));
+            Librova::Unicode::PathToUtf8(destinationPath));
     }
 
     CNoOpProgressSink progressSink;
@@ -166,7 +167,7 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
     {
         Librova::Logging::Info(
             "Exported converted book to '{}'.",
-            Librova::ManagedPaths::PathToUtf8(exportedPath));
+            Librova::Unicode::PathToUtf8(exportedPath));
     }
 
     return exportedPath;

@@ -11,6 +11,7 @@ target_include_directories(LibrovaEpubParsing PUBLIC
 
 target_link_libraries(LibrovaEpubParsing PUBLIC
     LibrovaDomain
+    LibrovaUnicode
     libzip::zip
     pugixml::pugixml
 )

@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace {
 
@@ -24,7 +24,7 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::ManagedPaths::PathToUtf8(path));
+            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
     }
 }
 

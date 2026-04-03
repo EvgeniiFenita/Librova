@@ -1,20 +1,6 @@
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
 
-#include <string>
-
-namespace {
-
-[[nodiscard]] std::string ToUtf8String(const std::u8string& value)
-{
-    return {reinterpret_cast<const char*>(value.data()), value.size()};
-}
-
-[[nodiscard]] std::u8string Utf8BytesToU8String(const std::string& value)
-{
-    return {reinterpret_cast<const char8_t*>(value.data()), reinterpret_cast<const char8_t*>(value.data() + value.size())};
-}
-
-} // namespace
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {
 
@@ -215,12 +201,12 @@ librova::v1::GetImportJobResultResponse CImportJobProtoMapper::ToProtoResultResp
 
 std::string CImportJobProtoMapper::PathToUtf8(const std::filesystem::path& path)
 {
-    return ToUtf8String(path.generic_u8string());
+    return Librova::Unicode::PathToUtf8(path);
 }
 
 std::filesystem::path CImportJobProtoMapper::PathFromUtf8(const std::string& value)
 {
-    return std::filesystem::path{Utf8BytesToU8String(value)};
+    return Librova::Unicode::PathFromUtf8(value);
 }
 
 Librova::Application::EImportMode CImportJobProtoMapper::FromProto(const librova::v1::ImportMode mode) noexcept

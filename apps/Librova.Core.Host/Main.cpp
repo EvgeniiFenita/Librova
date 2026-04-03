@@ -27,7 +27,6 @@
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "Logging/Logging.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
@@ -36,6 +35,7 @@
 #include "PipeTransport/PipeRequestDispatcher.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
 #ifdef _WIN32
@@ -44,72 +44,6 @@
 #endif
 
 namespace {
-
-#ifdef _WIN32
-[[nodiscard]] std::string WideToUtf8(const std::wstring_view value)
-{
-    if (value.empty())
-    {
-        return {};
-    }
-
-    const int length = ::WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr);
-    if (length <= 0)
-    {
-        throw std::runtime_error("Failed to convert Unicode command-line argument to UTF-8.");
-    }
-
-    std::string utf8Value(static_cast<std::size_t>(length), '\0');
-    ::WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        utf8Value.data(),
-        length,
-        nullptr,
-        nullptr);
-    return utf8Value;
-}
-
-[[nodiscard]] std::wstring Utf8ToWide(const std::string_view value)
-{
-    if (value.empty())
-    {
-        return {};
-    }
-
-    const int length = ::MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0);
-    if (length <= 0)
-    {
-        throw std::runtime_error("Failed to convert UTF-8 text to UTF-16.");
-    }
-
-    std::wstring wideValue(static_cast<std::size_t>(length), L'\0');
-    ::MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        wideValue.data(),
-        length);
-    return wideValue;
-}
-#endif
 
 [[nodiscard]] std::vector<std::string> CollectArguments(const int argc, char** argv)
 {
@@ -128,7 +62,7 @@ namespace {
     {
         for (int index = 1; index < wideArgc; ++index)
         {
-            arguments.push_back(WideToUtf8(wideArgv[index]));
+            arguments.push_back(Librova::Unicode::WideToUtf8(wideArgv[index]));
         }
     }
     catch (...)
@@ -263,7 +197,7 @@ void TryWakePipeServer(const std::filesystem::path& pipePath) noexcept
         return {};
     }
 
-    HANDLE shutdownEvent = ::CreateEventW(nullptr, TRUE, FALSE, Utf8ToWide(*shutdownEventName).c_str());
+    HANDLE shutdownEvent = ::CreateEventW(nullptr, TRUE, FALSE, Librova::Unicode::Utf8ToWide(*shutdownEventName).c_str());
     if (shutdownEvent == nullptr)
     {
         throw std::runtime_error("Failed to create or open shutdown event handle for --shutdown-event.");
@@ -330,7 +264,7 @@ int main(int argc, char** argv)
         Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
         Librova::Logging::Info(
             "Starting Librova.Core.Host for library root '{}'.",
-            Librova::ManagedPaths::PathToUtf8(options.LibraryRoot));
+            Librova::Unicode::PathToUtf8(options.LibraryRoot));
 
 #ifdef _WIN32
         SHostShutdownState shutdownState;
@@ -407,7 +341,7 @@ int main(int argc, char** argv)
                 Librova::PipeTransport::CNamedPipeServer server(options.PipePath);
                 Librova::Logging::Info(
                     "Waiting for pipe session on '{}'.",
-                    Librova::ManagedPaths::PathToUtf8(options.PipePath));
+                    Librova::Unicode::PathToUtf8(options.PipePath));
                 auto connection = server.WaitForClient();
 
 #ifdef _WIN32

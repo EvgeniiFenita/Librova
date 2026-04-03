@@ -36,6 +36,7 @@ if(BUILD_TESTING)
         TestImportJobManager.cpp
         TestImportJobRunner.cpp
         TestLogging.cpp
+        TestUnicodeConversion.cpp
         TestSingleFileImportCoordinator.cpp
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
@@ -84,11 +85,12 @@ if(BUILD_TESTING)
             LibrovaPipeTransport
             LibrovaProtoContracts
             LibrovaProtoMapping
-            LibrovaProtoServices
-            LibrovaSearchIndex
-            LibrovaSqlite
-            LibrovaStoragePlanning
-            LibrovaZipImporting
+        LibrovaProtoServices
+        LibrovaSearchIndex
+        LibrovaSqlite
+        LibrovaStoragePlanning
+        LibrovaUnicode
+        LibrovaZipImporting
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)

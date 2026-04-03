@@ -12,6 +12,7 @@ target_include_directories(LibrovaLogging
 
 target_link_libraries(LibrovaLogging
     PUBLIC
+        LibrovaUnicode
         spdlog::spdlog_header_only
 )
 

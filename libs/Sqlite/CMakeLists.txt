@@ -11,6 +11,7 @@ target_include_directories(LibrovaSqlite PUBLIC
 
 target_link_libraries(LibrovaSqlite PUBLIC
     LibrovaDatabaseSchema
+    LibrovaUnicode
     unofficial::sqlite3::sqlite3
 )
 

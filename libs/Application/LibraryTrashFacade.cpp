@@ -4,6 +4,7 @@
 
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::Application {
 namespace {
@@ -20,7 +21,7 @@ void LogRollbackFailure(const std::string_view label, const std::filesystem::pat
         Librova::Logging::Error(
             "Failed to restore {} during trash rollback. Path='{}' Error='{}'.",
             label,
-            Librova::ManagedPaths::PathToUtf8(sourcePath),
+            Librova::Unicode::PathToUtf8(sourcePath),
             error.what());
     }
     catch (...)

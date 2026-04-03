@@ -12,7 +12,7 @@
 #include <zip.h>
 
 #include "Logging/Logging.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace {
 
@@ -63,8 +63,8 @@ void LogZipEntryIssueIfInitialized(
         return;
     }
 
-    const auto utf8ZipPath = Librova::ManagedPaths::PathToUtf8(zipPath);
-    const auto utf8EntryPath = Librova::ManagedPaths::PathToUtf8(entryPath);
+    const auto utf8ZipPath = Librova::Unicode::PathToUtf8(zipPath);
+    const auto utf8EntryPath = Librova::Unicode::PathToUtf8(entryPath);
     if (outcome == "failed")
     {
         Librova::Logging::Error(
@@ -94,7 +94,7 @@ public:
     explicit CZipArchive(const std::filesystem::path& filePath)
     {
         int errorCode = ZIP_ER_OK;
-        const std::string utf8Path = Librova::ManagedPaths::PathToUtf8(filePath);
+        const std::string utf8Path = Librova::Unicode::PathToUtf8(filePath);
         m_archive = zip_open(utf8Path.c_str(), ZIP_RDONLY, &errorCode);
 
         if (m_archive == nullptr)
@@ -222,7 +222,7 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::ManagedPaths::PathToUtf8(path));
+            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
     }
 }
 

@@ -14,6 +14,8 @@
 
 #include <pugixml.hpp>
 
+#include "Unicode/UnicodeConversion.hpp"
+
 #if defined(_WIN32)
 #include <windows.h>
 #endif
@@ -59,7 +61,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
 
     if (!input)
     {
-        throw std::runtime_error("Failed to open FB2 file: " + filePath.string());
+        throw std::runtime_error("Failed to open FB2 file: " + Librova::Unicode::PathToUtf8(filePath));
     }
 
     std::string text{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
@@ -79,60 +81,10 @@ std::string ReplaceEncodingDeclaration(std::string text)
         || prefix.find("encoding=\"cp1251\"") != std::string::npos
         || prefix.find("encoding='cp1251'") != std::string::npos)
     {
-        const int wideLength = MultiByteToWideChar(
+        const std::string utf8Text = Librova::Unicode::CodePageToUtf8(
+            text,
             1251,
-            MB_ERR_INVALID_CHARS,
-            text.data(),
-            static_cast<int>(text.size()),
-            nullptr,
-            0);
-        if (wideLength <= 0)
-        {
-            throw std::runtime_error("Failed to decode FB2 file from windows-1251.");
-        }
-
-        std::wstring wideText(static_cast<std::size_t>(wideLength), L'\0');
-        if (MultiByteToWideChar(
-                1251,
-                MB_ERR_INVALID_CHARS,
-                text.data(),
-                static_cast<int>(text.size()),
-                wideText.data(),
-                wideLength)
-            <= 0)
-        {
-            throw std::runtime_error("Failed to decode FB2 file from windows-1251.");
-        }
-
-        const int utf8Length = WideCharToMultiByte(
-            CP_UTF8,
-            0,
-            wideText.data(),
-            static_cast<int>(wideText.size()),
-            nullptr,
-            0,
-            nullptr,
-            nullptr);
-        if (utf8Length <= 0)
-        {
-            throw std::runtime_error("Failed to convert FB2 file to UTF-8.");
-        }
-
-        std::string utf8Text(static_cast<std::size_t>(utf8Length), '\0');
-        if (WideCharToMultiByte(
-                CP_UTF8,
-                0,
-                wideText.data(),
-                static_cast<int>(wideText.size()),
-                utf8Text.data(),
-                utf8Length,
-                nullptr,
-                nullptr)
-            <= 0)
-        {
-            throw std::runtime_error("Failed to convert FB2 file to UTF-8.");
-        }
-
+            "Failed to decode FB2 file from windows-1251.");
         return ReplaceEncodingDeclaration(std::move(utf8Text));
     }
 #endif
@@ -147,7 +99,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
 
     if (!result)
     {
-        throw std::runtime_error("Failed to parse FB2 XML from " + filePath.string() + ": " + result.description());
+        throw std::runtime_error("Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath) + ": " + result.description());
     }
 
     return document;

@@ -2,18 +2,10 @@
 
 #include <chrono>
 
+#include "Unicode/UnicodeConversion.hpp"
+
 namespace Librova::ProtoMapping {
 namespace {
-
-std::string ToUtf8String(const std::u8string& value)
-{
-    return {reinterpret_cast<const char*>(value.data()), value.size()};
-}
-
-std::u8string Utf8BytesToU8String(const std::string& value)
-{
-    return {reinterpret_cast<const char8_t*>(value.data()), reinterpret_cast<const char8_t*>(value.data() + value.size())};
-}
 
 std::int64_t ToUnixMilliseconds(const std::chrono::system_clock::time_point timePoint)
 {
@@ -297,12 +289,12 @@ librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse
 
 std::string CLibraryCatalogProtoMapper::PathToUtf8(const std::filesystem::path& path)
 {
-    return ToUtf8String(path.generic_u8string());
+    return Librova::Unicode::PathToUtf8(path);
 }
 
 std::filesystem::path CLibraryCatalogProtoMapper::PathFromUtf8(const std::string& value)
 {
-    return std::filesystem::path{Utf8BytesToU8String(value)};
+    return Librova::Unicode::PathFromUtf8(value);
 }
 
 Librova::Domain::EBookFormat CLibraryCatalogProtoMapper::FromProto(const librova::v1::BookFormat format) noexcept

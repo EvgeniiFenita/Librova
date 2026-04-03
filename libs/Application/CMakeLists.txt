@@ -23,6 +23,7 @@ target_link_libraries(LibrovaApplication
     PRIVATE
         LibrovaLogging
         LibrovaManagedPaths
+        LibrovaUnicode
 )
 
 target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

@@ -7,7 +7,7 @@
 
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "CoreHost/HostOptions.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 TEST_CASE("Host options parse required pipe and library root", "[core-host]")
 {
@@ -54,11 +54,11 @@ TEST_CASE("Host options parse UTF-8 encoded Unicode paths", "[core-host]")
         "--fb2cng-config", utf8Config
     });
 
-    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.PipePath) == utf8PipePath);
-    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.LibraryRoot) == utf8LibraryRoot);
-    REQUIRE(Librova::ManagedPaths::PathToUtf8(options.ConverterConfiguration.Fb2Cng.ExecutablePath) == utf8Executable);
+    REQUIRE(Librova::Unicode::PathToUtf8(options.PipePath) == utf8PipePath);
+    REQUIRE(Librova::Unicode::PathToUtf8(options.LibraryRoot) == utf8LibraryRoot);
+    REQUIRE(Librova::Unicode::PathToUtf8(options.ConverterConfiguration.Fb2Cng.ExecutablePath) == utf8Executable);
     REQUIRE(options.ConverterConfiguration.Fb2Cng.ConfigPath.has_value());
-    REQUIRE(Librova::ManagedPaths::PathToUtf8(*options.ConverterConfiguration.Fb2Cng.ConfigPath) == utf8Config);
+    REQUIRE(Librova::Unicode::PathToUtf8(*options.ConverterConfiguration.Fb2Cng.ConfigPath) == utf8Config);
 }
 
 TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")

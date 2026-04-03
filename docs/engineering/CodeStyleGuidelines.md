@@ -173,6 +173,7 @@ Logging rules:
 - Convert between UTF-8 text and OS-native paths only at explicit infrastructure boundaries.
 - Avoid `path.string()` when Unicode correctness matters; prefer keeping values as `std::filesystem::path` or using Unicode-safe conversions.
 - If the same Unicode/path-safety helper logic is needed in more than one module, extract a shared helper instead of copying anonymous-namespace utilities.
+- Shared native UTF-8 / wide / path transcoding must live in `libs/Unicode/UnicodeConversion.*`; call that slice instead of introducing local conversion helpers.
 - If bytes are transcoded from a legacy encoding into UTF-8, any retained XML or text encoding declaration must be rewritten to match the new UTF-8 content.
 
 ## 11. C# / Avalonia Rules

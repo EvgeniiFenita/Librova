@@ -8,8 +8,8 @@ target_include_directories(LibrovaManagedStorage PUBLIC
 
 target_link_libraries(LibrovaManagedStorage PUBLIC
     LibrovaDomain
-    LibrovaManagedPaths
     LibrovaStoragePlanning
+    LibrovaUnicode
 )
 
 target_compile_features(LibrovaManagedStorage PUBLIC cxx_std_20)

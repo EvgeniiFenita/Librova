@@ -28,6 +28,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaProtoServices
         LibrovaProtoMapping
         LibrovaStoragePlanning
+        LibrovaUnicode
         LibrovaZipImporting
 )
 

@@ -8,6 +8,8 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include "Unicode/UnicodeConversion.hpp"
+
 namespace Librova::Logging {
 namespace {
 
@@ -18,9 +20,9 @@ constexpr std::string_view HostLoggerName = "Librova.Core.Host";
 [[nodiscard]] spdlog::filename_t ToSpdlogFilename(const std::filesystem::path& path)
 {
 #ifdef _WIN32
-    return path.native();
+    return Librova::Unicode::Utf8ToWide(Librova::Unicode::PathToUtf8(path));
 #else
-    return path.string();
+    return Librova::Unicode::PathToUtf8(path);
 #endif
 }
 

@@ -9,6 +9,7 @@
 
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace {
 
@@ -29,15 +30,6 @@ namespace {
 [[nodiscard]] bool IsZipStandalonePath(const std::filesystem::path& path)
 {
     return ToLower(path.extension().string()) == ".zip";
-}
-
-[[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path)
-{
-    const auto value = path.generic_u8string();
-    return {
-        reinterpret_cast<const char*>(value.data()),
-        value.size()
-    };
 }
 
 [[nodiscard]] std::string JoinWarningsAndError(
@@ -86,7 +78,7 @@ void LogImportSourceIssueIfInitialized(
         return;
     }
 
-    const auto utf8SourcePath = PathToUtf8(sourcePath);
+    const auto utf8SourcePath = Librova::Unicode::PathToUtf8(sourcePath);
     if (outcome == "failed")
     {
         Librova::Logging::Error(
@@ -377,7 +369,7 @@ private:
                 if (errorCode)
                 {
                     expanded.Warnings.push_back(
-                        "Failed to enumerate directory '" + PathToUtf8(sourcePath) + "'.");
+                        "Failed to enumerate directory '" + Librova::Unicode::PathToUtf8(sourcePath) + "'.");
                     break;
                 }
 
@@ -392,7 +384,7 @@ private:
                     continue;
                 }
 
-                const auto candidateKey = PathToUtf8(candidatePath);
+                const auto candidateKey = Librova::Unicode::PathToUtf8(candidatePath);
                 if (!seenPaths.insert(candidateKey).second)
                 {
                     continue;
@@ -405,7 +397,7 @@ private:
             if (discoveredSupportedEntries == 0)
             {
                 const auto warning =
-                    "Directory '" + PathToUtf8(sourcePath) + "' does not contain supported .fb2, .epub, or .zip files.";
+                    "Directory '" + Librova::Unicode::PathToUtf8(sourcePath) + "' does not contain supported .fb2, .epub, or .zip files.";
                 expanded.Warnings.push_back(warning);
                 LogImportSourceIssueIfInitialized(
                     sourcePath,
@@ -423,7 +415,7 @@ private:
             if (!IsSupportedStandaloneImportPath(sourcePath))
             {
                 const auto warning =
-                    "Unsupported selected source '" + PathToUtf8(sourcePath) + "'. Only .fb2, .epub, and .zip are supported.";
+                    "Unsupported selected source '" + Librova::Unicode::PathToUtf8(sourcePath) + "'. Only .fb2, .epub, and .zip are supported.";
                 expanded.Warnings.push_back(warning);
                 LogImportSourceIssueIfInitialized(
                     sourcePath,
@@ -434,7 +426,7 @@ private:
                 continue;
             }
 
-            const auto sourceKey = PathToUtf8(sourcePath);
+            const auto sourceKey = Librova::Unicode::PathToUtf8(sourcePath);
             if (seenPaths.insert(sourceKey).second)
             {
                 expanded.Candidates.push_back(sourcePath);
@@ -443,7 +435,7 @@ private:
             continue;
         }
 
-        const auto warning = "Selected import source '" + PathToUtf8(sourcePath) + "' does not exist.";
+        const auto warning = "Selected import source '" + Librova::Unicode::PathToUtf8(sourcePath) + "' does not exist.";
         expanded.Warnings.push_back(warning);
         LogImportSourceIssueIfInitialized(
             sourcePath,
@@ -519,7 +511,7 @@ void MergeWarnings(std::vector<std::string>& target, const std::vector<std::stri
                 workload.PlannedEntriesBySource.emplace(sourcePath, 1);
                 ++workload.TotalEntries;
                 const auto warning =
-                    "Failed to inspect ZIP archive '" + PathToUtf8(sourcePath) + "': " + error.what();
+                    "Failed to inspect ZIP archive '" + Librova::Unicode::PathToUtf8(sourcePath) + "': " + error.what();
                 workload.Warnings.push_back(warning);
                 LogImportSourceIssueIfInitialized(
                     sourcePath,
@@ -680,7 +672,7 @@ SImportResult CLibraryImportFacade::Run(
                 processedEntries += zipEntryCount;
                 result.Summary.FailedEntries += zipEntryCount;
                 result.Summary.Warnings.push_back(
-                    "ZIP archive '" + PathToUtf8(sourcePath) + "' failed: " + error.what());
+                    "ZIP archive '" + Librova::Unicode::PathToUtf8(sourcePath) + "' failed: " + error.what());
                 LogImportSourceIssueIfInitialized(
                     sourcePath,
                     "zip-import",

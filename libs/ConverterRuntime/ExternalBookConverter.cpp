@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ConverterRuntime {
 namespace {
@@ -21,25 +21,6 @@ namespace {
 std::wstring PathToWide(const std::filesystem::path& path)
 {
     return path.native();
-}
-
-std::wstring Utf8ToWide(const std::string& value)
-{
-    if (value.empty())
-    {
-        return {};
-    }
-
-    const int length = MultiByteToWideChar(CP_UTF8, 0, value.data(), static_cast<int>(value.size()), nullptr, 0);
-
-    if (length <= 0)
-    {
-        throw std::runtime_error("Failed to convert UTF-8 argument to UTF-16.");
-    }
-
-    std::wstring wideValue(static_cast<std::size_t>(length), L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, value.data(), static_cast<int>(value.size()), wideValue.data(), length);
-    return wideValue;
 }
 
 std::wstring QuoteWindowsArgument(const std::wstring& argument)
@@ -98,7 +79,7 @@ std::wstring BuildCommandLine(const Librova::ConverterCommand::SResolvedConverte
     for (const std::string& argument : command.Arguments)
     {
         commandLine.push_back(L' ');
-        commandLine.append(QuoteWindowsArgument(Utf8ToWide(argument)));
+        commandLine.append(QuoteWindowsArgument(Librova::Unicode::Utf8ToWide(argument)));
     }
 
     return commandLine;
@@ -339,9 +320,9 @@ void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
     {
         throw std::runtime_error(
             std::string{"Failed to move converter output from "}
-            + Librova::ManagedPaths::PathToUtf8(sourcePath)
+            + Librova::Unicode::PathToUtf8(sourcePath)
             + " to "
-            + Librova::ManagedPaths::PathToUtf8(destinationPath));
+            + Librova::Unicode::PathToUtf8(destinationPath));
     }
 }
 
@@ -353,7 +334,7 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to create converter directory: "} + Librova::ManagedPaths::PathToUtf8(path));
+            std::string{"Failed to create converter directory: "} + Librova::Unicode::PathToUtf8(path));
     }
 }
 
