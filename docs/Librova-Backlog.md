@@ -45,8 +45,8 @@ Working rule:
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 
 - `#34` extend metadata normalization beyond Russian-only case folding so search and duplicate detection stay correct for broader Cyrillic text.
-  - Status: `Open`
-  - Note: current normalization handles ASCII plus part of Russian Cyrillic, but misses characters such as `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`; fix the shared normalization path and add regression tests that prove search-indexing and duplicate keys remain case-insensitive for these inputs.
+  - Status: `Closed`
+  - Note: the shared metadata normalizer now lowercases extended Cyrillic code points including `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`, and regression coverage now proves both SQLite FTS search-index matching and probable-duplicate keys stay case-insensitive for those inputs.
 
 - `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
   - Status: `Open`

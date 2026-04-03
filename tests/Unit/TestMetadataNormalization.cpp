@@ -15,6 +15,12 @@ TEST_CASE("Text normalization treats cyrillic yo and ye as equivalent", "[domain
     REQUIRE(Librova::Domain::NormalizeText("Борис") == "борис");
 }
 
+TEST_CASE("Text normalization lowercases extended Cyrillic letters used outside Russian", "[domain][normalization]")
+{
+    REQUIRE(Librova::Domain::NormalizeText("ІЇЄЎ") == "іїєў");
+    REQUIRE(Librova::Domain::NormalizeText("ПРИВІТ ЇЖАК ЄЎ") == "привіт їжак єў");
+}
+
 TEST_CASE("Optional text normalization drops empty values", "[domain][normalization]")
 {
     REQUIRE_FALSE(Librova::Domain::NormalizeOptionalText(std::optional<std::string>{" \t "}).has_value());
@@ -38,6 +44,21 @@ TEST_CASE("Duplicate key normalization is stable across case, spacing, yo, and a
     const Librova::Domain::SBookMetadata secondMetadata{
         .TitleUtf8 = "федор",
         .AuthorsUtf8 = {"аркадий стругацкий", "борис стругацкий"}
+    };
+
+    REQUIRE(Librova::Domain::BuildDuplicateKey(firstMetadata) == Librova::Domain::BuildDuplicateKey(secondMetadata));
+}
+
+TEST_CASE("Duplicate key normalization keeps extended Cyrillic case-insensitive", "[domain][normalization]")
+{
+    const Librova::Domain::SBookMetadata firstMetadata{
+        .TitleUtf8 = "ПРЫГОДЫ Ў Горадзе",
+        .AuthorsUtf8 = {"Іван Єнін", "Їжак Аўтар"}
+    };
+
+    const Librova::Domain::SBookMetadata secondMetadata{
+        .TitleUtf8 = "прыгоды ў горадзе",
+        .AuthorsUtf8 = {"їжак аўтар", "іван єнін"}
     };
 
     REQUIRE(Librova::Domain::BuildDuplicateKey(firstMetadata) == Librova::Domain::BuildDuplicateKey(secondMetadata));

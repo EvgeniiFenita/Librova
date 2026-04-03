@@ -1,8 +1,8 @@
 #include "Domain/MetadataNormalization.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cctype>
+#include <cstdint>
 #include <vector>
 
 namespace Librova::Domain {
@@ -13,66 +13,191 @@ bool IsWhitespaceByte(const unsigned char value) noexcept
     return value == ' ' || value == '\t' || value == '\n' || value == '\r';
 }
 
+[[nodiscard]] bool TryDecodeUtf8CodePoint(
+    const std::string_view value,
+    const std::size_t index,
+    char32_t& codePoint,
+    std::size_t& sequenceLength) noexcept
+{
+    const unsigned char firstByte = static_cast<unsigned char>(value[index]);
+
+    if (firstByte < 0x80)
+    {
+        codePoint = firstByte;
+        sequenceLength = 1;
+        return true;
+    }
+
+    if ((firstByte & 0xE0) == 0xC0)
+    {
+        sequenceLength = 2;
+        if (index + sequenceLength > value.size())
+        {
+            return false;
+        }
+
+        const unsigned char secondByte = static_cast<unsigned char>(value[index + 1]);
+        if ((secondByte & 0xC0) != 0x80)
+        {
+            return false;
+        }
+
+        codePoint = (static_cast<char32_t>(firstByte & 0x1F) << 6)
+            | static_cast<char32_t>(secondByte & 0x3F);
+        return true;
+    }
+
+    if ((firstByte & 0xF0) == 0xE0)
+    {
+        sequenceLength = 3;
+        if (index + sequenceLength > value.size())
+        {
+            return false;
+        }
+
+        const unsigned char secondByte = static_cast<unsigned char>(value[index + 1]);
+        const unsigned char thirdByte = static_cast<unsigned char>(value[index + 2]);
+        if ((secondByte & 0xC0) != 0x80 || (thirdByte & 0xC0) != 0x80)
+        {
+            return false;
+        }
+
+        codePoint = (static_cast<char32_t>(firstByte & 0x0F) << 12)
+            | (static_cast<char32_t>(secondByte & 0x3F) << 6)
+            | static_cast<char32_t>(thirdByte & 0x3F);
+        return true;
+    }
+
+    if ((firstByte & 0xF8) == 0xF0)
+    {
+        sequenceLength = 4;
+        if (index + sequenceLength > value.size())
+        {
+            return false;
+        }
+
+        const unsigned char secondByte = static_cast<unsigned char>(value[index + 1]);
+        const unsigned char thirdByte = static_cast<unsigned char>(value[index + 2]);
+        const unsigned char fourthByte = static_cast<unsigned char>(value[index + 3]);
+        if ((secondByte & 0xC0) != 0x80 || (thirdByte & 0xC0) != 0x80 || (fourthByte & 0xC0) != 0x80)
+        {
+            return false;
+        }
+
+        codePoint = (static_cast<char32_t>(firstByte & 0x07) << 18)
+            | (static_cast<char32_t>(secondByte & 0x3F) << 12)
+            | (static_cast<char32_t>(thirdByte & 0x3F) << 6)
+            | static_cast<char32_t>(fourthByte & 0x3F);
+        return true;
+    }
+
+    return false;
+}
+
+void AppendUtf8CodePoint(const char32_t codePoint, std::string& result)
+{
+    if (codePoint <= 0x7F)
+    {
+        result.push_back(static_cast<char>(codePoint));
+        return;
+    }
+
+    if (codePoint <= 0x7FF)
+    {
+        result.push_back(static_cast<char>(0xC0 | ((codePoint >> 6) & 0x1F)));
+        result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+        return;
+    }
+
+    if (codePoint <= 0xFFFF)
+    {
+        result.push_back(static_cast<char>(0xE0 | ((codePoint >> 12) & 0x0F)));
+        result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+        result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+        return;
+    }
+
+    result.push_back(static_cast<char>(0xF0 | ((codePoint >> 18) & 0x07)));
+    result.push_back(static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F)));
+    result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+    result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
+}
+
+[[nodiscard]] char32_t NormalizeLowercaseCodePoint(const char32_t codePoint) noexcept
+{
+    if (codePoint <= 0x7F)
+    {
+        return static_cast<char32_t>(std::tolower(static_cast<unsigned char>(codePoint)));
+    }
+
+    if (codePoint == U'\u0401' || codePoint == U'\u0451')
+    {
+        return U'\u0435';
+    }
+
+    if (codePoint >= U'\u0410' && codePoint <= U'\u042F')
+    {
+        return codePoint + 0x20;
+    }
+
+    if (codePoint >= U'\u0400' && codePoint <= U'\u040F')
+    {
+        switch (codePoint)
+        {
+        case U'\u0400':
+            return U'\u0450';
+        case U'\u0402':
+            return U'\u0452';
+        case U'\u0403':
+            return U'\u0453';
+        case U'\u0404':
+            return U'\u0454';
+        case U'\u0405':
+            return U'\u0455';
+        case U'\u0406':
+            return U'\u0456';
+        case U'\u0407':
+            return U'\u0457';
+        case U'\u0408':
+            return U'\u0458';
+        case U'\u0409':
+            return U'\u0459';
+        case U'\u040A':
+            return U'\u045A';
+        case U'\u040B':
+            return U'\u045B';
+        case U'\u040C':
+            return U'\u045C';
+        case U'\u040D':
+            return U'\u045D';
+        case U'\u040E':
+            return U'\u045E';
+        case U'\u040F':
+            return U'\u045F';
+        default:
+            return codePoint;
+        }
+    }
+
+    return codePoint;
+}
+
 void AppendLowercasedNormalizedUtf8(const std::string_view value, std::string& result)
 {
     for (std::size_t index = 0; index < value.size();)
     {
-        const unsigned char firstByte = static_cast<unsigned char>(value[index]);
+        char32_t codePoint = 0;
+        std::size_t sequenceLength = 0;
 
-        if (firstByte < 0x80)
+        if (!TryDecodeUtf8CodePoint(value, index, codePoint, sequenceLength))
         {
-            result.push_back(static_cast<char>(std::tolower(firstByte)));
+            result.push_back(value[index]);
             ++index;
             continue;
         }
 
-        if (index + 1 < value.size())
-        {
-            const unsigned char secondByte = static_cast<unsigned char>(value[index + 1]);
-
-            if (firstByte == 0xD0)
-            {
-                if (secondByte == 0x81)
-                {
-                    result.push_back(static_cast<char>(0xD0));
-                    result.push_back(static_cast<char>(0xB5));
-                    index += 2;
-                    continue;
-                }
-
-                if (secondByte >= 0x90 && secondByte <= 0x9F)
-                {
-                    result.push_back(static_cast<char>(0xD0));
-                    result.push_back(static_cast<char>(secondByte + 0x20));
-                    index += 2;
-                    continue;
-                }
-
-                if (secondByte >= 0xA0 && secondByte <= 0xAF)
-                {
-                    result.push_back(static_cast<char>(0xD1));
-                    result.push_back(static_cast<char>(secondByte - 0x20));
-                    index += 2;
-                    continue;
-                }
-            }
-
-            if (firstByte == 0xD1 && secondByte == 0x91)
-            {
-                result.push_back(static_cast<char>(0xD0));
-                result.push_back(static_cast<char>(0xB5));
-                index += 2;
-                continue;
-            }
-
-            result.push_back(static_cast<char>(firstByte));
-            result.push_back(static_cast<char>(secondByte));
-            index += 2;
-            continue;
-        }
-
-        result.push_back(static_cast<char>(firstByte));
-        ++index;
+        AppendUtf8CodePoint(NormalizeLowercaseCodePoint(codePoint), result);
+        index += sequenceLength;
     }
 }
 

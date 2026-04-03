@@ -324,6 +324,48 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and е �
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-insensitive", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-extended-cyrillic.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Прыгоды ў горадзе";
+    book.Metadata.AuthorsUtf8 = {"Іван Єнін", "Їжак Аўтар"};
+    book.Metadata.Language = "be";
+    book.Metadata.DescriptionUtf8 = std::string{"Кніга пра Івана, їжака і вясёлыя падзеі"};
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000403/book.epub";
+    book.File.SizeBytes = 555;
+    book.File.Sha256Hex = "hash-cyr-3";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
+    static_cast<void>(writeRepository.Add(book));
+
+    const std::vector<Librova::Domain::SBook> titleSearch = queryRepository.Search({
+        .TextUtf8 = "ПРЫГОДЫ Ў"
+    });
+    REQUIRE(titleSearch.size() == 1);
+    REQUIRE(titleSearch.front().Metadata.TitleUtf8 == "Прыгоды ў горадзе");
+
+    const std::vector<Librova::Domain::SBook> authorSearch = queryRepository.Search({
+        .TextUtf8 = "ІВАН"
+    });
+    REQUIRE(authorSearch.size() == 1);
+    REQUIRE(authorSearch.front().Metadata.TitleUtf8 == "Прыгоды ў горадзе");
+
+    const std::vector<Librova::Domain::SBook> descriptionSearch = queryRepository.Search({
+        .TextUtf8 = "ЇЖАК"
+    });
+    REQUIRE(descriptionSearch.size() == 1);
+    REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Прыгоды ў горадзе");
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-text search", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-fts-syntax.db";
@@ -519,6 +561,43 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
 
     REQUIRE(probableMatches.size() == 1);
     REQUIRE(probableMatches.front().ExistingBookId.Value == matchingBookId.Value);
+    REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository probable duplicate detection stays case-insensitive for extended Cyrillic", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-extended-cyrillic-duplicates.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook storedBook;
+    storedBook.Metadata.TitleUtf8 = "Прыгоды ў горадзе";
+    storedBook.Metadata.AuthorsUtf8 = {"Іван Єнін", "Їжак Аўтар"};
+    storedBook.Metadata.Language = "be";
+    storedBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    storedBook.File.ManagedPath = "Books/0000000703/match.epub";
+    storedBook.File.SizeBytes = 901;
+    storedBook.File.Sha256Hex = "hash-probable-3";
+    storedBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
+
+    const auto storedBookId = writeRepository.Add(storedBook);
+
+    const std::vector<Librova::Domain::SDuplicateMatch> probableMatches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "ПРЫГОДЫ Ў ГОРАДЗЕ",
+            .AuthorsUtf8 = {"їжак аўтар", "іван єнін"},
+            .Language = "be"
+        },
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(probableMatches.size() == 1);
+    REQUIRE(probableMatches.front().ExistingBookId.Value == storedBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
     std::filesystem::remove(databasePath);
