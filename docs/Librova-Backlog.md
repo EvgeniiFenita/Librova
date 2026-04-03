@@ -42,6 +42,10 @@ Working rule:
 
 ### Minor
 
+- `#28` downscale oversized imported covers before storing them in the managed library.
+  - Status: `Closed`
+  - Note: run cover optimization during import behind a native image-processing interface, keep aspect ratio, avoid upscaling, and keep the backend swappable so the initial Windows-only implementation does not leak into import policy.
+
 ## 4. Closed Backlog
 
 ### Major
@@ -84,6 +88,10 @@ Working rule:
 
 - `#6` keep the selected card visible when the details panel opens or closes by centering it in the visible viewport.
   - Status: `Closed`
+
+- `#29` replace fixed first-page library browsing with infinite scroll and total-result counts.
+  - Status: `Closed`
+  - Note: the `Library` grid now appends additional pages on scroll, the counter shows the total matching result count instead of the currently loaded page size, language-filter options come from the full matching result set instead of only the already loaded cards, and delete refresh reloads the visible range in one read-side request instead of replaying paged RPC calls.
 
 ### Critical
 
