@@ -42,7 +42,7 @@ Working rule:
 
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Open`
-  - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, and uses explicit graceful host shutdown before any forced kill fallback.
+  - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, uses explicit graceful host shutdown before any forced kill fallback, and hardens free-text search against raw FTS punctuation input.
 
 ### Minor
 

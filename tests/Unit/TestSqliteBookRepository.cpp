@@ -324,6 +324,37 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and ะต ั
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-text search", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-fts-syntax.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.Metadata.DescriptionUtf8 = std::string{"A zone full of artifacts and dangerous expeditions"};
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000501/book.epub";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "hash-fts-syntax";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(book));
+
+    const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
+        .TextUtf8 = R"(roadside: ("zone") -artifacts)"
+    });
+
+    REQUIRE(books.size() == 1);
+    REQUIRE(books.front().Metadata.TitleUtf8 == "Roadside Picnic");
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-duplicates.db";

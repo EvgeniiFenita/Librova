@@ -1,6 +1,7 @@
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 
 #include <optional>
+#include <cctype>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -19,10 +20,31 @@ namespace {
 std::string BuildFtsQuery(const std::string_view text)
 {
     const std::string normalizedText = Librova::Domain::NormalizeText(text);
+    std::string sanitizedText;
+    sanitizedText.reserve(normalizedText.size());
+
+    for (const unsigned char currentCharacter : normalizedText)
+    {
+        if (currentCharacter == ' ')
+        {
+            sanitizedText.push_back(' ');
+            continue;
+        }
+
+        if (currentCharacter >= 0x80 || std::isalnum(currentCharacter))
+        {
+            sanitizedText.push_back(static_cast<char>(currentCharacter));
+            continue;
+        }
+
+        sanitizedText.push_back(' ');
+    }
+
+    const std::string tokenizedText = Librova::Domain::NormalizeText(sanitizedText);
     std::string query;
     std::string token;
 
-    for (const char currentCharacter : normalizedText)
+    for (const char currentCharacter : tokenizedText)
     {
         if (currentCharacter == ' ')
         {
@@ -33,8 +55,9 @@ std::string BuildFtsQuery(const std::string_view text)
                     query.push_back(' ');
                 }
 
+                query.push_back('"');
                 query.append(token);
-                query.push_back('*');
+                query.append("\"*");
                 token.clear();
             }
 
@@ -51,8 +74,9 @@ std::string BuildFtsQuery(const std::string_view text)
             query.push_back(' ');
         }
 
+        query.push_back('"');
         query.append(token);
-        query.push_back('*');
+        query.append("\"*");
     }
 
     return query;
