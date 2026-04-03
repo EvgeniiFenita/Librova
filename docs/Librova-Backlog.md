@@ -28,10 +28,6 @@ Working rule:
 
 ### Major
 
-- `#1` unblock `Export` and `Move to Trash` after the first successful directory import.
-  - Status: `Needs Reproduction`
-  - Note: defect was reported in manual testing, but could not be reproduced again during follow-up verification.
-
 - `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
   - Status: `Open`
   - Note: treat `series` and `genres` as first-class metadata end-to-end instead of incidental parser output.
@@ -68,6 +64,10 @@ Working rule:
 
 - `#24` add per-file native host logging for skipped and failed entries during multi-file, directory, and ZIP imports so large import diagnostics do not depend only on UI summary warnings.
   - Status: `Closed`
+
+- `#1` unblock `Export` and `Move to Trash` after the first successful directory import.
+  - Status: `Closed`
+  - Note: real-host UI integration coverage now exercises both actions immediately after directory import, closing the stale `Needs Reproduction` gap and keeping the reported manual scenario under regression protection.
 
 - `#12` show current library book count and managed-book size total in megabytes, excluding the database.
   - Status: `Closed`

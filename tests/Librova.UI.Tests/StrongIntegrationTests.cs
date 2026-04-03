@@ -205,6 +205,49 @@ public sealed class StrongIntegrationTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ExportsSelectedBookAfterDirectoryImportAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-export-directory-import");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserExportDirectoryImport");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            await ImportDirectoryAsync(
+                session.ImportJobs,
+                sandboxRoot,
+                "incoming-export",
+                [
+                    ("exported-from-directory.fb2", "Exported From Directory", "Arkady", "Strugatsky"),
+                    ("second-book.fb2", "Second Book", "Boris", "Strugatsky")
+                ],
+                cancellation.Token);
+
+            var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportedFromDirectory.fb2");
+            var viewModel = new LibraryBrowserViewModel(
+                session.LibraryCatalog,
+                new FakeExportSelectionService(exportPath),
+                options.LibraryRoot);
+
+            await viewModel.RefreshAsync();
+            var exportedBook = Assert.Single(viewModel.Books, book => book.Title == "Exported From Directory");
+            await viewModel.ToggleSelectedBookAsync(exportedBook);
+
+            await viewModel.ExportSelectedBookAsync();
+
+            Assert.True(File.Exists(exportPath));
+            Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_MovesSelectedBookToTrashAgainstRealHost()
     {
         var sandboxRoot = CreateSandboxRoot("browser-trash");
@@ -226,6 +269,46 @@ public sealed class StrongIntegrationTests
             await viewModel.MoveSelectedBookToTrashAsync();
 
             Assert.Empty(viewModel.Books);
+            Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_MovesSelectedBookToTrashAfterDirectoryImportAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-trash-directory-import");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserTrashDirectoryImport");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            await ImportDirectoryAsync(
+                session.ImportJobs,
+                sandboxRoot,
+                "incoming-trash",
+                [
+                    ("trash-from-directory.fb2", "Trash From Directory", "Arkady", "Strugatsky"),
+                    ("keep-book.fb2", "Keep Book", "Boris", "Strugatsky")
+                ],
+                cancellation.Token);
+
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot);
+
+            await viewModel.RefreshAsync();
+            var trashedBook = Assert.Single(viewModel.Books, book => book.Title == "Trash From Directory");
+            await viewModel.ToggleSelectedBookAsync(trashedBook);
+
+            await viewModel.MoveSelectedBookToTrashAsync();
+
+            Assert.Single(viewModel.Books);
+            Assert.Equal("Keep Book", viewModel.Books[0].Title);
             Assert.Contains("Moved", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
         }
         finally
@@ -416,6 +499,44 @@ public sealed class StrongIntegrationTests
         Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
         Assert.NotNull(result.Summary);
         Assert.Equal(1UL, result.Summary!.ImportedEntries);
+    }
+
+    private static async Task ImportDirectoryAsync(
+        IImportJobsService importJobs,
+        string sandboxRoot,
+        string directoryName,
+        IReadOnlyList<(string FileName, string Title, string AuthorFirstName, string AuthorLastName)> books,
+        CancellationToken cancellationToken)
+    {
+        var importRoot = Path.Combine(sandboxRoot, directoryName);
+        Directory.CreateDirectory(importRoot);
+
+        foreach (var (fileName, title, authorFirstName, authorLastName) in books)
+        {
+            CreateFb2File(importRoot, fileName, title, authorFirstName, authorLastName);
+        }
+
+        var jobId = await importJobs.StartAsync(
+            new StartImportRequestModel
+            {
+                SourcePaths = [importRoot],
+                WorkingDirectory = Path.Combine(sandboxRoot, "Work", directoryName)
+            },
+            TimeSpan.FromSeconds(5),
+            cancellationToken);
+
+        var completed = await importJobs.WaitAsync(
+            jobId,
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15),
+            cancellationToken);
+        Assert.True(completed);
+
+        var result = await importJobs.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellationToken);
+        Assert.NotNull(result);
+        Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
+        Assert.NotNull(result.Summary);
+        Assert.Equal((ulong)books.Count, result.Summary!.ImportedEntries);
     }
 
     private static string CreateZipImportFixture(string sandboxRoot, string fileName)
