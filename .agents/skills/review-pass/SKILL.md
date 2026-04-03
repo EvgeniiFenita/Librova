@@ -73,7 +73,6 @@ Verify these files match implemented reality:
 - [ ] `docs/Librova-Architecture.md`
 - [ ] `docs/Librova-Backlog.md`
 - [ ] `docs/ManualUiTestScenarios.md` (Russian, UI labels in English as-is)
-- [ ] `docs/archive/Development-History.md`
 - [ ] `AGENTS.md`
 
 If any file disagrees with implemented reality, fix it before closing the review pass.

@@ -35,7 +35,6 @@ Checklist:
 - [ ] Unit tests for local logic
 - [ ] Integration test for the IPC boundary
 - [ ] Update `docs/Librova-Architecture.md` if any structural decision changed
-- [ ] Update `docs/archive/Development-History.md` with the verified checkpoint
 
 ---
 
@@ -82,6 +81,5 @@ Before marking the task done:
 - [ ] `Debug` and `Release` build both pass
 - [ ] All new tests are green
 - [ ] `docs/` updated for any changed product / architecture / backlog reality
-- [ ] `docs/archive/Development-History.md` has the verified checkpoint entry
 - [ ] No decorative tests added (see `docs/engineering/TestStrategy.md`)
 - [ ] No commits made unless explicitly requested

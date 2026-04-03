@@ -74,4 +74,3 @@ If the import pipeline change requires new or modified IPC methods, use the `$tr
 - [ ] `docs/Librova-Architecture.md` updated if import pipeline structure changed
 - [ ] `docs/Librova-Product.md` updated if user-facing import behavior changed
 - [ ] `docs/ManualUiTestScenarios.md` updated in Russian if UI import workflow changed
-- [ ] `docs/archive/Development-History.md` updated with the verified checkpoint

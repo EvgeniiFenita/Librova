@@ -14,6 +14,8 @@ Working rule:
 - if the user asks to "move to the next task", take the highest-priority task with status `Open`;
 - if a higher-priority task is marked `Needs Reproduction` or `Blocked`, take the next open task;
 - if several tasks share the same priority, prefer the most local and easiest-to-verify task first.
+- when a task is completed, move it out of `Open Backlog` into the matching priority section under `Closed Backlog` in the same change;
+- `Open Backlog` must never contain an item whose status is `Closed`.
 
 ## 2. Priority Meanings
 
@@ -24,16 +26,6 @@ Working rule:
 
 ## 3. Open Backlog
 
-### Critical
-
-- `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
-  - Status: `Closed`
-  - Note: `scripts/PublishPortable.ps1` is now the canonical Windows packaging flow. It publishes `Librova.UI` as a self-contained single-file `win-x64` executable, builds `Librova.Core.Host` through the `x64-release-static` preset so the host can ship as a single native `exe`, copies any remaining runtime dependencies into `out/package/win-x64-portable/`, and runs a portable smoke test before reporting success. The portable package now also keeps bootstrap UI state, preferences, and pre-library logs under `PortableData/` beside the executables instead of `%LOCALAPPDATA%`, while active library logs still move into `LibraryRoot/Logs`. The verified output currently contains `Librova.UI.exe`, `LibrovaCoreHostApp.exe`, and the Avalonia native runtime files `av_libglesv2.dll`, `libHarfBuzzSharp.dll`, and `libSkiaSharp.dll`.
-
-- `#33` harden `CoreHostProcess` command-line quoting so core startup survives Windows paths with trailing backslashes and embedded quotes.
-  - Status: `Closed`
-  - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
-
 ### Major
 
 - `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
@@ -43,10 +35,6 @@ Working rule:
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
-
-- `#34` extend metadata normalization beyond Russian-only case folding so search and duplicate detection stay correct for broader Cyrillic text.
-  - Status: `Closed`
-  - Note: the shared metadata normalizer now lowercases extended Cyrillic code points including `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`, and regression coverage now proves both SQLite FTS search-index matching and probable-duplicate keys stay case-insensitive for those inputs.
 
 - `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
   - Status: `Open`
@@ -69,10 +57,6 @@ Working rule:
 - `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
   - Status: `Open`
   - Note: current replacement logic can re-expand `{output_format}` and similar tokens if they appear in the source or destination path text; keep placeholder substitution explicit and add a regression test for filenames containing literal placeholder-like fragments.
-
-- `#28` downscale oversized imported covers before storing them in the managed library.
-  - Status: `Closed`
-  - Note: run cover optimization during import behind a native image-processing interface, keep aspect ratio, avoid upscaling, and keep the backend swappable so the initial Windows-only implementation does not leak into import policy.
 
 ### Low
 
@@ -131,7 +115,15 @@ Working rule:
   - Status: `Closed`
   - Note: delete now stages through managed `Trash` for rollback safety, hands staged files off to the Windows `Recycle Bin`, reports managed-`Trash` fallback explicitly if that handoff fails, and cleans up empty `Trash` subfolders after successful handoff.
 
+- `#34` extend metadata normalization beyond Russian-only case folding so search and duplicate detection stay correct for broader Cyrillic text.
+  - Status: `Closed`
+  - Note: the shared metadata normalizer now lowercases extended Cyrillic code points including `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`, and regression coverage now proves both SQLite FTS search-index matching and probable-duplicate keys stay case-insensitive for those inputs.
+
 ### Critical
+
+- `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
+  - Status: `Closed`
+  - Note: `scripts/PublishPortable.ps1` is now the canonical Windows packaging flow. It publishes `Librova.UI` as a self-contained single-file `win-x64` executable, builds `Librova.Core.Host` through the `x64-release-static` preset so the host can ship as a single native `exe`, copies any remaining runtime dependencies into `out/package/win-x64-portable/`, and runs a portable smoke test before reporting success. The portable package now also keeps bootstrap UI state, preferences, and pre-library logs under `PortableData/` beside the executables instead of `%LOCALAPPDATA%`, while active library logs still move into `LibraryRoot/Logs`. The verified output currently contains `Librova.UI.exe`, `LibrovaCoreHostApp.exe`, and the Avalonia native runtime files `av_libglesv2.dll`, `libHarfBuzzSharp.dll`, and `libSkiaSharp.dll`.
 
 - `#15` wire configured `fbc.exe` / `fb2cng` usage into import and export flows, with `Export As EPUB` and forced-import-conversion UI affordances enabled only when the converter path is configured for the current session.
   - Status: `Closed`
@@ -139,7 +131,15 @@ Working rule:
 - `#7` show deterministic import progress for large folders, including total file count, processed count, and final outcome summary.
   - Status: `Closed`
 
+- `#33` harden `CoreHostProcess` command-line quoting so core startup survives Windows paths with trailing backslashes and embedded quotes.
+  - Status: `Closed`
+  - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
+
 ### Minor
+
+- `#28` downscale oversized imported covers before storing them in the managed library.
+  - Status: `Closed`
+  - Note: run cover optimization during import behind a native image-processing interface, keep aspect ratio, avoid upscaling, and keep the backend swappable so the initial Windows-only implementation does not leak into import policy.
 
 - `#3` display file sizes in megabytes instead of raw bytes.
   - Status: `Closed`

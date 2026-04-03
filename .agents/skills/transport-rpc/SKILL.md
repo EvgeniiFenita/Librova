@@ -67,4 +67,3 @@ All four steps must be green before closing the checkpoint.
 
 - [ ] Both sides rebuild and all tests pass
 - [ ] `docs/Librova-Architecture.md` updated if IPC boundary structure changed
-- [ ] `docs/archive/Development-History.md` updated with the verified checkpoint
