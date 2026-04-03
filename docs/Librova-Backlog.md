@@ -27,8 +27,8 @@ Working rule:
 ### Critical
 
 - `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
-  - Status: `Open`
-  - Note: define the canonical packaging script, output layout, self-contained vs framework-dependent UI publish model, and a verification step on a clean Windows environment so the produced folder can be launched without repo-local build prerequisites.
+  - Status: `Closed`
+  - Note: `scripts/PublishPortable.ps1` is now the canonical Windows packaging flow. It publishes `Librova.UI` as a self-contained single-file `win-x64` executable, builds `Librova.Core.Host` through the `x64-release-static` preset so the host can ship as a single native `exe`, copies any remaining runtime dependencies into `out/package/win-x64-portable/`, and runs a portable smoke test before reporting success. The portable package now also keeps bootstrap UI state, preferences, and pre-library logs under `PortableData/` beside the executables instead of `%LOCALAPPDATA%`, while active library logs still move into `LibraryRoot/Logs`. The verified output currently contains `Librova.UI.exe`, `LibrovaCoreHostApp.exe`, and the Avalonia native runtime files `av_libglesv2.dll`, `libHarfBuzzSharp.dll`, and `libSkiaSharp.dll`.
 
 - `#33` harden `CoreHostProcess` command-line quoting so core startup survives Windows paths with trailing backslashes and embedded quotes.
   - Status: `Closed`

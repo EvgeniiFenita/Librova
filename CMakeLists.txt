@@ -8,6 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(MSVC)
     add_compile_options(/utf-8)
+
+    if(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES "-static$")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
 endif()
 
 include(CTest)

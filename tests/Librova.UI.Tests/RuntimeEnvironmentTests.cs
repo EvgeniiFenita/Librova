@@ -53,6 +53,94 @@ public sealed class RuntimeEnvironmentTests
     }
 
     [Fact]
+    public void RuntimeEnvironment_IsPortableMode_WhenPackagedHostExistsBesideBaseDirectory()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        var packagedHostPath = Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe");
+        File.WriteAllText(packagedHostPath, string.Empty);
+
+        try
+        {
+            Assert.True(RuntimeEnvironment.IsPortableMode(sandboxRoot, null));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_IsPortableMode_IsFalseWhenHostOverrideIsSet()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        var packagedHostPath = Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe");
+        File.WriteAllText(packagedHostPath, string.Empty);
+
+        try
+        {
+            Assert.False(RuntimeEnvironment.IsPortableMode(sandboxRoot, @"C:\Override\LibrovaCoreHostApp.exe"));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_DefaultPaths_UsePortableDataWhenPackagedHostExists()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            Assert.Equal(
+                Path.Combine(sandboxRoot, "PortableData", "Logs", "ui.log"),
+                RuntimeEnvironment.GetDefaultUiLogFilePath(sandboxRoot, null));
+            Assert.Equal(
+                Path.Combine(sandboxRoot, "PortableData", "ui-shell-state.json"),
+                RuntimeEnvironment.GetDefaultUiStateFilePath(sandboxRoot, null));
+            Assert.Equal(
+                Path.Combine(sandboxRoot, "PortableData", "ui-preferences.json"),
+                RuntimeEnvironment.GetDefaultUiPreferencesFilePath(sandboxRoot, null));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void CoreHostDevelopmentDefaults_Create_UsesEnvironmentOverrides()
     {
         var expectedLibraryRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "library");

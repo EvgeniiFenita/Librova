@@ -54,4 +54,33 @@ public sealed class CoreHostPathResolverTests
             }
         }
     }
+
+    [Fact]
+    public void ResolveDevelopmentExecutablePath_PrefersPackagedHostBesideBaseDirectory()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-packaged-host", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        var packagedHostPath = Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe");
+        File.WriteAllText(packagedHostPath, string.Empty);
+
+        try
+        {
+            var resolvedPath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(sandboxRoot, null);
+
+            Assert.Equal(Path.GetFullPath(packagedHostPath), resolvedPath);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
 }

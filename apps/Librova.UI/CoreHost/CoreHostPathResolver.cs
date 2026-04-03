@@ -5,10 +5,13 @@ namespace Librova.UI.CoreHost;
 
 internal static class CoreHostPathResolver
 {
+    private const string HostExecutableName = "LibrovaCoreHostApp.exe";
+
     private static readonly (string Preset, string Configuration)[] KnownBuildConfigurations =
     [
         ("x64-debug", "Debug"),
-        ("x64-release", "Release")
+        ("x64-release", "Release"),
+        ("x64-release-static", "Release")
     ];
 
     public static string ResolveDevelopmentExecutablePath(string? baseDirectory = null)
@@ -30,6 +33,14 @@ internal static class CoreHostPathResolver
                 $"LIBROVA_CORE_HOST_EXECUTABLE points to a missing file: {resolvedOverride}");
         }
 
+        var packagedCandidate = Path.Combine(
+            Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory),
+            HostExecutableName);
+        if (File.Exists(packagedCandidate))
+        {
+            return packagedCandidate;
+        }
+
         var current = new DirectoryInfo(baseDirectory ?? AppContext.BaseDirectory);
         while (current is not null)
         {
@@ -43,7 +54,7 @@ internal static class CoreHostPathResolver
                     "apps",
                     "Librova.Core.Host",
                     configuration,
-                    "LibrovaCoreHostApp.exe");
+                    HostExecutableName);
 
                 if (File.Exists(candidate))
                 {

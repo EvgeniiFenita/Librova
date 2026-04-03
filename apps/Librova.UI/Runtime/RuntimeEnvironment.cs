@@ -5,6 +5,9 @@ namespace Librova.UI.Runtime;
 
 internal static class RuntimeEnvironment
 {
+    private const string PackagedHostExecutableName = "LibrovaCoreHostApp.exe";
+    private const string PortableDataDirectoryName = "PortableData";
+
     public const string UiLogFileEnvVar = "LIBROVA_UI_LOG_FILE";
     public const string UiStateFileEnvVar = "LIBROVA_UI_STATE_FILE";
     public const string UiPreferencesFileEnvVar = "LIBROVA_UI_PREFERENCES_FILE";
@@ -16,29 +19,88 @@ internal static class RuntimeEnvironment
 
     public static string GetDefaultUiLogFilePath() =>
         GetPathFromEnvironment(UiLogFileEnvVar)
-        ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Librova",
-            "Logs",
-            "ui.log");
+        ?? GetDefaultPortableAwarePath(
+            Path.Combine("Logs", "ui.log"),
+            GetLocalAppDataPath(Path.Combine("Logs", "ui.log")));
 
     public static string GetDefaultUiStateFilePath() =>
         GetPathFromEnvironment(UiStateFileEnvVar)
-        ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Librova",
-            "ui-shell-state.json");
+        ?? GetDefaultPortableAwarePath(
+            "ui-shell-state.json",
+            GetLocalAppDataPath("ui-shell-state.json"));
 
     public static string GetDefaultUiPreferencesFilePath() =>
         GetPathFromEnvironment(UiPreferencesFileEnvVar)
-        ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Librova",
-            "ui-preferences.json");
+        ?? GetDefaultPortableAwarePath(
+            "ui-preferences.json",
+            GetLocalAppDataPath("ui-preferences.json"));
 
     public static string? GetLibraryRootOverride() => GetPathFromEnvironment(LibraryRootEnvVar);
 
     public static string? GetCoreHostExecutableOverride() => GetPathFromEnvironment(CoreHostExecutableEnvVar);
+
+    internal static bool IsPortableMode(string? baseDirectory = null, string? hostExecutableOverride = null)
+    {
+        if (!string.IsNullOrWhiteSpace(hostExecutableOverride))
+        {
+            return false;
+        }
+
+        var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
+        var packagedHostPath = Path.Combine(effectiveBaseDirectory, PackagedHostExecutableName);
+        return File.Exists(packagedHostPath);
+    }
+
+    internal static string GetDefaultUiLogFilePath(string baseDirectory, string? hostExecutableOverride) =>
+        GetDefaultPortableAwarePath(
+            Path.Combine("Logs", "ui.log"),
+            GetLocalAppDataPath(Path.Combine("Logs", "ui.log")),
+            baseDirectory,
+            hostExecutableOverride);
+
+    internal static string GetDefaultUiStateFilePath(string baseDirectory, string? hostExecutableOverride) =>
+        GetDefaultPortableAwarePath(
+            "ui-shell-state.json",
+            GetLocalAppDataPath("ui-shell-state.json"),
+            baseDirectory,
+            hostExecutableOverride);
+
+    internal static string GetDefaultUiPreferencesFilePath(string baseDirectory, string? hostExecutableOverride) =>
+        GetDefaultPortableAwarePath(
+            "ui-preferences.json",
+            GetLocalAppDataPath("ui-preferences.json"),
+            baseDirectory,
+            hostExecutableOverride);
+
+    private static string GetDefaultPortableAwarePath(string relativePortablePath, string localAppDataPath)
+        => GetDefaultPortableAwarePath(
+            relativePortablePath,
+            localAppDataPath,
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
+
+    private static string GetDefaultPortableAwarePath(
+        string relativePortablePath,
+        string localAppDataPath,
+        string baseDirectory,
+        string? hostExecutableOverride)
+    {
+        if (!IsPortableMode(baseDirectory, hostExecutableOverride))
+        {
+            return localAppDataPath;
+        }
+
+        return Path.Combine(
+            Path.GetFullPath(baseDirectory),
+            PortableDataDirectoryName,
+            relativePortablePath);
+    }
+
+    private static string GetLocalAppDataPath(string relativePath) =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Librova",
+            relativePath);
 
     private static string? GetPathFromEnvironment(string variableName)
     {
