@@ -42,7 +42,7 @@ Working rule:
 
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Open`
-  - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section.
+  - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts and blocks silent in-place recreation for damaged libraries.
 
 ### Minor
 

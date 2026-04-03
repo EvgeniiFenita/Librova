@@ -1,3 +1,4 @@
+using Librova.UI.CoreHost;
 using Librova.UI.Desktop;
 using Librova.UI.Logging;
 using Librova.UI.ViewModels;
@@ -36,7 +37,7 @@ internal sealed class ShellApplication : IAsyncDisposable
         IShellStateStore? stateStore = null,
         IUiPreferencesStore? preferencesStore = null,
         UiPreferencesSnapshot? savedPreferencesOverride = null,
-        Func<string, Task>? switchLibraryAsync = null,
+        Func<string, UiLibraryOpenMode, Task>? switchLibraryAsync = null,
         Func<Task>? reloadShellAsync = null)
     {
         var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();

@@ -13,6 +13,7 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private readonly IUiPreferencesStore _preferencesStore;
     private readonly Func<string, Task> _continueAsync;
+    private readonly Func<string, string>? _additionalValidation;
     private readonly string _initialLibraryRoot;
     private readonly bool _requireDifferentLibraryRoot;
     private string _libraryRoot;
@@ -25,7 +26,8 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
         IPathSelectionService? pathSelectionService,
         IUiPreferencesStore? preferencesStore,
         Func<string, Task> continueAsync,
-        bool requireDifferentLibraryRoot = false)
+        bool requireDifferentLibraryRoot = false,
+        Func<string, string>? additionalValidation = null)
     {
         _initialLibraryRoot = suggestedLibraryRoot;
         _requireDifferentLibraryRoot = requireDifferentLibraryRoot;
@@ -34,6 +36,7 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _continueAsync = continueAsync;
+        _additionalValidation = additionalValidation;
 
         BrowseLibraryRootCommand = new AsyncCommand(BrowseLibraryRootAsync, () => !IsBusy);
         ContinueCommand = new AsyncCommand(ContinueAsync, CanContinue, HandleContinueErrorAsync);
@@ -144,6 +147,11 @@ internal sealed class FirstRunSetupViewModel : ObservableObject
         if (_requireDifferentLibraryRoot && AreEquivalentLibraryRoots(LibraryRoot, _initialLibraryRoot))
         {
             return "Choose a different library root. Retrying the same library will reopen the same startup error.";
+        }
+
+        if (_additionalValidation is not null)
+        {
+            return _additionalValidation(LibraryRoot);
         }
 
         return string.Empty;

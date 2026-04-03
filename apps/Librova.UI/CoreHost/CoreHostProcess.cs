@@ -100,6 +100,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         var builder = new StringBuilder();
         builder.Append("--pipe ").Append(Quote(options.PipePath));
         builder.Append(" --library-root ").Append(Quote(options.LibraryRoot));
+        builder.Append(" --library-mode ").Append(options.LibraryOpenMode is UiLibraryOpenMode.CreateNew ? "create" : "open");
         if (options.ParentProcessId.HasValue)
         {
             builder.Append(" --parent-pid ").Append(options.ParentProcessId.Value);

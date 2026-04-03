@@ -377,7 +377,8 @@ public sealed class StrongIntegrationTests
                 "..",
                 "..")),
             PipePath = $@"\\.\pipe\Librova.UI.StrongTests.{suffix}.{Environment.ProcessId}.{Environment.TickCount64}",
-            LibraryRoot = Path.Combine(sandboxRoot, "Library")
+            LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+            LibraryOpenMode = UiLibraryOpenMode.CreateNew
         };
 
     private static string CreateSandboxRoot(string scenario) =>

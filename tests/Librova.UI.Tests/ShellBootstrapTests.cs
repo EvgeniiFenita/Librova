@@ -28,7 +28,8 @@ public sealed class ShellBootstrapTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ShellTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));

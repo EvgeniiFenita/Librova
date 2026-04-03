@@ -100,6 +100,12 @@ std::filesystem::path BuildUniquePipePath()
     return std::filesystem::path{LR"(\\.\pipe\Librova.CoreHost.Process.Test.)" + suffix};
 }
 
+std::filesystem::path BuildUniqueSandboxPath(const std::wstring_view prefix)
+{
+    const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
+    return std::filesystem::temp_directory_path() / std::filesystem::path{std::wstring(prefix) + L"." + suffix};
+}
+
 std::wstring Quote(const std::filesystem::path& value)
 {
     return L"\"" + value.native() + L"\"";
@@ -244,7 +250,7 @@ PROCESS_INFORMATION StartProcess(const std::filesystem::path& executablePath, st
 
 TEST_CASE("Core host executable serves import job requests over named pipes", "[core-host][process]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-core-host-process");
+    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-core-host-process"));
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto workingDirectory = sandbox.GetPath() / "Work";
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "book.fb2");
@@ -257,7 +263,8 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
         + L" --pipe "
         + Quote(pipePath)
         + L" --library-root "
-        + Quote(libraryRoot);
+        + Quote(libraryRoot)
+        + L" --library-mode create";
 
     PROCESS_INFORMATION processInformation = StartProcess(hostAppPath, std::move(commandLine));
     CScopedProcess process(processInformation);
@@ -294,7 +301,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
 
 TEST_CASE("Core host exits gracefully when the watched parent process terminates", "[core-host][process]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-core-host-parent-watchdog");
+    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-core-host-parent-watchdog"));
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto pipePath = BuildUniquePipePath();
     const auto hostAppPath = GetHostAppPath();
@@ -313,6 +320,7 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
         + Quote(pipePath)
         + L" --library-root "
         + Quote(libraryRoot)
+        + L" --library-mode create"
         + L" --parent-pid "
         + std::to_wstring(parentProcessInformation.dwProcessId);
 
@@ -330,6 +338,28 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
     const std::string logText = ReadTextFile(logFilePath);
     REQUIRE(logText.find("Parent process") != std::string::npos);
     REQUIRE(logText.find("Librova.Core.Host stopped after serving 0 sessions.") != std::string::npos);
+}
+
+TEST_CASE("Core host rejects opening a missing managed library root", "[core-host][process]")
+{
+    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-core-host-open-missing"));
+    const auto libraryRoot = sandbox.GetPath() / "MissingLibrary";
+    const auto pipePath = BuildUniquePipePath();
+    const auto hostAppPath = GetHostAppPath();
+
+    REQUIRE(std::filesystem::exists(hostAppPath));
+
+    std::wstring commandLine = Quote(hostAppPath)
+        + L" --pipe "
+        + Quote(pipePath)
+        + L" --library-root "
+        + Quote(libraryRoot)
+        + L" --library-mode open";
+
+    CScopedProcess process(StartProcess(hostAppPath, std::move(commandLine)));
+    REQUIRE(process.WaitForExit(std::chrono::seconds(5)));
+    REQUIRE(process.TryGetExitCode() == std::optional<DWORD>{1});
+    REQUIRE_FALSE(std::filesystem::exists(libraryRoot));
 }
 
 TEST_CASE("Core host process supports help and version flags without runtime arguments", "[core-host][process]")

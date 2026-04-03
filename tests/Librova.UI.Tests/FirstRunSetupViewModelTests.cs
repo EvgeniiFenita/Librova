@@ -125,6 +125,31 @@ public sealed class FirstRunSetupViewModelTests
     }
 
     [Fact]
+    public void ContinueCommand_DisabledWhenAdditionalValidationFails()
+    {
+        var libraryRoot = BuildAvailableLibraryRoot("non-empty-create");
+        Directory.CreateDirectory(libraryRoot);
+        File.WriteAllText(Path.Combine(libraryRoot, "existing.txt"), "occupied");
+
+        try
+        {
+            var viewModel = new FirstRunSetupViewModel(
+                libraryRoot,
+                new FakePathSelectionService(),
+                new FakePreferencesStore(),
+                _ => Task.CompletedTask,
+                additionalValidation: LibraryRootInspection.BuildCreateNewValidationMessage);
+
+            Assert.False(viewModel.ContinueCommand.CanExecute(null));
+            Assert.Contains("empty target directory", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(libraryRoot);
+        }
+    }
+
+    [Fact]
     public void ContinueCommand_DisabledWhenRecoveryRequiresDifferentLibraryRootAndPathIsUnchanged()
     {
         var libraryRoot = BuildAvailableLibraryRoot("same-path-retry");
@@ -213,4 +238,21 @@ public sealed class FirstRunSetupViewModelTests
 
     private static string BuildAvailableLibraryRoot(string scenario) =>
         Path.Combine(Path.GetTempPath(), "librova-ui-tests", scenario, Guid.NewGuid().ToString("N"));
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
 }

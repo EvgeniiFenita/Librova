@@ -14,6 +14,22 @@ public sealed class CoreHostLaunchOptionsTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            LibraryOpenMode = UiLibraryOpenMode.OpenExisting,
+            ConverterMode = UiConverterMode.Disabled
+        };
+
+        options.Validate();
+    }
+
+    [Fact]
+    public void Validate_AcceptsCreateNewLibraryMode()
+    {
+        var options = new CoreHostLaunchOptions
+        {
+            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+            PipePath = @"\\.\pipe\Librova.Test",
+            LibraryRoot = @"C:\Libraries\Librova-New",
+            LibraryOpenMode = UiLibraryOpenMode.CreateNew,
             ConverterMode = UiConverterMode.Disabled
         };
 

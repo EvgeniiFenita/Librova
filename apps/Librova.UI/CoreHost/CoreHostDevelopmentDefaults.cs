@@ -19,19 +19,24 @@ internal static class CoreHostDevelopmentDefaults
         return CreateForLibraryRoot(
             string.IsNullOrWhiteSpace(libraryRoot) ? GetFallbackLibraryRoot() : libraryRoot,
             effectivePreferencesStore.TryLoad(),
-            baseDirectory);
+            baseDirectory,
+            UiLibraryOpenMode.OpenExisting);
     }
 
-    public static CoreHostLaunchOptions CreateForLibraryRoot(string libraryRoot, string? baseDirectory = null)
+    public static CoreHostLaunchOptions CreateForLibraryRoot(
+        string libraryRoot,
+        string? baseDirectory = null,
+        UiLibraryOpenMode libraryOpenMode = UiLibraryOpenMode.OpenExisting)
     {
         var preferences = UiPreferencesStore.CreateDefault().TryLoad();
-        return CreateForLibraryRoot(libraryRoot, preferences, baseDirectory);
+        return CreateForLibraryRoot(libraryRoot, preferences, baseDirectory, libraryOpenMode);
     }
 
     public static CoreHostLaunchOptions CreateForLibraryRoot(
         string libraryRoot,
         UiPreferencesSnapshot? preferences,
-        string? baseDirectory = null)
+        string? baseDirectory = null,
+        UiLibraryOpenMode libraryOpenMode = UiLibraryOpenMode.OpenExisting)
     {
         var executablePath = RuntimeEnvironment.GetCoreHostExecutableOverride()
             ?? CoreHostPathResolver.ResolveDevelopmentExecutablePath(baseDirectory);
@@ -42,6 +47,7 @@ internal static class CoreHostDevelopmentDefaults
             ExecutablePath = executablePath,
             PipePath = pipePath,
             LibraryRoot = libraryRoot,
+            LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,
             ConverterMode = preferences?.ConverterMode ?? UiConverterMode.Disabled,
             Fb2CngExecutablePath = preferences?.Fb2CngExecutablePath,

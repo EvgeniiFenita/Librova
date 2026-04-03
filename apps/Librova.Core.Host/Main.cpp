@@ -73,6 +73,8 @@ void PrintUsage()
         << "Options:\n"
         << "  --help, -h              Show this help and exit.\n"
         << "  --version               Show host version and exit.\n"
+        << "  --library-mode <open|create>\n"
+        << "                         Open an existing library or create a new one.\n"
         << "  --parent-pid <pid>      Bind host lifetime to the given parent process.\n"
         << "  --serve-one             Stop after serving a single pipe session.\n"
         << "  --max-sessions <count>  Stop after serving the specified number of sessions.\n"
@@ -176,7 +178,7 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot);
+        Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot, options.LibraryOpenMode);
         Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
         Librova::Logging::Info("Starting Librova.Core.Host for library root '{}'.", options.LibraryRoot.string());
 

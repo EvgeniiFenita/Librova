@@ -34,6 +34,10 @@
 - создается [out\runtime\ui-preferences.json](out/runtime/ui-preferences.json).
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
 - UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
+7. Повтори `-FirstRun`, но выбери уже непустую папку, которая не является существующей библиотекой Librova.
+Ожидаемое поведение:
+- `Continue` не запускает host.
+- validation error явно требует пустую папку для создания новой библиотеки.
 
 ## 2. Startup Error Recovery
 
@@ -64,6 +68,10 @@
 Ожидаемое поведение:
 - `Retry With This Library` становится активной.
 - приложение не пытается молча пересоздавать или чинить поврежденную библиотеку по тому же пути.
+5. Введи путь к существующей, но не-Librova папке, и нажми `Retry With This Library`.
+Ожидаемое поведение:
+- recovery validation отклоняет путь как несуществующую managed library Librova;
+- приложение не подменяет `Open Library` логикой неявного `Create Library`.
 
 ## 4. Shell Navigation
 
@@ -308,10 +316,18 @@
 - текущая библиотека закрывается.
 - приложение показывает loading state и затем открывает новую библиотеку.
 - `Library` screen теперь работает уже с новым root.
+2.1. Повтори `Open Library...`, но выбери обычную непустую папку без структуры Librova.
+Ожидаемое поведение:
+- переключение библиотеки не начинается;
+- validation error объясняет, что `Open Library...` требует существующую библиотеку Librova.
 3. Нажми `Create Library...` и выбери новый пустой путь.
 Ожидаемое поведение:
 - Librova создает managed library structure в новом месте.
 - приложение переключается на новую библиотеку как на активную.
+3.1. Повтори `Create Library...`, но выбери обычную непустую папку.
+Ожидаемое поведение:
+- переключение библиотеки не начинается;
+- validation error объясняет, что `Create Library...` требует пустую целевую папку.
 
 ## 14. Settings: Converter Configuration
 

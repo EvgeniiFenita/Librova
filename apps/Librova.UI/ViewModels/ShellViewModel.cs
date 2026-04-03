@@ -19,7 +19,7 @@ internal sealed class ShellViewModel : ObservableObject
     private readonly ShellSession _session;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly IUiPreferencesStore _preferencesStore;
-    private readonly Func<string, Task>? _switchLibraryAsync;
+    private readonly Func<string, UiLibraryOpenMode, Task>? _switchLibraryAsync;
     private readonly Func<Task>? _reloadShellAsync;
     private UiConverterMode _selectedConverterMode;
     private string _fb2CngExecutablePath = string.Empty;
@@ -36,7 +36,7 @@ internal sealed class ShellViewModel : ObservableObject
         ShellStateSnapshot? savedState = null,
         IUiPreferencesStore? preferencesStore = null,
         UiPreferencesSnapshot? savedPreferences = null,
-        Func<string, Task>? switchLibraryAsync = null,
+        Func<string, UiLibraryOpenMode, Task>? switchLibraryAsync = null,
         Func<Task>? reloadShellAsync = null)
     {
         _session = session;
@@ -281,19 +281,43 @@ internal sealed class ShellViewModel : ObservableObject
     private async Task OpenLibraryAsync()
     {
         var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
-        if (!string.IsNullOrWhiteSpace(selectedPath) && _switchLibraryAsync is not null)
+        if (string.IsNullOrWhiteSpace(selectedPath) || _switchLibraryAsync is null)
         {
-            await _switchLibraryAsync(selectedPath);
+            return;
         }
+
+        var validationMessage = LibraryRootInspection.BuildOpenExistingValidationMessage(selectedPath);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            UiLogging.Warning(
+                "Rejected Open Library request. LibraryRoot={LibraryRoot} Validation={Validation}",
+                selectedPath,
+                validationMessage);
+            throw new InvalidOperationException(validationMessage);
+        }
+
+        await _switchLibraryAsync(selectedPath, UiLibraryOpenMode.OpenExisting);
     }
 
     private async Task CreateLibraryAsync()
     {
         var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
-        if (!string.IsNullOrWhiteSpace(selectedPath) && _switchLibraryAsync is not null)
+        if (string.IsNullOrWhiteSpace(selectedPath) || _switchLibraryAsync is null)
         {
-            await _switchLibraryAsync(selectedPath);
+            return;
         }
+
+        var validationMessage = LibraryRootInspection.BuildCreateNewValidationMessage(selectedPath);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+        {
+            UiLogging.Warning(
+                "Rejected Create Library request. LibraryRoot={LibraryRoot} Validation={Validation}",
+                selectedPath,
+                validationMessage);
+            throw new InvalidOperationException(validationMessage);
+        }
+
+        await _switchLibraryAsync(selectedPath, UiLibraryOpenMode.CreateNew);
     }
 
     private Task SavePreferencesAsync()

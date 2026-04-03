@@ -49,6 +49,10 @@ If the library root itself is valid but the managed library is damaged, Librova 
 
 After startup, switching to another library is an application-level action rather than a hidden launch preference. The shell exposes `Open Library...` and `Create Library...` so the active library can be changed explicitly.
 
+`Open Library...` accepts only an existing Librova-managed library root that already contains the expected directory layout and `Database/librova.db`.
+
+`Create Library...` accepts only a new or empty target directory and must not repurpose an unrelated non-empty folder as a managed library.
+
 ### 3.2 Book Import
 
 The user can import:

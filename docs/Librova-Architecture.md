@@ -67,6 +67,12 @@ Managed paths are stable and `BookId`-based.
 
 The current `Trash` directory is part of the implemented baseline. A Windows `Recycle Bin` backed delete flow is tracked as active backlog work and is not yet part of the implemented delete path.
 
+Library-root bootstrap is mode-specific:
+
+- `Create Library` may initialize only a new or empty target directory.
+- `Open Library` must validate that the selected root is already a complete managed library, including `Database/librova.db`.
+- startup recovery for a damaged library must not silently recreate that library in place.
+
 ### 3.3 Import Safety
 
 Imports are staged before commit.

@@ -17,9 +17,21 @@ TEST_CASE("Host options parse required pipe and library root", "[core-host]")
 
     REQUIRE(options.PipePath == std::filesystem::path{R"(\\.\pipe\Librova.Test)"});
     REQUIRE(options.LibraryRoot == std::filesystem::path{"C:/Librova"});
+    REQUIRE(options.LibraryOpenMode == Librova::CoreHost::ELibraryOpenMode::OpenExisting);
     REQUIRE(options.MaxSessions == 0);
     REQUIRE(options.ConverterConfiguration.Mode
         == Librova::ConverterConfiguration::EConverterConfigurationMode::Disabled);
+}
+
+TEST_CASE("Host options parse explicit library creation mode", "[core-host]")
+{
+    const auto options = Librova::CoreHost::CHostOptions::Parse({
+        "--pipe", R"(\\.\pipe\Librova.Test)",
+        "--library-root", "C:/Librova-New",
+        "--library-mode", "create"
+    });
+
+    REQUIRE(options.LibraryOpenMode == Librova::CoreHost::ELibraryOpenMode::CreateNew);
 }
 
 TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")

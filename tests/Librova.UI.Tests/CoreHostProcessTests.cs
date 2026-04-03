@@ -21,6 +21,7 @@ public sealed class CoreHostProcessTests
 
         var arguments = CoreHostProcess.BuildArguments(options);
 
+        Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-config", arguments, StringComparison.Ordinal);
@@ -43,6 +44,7 @@ public sealed class CoreHostProcessTests
 
         var arguments = CoreHostProcess.BuildArguments(options);
 
+        Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
         Assert.Contains("--converter-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\custom.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--converter-arg", arguments, StringComparison.Ordinal);
@@ -71,6 +73,7 @@ public sealed class CoreHostProcessTests
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.Tests.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew,
                 ConverterMode = UiConverterMode.Disabled
             };
 

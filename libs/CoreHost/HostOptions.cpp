@@ -88,6 +88,30 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--library-mode")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --library-mode.");
+            }
+
+            const auto& mode = arguments[++index];
+            if (mode == "open")
+            {
+                options.LibraryOpenMode = ELibraryOpenMode::OpenExisting;
+            }
+            else if (mode == "create")
+            {
+                options.LibraryOpenMode = ELibraryOpenMode::CreateNew;
+            }
+            else
+            {
+                throw std::invalid_argument("Unsupported value for --library-mode.");
+            }
+
+            continue;
+        }
+
         if (argument == "--serve-one")
         {
             options.MaxSessions = 1;

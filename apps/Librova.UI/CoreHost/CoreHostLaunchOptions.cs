@@ -8,6 +8,7 @@ internal sealed class CoreHostLaunchOptions
     public required string ExecutablePath { get; init; }
     public required string PipePath { get; init; }
     public required string LibraryRoot { get; init; }
+    public UiLibraryOpenMode LibraryOpenMode { get; init; } = UiLibraryOpenMode.OpenExisting;
     public int? ParentProcessId { get; init; }
     public bool ServeOneSession { get; init; }
     public int? MaxSessions { get; init; }
@@ -48,6 +49,11 @@ internal sealed class CoreHostLaunchOptions
         if (!Path.IsPathFullyQualified(LibraryRoot))
         {
             throw new InvalidOperationException("Library root path must be absolute.");
+        }
+
+        if (!Enum.IsDefined(LibraryOpenMode))
+        {
+            throw new InvalidOperationException("Library open mode must be valid.");
         }
 
         if (MaxSessions is <= 0)

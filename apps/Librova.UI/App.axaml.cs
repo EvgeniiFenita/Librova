@@ -69,7 +69,8 @@ internal sealed partial class App : Application
                 preferencesStore,
                 launchOptions,
                 CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
-                cancellationToken);
+                cancellationToken,
+                explicitOpenMode: UiLibraryOpenMode.CreateNew);
             ShellWindowConfigurator.ConfigureFirstRunSetup(mainWindow, setup);
             return;
         }
@@ -89,7 +90,8 @@ internal sealed partial class App : Application
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string libraryRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        UiLibraryOpenMode libraryOpenMode)
     {
         ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
         var effectivePreferences = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
@@ -102,7 +104,8 @@ internal sealed partial class App : Application
             launchOptions,
             CoreHostDevelopmentDefaults.CreateForLibraryRoot(
                 libraryRoot,
-                effectivePreferences),
+                effectivePreferences,
+                libraryOpenMode: libraryOpenMode),
             cancellationToken,
             effectivePreferences);
     }
@@ -149,13 +152,14 @@ internal sealed partial class App : Application
                 launchOptions,
                 preferencesStore: preferencesStore,
                 savedPreferencesOverride: savedPreferencesOverride,
-                switchLibraryAsync: libraryRoot => SwitchLibraryRootAsync(
+                switchLibraryAsync: (libraryRoot, libraryOpenMode) => SwitchLibraryRootAsync(
                     mainWindow,
                     pathSelectionService,
                     preferencesStore,
                     launchOptions,
                     libraryRoot,
-                    cancellationToken),
+                    cancellationToken,
+                    libraryOpenMode),
                 reloadShellAsync: () => ReloadCurrentShellSessionAsync(
                     mainWindow,
                     pathSelectionService,
@@ -192,19 +196,28 @@ internal sealed partial class App : Application
         ShellLaunchOptions launchOptions,
         string suggestedLibraryRoot,
         CancellationToken cancellationToken,
+        UiLibraryOpenMode? explicitOpenMode = null,
         bool requireDifferentLibraryRoot = false) =>
         new(
             suggestedLibraryRoot,
             pathSelectionService,
             preferencesStore,
-            libraryRoot => StartShellWithLibraryRootAsync(
-                mainWindow,
-                pathSelectionService,
-                preferencesStore,
-                launchOptions,
-                libraryRoot,
-                cancellationToken),
-            requireDifferentLibraryRoot);
+            libraryRoot =>
+            {
+                var resolvedMode = explicitOpenMode ?? LibraryRootInspection.ResolveModeForRecovery(libraryRoot);
+                return StartShellWithLibraryRootAsync(
+                    mainWindow,
+                    pathSelectionService,
+                    preferencesStore,
+                    launchOptions,
+                    libraryRoot,
+                    cancellationToken,
+                    resolvedMode);
+            },
+            requireDifferentLibraryRoot,
+            explicitOpenMode is null
+                ? null
+                : libraryRoot => LibraryRootInspection.BuildModeValidationMessage(libraryRoot, explicitOpenMode.Value));
 
     private async Task SwitchLibraryRootAsync(
         MainWindow mainWindow,
@@ -212,7 +225,8 @@ internal sealed partial class App : Application
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string libraryRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        UiLibraryOpenMode libraryOpenMode)
     {
         UiLogging.Information("Switching active library. LibraryRoot={LibraryRoot}", libraryRoot);
         ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
@@ -230,7 +244,8 @@ internal sealed partial class App : Application
             preferencesStore,
             launchOptions,
             libraryRoot,
-            cancellationToken);
+            cancellationToken,
+            libraryOpenMode);
 
         if (_shellApplication is not null)
         {
@@ -270,7 +285,8 @@ internal sealed partial class App : Application
             preferencesStore,
             launchOptions,
             libraryRoot,
-            cancellationToken);
+            cancellationToken,
+            UiLibraryOpenMode.OpenExisting);
 
         if (_shellApplication is not null && currentSection is not ShellSection.Library)
         {

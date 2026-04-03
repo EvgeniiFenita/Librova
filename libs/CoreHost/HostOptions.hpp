@@ -11,10 +11,17 @@
 
 namespace Librova::CoreHost {
 
+enum class ELibraryOpenMode
+{
+    OpenExisting,
+    CreateNew
+};
+
 struct SHostOptions
 {
     std::filesystem::path PipePath;
     std::filesystem::path LibraryRoot;
+    ELibraryOpenMode LibraryOpenMode = ELibraryOpenMode::OpenExisting;
     std::optional<std::uint32_t> ParentProcessId;
     std::size_t MaxSessions = 0;
     bool ShowHelp = false;

@@ -512,6 +512,13 @@ public sealed class ShellApplicationTests
     public async Task Shell_CanRequestOpeningDifferentLibrary()
     {
         var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "open-library", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Database"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Books"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Covers"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Logs"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Temp"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Trash"));
+        File.WriteAllText(Path.Combine(selectedPath, "Database", "librova.db"), "sqlite-placeholder");
         var session = new ShellSession(
             new CoreHostProcess(),
             new CoreHostLaunchOptions
@@ -522,6 +529,7 @@ public sealed class ShellApplicationTests
             },
             new FakeImportJobsService());
         string? switchedTo = null;
+        UiLibraryOpenMode? requestedMode = null;
         var application = ShellApplication.Create(
             session,
             new FakePathSelectionService
@@ -530,15 +538,24 @@ public sealed class ShellApplicationTests
             },
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: new FakePreferencesStore(),
-            switchLibraryAsync: path =>
+            switchLibraryAsync: (path, mode) =>
             {
                 switchedTo = path;
+                requestedMode = mode;
                 return Task.CompletedTask;
             });
 
-        await application.Shell.OpenLibraryCommand.ExecuteAsyncForTests();
+        try
+        {
+            await application.Shell.OpenLibraryCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(selectedPath, switchedTo);
+            Assert.Equal(selectedPath, switchedTo);
+            Assert.Equal(UiLibraryOpenMode.OpenExisting, requestedMode);
+        }
+        finally
+        {
+            TryDeleteDirectory(selectedPath);
+        }
     }
 
     [Fact]
@@ -555,6 +572,7 @@ public sealed class ShellApplicationTests
             },
             new FakeImportJobsService());
         string? switchedTo = null;
+        UiLibraryOpenMode? requestedMode = null;
         var application = ShellApplication.Create(
             session,
             new FakePathSelectionService
@@ -563,19 +581,123 @@ public sealed class ShellApplicationTests
             },
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: new FakePreferencesStore(),
-            switchLibraryAsync: path =>
+            switchLibraryAsync: (path, mode) =>
             {
                 switchedTo = path;
+                requestedMode = mode;
                 return Task.CompletedTask;
             });
 
         await application.Shell.CreateLibraryCommand.ExecuteAsyncForTests();
 
         Assert.Equal(selectedPath, switchedTo);
+        Assert.Equal(UiLibraryOpenMode.CreateNew, requestedMode);
+    }
+
+    [Fact]
+    public async Task Shell_OpenLibrary_RejectsFolderThatIsNotManagedLibrary()
+    {
+        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "open-invalid", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(selectedPath);
+
+        try
+        {
+            var switchCalls = 0;
+            var session = new ShellSession(
+                new CoreHostProcess(),
+                new CoreHostLaunchOptions
+                {
+                    ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                    PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                    LibraryRoot = @"C:\Libraries\Librova"
+                },
+                new FakeImportJobsService());
+            var application = ShellApplication.Create(
+                session,
+                new FakePathSelectionService
+                {
+                    SelectedWorkingDirectory = selectedPath
+                },
+                stateStore: CreateIsolatedStateStore(),
+                preferencesStore: new FakePreferencesStore(),
+                switchLibraryAsync: (path, mode) =>
+                {
+                    switchCalls++;
+                    return Task.CompletedTask;
+                });
+
+            await application.Shell.OpenLibraryCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(0, switchCalls);
+        }
+        finally
+        {
+            TryDeleteDirectory(selectedPath);
+        }
+    }
+
+    [Fact]
+    public async Task Shell_CreateLibrary_RejectsNonEmptyFolder()
+    {
+        var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "create-invalid", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(selectedPath);
+        File.WriteAllText(Path.Combine(selectedPath, "existing.txt"), "occupied");
+
+        try
+        {
+            var switchCalls = 0;
+            var session = new ShellSession(
+                new CoreHostProcess(),
+                new CoreHostLaunchOptions
+                {
+                    ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                    PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                    LibraryRoot = @"C:\Libraries\Librova"
+                },
+                new FakeImportJobsService());
+            var application = ShellApplication.Create(
+                session,
+                new FakePathSelectionService
+                {
+                    SelectedWorkingDirectory = selectedPath
+                },
+                stateStore: CreateIsolatedStateStore(),
+                preferencesStore: new FakePreferencesStore(),
+                switchLibraryAsync: (path, mode) =>
+                {
+                    switchCalls++;
+                    return Task.CompletedTask;
+                });
+
+            await application.Shell.CreateLibraryCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(0, switchCalls);
+        }
+        finally
+        {
+            TryDeleteDirectory(selectedPath);
+        }
     }
 
     private static ShellStateStore CreateIsolatedStateStore() =>
         new(Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json"));
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
 
     private sealed class ThrowingStateStore : IShellStateStore
     {
