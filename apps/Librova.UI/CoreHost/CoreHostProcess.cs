@@ -13,6 +13,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 {
     private Process? _process;
     private IntPtr _jobHandle;
+    private IntPtr _shutdownEventHandle;
 
     public async Task StartAsync(CoreHostLaunchOptions options, CancellationToken cancellationToken)
     {
@@ -59,6 +60,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
         try
         {
+            CreateShutdownEvent(options);
             AttachProcessToLifetimeJob(process);
             await WaitForPipeReadyAsync(process, options.PipePath, startupOutput, cancellationToken).ConfigureAwait(false);
             _process = process;
@@ -72,6 +74,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             UiLogging.Error(error, "Failed to start or initialize core host process.");
             TryTerminate(process);
             ReleaseLifetimeJob();
+            ReleaseShutdownEvent();
             process.Dispose();
             throw;
         }
@@ -89,9 +92,14 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         _process = null;
 
         UiLogging.Information("Stopping core host process. ProcessId={ProcessId}", process.Id);
-        TryTerminate(process);
-        await process.WaitForExitAsync().ConfigureAwait(false);
+        var exitedGracefully = await TryRequestGracefulShutdownAsync(process).ConfigureAwait(false);
+        if (!exitedGracefully)
+        {
+            TryTerminate(process);
+            await process.WaitForExitAsync().ConfigureAwait(false);
+        }
         ReleaseLifetimeJob();
+        ReleaseShutdownEvent();
         UiLogging.Information("Core host process stopped. ProcessId={ProcessId}", process.Id);
     }
 
@@ -100,6 +108,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         var builder = new StringBuilder();
         builder.Append("--pipe ").Append(Quote(options.PipePath));
         builder.Append(" --library-root ").Append(Quote(options.LibraryRoot));
+        if (!string.IsNullOrWhiteSpace(options.ShutdownEventName))
+        {
+            builder.Append(" --shutdown-event ").Append(Quote(options.ShutdownEventName));
+        }
         builder.Append(" --library-mode ").Append(options.LibraryOpenMode is UiLibraryOpenMode.CreateNew ? "create" : "open");
         if (options.ParentProcessId.HasValue)
         {
@@ -213,6 +225,55 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         }
     }
 
+    private void CreateShutdownEvent(CoreHostLaunchOptions options)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(options.ShutdownEventName))
+        {
+            return;
+        }
+
+        var eventHandle = CreateEvent(IntPtr.Zero, true, false, options.ShutdownEventName);
+        if (eventHandle == IntPtr.Zero)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create shutdown event for core host lifetime management. Error={Marshal.GetLastWin32Error()}.");
+        }
+
+        _shutdownEventHandle = eventHandle;
+    }
+
+    private async Task<bool> TryRequestGracefulShutdownAsync(Process process)
+    {
+        if (_shutdownEventHandle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        if (!SetEvent(_shutdownEventHandle))
+        {
+            UiLogging.Warning(
+                "Failed to signal graceful shutdown for core host process. ProcessId={ProcessId} Error={ErrorCode}",
+                process.Id,
+                Marshal.GetLastWin32Error());
+            return false;
+        }
+
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            UiLogging.Information("Core host process acknowledged graceful shutdown. ProcessId={ProcessId}", process.Id);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            UiLogging.Warning(
+                "Core host graceful shutdown timed out. Falling back to termination. ProcessId={ProcessId}",
+                process.Id);
+            return false;
+        }
+    }
+
     private void AttachProcessToLifetimeJob(Process process)
     {
         if (!OperatingSystem.IsWindows() || _jobHandle != IntPtr.Zero)
@@ -276,6 +337,17 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         _jobHandle = IntPtr.Zero;
     }
 
+    private void ReleaseShutdownEvent()
+    {
+        if (_shutdownEventHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        CloseHandle(_shutdownEventHandle);
+        _shutdownEventHandle = IntPtr.Zero;
+    }
+
     private const uint JobObjectExtendedLimitInformation = 9;
     private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
@@ -333,4 +405,11 @@ internal sealed class CoreHostProcess : IAsyncDisposable
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WaitNamedPipe(string name, int timeout);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr CreateEvent(IntPtr eventAttributes, bool manualReset, bool initialState, string name);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetEvent(IntPtr handle);
 }

@@ -45,6 +45,72 @@
 
 namespace {
 
+#ifdef _WIN32
+[[nodiscard]] std::string WideToUtf8(const std::wstring_view value)
+{
+    if (value.empty())
+    {
+        return {};
+    }
+
+    const int length = ::WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+    if (length <= 0)
+    {
+        throw std::runtime_error("Failed to convert Unicode command-line argument to UTF-8.");
+    }
+
+    std::string utf8Value(static_cast<std::size_t>(length), '\0');
+    ::WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        utf8Value.data(),
+        length,
+        nullptr,
+        nullptr);
+    return utf8Value;
+}
+
+[[nodiscard]] std::wstring Utf8ToWide(const std::string_view value)
+{
+    if (value.empty())
+    {
+        return {};
+    }
+
+    const int length = ::MultiByteToWideChar(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        nullptr,
+        0);
+    if (length <= 0)
+    {
+        throw std::runtime_error("Failed to convert UTF-8 text to UTF-16.");
+    }
+
+    std::wstring wideValue(static_cast<std::size_t>(length), L'\0');
+    ::MultiByteToWideChar(
+        CP_UTF8,
+        0,
+        value.data(),
+        static_cast<int>(value.size()),
+        wideValue.data(),
+        length);
+    return wideValue;
+}
+#endif
+
 [[nodiscard]] std::vector<std::string> CollectArguments(const int argc, char** argv)
 {
 #ifdef _WIN32
@@ -55,39 +121,6 @@ namespace {
         throw std::runtime_error("Failed to read Unicode command-line arguments.");
     }
 
-    auto wideToUtf8 = [](const std::wstring_view value) {
-        if (value.empty())
-        {
-            return std::string{};
-        }
-
-        const int length = ::WideCharToMultiByte(
-            CP_UTF8,
-            0,
-            value.data(),
-            static_cast<int>(value.size()),
-            nullptr,
-            0,
-            nullptr,
-            nullptr);
-        if (length <= 0)
-        {
-            throw std::runtime_error("Failed to convert Unicode command-line argument to UTF-8.");
-        }
-
-        std::string utf8Value(static_cast<std::size_t>(length), '\0');
-        ::WideCharToMultiByte(
-            CP_UTF8,
-            0,
-            value.data(),
-            static_cast<int>(value.size()),
-            utf8Value.data(),
-            length,
-            nullptr,
-            nullptr);
-        return utf8Value;
-    };
-
     std::vector<std::string> arguments;
     arguments.reserve(wideArgc > 1 ? static_cast<std::size_t>(wideArgc - 1) : 0);
 
@@ -95,7 +128,7 @@ namespace {
     {
         for (int index = 1; index < wideArgc; ++index)
         {
-            arguments.push_back(wideToUtf8(wideArgv[index]));
+            arguments.push_back(WideToUtf8(wideArgv[index]));
         }
     }
     catch (...)
@@ -219,6 +252,58 @@ void TryWakePipeServer(const std::filesystem::path& pipePath) noexcept
         ::CloseHandle(parentHandle);
     });
 }
+
+[[nodiscard]] std::jthread StartShutdownEventWatchdog(
+    const std::optional<std::string>& shutdownEventName,
+    const std::filesystem::path& pipePath,
+    SHostShutdownState& shutdownState)
+{
+    if (!shutdownEventName.has_value())
+    {
+        return {};
+    }
+
+    HANDLE shutdownEvent = ::CreateEventW(nullptr, TRUE, FALSE, Utf8ToWide(*shutdownEventName).c_str());
+    if (shutdownEvent == nullptr)
+    {
+        throw std::runtime_error("Failed to create or open shutdown event handle for --shutdown-event.");
+    }
+
+    return std::jthread([shutdownEvent, shutdownEventName, pipePath, &shutdownState](std::stop_token stopToken)
+    {
+        while (!stopToken.stop_requested())
+        {
+            const auto waitResult = ::WaitForSingleObject(shutdownEvent, 250);
+            if (waitResult == WAIT_TIMEOUT)
+            {
+                continue;
+            }
+
+            if (waitResult == WAIT_OBJECT_0)
+            {
+                Librova::Logging::Info(
+                    "Shutdown requested by UI event '{}'.",
+                    *shutdownEventName);
+                shutdownState.ExitCode.store(0);
+                shutdownState.Requested.store(true);
+                TryWakePipeServer(pipePath);
+                break;
+            }
+
+            Librova::Logging::Warn(
+                "Failed while waiting for shutdown event '{}'. WaitResult={} LastError={}.",
+                *shutdownEventName,
+                static_cast<unsigned long>(waitResult),
+                static_cast<unsigned long>(::GetLastError()));
+            shutdownState.ExitCode.store(1);
+            shutdownState.Requested.store(true);
+            TryWakePipeServer(pipePath);
+            break;
+        }
+
+        ::CloseHandle(shutdownEvent);
+    });
+}
 #endif
 
 } // namespace
@@ -249,7 +334,12 @@ int main(int argc, char** argv)
 
 #ifdef _WIN32
         SHostShutdownState shutdownState;
+        auto shutdownWatchdog = StartShutdownEventWatchdog(options.ShutdownEventName, options.PipePath, shutdownState);
         auto parentWatchdog = StartParentProcessWatchdog(options.ParentProcessId, options.PipePath, shutdownState);
+        if (options.ShutdownEventName.has_value())
+        {
+            Librova::Logging::Info("Watching shutdown event '{}' for host lifetime.", *options.ShutdownEventName);
+        }
         if (options.ParentProcessId.has_value())
         {
             Librova::Logging::Info("Watching parent process {} for host lifetime.", *options.ParentProcessId);

@@ -121,6 +121,12 @@ std::filesystem::path GetCmdExePath()
     return std::filesystem::path{R"(C:\Windows\System32\cmd.exe)"};
 }
 
+std::wstring BuildUniqueShutdownEventName()
+{
+    const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
+    return L"Local\\Librova.CoreHost.Shutdown.Test." + suffix;
+}
+
 void WaitForPipeServerReady(const std::filesystem::path& pipePath, const PROCESS_INFORMATION& processInformation)
 {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -337,6 +343,46 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
 
     const std::string logText = ReadTextFile(logFilePath);
     REQUIRE(logText.find("Parent process") != std::string::npos);
+    REQUIRE(logText.find("Librova.Core.Host stopped after serving 0 sessions.") != std::string::npos);
+}
+
+TEST_CASE("Core host exits gracefully when the shutdown event is signaled", "[core-host][process]")
+{
+    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-core-host-shutdown-event"));
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto pipePath = BuildUniquePipePath();
+    const auto hostAppPath = GetHostAppPath();
+    const auto shutdownEventName = BuildUniqueShutdownEventName();
+
+    REQUIRE(std::filesystem::exists(hostAppPath));
+
+    HANDLE shutdownEvent = CreateEventW(nullptr, TRUE, FALSE, shutdownEventName.c_str());
+    REQUIRE(shutdownEvent != nullptr);
+
+    std::wstring commandLine = Quote(hostAppPath)
+        + L" --pipe "
+        + Quote(pipePath)
+        + L" --library-root "
+        + Quote(libraryRoot)
+        + L" --shutdown-event \""
+        + shutdownEventName
+        + L"\" --library-mode create";
+
+    PROCESS_INFORMATION hostProcessInformation = StartProcess(hostAppPath, std::move(commandLine));
+    CScopedProcess hostProcess(hostProcessInformation);
+    WaitForPipeServerReady(pipePath, hostProcessInformation);
+
+    REQUIRE(SetEvent(shutdownEvent) != FALSE);
+    REQUIRE(hostProcess.WaitForExit(std::chrono::seconds(10)));
+    REQUIRE(hostProcess.TryGetExitCode() == std::optional<DWORD>{0});
+
+    CloseHandle(shutdownEvent);
+
+    const auto logFilePath = libraryRoot / "Logs" / "host.log";
+    REQUIRE(std::filesystem::exists(logFilePath));
+
+    const std::string logText = ReadTextFile(logFilePath);
+    REQUIRE(logText.find("Shutdown requested by UI event") != std::string::npos);
     REQUIRE(logText.find("Librova.Core.Host stopped after serving 0 sessions.") != std::string::npos);
 }
 

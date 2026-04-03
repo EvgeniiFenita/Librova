@@ -8,6 +8,7 @@ internal sealed class CoreHostLaunchOptions
     public required string ExecutablePath { get; init; }
     public required string PipePath { get; init; }
     public required string LibraryRoot { get; init; }
+    public string? ShutdownEventName { get; init; }
     public UiLibraryOpenMode LibraryOpenMode { get; init; } = UiLibraryOpenMode.OpenExisting;
     public int? ParentProcessId { get; init; }
     public bool ServeOneSession { get; init; }

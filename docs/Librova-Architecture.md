@@ -39,6 +39,8 @@ This is the canonical runtime boundary between UI and core.
 
 For process lifetime safety on Windows, the UI also passes its parent process id to the native host and binds the host lifetime to the UI session, so the host is not expected to survive a crashed or abruptly terminated UI process.
 
+For normal UI shutdown, the UI must first request a graceful host stop and only fall back to forced termination if that request times out.
+
 The runtime deliberately does not depend on:
 
 - `gRPC` runtime

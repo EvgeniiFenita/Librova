@@ -47,6 +47,7 @@ internal static class CoreHostDevelopmentDefaults
             ExecutablePath = executablePath,
             PipePath = pipePath,
             LibraryRoot = libraryRoot,
+            ShutdownEventName = $@"Local\Librova.UI.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
             LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,
             ConverterMode = preferences?.ConverterMode ?? UiConverterMode.Disabled,

@@ -89,6 +89,17 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--shutdown-event")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --shutdown-event.");
+            }
+
+            options.ShutdownEventName = arguments[++index];
+            continue;
+        }
+
         if (argument == "--library-mode")
         {
             if (!HasValue(arguments, index))

@@ -13,6 +13,7 @@ public sealed class CoreHostProcessTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
             ParentProcessId = 12345,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
@@ -21,6 +22,8 @@ public sealed class CoreHostProcessTests
 
         var arguments = CoreHostProcess.BuildArguments(options);
 
+        Assert.Contains("--shutdown-event", arguments, StringComparison.Ordinal);
+        Assert.Contains(@"""Local\Librova.UI.Tests.Shutdown""", arguments, StringComparison.Ordinal);
         Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
@@ -36,6 +39,7 @@ public sealed class CoreHostProcessTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
             ConverterMode = UiConverterMode.CustomCommand,
             CustomConverterExecutablePath = @"C:\Tools\custom.exe",
             CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
@@ -44,6 +48,7 @@ public sealed class CoreHostProcessTests
 
         var arguments = CoreHostProcess.BuildArguments(options);
 
+        Assert.Contains("--shutdown-event", arguments, StringComparison.Ordinal);
         Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
         Assert.Contains("--converter-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\custom.exe""", arguments, StringComparison.Ordinal);
@@ -73,6 +78,7 @@ public sealed class CoreHostProcessTests
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.Tests.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                ShutdownEventName = $@"Local\Librova.UI.Tests.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryOpenMode = UiLibraryOpenMode.CreateNew,
                 ConverterMode = UiConverterMode.Disabled
             };
@@ -90,6 +96,7 @@ public sealed class CoreHostProcessTests
 
             var hostLogContents = await ReadAllTextWhenAvailableAsync(hostLogPath, TimeSpan.FromSeconds(5));
             Assert.DoesNotContain("Pipe session failed", hostLogContents, StringComparison.Ordinal);
+            Assert.Contains("Shutdown requested by UI event", hostLogContents, StringComparison.Ordinal);
         }
         finally
         {

@@ -117,6 +117,7 @@ public sealed class CoreHostLaunchOptionsTests
             });
 
         Assert.Equal(@"D:\Librova\Data", options.LibraryRoot);
+        Assert.StartsWith(@"Local\Librova.UI.Shutdown.", options.ShutdownEventName, StringComparison.Ordinal);
         Assert.Equal(UiConverterMode.CustomCommand, options.ConverterMode);
         Assert.Equal(@"D:\Tools\custom.exe", options.CustomConverterExecutablePath);
         Assert.Equal(["--input", "{source}"], options.CustomConverterArguments);
