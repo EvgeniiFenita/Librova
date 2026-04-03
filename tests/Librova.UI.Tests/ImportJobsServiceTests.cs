@@ -26,7 +26,8 @@ public sealed class ImportJobsServiceTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
@@ -113,7 +114,8 @@ public sealed class ImportJobsServiceTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.Directory.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var importRoot = Path.Combine(sandboxRoot, "Incoming");
@@ -185,7 +187,8 @@ public sealed class ImportJobsServiceTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.Batch.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var firstPath = Path.Combine(sandboxRoot, "first.fb2");
@@ -256,7 +259,8 @@ public sealed class ImportJobsServiceTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ServiceTests.Progress.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var importRoot = Path.Combine(sandboxRoot, "Incoming");

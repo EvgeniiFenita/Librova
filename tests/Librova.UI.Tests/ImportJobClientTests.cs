@@ -27,7 +27,8 @@ public sealed class ImportJobClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.ImportTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");

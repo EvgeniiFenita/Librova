@@ -28,7 +28,8 @@ public sealed class LibraryCatalogClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryClientTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
@@ -121,7 +122,8 @@ public sealed class LibraryCatalogClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryDetailsTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
@@ -233,7 +235,8 @@ public sealed class LibraryCatalogClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryStatisticsTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourceOnePath = Path.Combine(sandboxRoot, "one.fb2");
@@ -331,7 +334,8 @@ public sealed class LibraryCatalogClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryExportTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
@@ -450,6 +454,7 @@ public sealed class LibraryCatalogClientTests
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryExportConvertedTests.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew,
                 ConverterMode = UiConverterMode.CustomCommand,
                 CustomConverterExecutablePath = @"C:\Program Files\PowerShell\7\pwsh.exe",
                 CustomConverterArguments = ["-File", scriptPath, "{source}", "{destination}"],
@@ -557,7 +562,8 @@ public sealed class LibraryCatalogClientTests
                     "..",
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryTrashTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library")
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
