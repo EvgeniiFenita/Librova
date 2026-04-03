@@ -176,9 +176,3 @@ A task can be considered closed only when:
 - appropriate automated tests are added where practical;
 - documentation is updated if user-visible behavior or working rules changed;
 - the user confirms manual verification when the task comes from UI or manual-test remarks.
-
-## 6. History
-
-Verified change history is maintained in:
-
-- [Development-History](archive/Development-History.md)

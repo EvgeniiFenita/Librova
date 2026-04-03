@@ -204,4 +204,3 @@ Any remaining implementation work belongs in [Librova Backlog](Librova-Backlog.m
 - [Librova-Architecture](Librova-Architecture.md)
 - [Librova Backlog](Librova-Backlog.md)
 - [ManualUiTestScenarios](ManualUiTestScenarios.md)
-- [Development-History](archive/Development-History.md)

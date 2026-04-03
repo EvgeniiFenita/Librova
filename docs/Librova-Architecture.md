@@ -165,9 +165,3 @@ Testing is layered:
 Any remaining implementation or hardening work is tracked in:
 
 - [Librova Backlog](Librova-Backlog.md)
-
-## 9. History
-
-Long-form historical planning and architectural evolution are preserved in:
-
-- [Architecture-History](archive/Architecture-History.md)

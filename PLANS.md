@@ -44,7 +44,6 @@ Concrete, verifiable criteria. Examples:
 ## Related Files
 - docs/Librova-Backlog.md (item: ...)
 - docs/Librova-Architecture.md (section: ...)
-- docs/archive/Development-History.md (checkpoint to add on completion)
 ```
 
 ---
