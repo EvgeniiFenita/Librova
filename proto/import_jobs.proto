@@ -146,6 +146,8 @@ message ListBooksRequest {
 
 message ListBooksResponse {
   repeated BookListItem items = 1;
+  uint64 total_count = 2;
+  repeated string available_languages = 3;
 }
 
 message GetBookDetailsRequest {

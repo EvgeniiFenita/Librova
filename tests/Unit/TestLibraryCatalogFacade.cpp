@@ -78,6 +78,8 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
 
     REQUIRE_FALSE(result.IsEmpty());
     REQUIRE(result.Items.size() == 1);
+    REQUIRE(result.TotalCount == 1);
+    REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
     REQUIRE(result.Items.front().TitleUtf8 == "Roadside Picnic");
     REQUIRE(result.Items.front().AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
     REQUIRE(result.Items.front().Language == "en");
@@ -119,6 +121,17 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
     secondBook.Metadata.TagsUtf8 = {"selected"};
     static_cast<void>(writeRepository.Add(secondBook));
 
+    Librova::Domain::SBook thirdBook = MakeBook(
+        "Gamma",
+        {"Author Three"},
+        "ru",
+        Librova::Domain::EBookFormat::Epub,
+        "Books/0000001103/gamma.epub",
+        "catalog-page-3",
+        std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
+    thirdBook.Metadata.TagsUtf8 = {"selected"};
+    static_cast<void>(writeRepository.Add(thirdBook));
+
     const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
     const Librova::Application::SBookListResult result = facade.ListBooks({
         .Language = std::string{"en"},
@@ -130,6 +143,8 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
     });
 
     REQUIRE(result.Items.size() == 1);
+    REQUIRE(result.TotalCount == 2);
+    REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
     REQUIRE(result.Items.front().TitleUtf8 == "Beta");
 
     std::filesystem::remove(databasePath);
@@ -141,6 +156,16 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
     {
     public:
         [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery&) const override
+        {
+            return 0;
+        }
+
+        [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }

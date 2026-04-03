@@ -747,7 +747,7 @@ public sealed class ViewModelsTests
         Assert.Single(viewModel.Books);
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
         Assert.Null(viewModel.SelectedBook);
-        Assert.Equal("1 shown", viewModel.BookCountText);
+        Assert.Equal("1 book", viewModel.BookCountText);
         Assert.Equal("Library: 1 book, 0.00 MB", viewModel.LibraryStatisticsText);
         Assert.True(viewModel.Books[0].ShowCoverPlaceholder);
     }
@@ -879,7 +879,7 @@ public sealed class ViewModelsTests
         Assert.Null(service.LastRequest.Format);
         Assert.Null(service.LastRequest.SortBy);
         Assert.Equal(0UL, service.LastRequest.Offset);
-        Assert.Equal(11UL, service.LastRequest.Limit);
+        Assert.Equal(10UL, service.LastRequest.Limit);
     }
 
     [Fact]
@@ -896,7 +896,7 @@ public sealed class ViewModelsTests
 
         Assert.Single(viewModel.Books);
         Assert.Equal("Roadside Picnic", viewModel.Books[0].Title);
-        Assert.Equal("1 shown", viewModel.BookCountText);
+        Assert.Equal("1 book", viewModel.BookCountText);
 
         viewModel.SearchText = "missing";
         await WaitForConditionAsync(() => service.ListCalls >= 3 && viewModel.Books.Count == 0);
@@ -911,6 +911,97 @@ public sealed class ViewModelsTests
         Assert.Equal("2 books", viewModel.BookCountText);
         Assert.Equal("Library: 2 books, 0.00 MB", viewModel.LibraryStatisticsText);
         Assert.Equal("Loaded 2 book(s).", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_KeepsOtherKnownLanguagesVisibleWhenLanguageFilterIsApplied()
+    {
+        var service = new QueryFilteringLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Contains("en", viewModel.AvailableLanguageFilters);
+        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+
+        viewModel.LanguageFilter = "en";
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Language == "en"));
+
+        Assert.Contains("All languages", viewModel.AvailableLanguageFilters);
+        Assert.Contains("en", viewModel.AvailableLanguageFilters);
+        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowsLanguagesBeyondTheFirstLoadedBatch()
+    {
+        var service = new PagedLanguageLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(["Alpha", "Beta"], viewModel.Books.Select(book => book.Title).ToArray());
+        Assert.Contains("en", viewModel.AvailableLanguageFilters);
+        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+        Assert.Equal("3 books", viewModel.BookCountText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_RemovesLanguageWhenTheLastBookUsingItIsDeleted()
+    {
+        var service = new LanguageDeletionLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books.Single(book => book.Language == "ru"));
+
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.DoesNotContain("ru", viewModel.AvailableLanguageFilters);
+        Assert.Contains("en", viewModel.AvailableLanguageFilters);
+        Assert.Equal("1 book", viewModel.BookCountText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ReportsLoadMoreFailureWithoutThrowing()
+    {
+        var service = new FailingLoadMoreLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+
+        await viewModel.RefreshAsync();
+        await viewModel.LoadMoreAsync();
+
+        Assert.Equal(2, viewModel.Books.Count);
+        Assert.Equal("load more failed", viewModel.StatusText);
+        Assert.True(viewModel.HasMoreResults);
+        Assert.False(viewModel.IsLoadingMore);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_RefreshesLoadedRangeInSingleRequestAfterDeletingBook()
+    {
+        var service = new DeleteAfterDeepScrollLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+
+        await viewModel.RefreshAsync();
+        await viewModel.LoadMoreAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[2]);
+
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.Equal(3, service.ListCalls);
+        Assert.Equal(4UL, service.Requests[^1].Limit);
+        Assert.Equal(0UL, service.Requests[^1].Offset);
+        Assert.Equal(["Alpha", "Beta", "Delta"], viewModel.Books.Select(book => book.Title).ToArray());
     }
 
     [Fact]
@@ -929,7 +1020,7 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
 
         Assert.Single(viewModel.Books);
-        Assert.Equal("1 books", viewModel.BookCountText);
+        Assert.Equal("1 book", viewModel.BookCountText);
         Assert.Equal("Library: 42 books, 5.00 MB", viewModel.LibraryStatisticsText);
     }
 
@@ -948,7 +1039,7 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_PaginatesForwardAndBackward()
+    public async Task LibraryBrowserViewModel_LoadsAdditionalPagesIntoExistingCollection()
     {
         var service = new PagingLibraryCatalogService();
         var viewModel = new LibraryBrowserViewModel(service)
@@ -957,17 +1048,13 @@ public sealed class ViewModelsTests
         };
 
         await viewModel.RefreshAsync();
+        Assert.Equal(2, viewModel.Books.Count);
         Assert.True(viewModel.HasMoreResults);
-        Assert.Equal("Page 1+", viewModel.PageLabelText);
         Assert.Null(viewModel.SelectedBook);
 
-        await viewModel.NextPageAsync();
-        Assert.Equal(2, viewModel.CurrentPage);
-        Assert.Equal("Page 2", viewModel.PageLabelText);
-        Assert.Null(viewModel.SelectedBook);
-
-        await viewModel.PreviousPageAsync();
-        Assert.Equal(1, viewModel.CurrentPage);
+        await viewModel.LoadMoreAsync();
+        Assert.Equal(3, viewModel.Books.Count);
+        Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.Books.Select(book => book.Title).ToArray());
         Assert.Null(viewModel.SelectedBook);
     }
 
@@ -983,9 +1070,7 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
 
         Assert.False(viewModel.HasMoreResults);
-        Assert.Equal("Page 1", viewModel.PageLabelText);
-        Assert.False(viewModel.NextPageCommand.CanExecute(null));
-        Assert.Equal(3UL, service.LastRequest!.Limit);
+        Assert.Equal(2UL, service.LastRequest!.Limit);
     }
 
     [Fact]
@@ -1127,7 +1212,6 @@ public sealed class ViewModelsTests
         viewModel.PageSize = -10;
 
         Assert.Equal(1, viewModel.PageSize);
-        Assert.Equal("1 per page", viewModel.PageSizeText);
     }
 
     [Fact]
@@ -1528,19 +1612,25 @@ public sealed class ViewModelsTests
             BookCount = 1
         };
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 1,
-                    Title = "Roadside Picnic",
-                    Authors = ["Arkady Strugatsky"],
-                    Language = "en",
-                    Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000001/book.epub",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Roadside Picnic",
+                        Authors = ["Arkady Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
@@ -1587,8 +1677,8 @@ public sealed class ViewModelsTests
 
     private sealed class EmptyLibraryCatalogService : ILibraryCatalogService
     {
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel());
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
@@ -1613,10 +1703,10 @@ public sealed class ViewModelsTests
         public BookListRequestModel? LastRequest { get; private set; }
         public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+            return Task.FromResult(new BookListPageModel());
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1659,7 +1749,7 @@ public sealed class ViewModelsTests
                 BookId = 2,
                 Title = "Monday Begins on Saturday",
                 Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
-                Language = "en",
+                Language = "ru",
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Books/0000000002/monday.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -1668,19 +1758,32 @@ public sealed class ViewModelsTests
 
         public int ListCalls { get; private set; }
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             ListCalls++;
 
-            if (string.IsNullOrWhiteSpace(request.Text))
+            IEnumerable<BookListItemModel> filtered = AllBooks;
+            if (!string.IsNullOrWhiteSpace(request.Text))
             {
-                return Task.FromResult(AllBooks);
+                filtered = filtered.Where(book => book.Title.Contains(request.Text, StringComparison.OrdinalIgnoreCase));
             }
 
-            var filtered = AllBooks
-                .Where(book => book.Title.Contains(request.Text, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-            return Task.FromResult<IReadOnlyList<BookListItemModel>>(filtered);
+            if (!string.IsNullOrWhiteSpace(request.Language))
+            {
+                filtered = filtered.Where(book => string.Equals(book.Language, request.Language, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var filteredItems = filtered.ToArray();
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)filteredItems.Length,
+                AvailableLanguages = AllBooks
+                    .Select(book => book.Language)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                Items = filteredItems
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1706,20 +1809,26 @@ public sealed class ViewModelsTests
 
     private sealed class CoverAwareLibraryCatalogService : ILibraryCatalogService
     {
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 1,
-                    Title = "Covered Book",
-                    Authors = ["Author"],
-                    Language = "en",
-                    Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000001/book.epub",
-                    CoverPath = "Covers/0000000001.png",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Covered Book",
+                        Authors = ["Author"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/book.epub",
+                        CoverPath = "Covers/0000000001.png",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
@@ -1760,19 +1869,25 @@ public sealed class ViewModelsTests
         public string? LastExportPath { get; private set; }
         public BookFormatModel? LastExportFormat { get; private set; }
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 41,
-                    Title = "Roadside: Picnic / Director's Cut?",
-                    Authors = ["Arkady*Boris|Strugatsky"],
-                    Language = "en",
-                    Format = BookFormatModel.Fb2,
-                    ManagedPath = "Books/0000000041/book.fb2",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 41,
+                        Title = "Roadside: Picnic / Director's Cut?",
+                        Authors = ["Arkady*Boris|Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Books/0000000041/book.fb2",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(new BookDetailsModel
@@ -1838,19 +1953,25 @@ public sealed class ViewModelsTests
 
     private sealed class StatisticsFailureLibraryCatalogService : ILibraryCatalogService
     {
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 1,
-                    Title = "Roadside Picnic",
-                    Authors = ["Arkady Strugatsky"],
-                    Language = "en",
-                    Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000001/book.epub",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Roadside Picnic",
+                        Authors = ["Arkady Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
@@ -1872,56 +1993,58 @@ public sealed class ViewModelsTests
 
     private sealed class PagingLibraryCatalogService : ILibraryCatalogService
     {
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             if (request.Offset == 0)
             {
-                return Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                    new BookListItemModel
-                    {
-                        BookId = 1,
-                        Title = "Alpha",
-                        Authors = ["Author One"],
-                        Language = "en",
-                        Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/alpha.epub",
-                        AddedAtUtc = DateTimeOffset.UtcNow
-                    },
-                    new BookListItemModel
-                    {
-                        BookId = 2,
-                        Title = "Beta",
-                        Authors = ["Author Two"],
-                        Language = "en",
-                        Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000002/beta.epub",
-                        AddedAtUtc = DateTimeOffset.UtcNow
-                    },
-                    new BookListItemModel
-                    {
-                        BookId = 99,
-                        Title = "Lookahead",
-                        Authors = ["Author Extra"],
-                        Language = "en",
-                        Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000099/lookahead.epub",
-                        AddedAtUtc = DateTimeOffset.UtcNow
-                    }
-                ]);
+                return Task.FromResult(new BookListPageModel
+                {
+                    TotalCount = 3,
+                    AvailableLanguages = ["en"],
+                    Items =
+                    [
+                        new BookListItemModel
+                        {
+                            BookId = 1,
+                            Title = "Alpha",
+                            Authors = ["Author One"],
+                            Language = "en",
+                            Format = BookFormatModel.Epub,
+                            ManagedPath = "Books/0000000001/alpha.epub",
+                            AddedAtUtc = DateTimeOffset.UtcNow
+                        },
+                        new BookListItemModel
+                        {
+                            BookId = 2,
+                            Title = "Beta",
+                            Authors = ["Author Two"],
+                            Language = "en",
+                            Format = BookFormatModel.Epub,
+                            ManagedPath = "Books/0000000002/beta.epub",
+                            AddedAtUtc = DateTimeOffset.UtcNow
+                        }
+                    ]
+                });
             }
 
-            return Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 3,
-                    Title = "Gamma",
-                    Authors = ["Author Three"],
-                    Language = "en",
-                    Format = BookFormatModel.Fb2,
-                    ManagedPath = "Books/0000000003/gamma.fb2",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 3,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 3,
+                        Title = "Gamma",
+                        Authors = ["Author Three"],
+                        Language = "en",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Books/0000000003/gamma.fb2",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1949,31 +2072,37 @@ public sealed class ViewModelsTests
     {
         public BookListRequestModel? LastRequest { get; private set; }
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult<IReadOnlyList<BookListItemModel>>([
-                new BookListItemModel
-                {
-                    BookId = 1,
-                    Title = "Alpha",
-                    Authors = ["Author One"],
-                    Language = "en",
-                    Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000001/alpha.epub",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                },
-                new BookListItemModel
-                {
-                    BookId = 2,
-                    Title = "Beta",
-                    Authors = ["Author Two"],
-                    Language = "en",
-                    Format = BookFormatModel.Fb2,
-                    ManagedPath = "Books/0000000002/beta.fb2",
-                    AddedAtUtc = DateTimeOffset.UtcNow
-                }
-            ]);
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 2,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Alpha",
+                        Authors = ["Author One"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/alpha.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    },
+                    new BookListItemModel
+                    {
+                        BookId = 2,
+                        Title = "Beta",
+                        Authors = ["Author Two"],
+                        Language = "en",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Books/0000000002/beta.fb2",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1995,5 +2124,269 @@ public sealed class ViewModelsTests
 
         public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+    }
+
+    private sealed class FailingLoadMoreLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            if (request.Offset == 0)
+            {
+                return Task.FromResult(new BookListPageModel
+                {
+                    TotalCount = 3,
+                    AvailableLanguages = ["en"],
+                    Items =
+                    [
+                        new BookListItemModel
+                        {
+                            BookId = 1,
+                            Title = "Alpha",
+                            Authors = ["Author One"],
+                            Language = "en",
+                            Format = BookFormatModel.Epub,
+                            ManagedPath = "Books/0000000001/alpha.epub",
+                            AddedAtUtc = DateTimeOffset.UtcNow
+                        },
+                        new BookListItemModel
+                        {
+                            BookId = 2,
+                            Title = "Beta",
+                            Authors = ["Author Two"],
+                            Language = "en",
+                            Format = BookFormatModel.Epub,
+                            ManagedPath = "Books/0000000002/beta.epub",
+                            AddedAtUtc = DateTimeOffset.UtcNow
+                        }
+                    ]
+                });
+            }
+
+            throw new InvalidOperationException("load more failed");
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel { BookCount = 3 });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class PagedLanguageLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly IReadOnlyList<BookListItemModel> _books =
+        [
+            new()
+            {
+                BookId = 1,
+                Title = "Alpha",
+                Authors = ["Author One"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/alpha.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 2,
+                Title = "Beta",
+                Authors = ["Author Two"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000002/beta.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 3,
+                Title = "Gamma",
+                Authors = ["Author Three"],
+                Language = "ru",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000003/gamma.fb2",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var items = _books
+                .Skip((int)request.Offset)
+                .Take((int)request.Limit)
+                .ToArray();
+
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)_books.Count,
+                AvailableLanguages = ["en", "ru"],
+                Items = items
+            });
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = (ulong)_books.Count
+            });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class LanguageDeletionLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly List<BookListItemModel> _books =
+        [
+            new()
+            {
+                BookId = 1,
+                Title = "Alpha",
+                Authors = ["Author One"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/alpha.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 2,
+                Title = "Gamma",
+                Authors = ["Author Three"],
+                Language = "ru",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000002/gamma.fb2",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var items = _books
+                .Skip((int)request.Offset)
+                .Take((int)request.Limit)
+                .ToArray();
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)_books.Count,
+                AvailableLanguages = _books
+                    .Select(book => book.Language)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                Items = items
+            });
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = (ulong)_books.Count
+            });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _books.RemoveAll(book => book.BookId == bookId);
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class DeleteAfterDeepScrollLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly List<BookListItemModel> _books =
+        [
+            new()
+            {
+                BookId = 1,
+                Title = "Alpha",
+                Authors = ["Author One"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/alpha.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 2,
+                Title = "Beta",
+                Authors = ["Author Two"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000002/beta.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 3,
+                Title = "Gamma",
+                Authors = ["Author Three"],
+                Language = "en",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000003/gamma.fb2",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                BookId = 4,
+                Title = "Delta",
+                Authors = ["Author Four"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000004/delta.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public int ListCalls { get; private set; }
+        public List<BookListRequestModel> Requests { get; } = [];
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            ListCalls++;
+            Requests.Add(request);
+
+            var items = _books
+                .Skip((int)request.Offset)
+                .Take((int)request.Limit)
+                .ToArray();
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)_books.Count,
+                AvailableLanguages = ["en"],
+                Items = items
+            });
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel { BookCount = (ulong)_books.Count });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<bool> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _books.RemoveAll(book => book.BookId == bookId);
+            return Task.FromResult(true);
+        }
     }
 }

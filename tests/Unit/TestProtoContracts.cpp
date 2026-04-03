@@ -56,6 +56,9 @@ TEST_CASE("Import request protobuf preserves optional sha256 field presence", "[
 TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
 {
     librova::v1::ListBooksResponse response;
+    response.set_total_count(77);
+    response.add_available_languages("en");
+    response.add_available_languages("ru");
     auto* item = response.add_items();
     item->set_book_id(101);
     item->set_title("Roadside Picnic");
@@ -75,6 +78,10 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
 
     librova::v1::ListBooksResponse parsed;
     REQUIRE(parsed.ParseFromString(payload));
+    REQUIRE(parsed.total_count() == 77);
+    REQUIRE(parsed.available_languages_size() == 2);
+    REQUIRE(parsed.available_languages(0) == "en");
+    REQUIRE(parsed.available_languages(1) == "ru");
     REQUIRE(parsed.items_size() == 1);
     REQUIRE(parsed.items(0).book_id() == 101);
     REQUIRE(parsed.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);

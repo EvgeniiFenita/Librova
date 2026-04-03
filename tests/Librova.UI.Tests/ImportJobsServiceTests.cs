@@ -430,7 +430,12 @@ public sealed class ImportJobsServiceTests
             Assert.NotNull(result.Summary);
             Assert.Equal(1UL, result.Summary!.TotalEntries);
             Assert.Equal(1UL, result.Summary.FailedEntries);
-            Assert.Contains(result.Summary.Warnings, warning => warning.Contains("title_info_preview", StringComparison.Ordinal));
+            Assert.Contains(
+                result.Summary.Warnings,
+                warning => string.Equals(
+                    warning,
+                    "FB2 metadata must contain at least one non-empty title-info/author.",
+                    StringComparison.Ordinal));
         }
         finally
         {

@@ -80,7 +80,7 @@ public sealed class ShellBootstrapTests
             Assert.NotNull(result);
             Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
 
-            var books = await session.LibraryCatalog.ListBooksAsync(
+            var page = await session.LibraryCatalog.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Text = "века",
@@ -89,8 +89,9 @@ public sealed class ShellBootstrapTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(books);
-            Assert.Equal("Хищные вещи века", books[0].Title);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
+            Assert.Equal("Хищные вещи века", page.Items[0].Title);
         }
         finally
         {

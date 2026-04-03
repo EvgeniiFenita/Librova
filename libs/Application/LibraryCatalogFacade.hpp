@@ -48,6 +48,8 @@ struct SBookListItem
 struct SBookListResult
 {
     std::vector<SBookListItem> Items;
+    std::uint64_t TotalCount = 0;
+    std::vector<std::string> AvailableLanguages;
 
     [[nodiscard]] bool IsEmpty() const noexcept
     {

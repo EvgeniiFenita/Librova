@@ -143,6 +143,11 @@ librova::v1::ListBooksResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     const Librova::Application::SBookListResult& result)
 {
     librova::v1::ListBooksResponse response;
+    response.set_total_count(result.TotalCount);
+    for (const std::string& language : result.AvailableLanguages)
+    {
+        response.add_available_languages(language);
+    }
 
     for (const Librova::Application::SBookListItem& item : result.Items)
     {

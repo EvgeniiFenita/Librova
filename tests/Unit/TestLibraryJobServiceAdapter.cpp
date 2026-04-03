@@ -89,6 +89,16 @@ public:
         return {};
     }
 
+    [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery&) const override
+    {
+        return 0;
+    }
+
+    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return {};
@@ -275,6 +285,7 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
 
     const auto response = adapter.ListBooks(request);
     REQUIRE(response.items_size() == 1);
+    REQUIRE(response.total_count() == 1);
     REQUIRE(response.items(0).title() == "Roadside Picnic");
     REQUIRE(response.items(0).authors_size() == 1);
     REQUIRE(response.items(0).managed_path() == "Books/0000000201/book.epub");

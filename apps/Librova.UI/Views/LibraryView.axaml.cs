@@ -70,8 +70,7 @@ internal sealed partial class LibraryView : UserControl
         }
 
         if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SearchText)
-            or nameof(LibraryBrowserViewModel.LanguageFilter)
-            or nameof(LibraryBrowserViewModel.CurrentPage))
+            or nameof(LibraryBrowserViewModel.LanguageFilter))
         {
             InvalidateOpenPanelSnapshot();
             return;
@@ -129,6 +128,8 @@ internal sealed partial class LibraryView : UserControl
 
     private void OnViewportOffsetChanged(Vector offset)
     {
+        TryLoadMoreBooks();
+
         if (_suppressViewportOffsetTracking || !_wasDetailsPanelVisible || _openPanelSnapshot is null)
         {
             return;
@@ -325,6 +326,28 @@ internal sealed partial class LibraryView : UserControl
         {
             _suppressViewportOffsetTracking = false;
         }
+    }
+
+    private void TryLoadMoreBooks()
+    {
+        if (_booksViewport is null || _libraryBrowser is null)
+        {
+            return;
+        }
+
+        if (!_libraryBrowser.HasMoreResults || _libraryBrowser.IsBusy || _libraryBrowser.IsLoadingMore)
+        {
+            return;
+        }
+
+        const double preloadThreshold = 320d;
+        var remainingHeight = _booksViewport.Extent.Height - (_booksViewport.Offset.Y + _booksViewport.Viewport.Height);
+        if (remainingHeight > preloadThreshold)
+        {
+            return;
+        }
+
+        _ = _libraryBrowser.LoadMoreAsync();
     }
 
     private enum SelectionViewportAction

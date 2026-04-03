@@ -29,15 +29,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private readonly string _libraryRoot;
     private readonly bool _hasConfiguredConverter;
     private CancellationTokenSource? _refreshDebounce;
+    private CancellationTokenSource? _loadMoreCancellation;
     private bool _isLibraryStatisticsUnavailable;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
     private string _statusText = "Library view is idle.";
     private bool _isBusy;
+    private bool _isLoadingMore;
     private bool _isLoadingSelectionDetails;
     private int _pageSize = 120;
-    private int _currentPage = 1;
+    private int _loadedPageCount = 0;
     private bool _hasMoreResults;
+    private ulong _totalBookCount;
     private BookListItemModel? _selectedBook;
     private BookDetailsModel? _selectedBookDetails;
     private LibraryStatisticsModel _libraryStatistics = new();
@@ -55,8 +58,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         _libraryRoot = libraryRoot ?? string.Empty;
         _hasConfiguredConverter = hasConfiguredConverter;
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
-        NextPageCommand = new AsyncCommand(NextPageAsync, () => !IsBusy && HasMoreResults, HandleCommandErrorAsync);
-        PreviousPageCommand = new AsyncCommand(PreviousPageAsync, () => !IsBusy && CanGoToPreviousPage, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => HasSelectedBook && !IsLoadingSelectionDetails, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         ExportSelectedBookAsEpubCommand = new AsyncCommand(ExportSelectedBookAsEpubAsync, () => CanExportSelectedBookAsEpub, HandleCommandErrorAsync);
@@ -69,8 +70,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public ObservableCollection<BookListItemModel> Books { get; } = [];
     public ObservableCollection<string> AvailableLanguageFilters { get; } = [];
     public AsyncCommand RefreshCommand { get; }
-    public AsyncCommand NextPageCommand { get; }
-    public AsyncCommand PreviousPageCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
     public AsyncCommand ExportSelectedBookCommand { get; }
     public AsyncCommand ExportSelectedBookAsEpubCommand { get; }
@@ -130,23 +129,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         set
         {
             var effectiveValue = value < 1 ? 1 : value;
-            if (SetProperty(ref _pageSize, effectiveValue))
-            {
-                RaisePropertyChanged(nameof(PageSizeText));
-            }
-        }
-    }
-
-    public int CurrentPage
-    {
-        get => _currentPage;
-        private set
-        {
-            if (SetProperty(ref _currentPage, value))
-            {
-                RaisePropertyChanged(nameof(PageLabelText));
-                PreviousPageCommand.RaiseCanExecuteChanged();
-            }
+            SetProperty(ref _pageSize, effectiveValue);
         }
     }
 
@@ -157,8 +140,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             if (SetProperty(ref _hasMoreResults, value))
             {
-                RaisePropertyChanged(nameof(PageLabelText));
-                NextPageCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -254,8 +235,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             if (SetProperty(ref _isBusy, value))
             {
                 RefreshCommand.RaiseCanExecuteChanged();
-                NextPageCommand.RaiseCanExecuteChanged();
-                PreviousPageCommand.RaiseCanExecuteChanged();
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
@@ -279,6 +258,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
+    public bool IsLoadingMore
+    {
+        get => _isLoadingMore;
+        private set
+        {
+            if (SetProperty(ref _isLoadingMore, value))
+            {
+                RaisePropertyChanged(nameof(ShowLoadMoreIndicator));
+            }
+        }
+    }
+
     public bool HasBooks => Books.Count > 0;
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
@@ -288,12 +279,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public string ExportAsEpubHintText => "Configure a converter in Settings to enable EPUB export.";
     public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction;
     public bool ShowEmptyState => !HasBooks;
-    public bool CanGoToPreviousPage => CurrentPage > 1;
-    public string PageSizeText => $"{PageSize} per page";
-    public string PageLabelText => HasMoreResults ? $"Page {CurrentPage}+" : $"Page {CurrentPage}";
-    public string BookCountText => HasActiveFilters
-        ? $"{Books.Count:N0} shown"
-        : $"{Books.Count:N0} books";
+    public bool ShowLoadMoreIndicator => HasBooks && IsLoadingMore;
+    public string BookCountText => FormatBookCount(_totalBookCount);
     public string LibraryStatisticsText =>
         _isLibraryStatisticsUnavailable
             ? "Library summary unavailable."
@@ -328,27 +315,24 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public async Task RefreshAsync()
     {
-        await RefreshPageAsync(CurrentPage <= 0 ? 1 : CurrentPage);
+        await RefreshBatchAsync(1);
     }
 
-    public async Task NextPageAsync()
+    public async Task LoadMoreAsync()
     {
-        if (!HasMoreResults)
+        if (IsBusy || IsLoadingMore || !HasMoreResults)
         {
             return;
         }
 
-        await RefreshPageAsync(CurrentPage + 1);
-    }
-
-    public async Task PreviousPageAsync()
-    {
-        if (!CanGoToPreviousPage)
+        try
         {
-            return;
+            await AppendNextBatchAsync();
         }
-
-        await RefreshPageAsync(CurrentPage - 1);
+        catch (Exception error)
+        {
+            await HandleCommandErrorAsync(error);
+        }
     }
 
     public async Task ToggleSelectedBookAsync(BookListItemModel? book)
@@ -471,6 +455,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         try
         {
             var deletedTitle = SelectedBook.Title;
+            var loadedPageCount = Math.Max(_loadedPageCount, 1);
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             var moved = await _libraryCatalogService.MoveBookToTrashAsync(
                 SelectedBook.BookId,
@@ -483,12 +468,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 return;
             }
 
-            var requestedPage = CurrentPage;
-            await RefreshPageAsync(requestedPage);
-            if (Books.Count == 0 && requestedPage > 1)
-            {
-                await RefreshPageAsync(requestedPage - 1);
-            }
+            await RefreshLoadedRangeAsync(loadedPageCount);
 
             StatusText = $"Moved '{deletedTitle}' to trash.";
         }
@@ -513,7 +493,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             await Task.Delay(250, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            await RefreshPageAsync(1);
+            await RefreshBatchAsync(1);
         }
         catch (OperationCanceledException)
         {
@@ -524,19 +504,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
-    private async Task RefreshPageAsync(int pageNumber)
+    private async Task RefreshBatchAsync(int batchNumber)
     {
         IsBusy = true;
-        StatusText = pageNumber == CurrentPage
-            ? "Refreshing library..."
-            : $"Loading page {pageNumber}...";
+        StatusText = "Refreshing library...";
         var previousSelectionId = SelectedBook?.BookId;
 
         try
         {
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var items = await _libraryCatalogService.ListBooksAsync(
-                BuildRequest(pageNumber),
+            var page = await _libraryCatalogService.ListBooksAsync(
+                BuildRequest(batchNumber),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
             var libraryStatisticsUnavailable = false;
@@ -552,16 +530,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 libraryStatisticsUnavailable = true;
             }
 
-            var visibleItems = items.Take(PageSize).Select(Prepare).ToArray();
+            var visibleItems = page.Items.Select(Prepare).ToArray();
             Books.Clear();
             foreach (var item in visibleItems)
             {
                 Books.Add(item);
             }
 
-            UpdateAvailableLanguages(visibleItems);
-            CurrentPage = pageNumber;
-            HasMoreResults = items.Count > PageSize;
+            UpdateAvailableLanguages(page.AvailableLanguages);
+            _loadedPageCount = batchNumber;
+            _totalBookCount = page.TotalCount;
 
             if (previousSelectionId is not null)
             {
@@ -577,17 +555,73 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             }
 
             _isLibraryStatisticsUnavailable = libraryStatisticsUnavailable;
+            HasMoreResults = (ulong)Books.Count < _totalBookCount;
             RaisePropertyChanged(nameof(HasBooks));
             RaisePropertyChanged(nameof(ShowEmptyState));
             RaisePropertyChanged(nameof(BookCountText));
             RaisePropertyChanged(nameof(LibraryStatisticsText));
             RaisePropertyChanged(nameof(EmptyStateTitle));
             RaisePropertyChanged(nameof(EmptyStateDescription));
-            StatusText = BuildRefreshStatusText(Books.Count, _isLibraryStatisticsUnavailable);
+            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task RefreshLoadedRangeAsync(int loadedPageCount)
+    {
+        await RefreshRangeAsync(Math.Max(1, loadedPageCount) * PageSize);
+    }
+
+    private async Task AppendNextBatchAsync()
+    {
+        if (_loadedPageCount <= 0)
+        {
+            await RefreshBatchAsync(1);
+            return;
+        }
+
+        _loadMoreCancellation?.Cancel();
+        _loadMoreCancellation?.Dispose();
+        _loadMoreCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        IsLoadingMore = true;
+        StatusText = "Loading more books...";
+
+        try
+        {
+            var nextBatchNumber = _loadedPageCount + 1;
+            var page = await _libraryCatalogService.ListBooksAsync(
+                BuildRequest(nextBatchNumber),
+                TimeSpan.FromSeconds(5),
+                _loadMoreCancellation.Token);
+
+            foreach (var item in page.Items.Select(Prepare))
+            {
+                if (Books.Any(existing => existing.BookId == item.BookId))
+                {
+                    continue;
+                }
+
+                Books.Add(item);
+            }
+
+            _totalBookCount = page.TotalCount;
+            _loadedPageCount = nextBatchNumber;
+            HasMoreResults = (ulong)Books.Count < _totalBookCount;
+            UpdateAvailableLanguages(page.AvailableLanguages);
+            RaisePropertyChanged(nameof(HasBooks));
+            RaisePropertyChanged(nameof(ShowEmptyState));
+            RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(EmptyStateTitle));
+            RaisePropertyChanged(nameof(EmptyStateDescription));
+            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
+        }
+        finally
+        {
+            IsLoadingMore = false;
         }
     }
 
@@ -597,13 +631,88 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private BookListRequestModel BuildRequest(int pageNumber) =>
+    private async Task RefreshRangeAsync(int itemLimit)
+    {
+        IsBusy = true;
+        StatusText = "Refreshing library...";
+        var previousSelectionId = SelectedBook?.BookId;
+
+        try
+        {
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var page = await _libraryCatalogService.ListBooksAsync(
+                BuildInitialRangeRequest(itemLimit),
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var libraryStatisticsUnavailable = false;
+
+            try
+            {
+                _libraryStatistics = await _libraryCatalogService.GetLibraryStatisticsAsync(
+                    TimeSpan.FromSeconds(5),
+                    cancellation.Token);
+            }
+            catch (Exception)
+            {
+                libraryStatisticsUnavailable = true;
+            }
+
+            var visibleItems = page.Items.Select(Prepare).ToArray();
+            Books.Clear();
+            foreach (var item in visibleItems)
+            {
+                Books.Add(item);
+            }
+
+            UpdateAvailableLanguages(page.AvailableLanguages);
+            _loadedPageCount = Math.Max(1, (visibleItems.Length + PageSize - 1) / PageSize);
+            _totalBookCount = page.TotalCount;
+
+            if (previousSelectionId is not null)
+            {
+                SelectedBook = visibleItems.FirstOrDefault(item => item.BookId == previousSelectionId);
+                if (SelectedBook is not null)
+                {
+                    await LoadSelectedBookDetailsAsync();
+                }
+            }
+            else
+            {
+                SelectedBook = null;
+            }
+
+            _isLibraryStatisticsUnavailable = libraryStatisticsUnavailable;
+            HasMoreResults = (ulong)Books.Count < _totalBookCount;
+            RaisePropertyChanged(nameof(HasBooks));
+            RaisePropertyChanged(nameof(ShowEmptyState));
+            RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(LibraryStatisticsText));
+            RaisePropertyChanged(nameof(EmptyStateTitle));
+            RaisePropertyChanged(nameof(EmptyStateDescription));
+            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private BookListRequestModel BuildRequest(int batchNumber) =>
         new()
         {
             Text = SearchText,
             Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-            Offset = checked((ulong)Math.Max(0, pageNumber - 1) * (ulong)PageSize),
-            Limit = checked((ulong)PageSize + 1UL)
+            Offset = checked((ulong)Math.Max(0, batchNumber - 1) * (ulong)PageSize),
+            Limit = (ulong)PageSize
+        };
+
+    private BookListRequestModel BuildInitialRangeRequest(int itemLimit) =>
+        new()
+        {
+            Text = SearchText,
+            Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+            Offset = 0,
+            Limit = (ulong)Math.Max(1, itemLimit)
         };
 
     private BookListItemModel Prepare(BookListItemModel item)
@@ -656,11 +765,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
-    private void UpdateAvailableLanguages(IEnumerable<BookListItemModel> visibleItems)
+    private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
     {
         var items = new List<string> { "All languages" };
-        items.AddRange(visibleItems
-            .Select(item => item.Language)
+        items.AddRange(availableLanguages
             .Where(language => !string.IsNullOrWhiteSpace(language))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(language => language, StringComparer.OrdinalIgnoreCase));
@@ -794,11 +902,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             $"{megabytes:F2} MB");
     }
 
-    private static string BuildRefreshStatusText(int visibleBookCount, bool libraryStatisticsUnavailable)
+    private static string BuildRefreshStatusText(int visibleBookCount, ulong totalBookCount, bool libraryStatisticsUnavailable)
     {
         var baseText = visibleBookCount == 0
             ? "No books found for the current filter."
-            : $"Loaded {visibleBookCount} book(s).";
+            : (ulong)visibleBookCount >= totalBookCount
+                ? $"Loaded {visibleBookCount} book(s)."
+                : $"Loaded {visibleBookCount} of {totalBookCount} book(s).";
         return libraryStatisticsUnavailable
             ? baseText + " Library summary unavailable."
             : baseText;

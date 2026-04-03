@@ -842,10 +842,14 @@ public sealed class ShellApplicationTests
         public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
         public LibraryStatisticsModel Statistics { get; init; } = new();
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             ListCalls++;
-            return Task.FromResult(Items);
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)Items.Count,
+                Items = Items
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -884,15 +888,20 @@ public sealed class ShellApplicationTests
 
         public int ListCalls { get; private set; }
 
-        public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             ListCalls++;
             if (_responses.Count == 0)
             {
-                return Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+                return Task.FromResult(new BookListPageModel());
             }
 
-            return Task.FromResult(_responses.Dequeue());
+            var items = _responses.Dequeue();
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)items.Count,
+                Items = items
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)

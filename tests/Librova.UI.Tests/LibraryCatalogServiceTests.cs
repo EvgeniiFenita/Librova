@@ -73,7 +73,7 @@ public sealed class LibraryCatalogServiceTests
                 cancellation.Token));
 
             var service = new LibraryCatalogService(options.PipePath);
-            var items = await service.ListBooksAsync(
+            var page = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Text = "monday",
@@ -83,9 +83,10 @@ public sealed class LibraryCatalogServiceTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(items);
-            Assert.Equal("Monday Begins on Saturday", items[0].Title);
-            Assert.Equal(BookFormatModel.Fb2, items[0].Format);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
+            Assert.Equal("Monday Begins on Saturday", page.Items[0].Title);
+            Assert.Equal(BookFormatModel.Fb2, page.Items[0].Format);
         }
         finally
         {
@@ -168,7 +169,7 @@ public sealed class LibraryCatalogServiceTests
                 cancellation.Token));
 
             var service = new LibraryCatalogService(options.PipePath);
-            var items = await service.ListBooksAsync(
+            var page = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Text = "export",
@@ -177,11 +178,12 @@ public sealed class LibraryCatalogServiceTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(items);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
 
             var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportThroughService.fb2");
             var exportedPath = await service.ExportBookAsync(
-                items[0].BookId,
+                page.Items[0].BookId,
                 exportPath,
                 null,
                 TimeSpan.FromSeconds(5),
@@ -271,7 +273,7 @@ public sealed class LibraryCatalogServiceTests
                 cancellation.Token));
 
             var service = new LibraryCatalogService(options.PipePath);
-            var items = await service.ListBooksAsync(
+            var page = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Limit = 10
@@ -281,14 +283,15 @@ public sealed class LibraryCatalogServiceTests
             var statistics = await service.GetLibraryStatisticsAsync(
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
-            var expectedManagedBookSizeBytes = items
+            var expectedManagedBookSizeBytes = page.Items
                 .Select(item => ResolveLibraryPath(options.LibraryRoot, item.ManagedPath))
                 .Aggregate(0UL, (total, path) => total + (ulong)new FileInfo(path).Length);
             var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
             var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
 
             Assert.Equal(1UL, statistics.BookCount);
-            Assert.Single(items);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
             Assert.True(databaseSizeBytes > 0);
             Assert.Equal(expectedManagedBookSizeBytes, statistics.TotalManagedBookSizeBytes);
             Assert.NotEqual(expectedManagedBookSizeBytes + databaseSizeBytes, statistics.TotalManagedBookSizeBytes);
@@ -393,7 +396,7 @@ public sealed class LibraryCatalogServiceTests
                 cancellation.Token));
 
             var service = new LibraryCatalogService(options.PipePath);
-            var items = await service.ListBooksAsync(
+            var page = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Text = "export as epub",
@@ -402,11 +405,12 @@ public sealed class LibraryCatalogServiceTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(items);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
 
             var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportAsEpubThroughService.epub");
             var exportedPath = await service.ExportBookAsync(
-                items[0].BookId,
+                page.Items[0].BookId,
                 exportPath,
                 BookFormatModel.Epub,
                 TimeSpan.FromSeconds(5),
@@ -496,7 +500,7 @@ public sealed class LibraryCatalogServiceTests
                 cancellation.Token));
 
             var service = new LibraryCatalogService(options.PipePath);
-            var items = await service.ListBooksAsync(
+            var page = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
                     Text = "trash",
@@ -505,10 +509,11 @@ public sealed class LibraryCatalogServiceTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Single(items);
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
 
             var moved = await service.MoveBookToTrashAsync(
-                items[0].BookId,
+                page.Items[0].BookId,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
@@ -523,7 +528,8 @@ public sealed class LibraryCatalogServiceTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
 
-            Assert.Empty(afterDelete);
+            Assert.Empty(afterDelete.Items);
+            Assert.Equal(0UL, afterDelete.TotalCount);
         }
         finally
         {

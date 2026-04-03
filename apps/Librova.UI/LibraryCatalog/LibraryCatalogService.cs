@@ -20,7 +20,7 @@ internal sealed class LibraryCatalogService : ILibraryCatalogService
         _client = client;
     }
 
-    public async Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(
+    public async Task<BookListPageModel> ListBooksAsync(
         BookListRequestModel request,
         TimeSpan timeout,
         CancellationToken cancellationToken)

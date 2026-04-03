@@ -7,11 +7,11 @@ namespace Librova.UI.LibraryCatalog;
 
 internal sealed class NullLibraryCatalogService : ILibraryCatalogService
 {
-    public Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(
+    public Task<BookListPageModel> ListBooksAsync(
         BookListRequestModel request,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<BookListItemModel>>([]);
+        Task.FromResult(new BookListPageModel());
 
     public Task<BookDetailsModel?> GetBookDetailsAsync(
         long bookId,

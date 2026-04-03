@@ -19,9 +19,15 @@ SBookListResult CLibraryCatalogFacade::ListBooks(const SBookListRequest& request
         throw std::invalid_argument("Book list request must use a positive limit.");
     }
 
-    const std::vector<Librova::Domain::SBook> books = m_bookQueryRepository.Search(ToDomainQuery(request));
+    const auto domainQuery = ToDomainQuery(request);
+    auto languageQuery = domainQuery;
+    languageQuery.Language.reset();
+
+    const std::vector<Librova::Domain::SBook> books = m_bookQueryRepository.Search(domainQuery);
 
     SBookListResult result;
+    result.TotalCount = m_bookQueryRepository.CountSearchResults(domainQuery);
+    result.AvailableLanguages = m_bookQueryRepository.ListAvailableLanguages(languageQuery);
     result.Items.reserve(books.size());
 
     for (const Librova::Domain::SBook& book : books)

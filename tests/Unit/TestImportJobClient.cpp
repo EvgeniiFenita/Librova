@@ -52,6 +52,16 @@ public:
         return {};
     }
 
+    [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery&) const override
+    {
+        return 0;
+    }
+
+    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return {};

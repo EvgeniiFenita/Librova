@@ -156,13 +156,10 @@ public sealed class StrongIntegrationTests
             await viewModel.RefreshAsync();
             Assert.Equal(2, viewModel.Books.Count);
             Assert.True(viewModel.HasMoreResults);
-            Assert.Equal("Page 1+", viewModel.PageLabelText);
 
-            await viewModel.NextPageAsync();
-            Assert.Single(viewModel.Books);
+            await viewModel.LoadMoreAsync();
+            Assert.Equal(3, viewModel.Books.Count);
             Assert.False(viewModel.HasMoreResults);
-            Assert.Equal(2, viewModel.CurrentPage);
-            Assert.Equal("Page 2", viewModel.PageLabelText);
         }
         finally
         {
@@ -376,11 +373,12 @@ public sealed class StrongIntegrationTests
             Assert.Equal(ImportJobStatusModel.Cancelled, result!.Snapshot.Status);
             Assert.Equal(0UL, result.Summary!.ImportedEntries);
 
-            var books = await session.LibraryCatalog.ListBooksAsync(
+            var page = await session.LibraryCatalog.ListBooksAsync(
                 new BookListRequestModel(),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
-            Assert.Empty(books);
+            Assert.Empty(page.Items);
+            Assert.Equal(0UL, page.TotalCount);
 
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Books")));
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Covers")));

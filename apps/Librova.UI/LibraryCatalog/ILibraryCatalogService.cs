@@ -7,7 +7,7 @@ namespace Librova.UI.LibraryCatalog;
 
 internal interface ILibraryCatalogService
 {
-    Task<IReadOnlyList<BookListItemModel>> ListBooksAsync(
+    Task<BookListPageModel> ListBooksAsync(
         BookListRequestModel request,
         TimeSpan timeout,
         CancellationToken cancellationToken);

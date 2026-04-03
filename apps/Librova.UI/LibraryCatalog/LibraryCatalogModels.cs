@@ -36,6 +36,13 @@ internal sealed class BookListRequestModel
     public ulong Limit { get; init; } = 50;
 }
 
+internal sealed class BookListPageModel
+{
+    public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
+    public ulong TotalCount { get; init; }
+    public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
+}
+
 internal sealed class BookListItemModel : INotifyPropertyChanged
 {
     private IImage? _resolvedCoverImage;

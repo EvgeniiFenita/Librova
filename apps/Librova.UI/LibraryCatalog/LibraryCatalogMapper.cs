@@ -57,8 +57,13 @@ internal static class LibraryCatalogMapper
         return request;
     }
 
-    public static IReadOnlyList<BookListItemModel> FromProto(ListBooksResponse response) =>
-        response.Items.Select(FromProto).ToArray();
+    public static BookListPageModel FromProto(ListBooksResponse response) =>
+        new()
+        {
+            Items = response.Items.Select(FromProto).ToArray(),
+            TotalCount = response.TotalCount,
+            AvailableLanguages = response.AvailableLanguages.ToArray()
+        };
 
     public static BookDetailsModel? FromProto(GetBookDetailsResponse response) =>
         response.Details is null ? null : FromProto(response.Details);

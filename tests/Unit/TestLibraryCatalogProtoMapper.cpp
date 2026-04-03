@@ -49,10 +49,18 @@ TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "
     item.SizeBytes = 4096;
     item.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
 
-    const Librova::Application::SBookListResult result{{item}};
+    const Librova::Application::SBookListResult result{
+        .Items = {item},
+        .TotalCount = 12,
+        .AvailableLanguages = {"en", "ru"}
+    };
     const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(result);
 
     REQUIRE(response.items_size() == 1);
+    REQUIRE(response.total_count() == 12);
+    REQUIRE(response.available_languages_size() == 2);
+    REQUIRE(response.available_languages(0) == "en");
+    REQUIRE(response.available_languages(1) == "ru");
     REQUIRE(response.items(0).book_id() == 12);
     REQUIRE(response.items(0).title() == "Пикник на обочине");
     REQUIRE(response.items(0).managed_path() == "Books/0000000012/Пикник.epub");
