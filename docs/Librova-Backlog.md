@@ -38,7 +38,32 @@ Backlog edit rules:
 
 ## 3. Open Backlog
 
+### Critical
+- `#44` store managed book and cover paths as stable library-relative values instead of absolute filesystem paths.
+  - Status: `Open`
+  - Note: current import persistence writes absolute managed paths into SQLite, which breaks library portability and drifts from the transport/tests that expect `Books/...` and `Covers/...` relative paths; fix persistence, read-side resolution, and any affected transport mapping together.
+
+- `#45` prevent managed-trash cleanup from deleting required top-level library directories such as `Covers`.
+  - Status: `Open`
+  - Note: deleting the last cover currently allows post-move cleanup to remove `LibraryRoot/Covers`, which then causes existing-library bootstrap validation to fail on the next startup; keep cleanup below the protected top-level layout only.
+
+- `#46` make staged delete crash-safe across filesystem moves and catalog removal.
+  - Status: `Open`
+  - Note: the current delete flow moves managed files into library `Trash` before removing the database row, so a crash in between can leave a catalog entry pointing at a missing managed file; tighten ordering or add durable recovery semantics so delete remains consistent across process interruption.
+
+- `#47` harden duplicate protection against concurrent imports with database-level enforcement.
+  - Status: `Open`
+  - Note: duplicate detection currently relies on read-side `FindDuplicates` checks plus a non-unique `sha256_hex` index, which still allows parallel import races to insert the same book twice; add a schema-level uniqueness barrier and make the write path handle the conflict explicitly.
+
+- `#48` compute and propagate SHA-256 for batch and ZIP imports so strict duplicate detection works beyond single-source manual requests.
+  - Status: `Open`
+  - Note: the normal UI and multi-source import flow do not populate `sha256_hex`, so strict duplicate detection by content hash is effectively absent for batch and ZIP imports; compute the hash in the real import pipeline and cover it with regression tests.
+
 ### Major
+- `#49` reject databases created by a newer schema version instead of silently downgrading `user_version`.
+  - Status: `Open`
+  - Note: schema migration currently accepts forward-version databases and then unconditionally rewrites `PRAGMA user_version` to the local version, which risks running an older binary against an incompatible schema; fail fast with explicit recovery guidance.
+
 - `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
   - Status: `Open`
   - Note: focus this item on browse-time behavior: filter sources, filter UI, request plumbing, result counts, and any related series/genres browsing flows rather than parser-only metadata extraction.
@@ -47,12 +72,26 @@ Backlog edit rules:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 ### Minor
+- `#50` replace whole-file bootstrap log merging with streamed copy during UI log reinitialization.
+  - Status: `Open`
+  - Note: `UiLogging.Reinitialize` currently loads the previous log file with `File.ReadAllText` before appending it into the library log, which is unnecessary memory pressure for large bootstrap logs; switch to a streamed merge while preserving the current move/cleanup behavior.
+
+- `#51` save UI preferences atomically so interrupted writes do not corrupt the preferences file.
+  - Status: `Open`
+  - Note: `UiPreferencesStore.Save` writes directly to the live JSON file; replace it with temp-file write plus atomic replace/move semantics and add regression coverage for interrupted or invalid-file recovery where practical.
+
+- `#52` validate IPC-provided cover paths against the active library root on the UI side before file IO.
+  - Status: `Open`
+  - Note: the native side already resolves managed paths within the library root, but the Avalonia browser currently trusts `cover_path` values from IPC directly when loading images; add a local guard so UI file IO still rejects out-of-root paths if the contract is violated.
 
 - `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
   - Status: `Open`
   - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
 
 ### Low
+- `#53` fail fast on unexpected `BOOK_FORMAT_ZIP` or unknown catalog format values instead of silently mapping them to `EPUB`.
+  - Status: `Open`
+  - Note: the current catalog proto mapper treats `BOOK_FORMAT_ZIP` and default/unknown values as `Epub`, which hides contract drift; prefer explicit rejection or logging so unsupported values cannot masquerade as valid EPUB metadata.
 
 - `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
   - Status: `Open`
