@@ -158,6 +158,10 @@ Backlog edit rules:
   - Status: `Closed`
   - Note: `Settings` now shows the current application version, and both native `Core::Version` plus managed assembly metadata read it from the shared repository-root `VERSION.txt` file instead of duplicated per-project constants.
 
+- `#41` remove custom EPUB converter support and keep only built-in `fbc` / `fb2cng` configuration.
+  - Status: `Closed`
+  - Note: the custom converter mode, arguments, and host flags are removed across settings, preferences, launch options, native converter configuration, and related tests; `Settings` now exposes only the built-in `fbc.exe` path while empty path cleanly disables EPUB conversion.
+
 - `#3` display file sizes in megabytes instead of raw bytes.
   - Status: `Closed`
 

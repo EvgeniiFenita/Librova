@@ -39,34 +39,10 @@ TEST_CASE("Built-in fb2cng configuration produces the default command profile", 
     }));
 }
 
-TEST_CASE("Custom converter configuration preserves explicit template and output mode", "[converter-config]")
-{
-    const Librova::ConverterConfiguration::SConverterConfiguration configuration{
-        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand,
-        .Custom = {
-            .ExecutablePath = "C:/Tools/custom-converter.exe",
-            .ArgumentTemplate = {"run", "{source}", "{destination}"},
-            .OutputMode = Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath
-        }
-    };
-
-    const auto profile = Librova::ConverterConfiguration::TryBuildCommandProfile(configuration);
-
-    REQUIRE(configuration.IsValid());
-    REQUIRE(profile.has_value());
-    REQUIRE(profile->ExecutablePath == std::filesystem::path("C:/Tools/custom-converter.exe"));
-    REQUIRE(profile->ArgumentTemplate == std::vector<std::string>({
-        "run",
-        "{source}",
-        "{destination}"
-    }));
-    REQUIRE(profile->OutputMode == Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath);
-}
-
 TEST_CASE("Invalid enabled converter configuration is rejected", "[converter-config]")
 {
     const Librova::ConverterConfiguration::SConverterConfiguration configuration{
-        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand
+        .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng
     };
 
     REQUIRE_FALSE(configuration.IsValid());

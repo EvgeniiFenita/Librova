@@ -137,19 +137,6 @@ internal sealed class CoreHostProcess : IAsyncDisposable
                     builder.Append(" --fb2cng-config ").Append(Quote(options.Fb2CngConfigPath));
                 }
                 break;
-
-            case UiConverterMode.CustomCommand:
-                builder.Append(" --converter-exe ").Append(Quote(options.CustomConverterExecutablePath!));
-                foreach (var argument in options.CustomConverterArguments)
-                {
-                    builder.Append(" --converter-arg ").Append(Quote(argument));
-                }
-
-                builder.Append(" --converter-output ")
-                    .Append(options.CustomConverterOutputMode is UiConverterOutputMode.SingleFileInDestinationDirectory
-                        ? "directory"
-                        : "exact");
-                break;
         }
 
         return builder.ToString();

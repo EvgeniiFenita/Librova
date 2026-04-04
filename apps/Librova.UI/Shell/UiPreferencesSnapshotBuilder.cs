@@ -7,15 +7,23 @@ internal static class UiPreferencesSnapshotBuilder
     public static UiPreferencesSnapshot WithPreferredLibraryRoot(
         UiPreferencesSnapshot? existing,
         string libraryRoot) =>
-        new()
+        BuildNormalizedSnapshot(existing, libraryRoot);
+
+    private static UiPreferencesSnapshot BuildNormalizedSnapshot(
+        UiPreferencesSnapshot? existing,
+        string libraryRoot)
+    {
+        var executablePath = string.IsNullOrWhiteSpace(existing?.Fb2CngExecutablePath)
+            ? null
+            : existing.Fb2CngExecutablePath;
+
+        return new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = libraryRoot,
-            ConverterMode = existing?.ConverterMode ?? UiConverterMode.Disabled,
-            Fb2CngExecutablePath = existing?.Fb2CngExecutablePath,
-            Fb2CngConfigPath = existing?.Fb2CngConfigPath,
-            CustomConverterExecutablePath = existing?.CustomConverterExecutablePath,
-            CustomConverterArguments = existing?.CustomConverterArguments,
-            CustomConverterOutputMode = existing?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath,
-            ForceEpubConversionOnImport = existing?.ForceEpubConversionOnImport ?? false
+            ConverterMode = executablePath is null ? UiConverterMode.Disabled : UiConverterMode.BuiltInFb2Cng,
+            Fb2CngExecutablePath = executablePath,
+            Fb2CngConfigPath = executablePath is null ? null : existing?.Fb2CngConfigPath,
+            ForceEpubConversionOnImport = executablePath is not null && (existing?.ForceEpubConversionOnImport ?? false)
         };
+    }
 }

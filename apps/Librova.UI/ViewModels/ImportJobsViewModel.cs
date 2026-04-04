@@ -155,7 +155,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public bool ForceEpubConversionOnImport
     {
         get => _forceEpubConversionOnImport;
-        set => SetProperty(ref _forceEpubConversionOnImport, value);
+        set => SetProperty(ref _forceEpubConversionOnImport, HasConfiguredConverter && value);
     }
 
     public bool HasConfiguredConverter

@@ -21,11 +21,7 @@ internal sealed class ShellViewModel : ObservableObject
     private readonly IUiPreferencesStore _preferencesStore;
     private readonly Func<string, UiLibraryOpenMode, Task>? _switchLibraryAsync;
     private readonly Func<Task>? _reloadShellAsync;
-    private UiConverterMode _selectedConverterMode;
     private string _fb2CngExecutablePath = string.Empty;
-    private string _customConverterExecutablePath = string.Empty;
-    private string _customConverterArgumentsText = string.Empty;
-    private UiConverterOutputMode _selectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
     private string _converterValidationMessage = string.Empty;
     private ShellSection _currentSection = ShellSection.Library;
 
@@ -44,12 +40,13 @@ internal sealed class ShellViewModel : ObservableObject
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _switchLibraryAsync = switchLibraryAsync;
         _reloadShellAsync = reloadShellAsync;
+        var hasConfiguredConverter = HasConfiguredBuiltInConverter(session.HostOptions);
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
         LibraryBrowser = new LibraryBrowserViewModel(
             session.LibraryCatalog,
             _pathSelectionService,
             session.HostOptions.LibraryRoot,
-            hasConfiguredConverter: session.HostOptions.ConverterMode is not UiConverterMode.Disabled);
+            hasConfiguredConverter: hasConfiguredConverter);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged += OnLibraryBrowserPropertyChanged;
@@ -57,19 +54,13 @@ internal sealed class ShellViewModel : ObservableObject
             ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
             : savedState.WorkingDirectory!;
         ImportJobs.AllowProbableDuplicates = savedState?.AllowProbableDuplicates ?? false;
-        ImportJobs.HasConfiguredConverter = session.HostOptions.ConverterMode is not UiConverterMode.Disabled;
-        ImportJobs.ForceEpubConversionOnImport = savedPreferences?.ForceEpubConversionOnImport ?? false;
-        _selectedConverterMode = savedPreferences?.ConverterMode ?? UiConverterMode.Disabled;
+        ImportJobs.HasConfiguredConverter = hasConfiguredConverter;
+        ImportJobs.ForceEpubConversionOnImport = hasConfiguredConverter
+            && (savedPreferences?.ForceEpubConversionOnImport ?? false);
         _fb2CngExecutablePath = savedPreferences?.Fb2CngExecutablePath ?? string.Empty;
-        _customConverterExecutablePath = savedPreferences?.CustomConverterExecutablePath ?? string.Empty;
-        _customConverterArgumentsText = savedPreferences?.CustomConverterArguments is { Length: > 0 } arguments
-            ? string.Join(Environment.NewLine, arguments)
-            : string.Empty;
-        _selectedCustomConverterOutputMode = savedPreferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath;
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
-        BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync, () => IsBuiltInConverterSelected);
-        BrowseCustomConverterExecutablePathCommand = new AsyncCommand(BrowseCustomConverterExecutablePathAsync, () => IsCustomConverterSelected);
+        BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync);
         OpenLibraryCommand = new AsyncCommand(OpenLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         CreateLibraryCommand = new AsyncCommand(CreateLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Library);
@@ -95,25 +86,11 @@ internal sealed class ShellViewModel : ObservableObject
     public LibraryBrowserViewModel LibraryBrowser { get; }
     public AsyncCommand SavePreferencesCommand { get; }
     public AsyncCommand BrowseFb2CngExecutablePathCommand { get; }
-    public AsyncCommand BrowseCustomConverterExecutablePathCommand { get; }
     public AsyncCommand OpenLibraryCommand { get; }
     public AsyncCommand CreateLibraryCommand { get; }
     public AsyncCommand ShowLibrarySectionCommand { get; }
     public AsyncCommand ShowImportSectionCommand { get; }
     public AsyncCommand ShowSettingsSectionCommand { get; }
-
-    public UiConverterMode SelectedConverterMode
-    {
-        get => _selectedConverterMode;
-        set
-        {
-            if (SetProperty(ref _selectedConverterMode, value))
-            {
-                UpdateConverterValidation();
-                RaiseConverterPropertiesChanged();
-            }
-        }
-    }
 
     public string Fb2CngExecutablePath
     {
@@ -121,45 +98,6 @@ internal sealed class ShellViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _fb2CngExecutablePath, value))
-            {
-                UpdateConverterValidation();
-                SavePreferencesCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
-    public string CustomConverterExecutablePath
-    {
-        get => _customConverterExecutablePath;
-        set
-        {
-            if (SetProperty(ref _customConverterExecutablePath, value))
-            {
-                UpdateConverterValidation();
-                SavePreferencesCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
-    public string CustomConverterArgumentsText
-    {
-        get => _customConverterArgumentsText;
-        set
-        {
-            if (SetProperty(ref _customConverterArgumentsText, value))
-            {
-                UpdateConverterValidation();
-                SavePreferencesCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
-    public UiConverterOutputMode SelectedCustomConverterOutputMode
-    {
-        get => _selectedCustomConverterOutputMode;
-        set
-        {
-            if (SetProperty(ref _selectedCustomConverterOutputMode, value))
             {
                 UpdateConverterValidation();
                 SavePreferencesCommand.RaiseCanExecuteChanged();
@@ -199,11 +137,7 @@ internal sealed class ShellViewModel : ObservableObject
     public bool IsSettingsSectionActive => CurrentSection is ShellSection.Settings;
     public bool IsImportInProgress => ImportJobs.IsBusy;
     public bool CanSwitchLibrary => !IsImportInProgress && _switchLibraryAsync is not null;
-    public bool IsConverterDisabled => SelectedConverterMode is UiConverterMode.Disabled;
-    public bool IsBuiltInConverterSelected => SelectedConverterMode is UiConverterMode.BuiltInFb2Cng;
-    public bool IsCustomConverterSelected => SelectedConverterMode is UiConverterMode.CustomCommand;
-    public IReadOnlyList<UiConverterMode> AvailableConverterModes { get; } = Enum.GetValues<UiConverterMode>();
-    public IReadOnlyList<UiConverterOutputMode> AvailableConverterOutputModes { get; } = Enum.GetValues<UiConverterOutputMode>();
+    public bool HasConfiguredConverter => !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
     public string CurrentSectionTitle => CurrentSection switch
     {
         ShellSection.Library => "Library",
@@ -226,6 +160,8 @@ internal sealed class ShellViewModel : ObservableObject
     public string ApplicationVersionText => $"Version {ApplicationVersion.Value}";
     public string DiagnosticsHintText =>
         "If startup or import flow looks suspicious, inspect the UI log first, then the host log.";
+    public string ConverterHintText =>
+        "Librova uses the built-in fb2cng / fbc.exe converter profile. Leave the path empty to keep EPUB conversion disabled.";
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
@@ -267,15 +203,6 @@ internal sealed class ShellViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(selectedPath))
         {
             Fb2CngExecutablePath = selectedPath;
-        }
-    }
-
-    private async Task BrowseCustomConverterExecutablePathAsync()
-    {
-        var selectedPath = await _pathSelectionService.PickExecutableFileAsync("Select custom converter executable", default);
-        if (!string.IsNullOrWhiteSpace(selectedPath))
-        {
-            CustomConverterExecutablePath = selectedPath;
         }
     }
 
@@ -323,15 +250,13 @@ internal sealed class ShellViewModel : ObservableObject
 
     private Task SavePreferencesAsync()
     {
+        var hasConfiguredConverter = !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
         _preferencesStore.Save(new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
-            ConverterMode = SelectedConverterMode,
-            Fb2CngExecutablePath = IsBuiltInConverterSelected ? Fb2CngExecutablePath : null,
-            CustomConverterExecutablePath = IsCustomConverterSelected ? CustomConverterExecutablePath : null,
-            CustomConverterArguments = IsCustomConverterSelected ? ParseCustomConverterArguments() : null,
-            CustomConverterOutputMode = SelectedCustomConverterOutputMode,
-            ForceEpubConversionOnImport = ImportJobs.ForceEpubConversionOnImport
+            ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
+            Fb2CngExecutablePath = hasConfiguredConverter ? Fb2CngExecutablePath : null,
+            ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport
         });
         UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
         return _reloadShellAsync is null ? Task.CompletedTask : _reloadShellAsync();
@@ -350,60 +275,22 @@ internal sealed class ShellViewModel : ObservableObject
 
     private string BuildConverterValidationMessage()
     {
-        switch (SelectedConverterMode)
+        if (string.IsNullOrWhiteSpace(Fb2CngExecutablePath))
         {
-            case UiConverterMode.Disabled:
-                return string.Empty;
-
-            case UiConverterMode.BuiltInFb2Cng:
-                if (string.IsNullOrWhiteSpace(Fb2CngExecutablePath))
-                {
-                    return "Built-in fb2cng executable path is required.";
-                }
-
-                if (!Path.IsPathFullyQualified(Fb2CngExecutablePath))
-                {
-                    return "Built-in fb2cng executable path must be absolute.";
-                }
-
-                return string.Empty;
-
-            case UiConverterMode.CustomCommand:
-                if (string.IsNullOrWhiteSpace(CustomConverterExecutablePath))
-                {
-                    return "Custom converter executable path is required.";
-                }
-
-                if (!Path.IsPathFullyQualified(CustomConverterExecutablePath))
-                {
-                    return "Custom converter executable path must be absolute.";
-                }
-
-                if (ParseCustomConverterArguments().Length == 0)
-                {
-                    return "Custom converter arguments must contain at least one template entry.";
-                }
-
-                return string.Empty;
-
-            default:
-                return string.Empty;
+            return string.Empty;
         }
+
+        if (!Path.IsPathFullyQualified(Fb2CngExecutablePath))
+        {
+            return "Built-in fb2cng executable path must be absolute.";
+        }
+
+        return string.Empty;
     }
 
-    private string[] ParseCustomConverterArguments() =>
-        CustomConverterArgumentsText
-            .Split([Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    private void RaiseConverterPropertiesChanged()
-    {
-        RaisePropertyChanged(nameof(IsConverterDisabled));
-        RaisePropertyChanged(nameof(IsBuiltInConverterSelected));
-        RaisePropertyChanged(nameof(IsCustomConverterSelected));
-        BrowseFb2CngExecutablePathCommand.RaiseCanExecuteChanged();
-        BrowseCustomConverterExecutablePathCommand.RaiseCanExecuteChanged();
-        SavePreferencesCommand.RaiseCanExecuteChanged();
-    }
+    private static bool HasConfiguredBuiltInConverter(CoreHostLaunchOptions hostOptions) =>
+        hostOptions.ConverterMode is UiConverterMode.BuiltInFb2Cng
+        && !string.IsNullOrWhiteSpace(hostOptions.Fb2CngExecutablePath);
 
     private async Task HandleImportCompletedSuccessfullyAsync()
     {

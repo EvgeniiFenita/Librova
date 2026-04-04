@@ -6,8 +6,5 @@ internal sealed class UiPreferencesSnapshot
     public CoreHost.UiConverterMode ConverterMode { get; init; }
     public string? Fb2CngExecutablePath { get; init; }
     public string? Fb2CngConfigPath { get; init; }
-    public string? CustomConverterExecutablePath { get; init; }
-    public string[]? CustomConverterArguments { get; init; }
-    public CoreHost.UiConverterOutputMode CustomConverterOutputMode { get; init; }
     public bool ForceEpubConversionOnImport { get; init; }
 }

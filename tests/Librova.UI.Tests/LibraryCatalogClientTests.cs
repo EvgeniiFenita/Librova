@@ -419,7 +419,7 @@ public sealed class LibraryCatalogClientTests
     }
 
     [Fact]
-    public async Task LibraryCatalogClient_ExportsSelectedFb2AsEpubThroughNativeHost()
+    public async Task LibraryCatalogClient_RejectsFb2AsEpubExportWhenNoConverterIsConfigured()
     {
         var sandboxRoot = Path.Combine(
             Path.GetTempPath(),
@@ -454,11 +454,7 @@ public sealed class LibraryCatalogClientTests
                     "..")),
                 PipePath = $@"\\.\pipe\Librova.UI.LibraryExportConvertedTests.{Environment.ProcessId}.{Environment.TickCount64}",
                 LibraryRoot = Path.Combine(sandboxRoot, "Library"),
-                LibraryOpenMode = UiLibraryOpenMode.CreateNew,
-                ConverterMode = UiConverterMode.CustomCommand,
-                CustomConverterExecutablePath = @"C:\Program Files\PowerShell\7\pwsh.exe",
-                CustomConverterArguments = ["-File", scriptPath, "{source}", "{destination}"],
-                CustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
             };
 
             var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
@@ -516,16 +512,14 @@ public sealed class LibraryCatalogClientTests
             Assert.Equal(BookFormat.Fb2, listResponse.Items[0].Format);
 
             var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportMeAsEpub.epub");
-            var exportResponse = await client.ExportBookAsync(
-                listResponse.Items[0].BookId,
-                exportPath,
-                BookFormatModel.Epub,
-                TimeSpan.FromSeconds(5),
-                cancellation.Token);
-
-            Assert.True(exportResponse.HasExportedPath);
-            Assert.Equal(Path.GetFullPath(exportPath), Path.GetFullPath(exportResponse.ExportedPath));
-            Assert.True(File.Exists(exportPath));
+            var error = await Assert.ThrowsAsync<Librova.UI.PipeTransport.PipeTransportException>(async () =>
+                await client.ExportBookAsync(
+                    listResponse.Items[0].BookId,
+                    exportPath,
+                    BookFormatModel.Epub,
+                    TimeSpan.FromSeconds(5),
+                    cancellation.Token));
+            Assert.Contains("converter is unavailable", error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

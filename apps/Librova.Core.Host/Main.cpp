@@ -111,11 +111,7 @@ void PrintUsage()
         << "  --serve-one             Stop after serving a single pipe session.\n"
         << "  --max-sessions <count>  Stop after serving the specified number of sessions.\n"
         << "  --fb2cng-exe <path>     Use built-in fb2cng converter profile.\n"
-        << "  --fb2cng-config <path>  Built-in fb2cng configuration path.\n"
-        << "  --converter-exe <path>  Use custom converter executable.\n"
-        << "  --converter-arg <arg>   Append a custom converter argument template item.\n"
-        << "  --converter-output <exact|directory>\n"
-        << "                         Select custom converter output mode.\n";
+        << "  --fb2cng-config <path>  Built-in fb2cng configuration path.\n";
 }
 
 #ifdef _WIN32

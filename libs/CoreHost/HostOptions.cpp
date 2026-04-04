@@ -159,12 +159,6 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --fb2cng-exe.");
             }
 
-            if (options.ConverterConfiguration.Mode
-                == Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
-            {
-                throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
-            }
-
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
             options.ConverterConfiguration.Fb2Cng.ExecutablePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
@@ -178,88 +172,9 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
                 throw std::invalid_argument("Missing value for --fb2cng-config.");
             }
 
-            if (options.ConverterConfiguration.Mode
-                == Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand)
-            {
-                throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
-            }
-
             options.ConverterConfiguration.Mode =
                 Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng;
             options.ConverterConfiguration.Fb2Cng.ConfigPath = Librova::Unicode::PathFromUtf8(arguments[++index]);
-            continue;
-        }
-
-        if (argument == "--converter-exe")
-        {
-            if (!HasValue(arguments, index))
-            {
-                throw std::invalid_argument("Missing value for --converter-exe.");
-            }
-
-            if (options.ConverterConfiguration.Mode
-                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
-            {
-                throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
-            }
-
-            options.ConverterConfiguration.Mode =
-                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
-            options.ConverterConfiguration.Custom.ExecutablePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
-            continue;
-        }
-
-        if (argument == "--converter-arg")
-        {
-            if (!HasValue(arguments, index))
-            {
-                throw std::invalid_argument("Missing value for --converter-arg.");
-            }
-
-            if (options.ConverterConfiguration.Mode
-                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
-            {
-                throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
-            }
-
-            options.ConverterConfiguration.Mode =
-                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
-            options.ConverterConfiguration.Custom.ArgumentTemplate.push_back(arguments[++index]);
-            continue;
-        }
-
-        if (argument == "--converter-output")
-        {
-            if (!HasValue(arguments, index))
-            {
-                throw std::invalid_argument("Missing value for --converter-output.");
-            }
-
-            if (options.ConverterConfiguration.Mode
-                == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng)
-            {
-                throw std::invalid_argument("Built-in and custom converter options cannot be mixed.");
-            }
-
-            options.ConverterConfiguration.Mode =
-                Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand;
-
-            const auto& mode = arguments[++index];
-            if (mode == "exact")
-            {
-                options.ConverterConfiguration.Custom.OutputMode =
-                    Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath;
-            }
-            else if (mode == "directory")
-            {
-                options.ConverterConfiguration.Custom.OutputMode =
-                    Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory;
-            }
-            else
-            {
-                throw std::invalid_argument("Unsupported value for --converter-output.");
-            }
-
             continue;
         }
 

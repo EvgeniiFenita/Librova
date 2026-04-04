@@ -379,16 +379,7 @@
 Ожидаемое поведение:
 - в текущем UI нет отдельного поля для YAML-конфига `fbc.yaml`;
 - для built-in режима на экране остаётся только путь к `fbc.exe`.
-5. Переключись на `CustomCommand`.
-6. Введи абсолютный путь к executable, но оставь arguments пустыми.
-Ожидаемое поведение:
-- validation error сообщает, что arguments обязательны.
-6.1. Нажми `Browse...` рядом с custom executable path и выбери converter `.exe`.
-Ожидаемое поведение:
-- путь к custom converter подставляется в поле автоматически;
-- путь остается абсолютным;
-- ручной ввод пути больше не является единственным способом настройки custom converter.
-7. Добавь по одной argument template на строку и нажми `Save`.
+5. Нажми `Save`.
 Ожидаемое поведение:
 - converter settings успешно сохраняются.
 - после `Save` текущая shell session перезагружается и начинает работать уже с обновленной converter-конфигурацией;
@@ -397,7 +388,7 @@
 - если до настройки converter выбрать `FB2` в `Library`, вместо `Export As EPUB` показывается подсказка про `Settings`;
 - если после этого перейти в `Import`, появляется чекбокс `Force conversion to EPUB during import`.
 - кнопка `Save` оформлена как основное действие, а не как вторичная навигационная кнопка.
-8. В built-in режиме через `fbc.exe` выполни импорт `FB2` с включенным `Force conversion to EPUB during import`, затем выполни `Export As EPUB` для другой `FB2` книги.
+6. В built-in режиме через `fbc.exe` выполни импорт `FB2` с включенным `Force conversion to EPUB during import`, затем выполни `Export As EPUB` для другой `FB2` книги.
 Ожидаемое поведение:
 - рядом с import working directory и рядом с user-chosen export destination не появляются `fb2cng.log` или `fb2cng-report.zip`;
 - если `fbc.exe` пишет свои стандартные log/report файлы, они оказываются внутри `Library\\Logs`.

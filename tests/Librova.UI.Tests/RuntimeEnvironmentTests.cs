@@ -249,6 +249,46 @@ public sealed class RuntimeEnvironmentTests
         });
     }
 
+    [Fact]
+    public void CoreHostDevelopmentDefaults_Create_DisablesConverterWhenLegacyModeHasNoExecutablePath()
+    {
+        var preferencesFile = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-preferences.json");
+        var expectedExecutable = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "out",
+            "build",
+            "x64-debug",
+            "apps",
+            "Librova.Core.Host",
+            "Debug",
+            "LibrovaCoreHostApp.exe"));
+
+        Directory.CreateDirectory(Path.GetDirectoryName(preferencesFile)!);
+        new UiPreferencesStore(preferencesFile).Save(new UiPreferencesSnapshot
+        {
+            PreferredLibraryRoot = @"D:\Librova\PreferredLibrary",
+            ConverterMode = UiConverterMode.BuiltInFb2Cng,
+            ForceEpubConversionOnImport = true
+        });
+
+        WithEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, preferencesFile, () =>
+        {
+            WithEnvironmentVariable(RuntimeEnvironment.LibraryRootEnvVar, null, () =>
+            {
+                WithEnvironmentVariable(RuntimeEnvironment.CoreHostExecutableEnvVar, expectedExecutable, () =>
+                {
+                    var options = CoreHostDevelopmentDefaults.Create();
+                    Assert.Equal(UiConverterMode.Disabled, options.ConverterMode);
+                    Assert.Null(options.Fb2CngExecutablePath);
+                });
+            });
+        });
+    }
+
     private static void WithEnvironmentVariable(string variableName, string? value, Action action)
     {
         var previousValue = Environment.GetEnvironmentVariable(variableName);

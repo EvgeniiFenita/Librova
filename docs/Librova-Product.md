@@ -128,12 +128,7 @@ If the final handoff into the Windows `Recycle Bin` fails, Librova keeps the del
 
 The user can configure:
 
-- the converter mode:
-  - disabled
-  - built-in `fb2cng`
-  - custom external converter
 - the built-in `fb2cng` executable path through direct text entry or a `Browse...` file picker in `Settings`
-- the custom converter executable path through direct text entry or a `Browse...` file picker in `Settings`
 
 Saving converter settings reloads the current shell session so the active host process immediately picks up the new converter configuration.
 
@@ -141,7 +136,7 @@ That reload keeps the user in the current section instead of forcing a jump back
 
 For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with the managed library `Logs` directory as its process working directory so default `fb2cng.log` output and similar diagnostic artifacts do not pollute import temp folders or user export destinations.
 
-The `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path.
+The `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path, and leaving that path empty keeps EPUB conversion disabled.
 
 ## 4. Current Included Scope
 

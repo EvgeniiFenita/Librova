@@ -80,30 +80,6 @@ TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")
     REQUIRE(options.ConverterConfiguration.Fb2Cng.ConfigPath == std::filesystem::path{"C:/tools/fbc.yaml"});
 }
 
-TEST_CASE("Host options parse custom converter configuration", "[core-host]")
-{
-    const auto options = Librova::CoreHost::CHostOptions::Parse({
-        "--pipe", R"(\\.\pipe\Librova.Test)",
-        "--library-root", "C:/Librova",
-        "--converter-exe", "C:/tools/custom.exe",
-        "--converter-arg", "--input",
-        "--converter-arg", "{source}",
-        "--converter-arg", "--output-dir",
-        "--converter-arg", "{destination_dir}",
-        "--converter-output", "directory",
-        "--max-sessions", "3"
-    });
-
-    REQUIRE(options.MaxSessions == 3);
-    REQUIRE(options.ConverterConfiguration.Mode
-        == Librova::ConverterConfiguration::EConverterConfigurationMode::CustomCommand);
-    REQUIRE(options.ConverterConfiguration.Custom.ExecutablePath == std::filesystem::path{"C:/tools/custom.exe"});
-    REQUIRE(options.ConverterConfiguration.Custom.ArgumentTemplate.size() == 4);
-    REQUIRE(
-        options.ConverterConfiguration.Custom.OutputMode
-        == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
-}
-
 TEST_CASE("Host options reject missing required arguments", "[core-host]")
 {
     REQUIRE_THROWS_AS(
@@ -113,14 +89,29 @@ TEST_CASE("Host options reject missing required arguments", "[core-host]")
         std::invalid_argument);
 }
 
-TEST_CASE("Host options reject mixed converter modes", "[core-host]")
+TEST_CASE("Host options reject removed custom converter flags", "[core-host]")
 {
     REQUIRE_THROWS_AS(
         Librova::CoreHost::CHostOptions::Parse({
             "--pipe", R"(\\.\pipe\Librova.Test)",
             "--library-root", "C:/Librova",
-            "--fb2cng-exe", "C:/tools/fbc.exe",
             "--converter-exe", "C:/tools/custom.exe"
+        }),
+        std::invalid_argument);
+
+    REQUIRE_THROWS_AS(
+        Librova::CoreHost::CHostOptions::Parse({
+            "--pipe", R"(\\.\pipe\Librova.Test)",
+            "--library-root", "C:/Librova",
+            "--converter-arg", "{source}"
+        }),
+        std::invalid_argument);
+
+    REQUIRE_THROWS_AS(
+        Librova::CoreHost::CHostOptions::Parse({
+            "--pipe", R"(\\.\pipe\Librova.Test)",
+            "--library-root", "C:/Librova",
+            "--converter-output", "directory"
         }),
         std::invalid_argument);
 }

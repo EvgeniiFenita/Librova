@@ -41,6 +41,7 @@ internal static class CoreHostDevelopmentDefaults
         var executablePath = RuntimeEnvironment.GetCoreHostExecutableOverride()
             ?? CoreHostPathResolver.ResolveDevelopmentExecutablePath(baseDirectory);
         var pipePath = $@"\\.\pipe\Librova.UI.{Environment.ProcessId}.{Environment.TickCount64}";
+        var hasConfiguredConverter = !string.IsNullOrWhiteSpace(preferences?.Fb2CngExecutablePath);
 
         return new CoreHostLaunchOptions
         {
@@ -50,11 +51,8 @@ internal static class CoreHostDevelopmentDefaults
             ShutdownEventName = $@"Local\Librova.UI.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
             LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,
-            ConverterMode = preferences?.ConverterMode ?? UiConverterMode.Disabled,
-            Fb2CngExecutablePath = preferences?.Fb2CngExecutablePath,
-            CustomConverterExecutablePath = preferences?.CustomConverterExecutablePath,
-            CustomConverterArguments = preferences?.CustomConverterArguments ?? [],
-            CustomConverterOutputMode = preferences?.CustomConverterOutputMode ?? UiConverterOutputMode.ExactDestinationPath
+            ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
+            Fb2CngExecutablePath = hasConfiguredConverter ? preferences!.Fb2CngExecutablePath : null
         };
     }
 

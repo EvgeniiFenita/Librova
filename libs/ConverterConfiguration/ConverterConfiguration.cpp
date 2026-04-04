@@ -10,8 +10,6 @@ bool SConverterConfiguration::IsValid() const noexcept
         return true;
     case EConverterConfigurationMode::BuiltInFb2Cng:
         return Fb2Cng.IsValid();
-    case EConverterConfigurationMode::CustomCommand:
-        return Custom.IsValid();
     }
 
     return false;
@@ -33,12 +31,6 @@ std::optional<Librova::ConverterCommand::SConverterCommandProfile> TryBuildComma
         return Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
             configuration.Fb2Cng.ExecutablePath,
             configuration.Fb2Cng.ConfigPath);
-    case EConverterConfigurationMode::CustomCommand:
-        return Librova::ConverterCommand::SConverterCommandProfile{
-            .ExecutablePath = configuration.Custom.ExecutablePath,
-            .ArgumentTemplate = configuration.Custom.ArgumentTemplate,
-            .OutputMode = configuration.Custom.OutputMode
-        };
     }
 
     return std::nullopt;

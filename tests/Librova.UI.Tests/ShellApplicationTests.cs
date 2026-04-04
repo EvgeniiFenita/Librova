@@ -351,7 +351,7 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
-    public async Task ShellSettings_CanSaveCustomConverterPreferences()
+    public async Task ShellSettings_CanSaveBuiltInConverterPreferences()
     {
         var preferencesStore = new FakePreferencesStore();
         var reloadCalls = 0;
@@ -376,21 +376,75 @@ public sealed class ShellApplicationTests
                 reloadCalls++;
                 return Task.CompletedTask;
             });
-        application.Shell.SelectedConverterMode = UiConverterMode.CustomCommand;
-        application.Shell.CustomConverterExecutablePath = @"D:\Tools\custom.exe";
-        application.Shell.CustomConverterArgumentsText = "--input" + Environment.NewLine + "{source}";
-        application.Shell.SelectedCustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath;
+        application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
         application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
 
         await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
-        Assert.Equal(UiConverterMode.CustomCommand, preferencesStore.LastSavedSnapshot?.ConverterMode);
-        Assert.Equal(@"C:\Libraries\Librova", preferencesStore.LastSavedSnapshot?.PreferredLibraryRoot);
-        Assert.Equal(@"D:\Tools\custom.exe", preferencesStore.LastSavedSnapshot?.CustomConverterExecutablePath);
-        Assert.NotNull(preferencesStore.LastSavedSnapshot?.CustomConverterArguments);
-        Assert.Equal(["--input", "{source}"], preferencesStore.LastSavedSnapshot!.CustomConverterArguments);
-        Assert.True(preferencesStore.LastSavedSnapshot.ForceEpubConversionOnImport);
+        Assert.NotNull(preferencesStore.LastSavedSnapshot);
+        Assert.Equal(UiConverterMode.BuiltInFb2Cng, preferencesStore.LastSavedSnapshot.ConverterMode);
+        Assert.Equal(@"C:\Libraries\Librova", preferencesStore.LastSavedSnapshot.PreferredLibraryRoot);
+        Assert.Equal(@"D:\Tools\fbc.exe", preferencesStore.LastSavedSnapshot.Fb2CngExecutablePath);
+        Assert.False(preferencesStore.LastSavedSnapshot.ForceEpubConversionOnImport);
         Assert.Equal(1, reloadCalls);
+    }
+
+    [Fact]
+    public async Task ShellSettings_ClearsForcedImportConversionWhenConverterPathIsEmpty()
+    {
+        var preferencesStore = new FakePreferencesStore();
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: preferencesStore);
+        application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
+
+        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
+
+        Assert.NotNull(preferencesStore.LastSavedSnapshot);
+        Assert.Equal(UiConverterMode.Disabled, preferencesStore.LastSavedSnapshot!.ConverterMode);
+        Assert.Null(preferencesStore.LastSavedSnapshot.Fb2CngExecutablePath);
+        Assert.False(preferencesStore.LastSavedSnapshot.ForceEpubConversionOnImport);
+    }
+
+    [Fact]
+    public void Create_DoesNotRestoreForcedImportConversionWithoutConfiguredConverter()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore(),
+            savedPreferencesOverride: new UiPreferencesSnapshot
+            {
+                ForceEpubConversionOnImport = true
+            });
+
+        Assert.False(application.Shell.ImportJobs.ShowForceEpubConversionOption);
+        Assert.False(application.Shell.ImportJobs.ForceEpubConversionOnImport);
     }
 
     [Fact]
@@ -403,7 +457,8 @@ public sealed class ShellApplicationTests
                 ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
                 PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
                 LibraryRoot = @"C:\Libraries\Librova",
-                ConverterMode = UiConverterMode.BuiltInFb2Cng
+                ConverterMode = UiConverterMode.BuiltInFb2Cng,
+                Fb2CngExecutablePath = @"C:\Tools\fbc.exe"
             },
             new FakeImportJobsService(),
             new FakeLibraryCatalogService());
@@ -445,42 +500,9 @@ public sealed class ShellApplicationTests
             stateStore: CreateIsolatedStateStore(),
             preferencesStore: new FakePreferencesStore());
 
-        application.Shell.SelectedConverterMode = UiConverterMode.BuiltInFb2Cng;
-
         await application.Shell.BrowseFb2CngExecutablePathCommand.ExecuteAsyncForTests();
 
         Assert.Equal(@"C:\Tools\fbc.exe", application.Shell.Fb2CngExecutablePath);
-    }
-
-    [Fact]
-    public async Task ShellSettings_BrowseCustomConverterExecutablePathCommand_AppliesSelectedExecutable()
-    {
-        var session = new ShellSession(
-            new CoreHostProcess(),
-            new CoreHostLaunchOptions
-            {
-                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
-                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
-                LibraryRoot = @"C:\Libraries\Librova",
-                ConverterMode = UiConverterMode.Disabled
-            },
-            new FakeImportJobsService(),
-            new FakeLibraryCatalogService());
-
-        var application = ShellApplication.Create(
-            session,
-            new FakePathSelectionService
-            {
-                SelectedExecutablePath = @"D:\Tools\custom.exe"
-            },
-            stateStore: CreateIsolatedStateStore(),
-            preferencesStore: new FakePreferencesStore());
-
-        application.Shell.SelectedConverterMode = UiConverterMode.CustomCommand;
-
-        await application.Shell.BrowseCustomConverterExecutablePathCommand.ExecuteAsyncForTests();
-
-        Assert.Equal(@"D:\Tools\custom.exe", application.Shell.CustomConverterExecutablePath);
     }
 
     [Fact]

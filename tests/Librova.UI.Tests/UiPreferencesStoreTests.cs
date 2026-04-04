@@ -30,10 +30,8 @@ public sealed class UiPreferencesStoreTests
         var store = new UiPreferencesStore(filePath);
         var expected = new UiPreferencesSnapshot
         {
-            ConverterMode = UiConverterMode.CustomCommand,
-            CustomConverterExecutablePath = @"C:\Tools\custom.exe",
-            CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
-            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory,
+            ConverterMode = UiConverterMode.BuiltInFb2Cng,
+            Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
             ForceEpubConversionOnImport = true
         };
 
@@ -42,9 +40,7 @@ public sealed class UiPreferencesStoreTests
 
         Assert.NotNull(actual);
         Assert.Equal(expected.ConverterMode, actual!.ConverterMode);
-        Assert.Equal(expected.CustomConverterExecutablePath, actual.CustomConverterExecutablePath);
-        Assert.Equal(expected.CustomConverterArguments, actual.CustomConverterArguments);
-        Assert.Equal(expected.CustomConverterOutputMode, actual.CustomConverterOutputMode);
+        Assert.Equal(expected.Fb2CngExecutablePath, actual.Fb2CngExecutablePath);
         Assert.Equal(expected.ForceEpubConversionOnImport, actual.ForceEpubConversionOnImport);
     }
 

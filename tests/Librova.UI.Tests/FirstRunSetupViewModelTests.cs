@@ -86,10 +86,8 @@ public sealed class FirstRunSetupViewModelTests
             Snapshot = new UiPreferencesSnapshot
             {
                 PreferredLibraryRoot = @"C:\Libraries\Old",
-                ConverterMode = CoreHost.UiConverterMode.CustomCommand,
-                CustomConverterExecutablePath = @"C:\Tools\convert.exe",
-                CustomConverterArguments = ["--source", "{source}"],
-                CustomConverterOutputMode = CoreHost.UiConverterOutputMode.SingleFileInDestinationDirectory
+                ConverterMode = CoreHost.UiConverterMode.BuiltInFb2Cng,
+                Fb2CngExecutablePath = @"C:\Tools\fbc.exe"
             }
         };
 
@@ -102,9 +100,8 @@ public sealed class FirstRunSetupViewModelTests
         await viewModel.ContinueCommand.ExecuteAsyncForTests();
 
         Assert.Equal(libraryRoot, preferences.LastSavedSnapshot?.PreferredLibraryRoot);
-        Assert.Equal(CoreHost.UiConverterMode.CustomCommand, preferences.LastSavedSnapshot?.ConverterMode);
-        Assert.Equal(@"C:\Tools\convert.exe", preferences.LastSavedSnapshot?.CustomConverterExecutablePath);
-        Assert.Equal(CoreHost.UiConverterOutputMode.SingleFileInDestinationDirectory, preferences.LastSavedSnapshot?.CustomConverterOutputMode);
+        Assert.Equal(CoreHost.UiConverterMode.BuiltInFb2Cng, preferences.LastSavedSnapshot?.ConverterMode);
+        Assert.Equal(@"C:\Tools\fbc.exe", preferences.LastSavedSnapshot?.Fb2CngExecutablePath);
     }
 
     [Fact]

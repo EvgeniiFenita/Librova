@@ -33,32 +33,6 @@ public sealed class CoreHostProcessTests
     }
 
     [Fact]
-    public void BuildArguments_IncludesCustomConverterOptions()
-    {
-        var options = new CoreHostLaunchOptions
-        {
-            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
-            PipePath = @"\\.\pipe\Librova.Test",
-            LibraryRoot = @"C:\Libraries\Librova",
-            ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
-            ConverterMode = UiConverterMode.CustomCommand,
-            CustomConverterExecutablePath = @"C:\Tools\custom.exe",
-            CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
-            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
-        };
-
-        var arguments = CoreHostProcess.BuildArguments(options);
-
-        Assert.Contains("--shutdown-event", arguments, StringComparison.Ordinal);
-        Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
-        Assert.Contains("--converter-exe", arguments, StringComparison.Ordinal);
-        Assert.Contains(@"""C:\Tools\custom.exe""", arguments, StringComparison.Ordinal);
-        Assert.Contains("--converter-arg", arguments, StringComparison.Ordinal);
-        Assert.Contains(@"""{source}""", arguments, StringComparison.Ordinal);
-        Assert.Contains("--converter-output directory", arguments, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void BuildArguments_EscapesTrailingBackslashesEmbeddedQuotesAndCyrillicForCommandLineToArgv()
     {
         var options = new CoreHostLaunchOptions
@@ -67,14 +41,9 @@ public sealed class CoreHostProcessTests
             PipePath = @"\\.\pipe\Librova ""quoted"" pipe\",
             LibraryRoot = @"C:\Книги\Новая папка\",
             ShutdownEventName = @"Local\Librova ""shutdown""\",
-            ConverterMode = UiConverterMode.CustomCommand,
-            CustomConverterExecutablePath = @"C:\Tools\conv ""special""\",
-            CustomConverterArguments =
-            [
-                @"--template=""{source}""",
-                @"C:\вход\folder\"
-            ],
-            CustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath
+            ConverterMode = UiConverterMode.BuiltInFb2Cng,
+            Fb2CngExecutablePath = @"C:\Tools\conv ""special""\",
+            Fb2CngConfigPath = @"C:\вход\folder\cfg ""quoted"".yaml"
         };
 
         var arguments = CoreHostProcess.BuildArguments(options);
@@ -88,14 +57,10 @@ public sealed class CoreHostProcessTests
         Assert.Equal(options.ShutdownEventName, parsedArguments[5]);
         Assert.Equal("--library-mode", parsedArguments[6]);
         Assert.Equal("open", parsedArguments[7]);
-        Assert.Equal("--converter-exe", parsedArguments[8]);
-        Assert.Equal(options.CustomConverterExecutablePath, parsedArguments[9]);
-        Assert.Equal("--converter-arg", parsedArguments[10]);
-        Assert.Equal(options.CustomConverterArguments[0], parsedArguments[11]);
-        Assert.Equal("--converter-arg", parsedArguments[12]);
-        Assert.Equal(options.CustomConverterArguments[1], parsedArguments[13]);
-        Assert.Equal("--converter-output", parsedArguments[14]);
-        Assert.Equal("exact", parsedArguments[15]);
+        Assert.Equal("--fb2cng-exe", parsedArguments[8]);
+        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[9]);
+        Assert.Equal("--fb2cng-config", parsedArguments[10]);
+        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[11]);
     }
 
     [Fact]

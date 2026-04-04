@@ -83,20 +83,18 @@ public sealed class CoreHostLaunchOptionsTests
     }
 
     [Fact]
-    public void Validate_AcceptsCustomConverterConfiguration()
+    public void Validate_RejectsUnknownConverterMode()
     {
         var options = new CoreHostLaunchOptions
         {
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
-            ConverterMode = UiConverterMode.CustomCommand,
-            CustomConverterExecutablePath = @"C:\Tools\custom.exe",
-            CustomConverterArguments = ["--input", "{source}", "--output-dir", "{destination_dir}"],
-            CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+            ConverterMode = (UiConverterMode)999
         };
 
-        options.Validate();
+        var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Contains("converter mode", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -109,19 +107,15 @@ public sealed class CoreHostLaunchOptionsTests
                 Snapshot = new UiPreferencesSnapshot
                 {
                     PreferredLibraryRoot = @"D:\Librova\Data",
-                    ConverterMode = UiConverterMode.CustomCommand,
-                    CustomConverterExecutablePath = @"D:\Tools\custom.exe",
-                    CustomConverterArguments = ["--input", "{source}"],
-                    CustomConverterOutputMode = UiConverterOutputMode.SingleFileInDestinationDirectory
+                    ConverterMode = UiConverterMode.BuiltInFb2Cng,
+                    Fb2CngExecutablePath = @"D:\Tools\fbc.exe"
                 }
             });
 
         Assert.Equal(@"D:\Librova\Data", options.LibraryRoot);
         Assert.StartsWith(@"Local\Librova.UI.Shutdown.", options.ShutdownEventName, StringComparison.Ordinal);
-        Assert.Equal(UiConverterMode.CustomCommand, options.ConverterMode);
-        Assert.Equal(@"D:\Tools\custom.exe", options.CustomConverterExecutablePath);
-        Assert.Equal(["--input", "{source}"], options.CustomConverterArguments);
-        Assert.Equal(UiConverterOutputMode.SingleFileInDestinationDirectory, options.CustomConverterOutputMode);
+        Assert.Equal(UiConverterMode.BuiltInFb2Cng, options.ConverterMode);
+        Assert.Equal(@"D:\Tools\fbc.exe", options.Fb2CngExecutablePath);
     }
 
     private sealed class FakePreferencesStore : IUiPreferencesStore

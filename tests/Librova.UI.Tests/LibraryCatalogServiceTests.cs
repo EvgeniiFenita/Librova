@@ -7,6 +7,8 @@ namespace Librova.UI.Tests;
 
 public sealed class LibraryCatalogServiceTests
 {
+    private const string PwshPath = @"C:\Program Files\PowerShell\7\pwsh.exe";
+
     [Fact]
     public async Task LibraryCatalogService_ListsBooksWithoutGeneratedProtoTypes()
     {
@@ -208,6 +210,138 @@ public sealed class LibraryCatalogServiceTests
     }
 
     [Fact]
+    public async Task LibraryCatalogService_ExportsFb2AsEpubThroughBuiltInConverterProfile()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-library-service-export-built-in",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var scriptPath = Path.Combine(sandboxRoot, "fbc-standin.ps1");
+            await File.WriteAllTextAsync(scriptPath,
+                """
+                $command = $args[0]
+                $toFlag = $args[1]
+                $outputFormat = $args[2]
+                $overwrite = $args[3]
+                $source = $args[4]
+                $destinationDir = $args[5]
+                if ($command -ne 'convert' -or $toFlag -ne '--to' -or $outputFormat -ne 'epub2' -or $overwrite -ne '--overwrite')
+                {
+                  Write-Error 'Unexpected built-in converter contract.'
+                  exit 1
+                }
+                if ($source -notmatch '[\\/]+Library[\\/]+Books[\\/]+')
+                {
+                  Write-Error 'Import conversion intentionally disabled for this test.'
+                  exit 1
+                }
+                New-Item -ItemType Directory -Force $destinationDir | Out-Null
+                $actualPath = Join-Path $destinationDir 'generated-by-built-in.epub'
+                Copy-Item -LiteralPath $source -Destination $actualPath -Force
+                """);
+
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.LibraryServiceExportBuiltInTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew,
+                ConverterMode = UiConverterMode.BuiltInFb2Cng,
+                Fb2CngExecutablePath = PwshPath,
+                Fb2CngConfigPath = scriptPath
+            };
+
+            var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
+            await File.WriteAllTextAsync(sourcePath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook>
+                  <description>
+                    <title-info>
+                      <book-title>Export Through Built-In Profile</book-title>
+                      <author>
+                        <first-name>Arkady</first-name>
+                        <last-name>Strugatsky</last-name>
+                      </author>
+                      <lang>en</lang>
+                    </title-info>
+                  </description>
+                  <body>
+                    <section><p>Body</p></section>
+                  </body>
+                </FictionBook>
+                """);
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var importService = new ImportJobsService(options.PipePath);
+            var jobId = await importService.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [sourcePath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await importService.WaitAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(2),
+                cancellation.Token));
+
+            var service = new LibraryCatalogService(options.PipePath);
+            var page = await service.ListBooksAsync(
+                new BookListRequestModel
+                {
+                    Text = "built-in profile",
+                    Limit = 10
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.Single(page.Items);
+            Assert.Equal(1UL, page.TotalCount);
+            Assert.Equal(BookFormatModel.Fb2, page.Items[0].Format);
+
+            var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportThroughBuiltInProfile.epub");
+            var exportedPath = await service.ExportBookAsync(
+                page.Items[0].BookId,
+                exportPath,
+                BookFormatModel.Epub,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.Equal(Path.GetFullPath(exportPath), Path.GetFullPath(exportedPath!));
+            Assert.True(File.Exists(exportPath));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task LibraryCatalogService_LoadsAggregateLibraryStatisticsWithoutGeneratedProtoTypes()
     {
         var sandboxRoot = Path.Combine(
@@ -295,129 +429,6 @@ public sealed class LibraryCatalogServiceTests
             Assert.True(databaseSizeBytes > 0);
             Assert.Equal(expectedManagedBookSizeBytes, statistics.TotalManagedBookSizeBytes);
             Assert.NotEqual(expectedManagedBookSizeBytes + databaseSizeBytes, statistics.TotalManagedBookSizeBytes);
-        }
-        finally
-        {
-            try
-            {
-                Directory.Delete(sandboxRoot, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
-    }
-
-    [Fact]
-    public async Task LibraryCatalogService_ExportsFb2AsEpubWhenConverterIsConfigured()
-    {
-        var sandboxRoot = Path.Combine(
-            Path.GetTempPath(),
-            "librova-ui-library-service-export-converted",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(sandboxRoot);
-
-        try
-        {
-            var scriptPath = Path.Combine(sandboxRoot, "converter.ps1");
-            await File.WriteAllTextAsync(scriptPath,
-                """
-                param(
-                  [string]$source,
-                  [string]$destination
-                )
-                if ($source -notmatch '[\\/]+Library[\\/]+Books[\\/]+')
-                {
-                  Write-Error 'Import conversion intentionally disabled for this test.'
-                  exit 1
-                }
-                Copy-Item -LiteralPath $source -Destination $destination -Force
-                """);
-
-            var options = new CoreHostLaunchOptions
-            {
-                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
-                    AppContext.BaseDirectory,
-                    "..",
-                    "..",
-                    "..",
-                    "..")),
-                PipePath = $@"\\.\pipe\Librova.UI.LibraryServiceExportConvertedTests.{Environment.ProcessId}.{Environment.TickCount64}",
-                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
-                LibraryOpenMode = UiLibraryOpenMode.CreateNew,
-                ConverterMode = UiConverterMode.CustomCommand,
-                CustomConverterExecutablePath = @"C:\Program Files\PowerShell\7\pwsh.exe",
-                CustomConverterArguments = ["-File", scriptPath, "{source}", "{destination}"],
-                CustomConverterOutputMode = UiConverterOutputMode.ExactDestinationPath
-            };
-
-            var sourcePath = Path.Combine(sandboxRoot, "book.fb2");
-            await File.WriteAllTextAsync(sourcePath,
-                """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <FictionBook>
-                  <description>
-                    <title-info>
-                      <book-title>Export As EPUB Through Service</book-title>
-                      <author>
-                        <first-name>Arkady</first-name>
-                        <last-name>Strugatsky</last-name>
-                      </author>
-                      <lang>en</lang>
-                    </title-info>
-                  </description>
-                  <body>
-                    <section><p>Body</p></section>
-                  </body>
-                </FictionBook>
-                """);
-
-            await using var process = new CoreHostProcess();
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            await process.StartAsync(options, cancellation.Token);
-
-            var importService = new ImportJobsService(options.PipePath);
-            var jobId = await importService.StartAsync(
-                new StartImportRequestModel
-                {
-                    SourcePaths = [sourcePath],
-                    WorkingDirectory = Path.Combine(sandboxRoot, "Work")
-                },
-                TimeSpan.FromSeconds(5),
-                cancellation.Token);
-
-            Assert.True(await importService.WaitAsync(
-                jobId,
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(2),
-                cancellation.Token));
-
-            var service = new LibraryCatalogService(options.PipePath);
-            var page = await service.ListBooksAsync(
-                new BookListRequestModel
-                {
-                    Text = "export as epub",
-                    Limit = 10
-                },
-                TimeSpan.FromSeconds(5),
-                cancellation.Token);
-
-            Assert.Single(page.Items);
-            Assert.Equal(1UL, page.TotalCount);
-
-            var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportAsEpubThroughService.epub");
-            var exportedPath = await service.ExportBookAsync(
-                page.Items[0].BookId,
-                exportPath,
-                BookFormatModel.Epub,
-                TimeSpan.FromSeconds(5),
-                cancellation.Token);
-
-            Assert.Equal(Path.GetFullPath(exportPath), Path.GetFullPath(exportedPath!));
-            Assert.True(File.Exists(exportPath));
         }
         finally
         {
