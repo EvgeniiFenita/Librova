@@ -47,7 +47,16 @@ Backlog edit rules:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 ### Minor
+
+- `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
+  - Status: `Open`
+  - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
+
 ### Low
+
+- `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
+  - Status: `Open`
+  - Note: when `Export As EPUB` needs to decode a compressed managed `FB2` and then run conversion, the UI currently looks idle while no output file has appeared yet; add visible export-in-progress feedback such as disabled actions, wait cursor, status text, or progress so the running operation is obvious.
 
 ## 4. Closed Backlog
 
