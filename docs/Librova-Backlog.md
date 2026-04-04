@@ -39,11 +39,6 @@ Backlog edit rules:
 ## 3. Open Backlog
 
 ### Major
-
-- `#40` parse `series` and `genres` from `FB2` / `EPUB` and show them in book details.
-  - Status: `Open`
-  - Note: keep this slice limited to metadata extraction, persistence where needed, transport, and details-panel display; browser-level filtering and dedicated browsing UX stay out of scope for this task.
-
 - `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
   - Status: `Open`
   - Note: focus this item on browse-time behavior: filter sources, filter UI, request plumbing, result counts, and any related series/genres browsing flows rather than parser-only metadata extraction.
@@ -136,6 +131,10 @@ Backlog edit rules:
 - `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
   - Status: `Closed`
   - Note: converter argument expansion now resolves placeholders in one explicit pass instead of repeatedly re-running replacement over already expanded text, and regression coverage now preserves literal `{output_format}`-style fragments when they appear inside source or destination paths.
+
+- `#40` parse `series` and `genres` from `FB2` / `EPUB` and show them in book details.
+  - Status: `Closed`
+  - Note: `FB2` parsing now extracts `<genre>` plus `sequence`, `EPUB` parsing now extracts `dc:subject` plus collection-based series metadata, and real-host/UI regressions keep those fields visible in the `Library` details panel while browse-time filtering remains tracked under `#26`.
 
 ### Critical
 

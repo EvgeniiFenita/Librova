@@ -98,11 +98,11 @@ The user can:
 - open a right-hand details panel without leaving the `Library` section;
 - keep the selected card visible by re-centering it in the scroll viewport when the details panel opens or closes and the grid reflows;
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;
-- inspect richer metadata for the selected book;
+- inspect richer metadata for the selected book, including series and genres when the source file provides them;
 - export the selected book;
 - move the selected book to the Windows `Recycle Bin`.
 
-Series and genres are expected to become first-class browsing metadata rather than incidental parser output.
+Series and genres are already surfaced in the details panel when available; first-class browser filtering and browsing workflows for them remain future work.
 
 ### 3.4 Export
 

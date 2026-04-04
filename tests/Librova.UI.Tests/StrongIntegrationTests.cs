@@ -245,6 +245,114 @@ public sealed class StrongIntegrationTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ShowsFb2SeriesAndGenresInDetailsAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-fb2-series-genres");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserFb2SeriesGenres");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            var sourcePath = CreateFb2File(
+                sandboxRoot,
+                "roadside.fb2",
+                "Roadside Picnic",
+                "Arkady",
+                "Strugatsky",
+                genres: ["science_fiction", "adventure"],
+                series: "Noon Universe",
+                seriesIndex: 1.5);
+
+            var jobId = await session.ImportJobs.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [sourcePath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work", "roadside")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await session.ImportJobs.WaitAsync(jobId, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), cancellation.Token));
+
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot);
+            await viewModel.RefreshAsync();
+            await viewModel.ToggleSelectedBookAsync(Assert.Single(viewModel.Books));
+
+            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Series" && pair.Value.StartsWith("Noon Universe #", StringComparison.Ordinal));
+            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Genres" && pair.Value == "adventure, science_fiction");
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowsEpubSeriesAndGenresInDetailsAgainstRealHost()
+    {
+        var sandboxRoot = CreateSandboxRoot("browser-epub-series-genres");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserEpubSeriesGenres");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            var sourcePath = CreateEpubFile(
+                sandboxRoot,
+                "leviathan.epub",
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid">
+                  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                    <dc:title>Leviathan Wakes</dc:title>
+                    <dc:language>en</dc:language>
+                    <dc:creator>James S. A. Corey</dc:creator>
+                    <dc:subject>Science Fiction</dc:subject>
+                    <dc:subject>Space Opera</dc:subject>
+                    <dc:identifier id="bookid">urn:isbn:9780316129084</dc:identifier>
+                    <meta property="belongs-to-collection" id="series">The Expanse</meta>
+                    <meta refines="#series" property="collection-type">series</meta>
+                    <meta refines="#series" property="group-position">1</meta>
+                  </metadata>
+                  <manifest>
+                    <item id="chapter1" href="text/chapter1.xhtml" media-type="application/xhtml+xml"/>
+                  </manifest>
+                  <spine>
+                    <itemref idref="chapter1"/>
+                  </spine>
+                </package>
+                """);
+
+            var jobId = await session.ImportJobs.StartAsync(
+                new StartImportRequestModel
+                {
+                    SourcePaths = [sourcePath],
+                    WorkingDirectory = Path.Combine(sandboxRoot, "Work", "leviathan")
+                },
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(await session.ImportJobs.WaitAsync(jobId, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), cancellation.Token));
+
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot);
+            await viewModel.RefreshAsync();
+            await viewModel.ToggleSelectedBookAsync(Assert.Single(viewModel.Books));
+
+            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Series" && pair.Value.StartsWith("The Expanse #", StringComparison.Ordinal));
+            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Genres" && pair.Value == "Science Fiction, Space Opera");
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_MovesSelectedBookToTrashAgainstRealHost()
     {
         var sandboxRoot = CreateSandboxRoot("browser-trash");
@@ -574,30 +682,42 @@ public sealed class StrongIntegrationTests
         string title,
         string authorFirstName,
         string authorLastName,
-        string? isbn = null) =>
-        $$"""
+        string? isbn = null,
+        IReadOnlyList<string>? genres = null,
+        string? series = null,
+        double? seriesIndex = null)
+    {
+        var genresXml = string.Concat((genres ?? []).Select(genre => $"              <genre>{genre}</genre>{Environment.NewLine}"));
+        var seriesXml = string.IsNullOrWhiteSpace(series)
+            ? string.Empty
+            : $"              <sequence name=\"{series}\"{(seriesIndex is null ? string.Empty : $" number=\"{seriesIndex.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"")} />{Environment.NewLine}";
+        var publishInfoXml = string.IsNullOrWhiteSpace(isbn)
+            ? string.Empty
+            : $"""
+            <publish-info>
+              <isbn>{isbn}</isbn>
+            </publish-info>
+            """;
+
+        return $"""
         <?xml version="1.0" encoding="UTF-8"?>
         <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
           <description>
             <title-info>
-              <book-title>{{title}}</book-title>
-              <author>
-                <first-name>{{authorFirstName}}</first-name>
-                <last-name>{{authorLastName}}</last-name>
+              <book-title>{title}</book-title>
+        {genresXml}{seriesXml}      <author>
+                <first-name>{authorFirstName}</first-name>
+                <last-name>{authorLastName}</last-name>
               </author>
               <lang>en</lang>
             </title-info>
-            {{(string.IsNullOrWhiteSpace(isbn) ? string.Empty : $"""
-            <publish-info>
-              <isbn>{isbn}</isbn>
-            </publish-info>
-            """)}}
-          </description>
+        {publishInfoXml}  </description>
           <body>
             <section><p>Body</p></section>
           </body>
         </FictionBook>
         """;
+    }
 
     private static string CreateFb2File(
         string sandboxRoot,
@@ -605,10 +725,43 @@ public sealed class StrongIntegrationTests
         string title,
         string authorFirstName,
         string authorLastName,
-        string? isbn = null)
+        string? isbn = null,
+        IReadOnlyList<string>? genres = null,
+        string? series = null,
+        double? seriesIndex = null)
     {
         var sourcePath = Path.Combine(sandboxRoot, fileName);
-        File.WriteAllText(sourcePath, CreateFb2Document(title, authorFirstName, authorLastName, isbn));
+        File.WriteAllText(sourcePath, CreateFb2Document(title, authorFirstName, authorLastName, isbn, genres, series, seriesIndex));
+        return sourcePath;
+    }
+
+    private static string CreateEpubFile(string sandboxRoot, string fileName, string packageDocument)
+    {
+        var sourcePath = Path.Combine(sandboxRoot, fileName);
+        using var stream = File.Create(sourcePath);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+        WriteZipEntry(archive, "mimetype", "application/epub+zip");
+        WriteZipEntry(
+            archive,
+            "META-INF/container.xml",
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+              <rootfiles>
+                <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+              </rootfiles>
+            </container>
+            """);
+        WriteZipEntry(archive, "OEBPS/content.opf", packageDocument);
+        WriteZipEntry(
+            archive,
+            "OEBPS/text/chapter1.xhtml",
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <html xmlns="http://www.w3.org/1999/xhtml">
+              <body><p>Chapter 1</p></body>
+            </html>
+            """);
         return sourcePath;
     }
 

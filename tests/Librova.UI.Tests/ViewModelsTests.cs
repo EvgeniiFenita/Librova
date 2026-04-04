@@ -1086,6 +1086,8 @@ public sealed class ViewModelsTests
 
         Assert.NotNull(viewModel.SelectedBookDetails);
         Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Publisher" && pair.Value == "Macmillan");
+        Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Series" && pair.Value.StartsWith("Noon Universe #", StringComparison.Ordinal));
+        Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Genres" && pair.Value == "sci-fi, adventure");
         Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Size" && pair.Value == "0.00 MB");
         Assert.Equal("Aliens land only in one city.", viewModel.SelectedBookAnnotationText);
     }
@@ -1639,10 +1641,12 @@ public sealed class ViewModelsTests
                 Title = "Roadside Picnic",
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
+                Series = "Noon Universe",
+                SeriesIndex = 1.5,
                 Publisher = "Macmillan",
                 Year = 1972,
                 Isbn = "978-5-17-000000-1",
-                Tags = ["sci-fi"],
+                Tags = ["sci-fi", "adventure"],
                 Description = "Aliens land only in one city.",
                 Identifier = "details-id",
                 Format = BookFormatModel.Epub,

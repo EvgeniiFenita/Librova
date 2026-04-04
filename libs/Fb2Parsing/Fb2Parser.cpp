@@ -355,6 +355,15 @@ std::string ReplaceEncodingDeclaration(std::string text)
     return value;
 }
 
+void AppendNonEmptyNodeText(std::vector<std::string>& values, const pugi::xml_node& node)
+{
+    const std::optional<std::string> value = TryReadNodeText(node);
+    if (value.has_value())
+    {
+        values.push_back(*value);
+    }
+}
+
 [[nodiscard]] std::string RequireTextChild(const pugi::xml_node& parent, const char* childName, const char* errorLabel)
 {
     const std::optional<std::string> value = TryReadTextChild(parent, childName);
@@ -629,6 +638,14 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
             " [title_info_author_nodes=" + std::to_string(CountAuthorNodes(titleInfoNode))
             + ", title_info_preview=\"" + BuildNodePreview(titleInfoNode) + "\""
             + ", document_info_preview=\"" + BuildNodePreview(FindFirstChildByLocalName(descriptionNode, "document-info")) + "\"]");
+    }
+
+    for (const pugi::xml_node childNode : titleInfoNode.children())
+    {
+        if (MatchesLocalName(childNode, "genre"))
+        {
+            AppendNonEmptyNodeText(parsedBook.Metadata.TagsUtf8, childNode);
+        }
     }
 
     if (const std::optional<std::string> sequenceName = TryReadTextChild(titleInfoNode.child("sequence"), "name"))

@@ -158,6 +158,52 @@ std::filesystem::path CreateSampleEpub(const std::filesystem::path& outputPath)
     return outputPath;
 }
 
+std::filesystem::path CreateCustomEpub(
+    const std::filesystem::path& outputPath,
+    const std::string& packageDocument,
+    const std::vector<std::pair<std::string, std::string>>& textEntries = {},
+    const std::vector<std::pair<std::string, std::vector<std::byte>>>& binaryEntries = {})
+{
+    int errorCode = ZIP_ER_OK;
+    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create EPUB fixture archive.");
+    }
+
+    AddZipEntry(
+        archive,
+        "mimetype",
+        "application/epub+zip");
+    AddZipEntry(
+        archive,
+        "META-INF/container.xml",
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>)");
+    AddZipEntry(archive, "OEBPS/content.opf", packageDocument);
+
+    for (const auto& [entryPath, text] : textEntries)
+    {
+        AddZipEntry(archive, entryPath, text);
+    }
+
+    for (const auto& [entryPath, bytes] : binaryEntries)
+    {
+        AddZipEntry(archive, entryPath, bytes);
+    }
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize EPUB fixture archive.");
+    }
+
+    return outputPath;
+}
+
 } // namespace
 
 TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "[epub-parsing]")
@@ -223,4 +269,53 @@ TEST_CASE("EPUB parser opens Unicode file paths on Windows", "[epub-parsing]")
 
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
     REQUIRE(parsedBook.CoverBytes == std::vector<std::byte>({std::byte{0x01}, std::byte{0x23}, std::byte{0x45}}));
+}
+
+TEST_CASE("EPUB parser extracts subjects and collection series metadata", "[epub-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-series-tags");
+    const std::filesystem::path epubPath = CreateCustomEpub(
+        sandbox.GetPath() / "series-tags.epub",
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Leviathan Wakes</dc:title>
+    <dc:language>en</dc:language>
+    <dc:creator>James S. A. Corey</dc:creator>
+    <dc:subject>Science Fiction</dc:subject>
+    <dc:subject> Space Opera </dc:subject>
+    <dc:identifier id="bookid">urn:isbn:9780316129084</dc:identifier>
+    <dc:description>Humanity has spread across the solar system.</dc:description>
+    <meta property="belongs-to-collection" id="series">The Expanse</meta>
+    <meta refines="#series" property="collection-type">series</meta>
+    <meta refines="#series" property="group-position">1.0</meta>
+  </metadata>
+  <manifest>
+    <item id="chapter1" href="text/chapter1.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="chapter1"/>
+  </spine>
+</package>)",
+        {
+            {
+                "OEBPS/text/chapter1.xhtml",
+                R"(<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <body><p>Chapter 1</p></body>
+</html>)"
+            }
+        });
+
+    const Librova::EpubParsing::CEpubParser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(epubPath);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Leviathan Wakes");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"James S. A. Corey"}));
+    REQUIRE(parsedBook.Metadata.Language == "en");
+    REQUIRE(parsedBook.Metadata.TagsUtf8 == std::vector<std::string>({"Science Fiction", "Space Opera"}));
+    REQUIRE(parsedBook.Metadata.SeriesUtf8 == std::optional<std::string>{"The Expanse"});
+    REQUIRE(parsedBook.Metadata.SeriesIndex == std::optional<double>{1.0});
+    REQUIRE(parsedBook.Metadata.Identifier == std::optional<std::string>{"urn:isbn:9780316129084"});
+    REQUIRE(parsedBook.Metadata.DescriptionUtf8 == std::optional<std::string>{"Humanity has spread across the solar system."});
 }

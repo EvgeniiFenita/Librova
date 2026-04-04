@@ -53,6 +53,8 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
   <description>
     <title-info>
       <book-title>Пикник на обочине</book-title>
+      <genre>science_fiction</genre>
+      <genre> adventure </genre>
       <author>
         <first-name>Аркадий</first-name>
         <last-name>Стругацкий</last-name>
@@ -93,6 +95,7 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"Аркадий Стругацкий", "Борис Стругацкий"}));
     REQUIRE(parsedBook.Metadata.Language == "ru");
+    REQUIRE(parsedBook.Metadata.TagsUtf8 == std::vector<std::string>({"science_fiction", "adventure"}));
     REQUIRE(parsedBook.Metadata.SeriesUtf8 == std::optional<std::string>{"Миры"});
     REQUIRE(parsedBook.Metadata.SeriesIndex == std::optional<double>{1.5});
     REQUIRE(parsedBook.Metadata.DescriptionUtf8 == std::optional<std::string>{"Классика советской фантастики"});

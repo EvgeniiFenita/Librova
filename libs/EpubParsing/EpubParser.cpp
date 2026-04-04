@@ -1,6 +1,7 @@
 #include "EpubParsing/EpubParser.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cctype>
 #include <cstdint>
 #include <filesystem>
@@ -134,9 +135,220 @@ static_assert(!std::is_move_constructible_v<CZipArchive>);
     return value;
 }
 
+[[nodiscard]] std::string Trim(const std::string_view value)
+{
+    std::size_t start = 0;
+    std::size_t end = value.size();
+
+    while (start < end && std::isspace(static_cast<unsigned char>(value[start])) != 0)
+    {
+        ++start;
+    }
+
+    while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0)
+    {
+        --end;
+    }
+
+    return std::string{value.substr(start, end - start)};
+}
+
+[[nodiscard]] bool MatchesLocalName(const std::string_view qualifiedName, const std::string_view localName)
+{
+    const std::size_t separatorIndex = qualifiedName.find(':');
+    const std::string_view currentLocalName = separatorIndex == std::string_view::npos
+        ? qualifiedName
+        : qualifiedName.substr(separatorIndex + 1);
+    return currentLocalName == localName;
+}
+
+[[nodiscard]] bool MatchesLocalName(const pugi::xml_node& node, const std::string_view localName)
+{
+    return MatchesLocalName(node.name(), localName);
+}
+
+[[nodiscard]] bool MatchesLocalName(const pugi::xml_attribute& attribute, const std::string_view localName)
+{
+    return MatchesLocalName(attribute.name(), localName);
+}
+
+[[nodiscard]] pugi::xml_node FindFirstChildByLocalName(const pugi::xml_node& parent, const std::string_view localName)
+{
+    for (const pugi::xml_node childNode : parent.children())
+    {
+        if (MatchesLocalName(childNode, localName))
+        {
+            return childNode;
+        }
+    }
+
+    return {};
+}
+
+[[nodiscard]] std::optional<std::string> TryReadNodeText(const pugi::xml_node& node)
+{
+    const std::string value = Trim(node.text().as_string());
+    if (value.empty())
+    {
+        return std::nullopt;
+    }
+
+    return value;
+}
+
+[[nodiscard]] std::string RequireTextChildByLocalName(const pugi::xml_node& parent, const char* childName, const char* errorLabel)
+{
+    const std::optional<std::string> value = TryReadNodeText(FindFirstChildByLocalName(parent, childName));
+    if (!value.has_value())
+    {
+        throw std::runtime_error(std::string{"Missing required EPUB node: "} + errorLabel);
+    }
+
+    return *value;
+}
+
+[[nodiscard]] std::optional<std::string> TryReadAttributeByLocalName(const pugi::xml_node& node, const std::string_view localName)
+{
+    for (const pugi::xml_attribute attribute : node.attributes())
+    {
+        if (MatchesLocalName(attribute, localName))
+        {
+            const std::string value = Trim(attribute.as_string());
+            if (!value.empty())
+            {
+                return value;
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+[[nodiscard]] std::optional<std::string> FindRefinedMetaValue(
+    const pugi::xml_node& metadataNode,
+    const std::string_view targetId,
+    const std::string_view propertyName)
+{
+    if (targetId.empty())
+    {
+        return std::nullopt;
+    }
+
+    const std::string expectedRef = "#" + std::string{targetId};
+    for (const pugi::xml_node childNode : metadataNode.children())
+    {
+        if (!MatchesLocalName(childNode, "meta"))
+        {
+            continue;
+        }
+
+        const std::optional<std::string> refines = TryReadAttributeByLocalName(childNode, "refines");
+        const std::optional<std::string> property = TryReadAttributeByLocalName(childNode, "property");
+        if (!refines.has_value() || !property.has_value())
+        {
+            continue;
+        }
+
+        if (*refines == expectedRef && *property == propertyName)
+        {
+            return TryReadNodeText(childNode);
+        }
+    }
+
+    return std::nullopt;
+}
+
+template <typename TValue>
+TValue ParseExactNumber(const std::string_view value, const char* errorMessage)
+{
+    TValue parsedValue{};
+    const char* begin = value.data();
+    const char* end = value.data() + value.size();
+    const auto [parseEnd, errorCode] = std::from_chars(begin, end, parsedValue);
+
+    if (errorCode != std::errc{} || parseEnd != end)
+    {
+        throw std::runtime_error(errorMessage);
+    }
+
+    return parsedValue;
+}
+
+void AppendUniqueText(std::vector<std::string>& values, const std::string& value)
+{
+    if (std::find(values.begin(), values.end(), value) == values.end())
+    {
+        values.push_back(value);
+    }
+}
+
+void ParseSubjects(const pugi::xml_node& metadataNode, Librova::Domain::SParsedBook& parsedBook)
+{
+    for (const pugi::xml_node childNode : metadataNode.children())
+    {
+        if (!MatchesLocalName(childNode, "subject"))
+        {
+            continue;
+        }
+
+        const std::optional<std::string> subject = TryReadNodeText(childNode);
+        if (subject.has_value())
+        {
+            AppendUniqueText(parsedBook.Metadata.TagsUtf8, *subject);
+        }
+    }
+}
+
+void ParseSeriesMetadata(const pugi::xml_node& metadataNode, Librova::Domain::SParsedBook& parsedBook)
+{
+    for (const pugi::xml_node childNode : metadataNode.children())
+    {
+        if (!MatchesLocalName(childNode, "meta"))
+        {
+            continue;
+        }
+
+        const std::optional<std::string> property = TryReadAttributeByLocalName(childNode, "property");
+        if (!property.has_value() || *property != "belongs-to-collection")
+        {
+            continue;
+        }
+
+        const std::optional<std::string> collectionName = TryReadNodeText(childNode);
+        if (!collectionName.has_value())
+        {
+            continue;
+        }
+
+        const std::optional<std::string> itemId = TryReadAttributeByLocalName(childNode, "id");
+        const std::optional<std::string> collectionType = itemId.has_value()
+            ? FindRefinedMetaValue(metadataNode, *itemId, "collection-type")
+            : std::nullopt;
+
+        if (collectionType.has_value() && *collectionType != "series")
+        {
+            continue;
+        }
+
+        parsedBook.Metadata.SeriesUtf8 = *collectionName;
+
+        if (itemId.has_value())
+        {
+            if (const std::optional<std::string> groupPosition = FindRefinedMetaValue(metadataNode, *itemId, "group-position"))
+            {
+                parsedBook.Metadata.SeriesIndex = ParseExactNumber<double>(
+                    *groupPosition,
+                    "Failed to parse EPUB series index.");
+            }
+        }
+
+        return;
+    }
+}
+
 [[nodiscard]] std::optional<std::string> TryFindCoverPath(const pugi::xml_node& packageNode)
 {
-    const pugi::xml_node manifestNode = packageNode.child("manifest");
+    const pugi::xml_node manifestNode = FindFirstChildByLocalName(packageNode, "manifest");
 
     if (!manifestNode)
     {
@@ -145,9 +357,14 @@ static_assert(!std::is_move_constructible_v<CZipArchive>);
 
     std::optional<std::string> coverItemId;
 
-    for (const pugi::xml_node metaNode : packageNode.child("metadata").children("meta"))
+    for (const pugi::xml_node metaNode : FindFirstChildByLocalName(packageNode, "metadata").children())
     {
-        if (std::string_view{metaNode.attribute("name").as_string()} == "cover")
+        if (!MatchesLocalName(metaNode, "meta"))
+        {
+            continue;
+        }
+
+        if (TryReadAttributeByLocalName(metaNode, "name") == std::optional<std::string>{"cover"})
         {
             const std::string contentValue = metaNode.attribute("content").as_string();
 
@@ -161,8 +378,13 @@ static_assert(!std::is_move_constructible_v<CZipArchive>);
 
     if (coverItemId.has_value())
     {
-        for (const pugi::xml_node itemNode : manifestNode.children("item"))
+        for (const pugi::xml_node itemNode : manifestNode.children())
         {
+            if (!MatchesLocalName(itemNode, "item"))
+            {
+                continue;
+            }
+
             if (std::string_view{itemNode.attribute("id").as_string()} == *coverItemId)
             {
                 const std::string href = itemNode.attribute("href").as_string();
@@ -175,8 +397,13 @@ static_assert(!std::is_move_constructible_v<CZipArchive>);
         }
     }
 
-    for (const pugi::xml_node itemNode : manifestNode.children("item"))
+    for (const pugi::xml_node itemNode : manifestNode.children())
     {
+        if (!MatchesLocalName(itemNode, "item"))
+        {
+            continue;
+        }
+
         const std::string_view properties = itemNode.attribute("properties").as_string();
 
         if (properties.find("cover-image") != std::string_view::npos)
@@ -219,7 +446,12 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
     CZipArchive archive(filePath);
 
     const pugi::xml_document containerDocument = ParseXml(archive.ReadText("META-INF/container.xml"), "META-INF/container.xml");
-    const pugi::xml_node rootfileNode = containerDocument.child("container").child("rootfiles").child("rootfile");
+    const pugi::xml_node rootfileNode =
+        FindFirstChildByLocalName(
+            FindFirstChildByLocalName(
+                FindFirstChildByLocalName(containerDocument, "container"),
+                "rootfiles"),
+            "rootfile");
 
     if (!rootfileNode)
     {
@@ -234,8 +466,8 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
     }
 
     const pugi::xml_document packageDocument = ParseXml(archive.ReadText(PathToArchiveString(packagePath)), "package.opf");
-    const pugi::xml_node packageNode = packageDocument.child("package");
-    const pugi::xml_node metadataNode = packageNode.child("metadata");
+    const pugi::xml_node packageNode = FindFirstChildByLocalName(packageDocument, "package");
+    const pugi::xml_node metadataNode = FindFirstChildByLocalName(packageNode, "metadata");
 
     if (!packageNode || !metadataNode)
     {
@@ -244,12 +476,17 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
 
     Librova::Domain::SParsedBook parsedBook;
     parsedBook.SourceFormat = Librova::Domain::EBookFormat::Epub;
-    parsedBook.Metadata.TitleUtf8 = RequireTextChild(metadataNode, "dc:title", "dc:title");
-    parsedBook.Metadata.Language = RequireTextChild(metadataNode, "dc:language", "dc:language");
+    parsedBook.Metadata.TitleUtf8 = RequireTextChildByLocalName(metadataNode, "title", "dc:title");
+    parsedBook.Metadata.Language = RequireTextChildByLocalName(metadataNode, "language", "dc:language");
 
-    for (const pugi::xml_node creatorNode : metadataNode.children("dc:creator"))
+    for (const pugi::xml_node creatorNode : metadataNode.children())
     {
-        const std::string author = creatorNode.text().as_string();
+        if (!MatchesLocalName(creatorNode, "creator"))
+        {
+            continue;
+        }
+
+        const std::string author = Trim(creatorNode.text().as_string());
 
         if (!author.empty())
         {
@@ -262,9 +499,12 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
         throw std::runtime_error("EPUB metadata must contain at least one dc:creator.");
     }
 
-    if (const pugi::xml_node identifierNode = metadataNode.child("dc:identifier"))
+    ParseSubjects(metadataNode, parsedBook);
+    ParseSeriesMetadata(metadataNode, parsedBook);
+
+    if (const pugi::xml_node identifierNode = FindFirstChildByLocalName(metadataNode, "identifier"))
     {
-        const std::string identifier = identifierNode.text().as_string();
+        const std::string identifier = Trim(identifierNode.text().as_string());
 
         if (!identifier.empty())
         {
@@ -272,9 +512,9 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
         }
     }
 
-    if (const pugi::xml_node descriptionNode = metadataNode.child("dc:description"))
+    if (const pugi::xml_node descriptionNode = FindFirstChildByLocalName(metadataNode, "description"))
     {
-        const std::string description = descriptionNode.text().as_string();
+        const std::string description = Trim(descriptionNode.text().as_string());
 
         if (!description.empty())
         {
