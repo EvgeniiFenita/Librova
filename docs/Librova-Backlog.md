@@ -84,6 +84,10 @@ Backlog edit rules:
   - Status: `Open`
   - Note: the native side already resolves managed paths within the library root, but the Avalonia browser currently trusts `cover_path` values from IPC directly when loading images; add a local guard so UI file IO still rejects out-of-root paths if the contract is violated.
 
+- `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
+  - Status: `Open`
+  - Note: `#39` closed the single-source version display; this item expands that into a proper About section — a visually distinct card with application version, author name, and email address, styled in line with the existing design system.
+
 - `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
   - Status: `Open`
   - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
