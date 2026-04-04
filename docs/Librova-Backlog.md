@@ -48,9 +48,6 @@ Working rule:
   - Note: the displayed UI version must come from a single shared version definition used across the application instead of duplicated constants or per-project version strings, so native host, managed UI, packaging, and any future version display cannot drift apart.
 
 - `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
-  - Status: `Open`
-  - Note: current replacement logic can re-expand `{output_format}` and similar tokens if they appear in the source or destination path text; keep placeholder substitution explicit and add a regression test for filenames containing literal placeholder-like fragments.
-
 ### Low
 
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
@@ -123,6 +120,10 @@ Working rule:
 - `#37` remove fixed-sleep readiness from named-pipe tests and replace it with deterministic synchronization.
   - Status: `Closed`
   - Note: named-pipe channel, host, and client tests now wait on explicit server-ready signaling before connecting instead of relying on `sleep_for(20ms)`, keeping IPC verification deterministic and aligned with the repository rule against fixed waits.
+
+- `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
+  - Status: `Closed`
+  - Note: converter argument expansion now resolves placeholders in one explicit pass instead of repeatedly re-running replacement over already expanded text, and regression coverage now preserves literal `{output_format}`-style fragments when they appear inside source or destination paths.
 
 ### Critical
 

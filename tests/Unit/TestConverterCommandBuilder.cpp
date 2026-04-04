@@ -91,3 +91,30 @@ TEST_CASE("Converter command builder resolves fb2cng output directory contract",
     }));
     REQUIRE(command.ExpectedOutputPath == std::filesystem::path{"Temp/converted/book.epub"});
 }
+
+TEST_CASE("Converter command builder preserves literal placeholder text inside replacement paths", "[converter-command]")
+{
+    const Librova::ConverterCommand::SConverterCommandProfile profile{
+        .ExecutablePath = "tools/custom-converter.exe",
+        .ArgumentTemplate = {"--input", "{source}", "--output", "{destination}", "--dir", "{destination_dir}"},
+        .OutputMode = Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath
+    };
+
+    const Librova::Domain::SConversionRequest request{
+        .SourcePath = std::filesystem::path{u8"Import/{output_format}/source.fb2"},
+        .DestinationPath = std::filesystem::path{u8"Temp/{output_format}/book.epub"},
+        .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+        .DestinationFormat = Librova::Domain::EBookFormat::Epub
+    };
+
+    const auto command = Librova::ConverterCommand::CConverterCommandBuilder::Build(profile, request);
+
+    REQUIRE(command.Arguments == std::vector<std::string>({
+        "--input",
+        "Import/{output_format}/source.fb2",
+        "--output",
+        "Temp/{output_format}/book.epub",
+        "--dir",
+        "Temp/{output_format}"
+    }));
+}

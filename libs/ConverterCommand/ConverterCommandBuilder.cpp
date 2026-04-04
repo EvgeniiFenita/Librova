@@ -22,28 +22,41 @@ std::string ToConverterFormat(const Librova::Domain::EBookFormat format)
     throw std::runtime_error("Unsupported destination format for converter command.");
 }
 
-std::string ReplaceAll(std::string value, const std::string_view placeholder, const std::string_view replacement)
-{
-    std::size_t searchPosition = 0;
-
-    while ((searchPosition = value.find(placeholder, searchPosition)) != std::string::npos)
-    {
-        value.replace(searchPosition, placeholder.size(), replacement);
-        searchPosition += replacement.size();
-    }
-
-    return value;
-}
-
 std::string ExpandTemplate(
     const std::string& argumentTemplate,
     const std::unordered_map<std::string, std::string>& replacements)
 {
-    std::string resolvedArgument = argumentTemplate;
+    std::string resolvedArgument;
+    resolvedArgument.reserve(argumentTemplate.size());
 
-    for (const auto& [placeholder, replacement] : replacements)
+    for (std::size_t index = 0; index < argumentTemplate.size(); ++index)
     {
-        resolvedArgument = ReplaceAll(resolvedArgument, placeholder, replacement);
+        if (argumentTemplate[index] != '{')
+        {
+            resolvedArgument.push_back(argumentTemplate[index]);
+            continue;
+        }
+
+        const std::size_t placeholderEnd = argumentTemplate.find('}', index);
+
+        if (placeholderEnd == std::string::npos)
+        {
+            resolvedArgument.push_back(argumentTemplate[index]);
+            continue;
+        }
+
+        const std::string placeholder = argumentTemplate.substr(index, placeholderEnd - index + 1);
+
+        if (const auto replacementIterator = replacements.find(placeholder); replacementIterator != replacements.end())
+        {
+            resolvedArgument.append(replacementIterator->second);
+        }
+        else
+        {
+            resolvedArgument.append(placeholder);
+        }
+
+        index = placeholderEnd;
     }
 
     return resolvedArgument;
