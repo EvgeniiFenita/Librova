@@ -303,6 +303,8 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     static_cast<void>(writeRepository.Add(ignoredBook));
 
     const std::vector<std::string> languages = queryRepository.ListAvailableLanguages({
+        .TextUtf8 = "shared",
+        .AuthorUtf8 = std::string{"Common Author"},
         .Language = std::string{"en"},
         .SeriesUtf8 = std::string{"Series Shared"},
         .TagsUtf8 = {"shared-tag"},
@@ -612,6 +614,40 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     REQUIRE(probableMatches.size() == 1);
     REQUIRE(probableMatches.front().ExistingBookId.Value == matchingBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository probable duplicate detection requires the normalized title as well as the author set", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-probable-title-match.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook storedBook;
+    storedBook.Metadata.TitleUtf8 = "Definitely Maybe";
+    storedBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
+    storedBook.Metadata.Language = "ru";
+    storedBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    storedBook.File.ManagedPath = "Books/0000000707/maybe.epub";
+    storedBook.File.SizeBytes = 902;
+    storedBook.File.Sha256Hex = "hash-probable-7";
+    storedBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{6};
+    static_cast<void>(writeRepository.Add(storedBook));
+
+    const std::vector<Librova::Domain::SDuplicateMatch> probableMatches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Roadside Picnic",
+            .AuthorsUtf8 = {"Boris Strugatsky", "Arkady Strugatsky"},
+            .Language = "ru"
+        },
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(probableMatches.empty());
 
     std::filesystem::remove(databasePath);
 }

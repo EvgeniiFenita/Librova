@@ -46,6 +46,7 @@ Before making changes, read these documents in order:
 
 - Check the actual repository state before assuming structure.
 - Do not invent architecture that conflicts with frozen decisions in `docs/Librova-Architecture.md`.
+- Fix the true cause of a bug whenever it is reasonably reachable in the current task; do not stop at a local patch that only hides downstream symptoms while leaving the source inconsistency in place.
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.

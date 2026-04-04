@@ -6,7 +6,7 @@ TEST_CASE("Database schema exposes current version and migration steps", "[datab
 {
     const auto& migrations = Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements();
 
-    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 1);
+    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 2);
     REQUIRE(migrations.size() == 3);
     REQUIRE(migrations[0] == "PRAGMA foreign_keys = ON;");
     REQUIRE(migrations[1] == "PRAGMA journal_mode = WAL;");
@@ -30,6 +30,7 @@ TEST_CASE("Database schema script contains search index and core indexes", "[dat
 
     REQUIRE(script.find("CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_books_language") != std::string_view::npos);
+    REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_books_normalized_title") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_books_isbn") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_authors_author_id") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_tags_tag_id") != std::string_view::npos);

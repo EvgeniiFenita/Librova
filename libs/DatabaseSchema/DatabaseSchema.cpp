@@ -7,6 +7,7 @@ constexpr std::string_view GCreateSchemaScript = R"sql(
 CREATE TABLE IF NOT EXISTS books (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
+    normalized_title TEXT NOT NULL,
     language TEXT NOT NULL,
     series TEXT,
     series_index REAL,
@@ -83,6 +84,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
 );
 
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
+CREATE INDEX IF NOT EXISTS idx_books_normalized_title ON books(normalized_title);
 CREATE INDEX IF NOT EXISTS idx_books_language ON books(language);
 CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);
 CREATE INDEX IF NOT EXISTS idx_books_year ON books(year);
@@ -103,7 +105,7 @@ const std::vector<std::string_view> GMigrationStatements{
 
 int CDatabaseSchema::GetCurrentVersion() noexcept
 {
-    return 1;
+    return 2;
 }
 
 const std::vector<std::string_view>& CDatabaseSchema::GetMigrationStatements()

@@ -66,7 +66,9 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
@@ -111,7 +113,9 @@ TEST_CASE("Named pipe channel rejects oversized framed payload before allocation
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 

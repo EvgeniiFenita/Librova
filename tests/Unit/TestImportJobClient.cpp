@@ -18,6 +18,7 @@
 #include "Jobs/ImportJobRunner.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
+#include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
@@ -139,22 +140,30 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
     std::jthread serverThread([&] {
         try
         {
             for (int index = 0; index < 3; ++index)
             {
                 Librova::PipeTransport::CNamedPipeServer server(pipePath);
+                if (index == 0)
+                {
+                    readySignal.NotifyReady();
+                }
+
                 host.RunSingleSession(server.WaitForClient());
             }
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     Librova::ApplicationClient::CImportJobClient client(pipePath);
     const auto sandbox = CreateImportSandbox();

@@ -609,13 +609,19 @@ std::vector<std::string> BuildNormalizedAuthors(const std::vector<std::string>& 
     return normalizedAuthors;
 }
 
+std::string BuildNormalizedTitle(const std::string& title)
+{
+    return Librova::Domain::NormalizeText(title);
+}
+
 std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
     const Librova::Sqlite::CSqliteConnection& connection,
     const Librova::Domain::SCandidateBook& candidate)
 {
+    const std::string normalizedTitle = BuildNormalizedTitle(candidate.Metadata.TitleUtf8);
     const std::vector<std::string> normalizedAuthors = BuildNormalizedAuthors(candidate.Metadata.AuthorsUtf8);
 
-    if (normalizedAuthors.empty())
+    if (normalizedTitle.empty() || normalizedAuthors.empty())
     {
         return {};
     }
@@ -629,9 +635,11 @@ std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
         "SELECT ba.book_id "
         "FROM book_authors ba "
         "INNER JOIN authors a ON a.id = ba.author_id "
+        "INNER JOIN books b ON b.id = ba.book_id "
         "WHERE a.normalized_name IN ";
     sql += BuildIdInClause(normalizedAuthors.size());
     sql +=
+        " AND b.normalized_title = ? "
         " GROUP BY ba.book_id "
         "HAVING COUNT(*) = ? "
         "AND COUNT(*) = ("
@@ -646,6 +654,7 @@ std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
         statement.BindText(parameterIndex++, normalizedAuthor);
     }
 
+    statement.BindText(parameterIndex++, normalizedTitle);
     statement.BindInt64(parameterIndex, static_cast<std::int64_t>(normalizedAuthors.size()));
 
     std::vector<std::int64_t> bookIds;
@@ -758,42 +767,23 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
     if (candidate.Metadata.HasTitle() && candidate.Metadata.HasAuthors())
     {
-        const std::string candidateDuplicateKey = Librova::Domain::BuildDuplicateKey(candidate.Metadata);
+        const std::vector<std::int64_t> probableCandidateIds = FindProbableDuplicateCandidateIds(connection, candidate);
 
-        if (!candidateDuplicateKey.empty())
+        for (const std::int64_t probableCandidateId : probableCandidateIds)
         {
-            const std::vector<std::int64_t> probableCandidateIds = FindProbableDuplicateCandidateIds(connection, candidate);
-            const auto booksById = ReadBooksById(connection, probableCandidateIds);
+            const Librova::Domain::SBookId bookId{probableCandidateId};
 
-            for (const std::int64_t probableCandidateId : probableCandidateIds)
+            if (seenIds.contains(bookId.Value))
             {
-                const Librova::Domain::SBookId bookId{probableCandidateId};
-
-                if (seenIds.contains(bookId.Value))
-                {
-                    continue;
-                }
-
-                const auto existingBookIterator = booksById.find(bookId.Value);
-
-                if (existingBookIterator == booksById.end())
-                {
-                    continue;
-                }
-
-                if (Librova::Domain::BuildDuplicateKey({
-                        .TitleUtf8 = existingBookIterator->second.Metadata.TitleUtf8,
-                        .AuthorsUtf8 = existingBookIterator->second.Metadata.AuthorsUtf8
-                    }) == candidateDuplicateKey)
-                {
-                    matches.push_back({
-                        .Severity = Librova::Domain::EDuplicateSeverity::Probable,
-                        .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
-                        .ExistingBookId = bookId
-                    });
-                    seenIds.insert(bookId.Value);
-                }
+                continue;
             }
+
+            matches.push_back({
+                .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+                .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+                .ExistingBookId = bookId
+            });
+            seenIds.insert(bookId.Value);
         }
     }
 

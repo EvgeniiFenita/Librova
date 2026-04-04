@@ -23,8 +23,8 @@ TEST_CASE("Sqlite connection can apply schema migrations to a temporary database
             connection.Execute(statement);
         }
 
-        connection.Execute("INSERT INTO books (id, title, language, preferred_format, managed_path, file_size_bytes, sha256_hex, added_at_utc) "
-                           "VALUES (1, 'Roadside Picnic', 'ru', 'epub', 'Books/0000000001/book.epub', 123, 'abc', '2026-03-30T12:00:00Z');");
+        connection.Execute("INSERT INTO books (id, title, normalized_title, language, preferred_format, managed_path, file_size_bytes, sha256_hex, added_at_utc) "
+                           "VALUES (1, 'Roadside Picnic', 'roadside picnic', 'ru', 'epub', 'Books/0000000001/book.epub', 123, 'abc', '2026-03-30T12:00:00Z');");
 
         Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
 
@@ -87,8 +87,8 @@ TEST_CASE("Sqlite connection opens a database under a Unicode path", "[sqlite]")
             connection.Execute(statement);
         }
 
-        connection.Execute("INSERT INTO books (id, title, language, preferred_format, managed_path, file_size_bytes, sha256_hex, added_at_utc) "
-                           "VALUES (1, 'Metro 2033', 'ru', 'epub', 'Books/0000000001/book.epub', 123, 'hash', '2026-03-30T12:00:00Z');");
+        connection.Execute("INSERT INTO books (id, title, normalized_title, language, preferred_format, managed_path, file_size_bytes, sha256_hex, added_at_utc) "
+                           "VALUES (1, 'Metro 2033', 'metro 2033', 'ru', 'epub', 'Books/0000000001/book.epub', 123, 'hash', '2026-03-30T12:00:00Z');");
 
         Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "SELECT title FROM books WHERE id = 1;");
 

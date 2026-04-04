@@ -172,7 +172,9 @@ TEST_CASE("Named pipe client performs typed StartImport call through host", "[pi
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
@@ -215,7 +217,9 @@ TEST_CASE("Named pipe client raises transport error on invalid pipe response", "
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
@@ -271,7 +275,9 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 

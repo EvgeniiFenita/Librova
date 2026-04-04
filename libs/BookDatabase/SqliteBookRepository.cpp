@@ -289,6 +289,7 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
     CSqliteTransaction transaction(connection);
 
     const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(book.Metadata.Isbn);
+    const std::string normalizedTitle = Librova::Domain::NormalizeText(book.Metadata.TitleUtf8);
     const std::string addedAtUtc = SerializeTimePoint(book.AddedAtUtc);
     const std::string managedPath = Librova::Unicode::PathToUtf8(book.File.ManagedPath);
     const std::optional<std::string> coverPath = book.CoverPath.has_value()
@@ -302,10 +303,36 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         Librova::Sqlite::CSqliteStatement statement(
             connection.GetNativeHandle(),
             "INSERT INTO books "
-            "(id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+            "(id, title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
         statement.BindInt64(1, bookId);
         statement.BindText(2, book.Metadata.TitleUtf8);
+        statement.BindText(3, normalizedTitle);
+        statement.BindText(4, book.Metadata.Language);
+        book.Metadata.SeriesUtf8.has_value() ? statement.BindText(5, *book.Metadata.SeriesUtf8) : statement.BindNull(5);
+        book.Metadata.SeriesIndex.has_value() ? statement.BindDouble(6, *book.Metadata.SeriesIndex) : statement.BindNull(6);
+        book.Metadata.PublisherUtf8.has_value() ? statement.BindText(7, *book.Metadata.PublisherUtf8) : statement.BindNull(7);
+        book.Metadata.Year.has_value() ? statement.BindInt(8, *book.Metadata.Year) : statement.BindNull(8);
+        normalizedIsbn.has_value() ? statement.BindText(9, *normalizedIsbn) : statement.BindNull(9);
+        book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(10, *book.Metadata.DescriptionUtf8) : statement.BindNull(10);
+        book.Metadata.Identifier.has_value() ? statement.BindText(11, *book.Metadata.Identifier) : statement.BindNull(11);
+        statement.BindText(12, Librova::Domain::ToString(book.File.Format));
+        statement.BindText(13, managedPath);
+        coverPath.has_value() ? statement.BindText(14, *coverPath) : statement.BindNull(14);
+        statement.BindInt64(15, static_cast<std::int64_t>(book.File.SizeBytes));
+        statement.BindText(16, book.File.Sha256Hex);
+        statement.BindText(17, addedAtUtc);
+        static_cast<void>(statement.Step());
+    }
+    else
+    {
+        Librova::Sqlite::CSqliteStatement statement(
+            connection.GetNativeHandle(),
+            "INSERT INTO books "
+            "(title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+        statement.BindText(1, book.Metadata.TitleUtf8);
+        statement.BindText(2, normalizedTitle);
         statement.BindText(3, book.Metadata.Language);
         book.Metadata.SeriesUtf8.has_value() ? statement.BindText(4, *book.Metadata.SeriesUtf8) : statement.BindNull(4);
         book.Metadata.SeriesIndex.has_value() ? statement.BindDouble(5, *book.Metadata.SeriesIndex) : statement.BindNull(5);
@@ -320,30 +347,6 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         statement.BindInt64(14, static_cast<std::int64_t>(book.File.SizeBytes));
         statement.BindText(15, book.File.Sha256Hex);
         statement.BindText(16, addedAtUtc);
-        static_cast<void>(statement.Step());
-    }
-    else
-    {
-        Librova::Sqlite::CSqliteStatement statement(
-            connection.GetNativeHandle(),
-            "INSERT INTO books "
-            "(title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
-        statement.BindText(1, book.Metadata.TitleUtf8);
-        statement.BindText(2, book.Metadata.Language);
-        book.Metadata.SeriesUtf8.has_value() ? statement.BindText(3, *book.Metadata.SeriesUtf8) : statement.BindNull(3);
-        book.Metadata.SeriesIndex.has_value() ? statement.BindDouble(4, *book.Metadata.SeriesIndex) : statement.BindNull(4);
-        book.Metadata.PublisherUtf8.has_value() ? statement.BindText(5, *book.Metadata.PublisherUtf8) : statement.BindNull(5);
-        book.Metadata.Year.has_value() ? statement.BindInt(6, *book.Metadata.Year) : statement.BindNull(6);
-        normalizedIsbn.has_value() ? statement.BindText(7, *normalizedIsbn) : statement.BindNull(7);
-        book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(8, *book.Metadata.DescriptionUtf8) : statement.BindNull(8);
-        book.Metadata.Identifier.has_value() ? statement.BindText(9, *book.Metadata.Identifier) : statement.BindNull(9);
-        statement.BindText(10, Librova::Domain::ToString(book.File.Format));
-        statement.BindText(11, managedPath);
-        coverPath.has_value() ? statement.BindText(12, *coverPath) : statement.BindNull(12);
-        statement.BindInt64(13, static_cast<std::int64_t>(book.File.SizeBytes));
-        statement.BindText(14, book.File.Sha256Hex);
-        statement.BindText(15, addedAtUtc);
         static_cast<void>(statement.Step());
         bookId = connection.GetLastInsertRowId();
     }

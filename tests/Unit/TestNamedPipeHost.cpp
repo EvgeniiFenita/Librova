@@ -174,7 +174,9 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
@@ -244,7 +246,9 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
         }
         catch (...)
         {
-            serverFailure = std::current_exception();
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
         }
     });
 
