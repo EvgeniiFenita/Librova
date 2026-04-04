@@ -36,10 +36,6 @@ Working rule:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 
-- `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
-  - Status: `Open`
-  - Note: `FindDuplicates` currently reads every stored title/author pair into memory on each import and opens multiple SQLite connections for one duplicate check; collapse that into a tighter database-backed path and keep strict/probable duplicate semantics unchanged under tests.
-
 - `#36` separate language-list SQL binding from count-query binding in `SqliteBookQueryRepository`.
   - Status: `Open`
   - Note: `ListAvailableLanguages` currently reuses `BindSearchCountFilters` even though its SQL intentionally omits the `language` placeholder; the current UI path resets `Language` before calling it, but the repository method is still internally inconsistent and should get its own binder plus coverage for combined filters.
@@ -122,6 +118,10 @@ Working rule:
 - `#34` extend metadata normalization beyond Russian-only case folding so search and duplicate detection stay correct for broader Cyrillic text.
   - Status: `Closed`
   - Note: the shared metadata normalizer now lowercases extended Cyrillic code points including `І/і`, `Ї/ї`, `Є/є`, and `Ў/ў`, and regression coverage now proves both SQLite FTS search-index matching and probable-duplicate keys stay case-insensitive for those inputs.
+
+- `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
+  - Status: `Closed`
+  - Note: `SqliteBookQueryRepository::FindDuplicates` now keeps duplicate detection on one SQLite connection, narrows probable-duplicate candidates through an exact normalized-author-set query instead of reading the full library into memory, and preserves strict/probable semantics under regression tests including full author-set matching and multiple-match cases.
 
 ### Critical
 
