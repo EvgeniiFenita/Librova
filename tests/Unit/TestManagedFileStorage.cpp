@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 
+#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
 
 namespace {
@@ -105,6 +106,38 @@ TEST_CASE("Managed file storage commit finalizes staged files and removes temp s
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath.parent_path()));
 }
 
+TEST_CASE("Managed file storage compresses FB2 files for managed storage when requested", "[managed-storage]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-compressed");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.fb2";
+
+    WriteTextFile(
+        sourceBookPath,
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><FictionBook><body><section><p>"
+        "compressed fb2 content compressed fb2 content compressed fb2 content"
+        "</p></section></body></FictionBook>");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {78},
+        .Format = Librova::Domain::EBookFormat::Fb2,
+        .StorageEncoding = Librova::Domain::EStorageEncoding::Compressed,
+        .SourcePath = sourceBookPath
+    });
+
+    REQUIRE(std::filesystem::exists(prepared.StagedBookPath));
+    REQUIRE(std::filesystem::file_size(prepared.StagedBookPath) < std::filesystem::file_size(sourceBookPath));
+    REQUIRE(ReadTextFile(prepared.StagedBookPath) != ReadTextFile(sourceBookPath));
+
+    const auto decodedPath = sandbox.GetPath() / "decoded.fb2";
+    Librova::ManagedFileEncoding::DecodeFileToPath(
+        prepared.StagedBookPath,
+        Librova::Domain::EStorageEncoding::Compressed,
+        decodedPath);
+
+    REQUIRE(ReadTextFile(decodedPath) == ReadTextFile(sourceBookPath));
+}
+
 TEST_CASE("Managed file storage rollback removes staged files and leaves final targets absent", "[managed-storage]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-rollback");
@@ -155,4 +188,22 @@ TEST_CASE("Managed file storage restores staging state when commit fails after m
     REQUIRE(std::filesystem::is_directory(*prepared.FinalCoverPath));
     REQUIRE(ReadTextFile(prepared.StagedBookPath) == "book-content");
     REQUIRE(ReadTextFile(*prepared.StagedCoverPath) == "cover-content");
+}
+
+TEST_CASE("Managed file storage cleans staging directory when preparation fails", "[managed-storage]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-prepare-failure");
+    const std::filesystem::path missingSourceBookPath = sandbox.GetPath() / "input" / "missing.fb2";
+    const auto expectedStagingDirectory = sandbox.GetPath() / "Library" / "Temp" / "0000000089";
+
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+
+    REQUIRE_THROWS(storage.PrepareImport({
+        .BookId = {89},
+        .Format = Librova::Domain::EBookFormat::Fb2,
+        .StorageEncoding = Librova::Domain::EStorageEncoding::Compressed,
+        .SourcePath = missingSourceBookPath
+    }));
+
+    REQUIRE_FALSE(std::filesystem::exists(expectedStagingDirectory));
 }

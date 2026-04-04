@@ -31,6 +31,7 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
     book.Metadata.DescriptionUtf8 = std::string{"Классика советской фантастики"};
     book.Metadata.Identifier = std::string{"roadside-picnic"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
     book.File.ManagedPath = std::filesystem::path(u8"Books/0000000001/Пикник.epub");
     book.File.SizeBytes = 4096;
     book.File.Sha256Hex = "abc123";
@@ -56,6 +57,7 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
     REQUIRE(loadedBook->Metadata.DescriptionUtf8 == book.Metadata.DescriptionUtf8);
     REQUIRE(loadedBook->Metadata.Identifier == book.Metadata.Identifier);
     REQUIRE(loadedBook->File.Format == book.File.Format);
+    REQUIRE(loadedBook->File.StorageEncoding == book.File.StorageEncoding);
     REQUIRE(loadedBook->File.ManagedPath == book.File.ManagedPath);
     REQUIRE(loadedBook->File.SizeBytes == book.File.SizeBytes);
     REQUIRE(loadedBook->File.Sha256Hex == book.File.Sha256Hex);

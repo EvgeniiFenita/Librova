@@ -6,7 +6,7 @@ TEST_CASE("Database schema exposes current version and migration steps", "[datab
 {
     const auto& migrations = Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements();
 
-    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 2);
+    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 3);
     REQUIRE(migrations.size() == 3);
     REQUIRE(migrations[0] == "PRAGMA foreign_keys = ON;");
     REQUIRE(migrations[1] == "PRAGMA journal_mode = WAL;");

@@ -9,6 +9,7 @@
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Logging/Logging.hpp"
+#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 
 namespace {
 
@@ -69,6 +70,7 @@ public:
         std::stop_token) const override
     {
         LastRequest = request;
+        LastSourceText = ReadAllText(request.SourcePath);
         if (!Enabled)
         {
             return {
@@ -90,6 +92,7 @@ public:
     }
 
     mutable std::optional<Librova::Domain::SConversionRequest> LastRequest;
+    mutable std::string LastSourceText;
     bool Enabled = true;
 };
 
@@ -150,6 +153,32 @@ TEST_CASE("LibraryExportFacade rejects unsafe managed paths", "[application][exp
             .BookId = bookId,
             .DestinationPath = sandbox.GetPath() / "Exports" / "book.epub"
         }));
+}
+
+TEST_CASE("LibraryExportFacade rejects export destinations inside the managed library", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-inside-library");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto sourcePath = libraryRoot / "Books/0000000010/book.epub";
+    const auto destinationPath = sourcePath;
+
+    std::filesystem::create_directories(sourcePath.parent_path());
+    std::ofstream(sourcePath, std::ios::binary) << "epub-contents";
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-inside-library.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    const auto bookId = repository.Add(CreateBook({10}, "Books/0000000010/book.epub"));
+
+    const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot);
+
+    REQUIRE_THROWS_WITH(
+        facade.ExportBook({
+            .BookId = bookId,
+            .DestinationPath = destinationPath
+        }),
+        Catch::Matchers::ContainsSubstring("outside the managed library"));
+    REQUIRE(ReadAllText(sourcePath) == "epub-contents");
 }
 
 TEST_CASE("LibraryExportFacade accepts absolute managed path under library root", "[application][export]")
@@ -289,6 +318,80 @@ TEST_CASE("LibraryExportFacade converts FB2 export to EPUB when converter is con
     REQUIRE(converter.LastRequest->DestinationPath == destinationPath);
 }
 
+TEST_CASE("LibraryExportFacade transparently decompresses managed FB2 on direct export", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-compressed-fb2");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto plainSourcePath = sandbox.GetPath() / "input" / "source.fb2";
+    const auto managedSourcePath = libraryRoot / "Books/0000000007/book.fb2";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.fb2";
+
+    std::filesystem::create_directories(plainSourcePath.parent_path());
+    std::filesystem::create_directories(managedSourcePath.parent_path());
+    std::ofstream(plainSourcePath, std::ios::binary) << "plain-fb2-contents";
+    Librova::ManagedFileEncoding::EncodeFileToPath(
+        plainSourcePath,
+        Librova::Domain::EStorageEncoding::Compressed,
+        managedSourcePath);
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-compressed-fb2.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    auto book = CreateBook({7}, "Books/0000000007/book.fb2");
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
+    const auto bookId = repository.Add(book);
+
+    const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot);
+    const auto exportedPath = facade.ExportBook({
+        .BookId = bookId,
+        .DestinationPath = destinationPath
+    });
+
+    REQUIRE(exportedPath.has_value());
+    REQUIRE(ReadAllText(destinationPath) == "plain-fb2-contents");
+}
+
+TEST_CASE("LibraryExportFacade decodes compressed managed FB2 before EPUB conversion", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-compressed-converted");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto plainSourcePath = sandbox.GetPath() / "input" / "source.fb2";
+    const auto managedSourcePath = libraryRoot / "Books/0000000008/book.fb2";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
+
+    std::filesystem::create_directories(plainSourcePath.parent_path());
+    std::filesystem::create_directories(managedSourcePath.parent_path());
+    std::ofstream(plainSourcePath, std::ios::binary) << "plain-conversion-source";
+    Librova::ManagedFileEncoding::EncodeFileToPath(
+        plainSourcePath,
+        Librova::Domain::EStorageEncoding::Compressed,
+        managedSourcePath);
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-compressed-converted.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    auto book = CreateBook({8}, "Books/0000000008/book.fb2");
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
+    const auto bookId = repository.Add(book);
+
+    CStubBookConverter converter;
+    const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot, &converter);
+    const auto exportedPath = facade.ExportBook({
+        .BookId = bookId,
+        .DestinationPath = destinationPath,
+        .ExportFormat = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(exportedPath.has_value());
+    REQUIRE(ReadAllText(destinationPath) == "converted-epub");
+    REQUIRE(converter.LastRequest.has_value());
+    REQUIRE(converter.LastRequest->SourcePath != managedSourcePath);
+    REQUIRE(converter.LastSourceText == "plain-conversion-source");
+    REQUIRE_FALSE(std::filesystem::exists(converter.LastRequest->SourcePath));
+}
+
 TEST_CASE("LibraryExportFacade rejects converted FB2 export when converter is not configured", "[application][export]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-converted-missing");
@@ -315,4 +418,41 @@ TEST_CASE("LibraryExportFacade rejects converted FB2 export when converter is no
             .ExportFormat = Librova::Domain::EBookFormat::Epub
         }),
         Catch::Matchers::ContainsSubstring("converter is unavailable"));
+}
+
+TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression fails", "[application][export]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-broken-compressed-fb2");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto managedSourcePath = libraryRoot / "Books/0000000011/book.fb2";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
+    const auto tempExportDirectory = libraryRoot / "Temp" / "Export";
+
+    std::filesystem::create_directories(managedSourcePath.parent_path());
+    std::ofstream(managedSourcePath, std::ios::binary) << "broken-gzip";
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-broken-compressed-fb2.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    auto book = CreateBook({11}, "Books/0000000011/book.fb2");
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
+    const auto bookId = repository.Add(book);
+
+    CStubBookConverter converter;
+    const Librova::Application::CLibraryExportFacade facade(repository, libraryRoot, &converter);
+
+    REQUIRE_THROWS_WITH(
+        facade.ExportBook({
+            .BookId = bookId,
+            .DestinationPath = destinationPath,
+            .ExportFormat = Librova::Domain::EBookFormat::Epub
+        }),
+        Catch::Matchers::ContainsSubstring("decompression"));
+
+    REQUIRE_FALSE(std::filesystem::exists(destinationPath));
+    if (std::filesystem::exists(tempExportDirectory))
+    {
+        REQUIRE(std::filesystem::is_empty(tempExportDirectory));
+    }
 }

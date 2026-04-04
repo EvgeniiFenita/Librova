@@ -22,6 +22,7 @@ target_link_libraries(LibrovaApplication
         LibrovaZipImporting
     PRIVATE
         LibrovaLogging
+        LibrovaManagedFileEncoding
         LibrovaManagedPaths
         LibrovaUnicode
 )

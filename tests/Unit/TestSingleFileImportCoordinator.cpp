@@ -11,6 +11,7 @@
 
 #include "Domain/BookRepository.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
+#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -207,7 +208,7 @@ public:
         std::filesystem::create_directories(stagingDirectory);
 
         const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
-        std::filesystem::copy_file(plan.SourcePath, stagedBookPath, std::filesystem::copy_options::overwrite_existing);
+        Librova::ManagedFileEncoding::EncodeFileToPath(plan.SourcePath, plan.StorageEncoding, stagedBookPath);
 
         const std::filesystem::path finalBookPath =
             Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format);
@@ -360,13 +361,88 @@ TEST_CASE("Single file import imports FB2 without conversion when forced convers
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(bookRepository.AddedBook->Id.Value == 1);
     REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Fb2);
+    REQUIRE(bookRepository.AddedBook->File.StorageEncoding == Librova::Domain::EStorageEncoding::Compressed);
     REQUIRE(bookRepository.AddedBook->File.Sha256Hex == "fb2-hash");
     REQUIRE(managedStorage.LastPlan.has_value());
     REQUIRE(managedStorage.LastPlan->Format == Librova::Domain::EBookFormat::Fb2);
+    REQUIRE(managedStorage.LastPlan->StorageEncoding == Librova::Domain::EStorageEncoding::Compressed);
     REQUIRE(managedStorage.LastPlan->CoverSourcePath.has_value());
     REQUIRE(managedStorage.CommitCalled);
     REQUIRE_FALSE(managedStorage.RollbackCalled);
     REQUIRE(progressSink.LastPercent == 100);
+}
+
+TEST_CASE("Single file import keeps plain storage when forced EPUB conversion is enabled", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-plain-storage");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubBookConverter converter;
+    converter.Enabled = true;
+    converter.Result = {
+        .Status = Librova::Domain::EConversionStatus::Succeeded,
+        .OutputPath = sandbox.GetPath() / "work" / "converted.epub"
+    };
+    WriteTextFile(converter.Result.OutputPath, "converted-epub");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        &converter);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ForceEpubConversion = true
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(result.StoredFormat == Librova::Domain::EBookFormat::Epub);
+    REQUIRE(managedStorage.LastPlan.has_value());
+    REQUIRE(managedStorage.LastPlan->Format == Librova::Domain::EBookFormat::Epub);
+    REQUIRE(managedStorage.LastPlan->StorageEncoding == Librova::Domain::EStorageEncoding::Plain);
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Epub);
+    REQUIRE(bookRepository.AddedBook->File.StorageEncoding == Librova::Domain::EStorageEncoding::Plain);
+}
+
+TEST_CASE("Single file import stores compressed managed file size for fallback FB2", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback-compressed-size");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = std::string{"fb2-size-hash"}
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(managedStorage.LastPreparedStorage.has_value());
+    REQUIRE(bookRepository.AddedBook->File.SizeBytes == std::filesystem::file_size(managedStorage.LastPreparedStorage->FinalBookPath));
+    REQUIRE(bookRepository.AddedBook->File.SizeBytes < std::filesystem::file_size(sourcePath));
+    REQUIRE(bookRepository.AddedBook->File.Sha256Hex == "fb2-size-hash");
 }
 
 TEST_CASE("Single file import stores optimized cover bytes returned by the cover processor", "[importing]")

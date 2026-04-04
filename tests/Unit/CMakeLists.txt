@@ -41,6 +41,7 @@ if(BUILD_TESTING)
         TestSchemaMigrator.cpp
         TestDatabaseSchema.cpp
         TestManagedFileStorage.cpp
+        TestManagedFileEncoding.cpp
         TestManagedTrashService.cpp
         TestManagedPathSafety.cpp
         TestMetadataNormalization.cpp
@@ -79,6 +80,7 @@ if(BUILD_TESTING)
             LibrovaJobs
             LibrovaLogging
             LibrovaManagedStorage
+            LibrovaManagedFileEncoding
             LibrovaManagedPaths
             LibrovaManagedTrash
             LibrovaParserRegistry

@@ -13,7 +13,7 @@ TEST_CASE("Schema migrator applies schema and sets user version", "[database-run
 
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 2);
+    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 3);
 
     {
         Librova::Sqlite::CSqliteConnection connection(databasePath);
@@ -36,7 +36,7 @@ TEST_CASE("Schema migrator is idempotent for existing database", "[database-runt
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 2);
+    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 3);
 
     std::filesystem::remove(databasePath);
 }
@@ -77,7 +77,7 @@ TEST_CASE("Schema migrator upgrades version 1 databases with normalized titles",
 
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 2);
+    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 3);
 
     {
         Librova::Sqlite::CSqliteConnection connection(databasePath);
@@ -92,6 +92,12 @@ TEST_CASE("Schema migrator upgrades version 1 databases with normalized titles",
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_books_normalized_title';");
         REQUIRE(indexStatement.Step());
         REQUIRE(indexStatement.GetColumnInt(0) == 1);
+
+        Librova::Sqlite::CSqliteStatement storageEncodingStatement(
+            connection.GetNativeHandle(),
+            "SELECT storage_encoding FROM books WHERE id = 1;");
+        REQUIRE(storageEncodingStatement.Step());
+        REQUIRE(storageEncodingStatement.GetColumnText(0) == "plain");
     }
 
     std::filesystem::remove(databasePath);

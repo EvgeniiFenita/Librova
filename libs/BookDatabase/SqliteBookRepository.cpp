@@ -15,6 +15,7 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
+#include "Domain/StorageEncoding.hpp"
 #include "SearchIndex/SearchIndexMaintenance.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
@@ -194,12 +195,13 @@ void InsertFormatRow(
 {
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
-        "INSERT INTO formats (book_id, format, managed_path, file_size_bytes, sha256_hex) VALUES (?, ?, ?, ?, ?);");
+        "INSERT INTO formats (book_id, format, storage_encoding, managed_path, file_size_bytes, sha256_hex) VALUES (?, ?, ?, ?, ?, ?);");
     statement.BindInt64(1, bookId);
     statement.BindText(2, Librova::Domain::ToString(fileInfo.Format));
-    statement.BindText(3, Librova::Unicode::PathToUtf8(fileInfo.ManagedPath));
-    statement.BindInt64(4, static_cast<std::int64_t>(fileInfo.SizeBytes));
-    statement.BindText(5, fileInfo.Sha256Hex);
+    statement.BindText(3, Librova::Domain::ToString(fileInfo.StorageEncoding));
+    statement.BindText(4, Librova::Unicode::PathToUtf8(fileInfo.ManagedPath));
+    statement.BindInt64(5, static_cast<std::int64_t>(fileInfo.SizeBytes));
+    statement.BindText(6, fileInfo.Sha256Hex);
     static_cast<void>(statement.Step());
 }
 
@@ -303,8 +305,8 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         Librova::Sqlite::CSqliteStatement statement(
             connection.GetNativeHandle(),
             "INSERT INTO books "
-            "(id, title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+            "(id, title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
         statement.BindInt64(1, bookId);
         statement.BindText(2, book.Metadata.TitleUtf8);
         statement.BindText(3, normalizedTitle);
@@ -317,11 +319,12 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(10, *book.Metadata.DescriptionUtf8) : statement.BindNull(10);
         book.Metadata.Identifier.has_value() ? statement.BindText(11, *book.Metadata.Identifier) : statement.BindNull(11);
         statement.BindText(12, Librova::Domain::ToString(book.File.Format));
-        statement.BindText(13, managedPath);
-        coverPath.has_value() ? statement.BindText(14, *coverPath) : statement.BindNull(14);
-        statement.BindInt64(15, static_cast<std::int64_t>(book.File.SizeBytes));
-        statement.BindText(16, book.File.Sha256Hex);
-        statement.BindText(17, addedAtUtc);
+        statement.BindText(13, Librova::Domain::ToString(book.File.StorageEncoding));
+        statement.BindText(14, managedPath);
+        coverPath.has_value() ? statement.BindText(15, *coverPath) : statement.BindNull(15);
+        statement.BindInt64(16, static_cast<std::int64_t>(book.File.SizeBytes));
+        statement.BindText(17, book.File.Sha256Hex);
+        statement.BindText(18, addedAtUtc);
         static_cast<void>(statement.Step());
     }
     else
@@ -329,8 +332,8 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         Librova::Sqlite::CSqliteStatement statement(
             connection.GetNativeHandle(),
             "INSERT INTO books "
-            "(title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+            "(title, normalized_title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
         statement.BindText(1, book.Metadata.TitleUtf8);
         statement.BindText(2, normalizedTitle);
         statement.BindText(3, book.Metadata.Language);
@@ -342,11 +345,12 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
         book.Metadata.DescriptionUtf8.has_value() ? statement.BindText(9, *book.Metadata.DescriptionUtf8) : statement.BindNull(9);
         book.Metadata.Identifier.has_value() ? statement.BindText(10, *book.Metadata.Identifier) : statement.BindNull(10);
         statement.BindText(11, Librova::Domain::ToString(book.File.Format));
-        statement.BindText(12, managedPath);
-        coverPath.has_value() ? statement.BindText(13, *coverPath) : statement.BindNull(13);
-        statement.BindInt64(14, static_cast<std::int64_t>(book.File.SizeBytes));
-        statement.BindText(15, book.File.Sha256Hex);
-        statement.BindText(16, addedAtUtc);
+        statement.BindText(12, Librova::Domain::ToString(book.File.StorageEncoding));
+        statement.BindText(13, managedPath);
+        coverPath.has_value() ? statement.BindText(14, *coverPath) : statement.BindNull(14);
+        statement.BindInt64(15, static_cast<std::int64_t>(book.File.SizeBytes));
+        statement.BindText(16, book.File.Sha256Hex);
+        statement.BindText(17, addedAtUtc);
         static_cast<void>(statement.Step());
         bookId = connection.GetLastInsertRowId();
     }
@@ -390,7 +394,7 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
-        "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
+        "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
         "FROM books WHERE id = ?;");
     statement.BindInt64(1, id.Value);
 
@@ -400,10 +404,11 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     }
 
     const std::optional<Librova::Domain::EBookFormat> format = Librova::Domain::TryParseBookFormat(statement.GetColumnText(10));
+    const std::optional<Librova::Domain::EStorageEncoding> storageEncoding = Librova::Domain::TryParseStorageEncoding(statement.GetColumnText(11));
 
-    if (!format.has_value())
+    if (!format.has_value() || !storageEncoding.has_value())
     {
-        throw std::runtime_error("Failed to parse stored book format.");
+        throw std::runtime_error("Failed to parse stored book file metadata.");
     }
 
     Librova::Domain::SBook book;
@@ -420,11 +425,12 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     book.Metadata.AuthorsUtf8 = ReadAuthors(connection, book.Id.Value);
     book.Metadata.TagsUtf8 = ReadTags(connection, book.Id.Value);
     book.File.Format = *format;
-    book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(11));
-    book.CoverPath = statement.IsColumnNull(12) ? std::nullopt : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(12)));
-    book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(13));
-    book.File.Sha256Hex = statement.GetColumnText(14);
-    book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(15));
+    book.File.StorageEncoding = *storageEncoding;
+    book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(12));
+    book.CoverPath = statement.IsColumnNull(13) ? std::nullopt : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(13)));
+    book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(14));
+    book.File.Sha256Hex = statement.GetColumnText(15);
+    book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(16));
 
     return book;
 }

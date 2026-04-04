@@ -16,6 +16,7 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
+#include "Domain/StorageEncoding.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -205,7 +206,7 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         std::format(
-            "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
+            "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
             "FROM books WHERE id IN {};",
             BuildIdInClause(bookIds.size())));
     BindBookIds(statement, bookIds);
@@ -216,10 +217,11 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
     while (statement.Step())
     {
         const std::optional<Librova::Domain::EBookFormat> format = Librova::Domain::TryParseBookFormat(statement.GetColumnText(10));
+        const std::optional<Librova::Domain::EStorageEncoding> storageEncoding = Librova::Domain::TryParseStorageEncoding(statement.GetColumnText(11));
 
-        if (!format.has_value())
+        if (!format.has_value() || !storageEncoding.has_value())
         {
-            throw std::runtime_error("Failed to parse stored book format.");
+            throw std::runtime_error("Failed to parse stored book file metadata.");
         }
 
         Librova::Domain::SBook book;
@@ -244,13 +246,14 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
         }
 
         book.File.Format = *format;
-        book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(11));
-        book.CoverPath = statement.IsColumnNull(12)
+        book.File.StorageEncoding = *storageEncoding;
+        book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(12));
+        book.CoverPath = statement.IsColumnNull(13)
             ? std::nullopt
-            : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(12)));
-        book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(13));
-        book.File.Sha256Hex = statement.GetColumnText(14);
-        book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(15));
+            : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(13)));
+        book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(14));
+        book.File.Sha256Hex = statement.GetColumnText(15);
+        book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(16));
 
         booksById.emplace(book.Id.Value, std::move(book));
     }

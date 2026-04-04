@@ -119,6 +119,7 @@ struct SStoragePlan
 {
     SBookId BookId;
     EBookFormat Format = EBookFormat::Epub;
+    EStorageEncoding StorageEncoding = EStorageEncoding::Plain;
     std::filesystem::path SourcePath;
     std::optional<std::filesystem::path> CoverSourcePath;
 

@@ -49,10 +49,6 @@ Backlog edit rules:
 ### Minor
 ### Low
 
-- `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
-  - Status: `Open`
-  - Note: scope this explicitly to `FB2` first instead of a generic “all uncompressed formats”, and define whether compression is an internal storage detail or a surfaced managed-format variant across database, transport, statistics, and export flows.
-
 ## 4. Closed Backlog
 
 ### Major
@@ -188,6 +184,12 @@ Backlog edit rules:
 
 - `#22` add an application icon for the window title bar and Windows taskbar.
   - Status: `Closed`
+
+### Low
+
+- `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
+  - Status: `Closed`
+  - Note: completed as an internal managed-storage detail through persisted `storage_encoding`, with fallback-managed `FB2` compressed on import, transparently decoded on direct export and `Export As EPUB`, and library statistics now reflecting the real on-disk managed size.
 
 ## 5. Done Criteria
 

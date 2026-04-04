@@ -1,8 +1,10 @@
 #include "Application/LibraryExportFacade.hpp"
 
+#include <chrono>
 #include <stdexcept>
 
 #include "Logging/Logging.hpp"
+#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
@@ -21,6 +23,73 @@ public:
         return false;
     }
 };
+
+class CScopedPathCleanup final
+{
+public:
+    explicit CScopedPathCleanup(std::filesystem::path path)
+        : m_path(std::move(path))
+    {
+    }
+
+    ~CScopedPathCleanup()
+    {
+        if (m_path.empty())
+        {
+            return;
+        }
+
+        std::error_code errorCode;
+        std::filesystem::remove(m_path, errorCode);
+    }
+
+    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
+    {
+        return m_path;
+    }
+
+private:
+    std::filesystem::path m_path;
+};
+
+[[nodiscard]] bool IsPathWithinRoot(
+    const std::filesystem::path& root,
+    const std::filesystem::path& candidate)
+{
+    const auto normalizedRoot = root.lexically_normal();
+    const auto normalizedCandidate = candidate.lexically_normal();
+
+    auto rootIt = normalizedRoot.begin();
+    auto candidateIt = normalizedCandidate.begin();
+
+    for (; rootIt != normalizedRoot.end(); ++rootIt, ++candidateIt)
+    {
+        if (candidateIt == normalizedCandidate.end() || *rootIt != *candidateIt)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::filesystem::path CanonicalizeForComparison(const std::filesystem::path& path)
+{
+    const auto comparisonBase = path.has_filename() ? path.parent_path() : path;
+    std::error_code errorCode;
+    const auto canonicalBase = std::filesystem::weakly_canonical(comparisonBase, errorCode);
+    if (errorCode)
+    {
+        throw std::runtime_error("Export destination path could not be canonicalized.");
+    }
+
+    if (path.has_filename())
+    {
+        return (canonicalBase / path.filename()).lexically_normal();
+    }
+
+    return canonicalBase.lexically_normal();
+}
 
 } // namespace
 
@@ -65,9 +134,16 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
         throw std::invalid_argument("Export destination path must point to a file.");
     }
 
+    const auto canonicalLibraryRoot = CanonicalizeForComparison(m_libraryRoot);
+    const auto canonicalDestinationPath = CanonicalizeForComparison(request.DestinationPath);
+    if (IsPathWithinRoot(canonicalLibraryRoot, canonicalDestinationPath))
+    {
+        throw std::invalid_argument("Export destination path must be outside the managed library.");
+    }
+
     if (!request.ExportFormat.has_value() || *request.ExportFormat == book->File.Format)
     {
-        return ExportManagedFile(sourcePath, request.DestinationPath);
+        return ExportManagedFile(sourcePath, request.DestinationPath, book->File.StorageEncoding);
     }
 
     return ExportConvertedFile(
@@ -79,7 +155,8 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
 
 std::filesystem::path CLibraryExportFacade::ExportManagedFile(
     const std::filesystem::path& sourcePath,
-    const std::filesystem::path& destinationPath) const
+    const std::filesystem::path& destinationPath,
+    const Librova::Domain::EStorageEncoding storageEncoding) const
 {
     if (!destinationPath.parent_path().empty())
     {
@@ -93,10 +170,7 @@ std::filesystem::path CLibraryExportFacade::ExportManagedFile(
             Librova::Unicode::PathToUtf8(destinationPath));
     }
 
-    std::filesystem::copy_file(
-        sourcePath,
-        destinationPath,
-        std::filesystem::copy_options::overwrite_existing);
+    Librova::ManagedFileEncoding::DecodeFileToPath(sourcePath, storageEncoding, destinationPath);
 
     if (Librova::Logging::CLogging::IsInitialized())
     {
@@ -136,10 +210,26 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
             Librova::Unicode::PathToUtf8(destinationPath));
     }
 
+    std::optional<CScopedPathCleanup> temporaryDecodedSource;
+    auto conversionSourcePath = sourcePath;
+
+    if (book.File.StorageEncoding == Librova::Domain::EStorageEncoding::Compressed)
+    {
+        const auto tempDirectory = m_libraryRoot / "Temp" / "Export";
+        std::filesystem::create_directories(tempDirectory);
+        const auto uniqueSuffix = std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count());
+        const auto temporaryDecodedPath =
+            tempDirectory / ("decoded-" + std::to_string(book.Id.Value) + "-" + uniqueSuffix + ".fb2");
+        temporaryDecodedSource.emplace(temporaryDecodedPath);
+        Librova::ManagedFileEncoding::DecodeFileToPath(sourcePath, book.File.StorageEncoding, temporaryDecodedPath);
+        conversionSourcePath = temporaryDecodedSource->GetPath();
+    }
+
     CNoOpProgressSink progressSink;
     const auto conversionResult = m_converter->Convert(
         Librova::Domain::SConversionRequest{
-            .SourcePath = sourcePath,
+            .SourcePath = conversionSourcePath,
             .DestinationPath = destinationPath,
             .SourceFormat = book.File.Format,
             .DestinationFormat = exportFormat

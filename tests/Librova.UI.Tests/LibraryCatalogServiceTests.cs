@@ -234,9 +234,14 @@ public sealed class LibraryCatalogServiceTests
                   Write-Error 'Unexpected built-in converter contract.'
                   exit 1
                 }
-                if ($source -notmatch '[\\/]+Library[\\/]+Books[\\/]+')
+                if ($source -notmatch '[\\/]+Library[\\/]+')
                 {
-                  Write-Error 'Import conversion intentionally disabled for this test.'
+                  Write-Error 'Export conversion source must stay inside the managed library.'
+                  exit 1
+                }
+                if (-not (Test-Path -LiteralPath $source))
+                {
+                  Write-Error 'Export conversion source is missing.'
                   exit 1
                 }
                 New-Item -ItemType Directory -Force $destinationDir | Out-Null

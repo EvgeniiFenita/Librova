@@ -184,6 +184,18 @@ bool IsCancellationRequested(
     return sourceCover;
 }
 
+[[nodiscard]] Librova::Domain::EStorageEncoding DetermineStorageEncoding(
+    const Librova::Domain::EBookFormat storedFormat,
+    const bool forceEpubConversion) noexcept
+{
+    if (storedFormat == Librova::Domain::EBookFormat::Fb2 && !forceEpubConversion)
+    {
+        return Librova::Domain::EStorageEncoding::Compressed;
+    }
+
+    return Librova::Domain::EStorageEncoding::Plain;
+}
+
 } // namespace
 
 namespace Librova::Importing {
@@ -366,9 +378,12 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         progressSink.ReportValue(70, "Preparing managed storage");
+        const Librova::Domain::EStorageEncoding storageEncoding =
+            DetermineStorageEncoding(conversionOutcome.Format, request.ForceEpubConversion);
         preparedStorage = m_managedStorage.PrepareImport({
             .BookId = reservedBookId,
             .Format = conversionOutcome.Format,
+            .StorageEncoding = storageEncoding,
             .SourcePath = conversionOutcome.SourcePath,
             .CoverSourcePath = temporaryCoverPath
         });
@@ -383,8 +398,9 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             .Metadata = parsedBook.Metadata,
             .File = {
                 .Format = conversionOutcome.Format,
+                .StorageEncoding = storageEncoding,
                 .ManagedPath = preparedStorage->FinalBookPath,
-                .SizeBytes = std::filesystem::file_size(conversionOutcome.SourcePath),
+                .SizeBytes = std::filesystem::file_size(preparedStorage->StagedBookPath),
                 .Sha256Hex = request.Sha256Hex.value_or("")
             },
             .CoverPath = preparedStorage->FinalCoverPath,

@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
@@ -120,26 +121,38 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
 
     RemovePathNoThrow(stagingDirectory);
     EnsureDirectory(stagingDirectory);
-    CopyFile(plan.SourcePath, stagedBookPath);
 
-    Librova::Domain::SPreparedStorage preparedStorage{
-        .StagedBookPath = stagedBookPath,
-        .FinalBookPath = finalBookPath
-    };
-
-    if (plan.CoverSourcePath.has_value())
+    try
     {
-        const std::filesystem::path stagedCoverPath = BuildStagedCoverPath(stagingDirectory, *plan.CoverSourcePath);
-        const std::string extension = stagedCoverPath.extension().string();
+        Librova::ManagedFileEncoding::EncodeFileToPath(
+            plan.SourcePath,
+            plan.StorageEncoding,
+            stagedBookPath);
 
-        CopyFile(*plan.CoverSourcePath, stagedCoverPath);
+        Librova::Domain::SPreparedStorage preparedStorage{
+            .StagedBookPath = stagedBookPath,
+            .FinalBookPath = finalBookPath
+        };
 
-        preparedStorage.StagedCoverPath = stagedCoverPath;
-        preparedStorage.FinalCoverPath =
-            Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+        if (plan.CoverSourcePath.has_value())
+        {
+            const std::filesystem::path stagedCoverPath = BuildStagedCoverPath(stagingDirectory, *plan.CoverSourcePath);
+            const std::string extension = stagedCoverPath.extension().string();
+
+            CopyFile(*plan.CoverSourcePath, stagedCoverPath);
+
+            preparedStorage.StagedCoverPath = stagedCoverPath;
+            preparedStorage.FinalCoverPath =
+                Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+        }
+
+        return preparedStorage;
     }
-
-    return preparedStorage;
+    catch (...)
+    {
+        RemovePathNoThrow(stagingDirectory);
+        throw;
+    }
 }
 
 void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& preparedStorage)

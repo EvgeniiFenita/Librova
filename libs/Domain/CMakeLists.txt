@@ -2,6 +2,7 @@ add_library(LibrovaDomain STATIC
     BookFormat.cpp
     DomainError.cpp
     MetadataNormalization.cpp
+    StorageEncoding.cpp
 )
 
 target_include_directories(LibrovaDomain PUBLIC

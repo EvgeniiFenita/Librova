@@ -79,6 +79,8 @@ The import flow includes:
 
 The user-facing import screen is intentionally simplified: it centers on selecting or dropping a source file, then shows running progress and cancellation, rather than exposing internal job-management controls.
 
+When Librova keeps an imported book as managed `FB2`, it may store that managed file in compressed form inside the library to reduce on-disk size. This is an internal storage detail: browsing, delete, duplicate detection, direct `Export`, and `Export As EPUB` continue to behave as if the book were stored as an ordinary managed `FB2`.
+
 For multi-file imports, directory imports, and ZIP imports, the running state must surface a deterministic aggregate progress summary with total files, processed files, and the current imported / failed / skipped counts. The terminal result must keep the same aggregate summary visible after the job finishes.
 
 When a batch import contains both valid sources and a broken ZIP archive, Librova should surface the archive failure as a per-source warning and continue importing the remaining valid sources instead of failing the entire batch during workload preparation.

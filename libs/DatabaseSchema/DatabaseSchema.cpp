@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS books (
     description TEXT,
     identifier TEXT,
     preferred_format TEXT NOT NULL,
+    storage_encoding TEXT NOT NULL DEFAULT 'plain',
     managed_path TEXT NOT NULL,
     cover_path TEXT,
     file_size_bytes INTEGER NOT NULL,
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS book_tags (
 CREATE TABLE IF NOT EXISTS formats (
     book_id INTEGER PRIMARY KEY,
     format TEXT NOT NULL,
+    storage_encoding TEXT NOT NULL DEFAULT 'plain',
     managed_path TEXT NOT NULL,
     file_size_bytes INTEGER NOT NULL,
     sha256_hex TEXT NOT NULL,
@@ -105,7 +107,7 @@ const std::vector<std::string_view> GMigrationStatements{
 
 int CDatabaseSchema::GetCurrentVersion() noexcept
 {
-    return 2;
+    return 3;
 }
 
 const std::vector<std::string_view>& CDatabaseSchema::GetMigrationStatements()

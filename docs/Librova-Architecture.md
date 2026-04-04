@@ -67,6 +67,8 @@ One managed library root contains:
 
 Managed paths are stable and `BookId`-based.
 
+Managed file bytes may use an internal storage encoding that is independent from the logical book format. In the current implementation, fallback-managed `FB2` files are stored compressed inside `Books/`, while browse, export, delete, and duplicate behavior continue to treat them as ordinary `FB2` books.
+
 The `Trash` directory remains part of the implemented baseline as rollback-safe staging for delete operations.
 
 The user-facing delete path now removes managed books from the catalog, stages their files under `Trash`, and then hands those staged files off to the Windows `Recycle Bin`.
@@ -96,6 +98,7 @@ The import pipeline now accepts one or many selected source paths, including fol
 - `EPUB` is stored as `EPUB`.
 - `FB2` tries to convert to `EPUB`.
 - If conversion fails or is unavailable, original `FB2` may be stored with warnings.
+- If original `FB2` is stored as managed fallback, the managed file may be compressed as an internal storage detail; forced `FB2 -> EPUB` import does not apply that compression because the stored format is already `EPUB`.
 - Conversion cancellation is not treated as ordinary converter failure.
 - `FB2` metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real personal libraries, including Windows-1251 content on Windows.
 - duplicates are rejected by default;

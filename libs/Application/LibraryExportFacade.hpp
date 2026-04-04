@@ -29,7 +29,8 @@ public:
 private:
     [[nodiscard]] std::filesystem::path ExportManagedFile(
         const std::filesystem::path& sourcePath,
-        const std::filesystem::path& destinationPath) const;
+        const std::filesystem::path& destinationPath,
+        Librova::Domain::EStorageEncoding storageEncoding) const;
 
     [[nodiscard]] std::filesystem::path ExportConvertedFile(
         const Librova::Domain::SBook& book,

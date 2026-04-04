@@ -8,6 +8,7 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/BookId.hpp"
+#include "Domain/StorageEncoding.hpp"
 
 namespace Librova::Domain {
 
@@ -39,6 +40,7 @@ struct SBookMetadata
 struct SBookFileInfo
 {
     EBookFormat Format = EBookFormat::Epub;
+    EStorageEncoding StorageEncoding = EStorageEncoding::Plain;
     std::filesystem::path ManagedPath;
     std::uintmax_t SizeBytes = 0;
     std::string Sha256Hex;
@@ -51,6 +53,11 @@ struct SBookFileInfo
     [[nodiscard]] bool HasHash() const noexcept
     {
         return !Sha256Hex.empty();
+    }
+
+    [[nodiscard]] bool IsCompressed() const noexcept
+    {
+        return StorageEncoding == EStorageEncoding::Compressed;
     }
 };
 
