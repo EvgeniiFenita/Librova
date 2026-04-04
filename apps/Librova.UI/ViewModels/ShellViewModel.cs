@@ -63,9 +63,9 @@ internal sealed class ShellViewModel : ObservableObject
         BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync);
         OpenLibraryCommand = new AsyncCommand(OpenLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         CreateLibraryCommand = new AsyncCommand(CreateLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
-        ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Library);
-        ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Import);
-        ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress && CurrentSection is not ShellSection.Settings);
+        ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress);
+        ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => !IsImportInProgress);
+        ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress);
 
         UpdateConverterValidation();
 
@@ -117,9 +117,6 @@ internal sealed class ShellViewModel : ObservableObject
                 RaisePropertyChanged(nameof(IsSettingsSectionActive));
                 RaisePropertyChanged(nameof(CurrentSectionTitle));
                 RaisePropertyChanged(nameof(CurrentSectionDescription));
-                ShowLibrarySectionCommand.RaiseCanExecuteChanged();
-                ShowImportSectionCommand.RaiseCanExecuteChanged();
-                ShowSettingsSectionCommand.RaiseCanExecuteChanged();
             }
         }
     }

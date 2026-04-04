@@ -1,46 +1,64 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Base body text -->
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="FontSize" Value="14" />
+    <Setter Property="LineHeight" Value="22" />
   </Style>
 
+  <!-- Hero display — startup / error screens -->
   <Style Selector="TextBlock.DisplayTitle">
-    <Setter Property="FontSize" Value="34" />
+    <Setter Property="FontSize" Value="32" />
     <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="40" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
 
+  <!-- Page-level heading -->
   <Style Selector="TextBlock.ViewTitle">
-    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontSize" Value="22" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="30" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
 
+  <!-- Card / section heading -->
   <Style Selector="TextBlock.SectionTitle">
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontSize" Value="16" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="24" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
 
+  <!-- Overline / category label — accent color, spaced out -->
   <Style Selector="TextBlock.SectionEyebrow">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1.4" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
   </Style>
 
+  <!-- Secondary body text -->
   <Style Selector="TextBlock.BodyMuted">
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="LineHeight" Value="22" />
   </Style>
 
+  <!-- Small helper / path text -->
   <Style Selector="TextBlock.Caption">
     <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="18" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
 
+  <!-- Metadata key labels -->
   <Style Selector="TextBlock.MetaLabel">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="0.6" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
+
 </Styles>

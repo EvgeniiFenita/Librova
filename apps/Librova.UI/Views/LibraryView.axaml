@@ -8,17 +8,21 @@
              x:DataType="viewModels:ShellViewModel"
              mc:Ignorable="d">
   <UserControl.Styles>
+
+    <!-- Toolbar pill -->
     <Style Selector="Border.LibraryToolbar">
-      <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="22" />
-      <Setter Property="Padding" Value="20" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="20,14" />
     </Style>
+
+    <!-- Transparent book-card button wrapper -->
     <Style Selector="Button.BookCardButton">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
       <Setter Property="Template">
         <ControlTemplate>
           <ContentPresenter Content="{TemplateBinding Content}"
@@ -27,90 +31,112 @@
         </ControlTemplate>
       </Setter>
     </Style>
+
+    <!-- Book card surface -->
     <Style Selector="Border.BookCard">
       <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="18" />
-      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+      <Setter Property="BoxShadow" Value="0 2 12 0 #30000000" />
     </Style>
+
+    <!-- Hover overlay (fills BookCard area) -->
     <Style Selector="Border.BookCardHoverChrome">
-      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
       <Setter Property="Background" Value="#00FFFFFF" />
       <Setter Property="BorderBrush" Value="#00FFFFFF" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
+
+    <!-- Non-selected hover -->
     <Style Selector="Button.BookCardButton:pointerover Border.BookCardHoverChrome:not(.Selected)">
-      <Setter Property="Background" Value="#101A2330" />
+      <Setter Property="Background" Value="#0CFFFFFF" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
       <Setter Property="BorderThickness" Value="2" />
     </Style>
+
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*"
-        RowSpacing="18">
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- Toolbar -->
     <Border Classes="LibraryToolbar">
       <Grid ColumnDefinitions="2.3*,1.1*,Auto"
             ColumnSpacing="12">
+        <!-- Search: icon + TextBox side-by-side, no outer Border wrapper -->
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="10">
           <PathIcon Classes="AppIconAccent"
-                    Width="20"
-                    Height="20"
-                    Data="{StaticResource IconSearch}"
-                    VerticalAlignment="Center" />
+                    Width="16"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Data="{StaticResource IconSearch}" />
           <TextBox Grid.Column="1"
                    Classes="AppTextInput"
-                   Watermark="Search titles, authors, tags, and descriptions..."
+                   Watermark="Search titles, authors, tags..."
                    Text="{Binding LibraryBrowser.SearchText, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
+
+        <!-- Language filter -->
         <ComboBox Grid.Column="1"
                   Classes="AppComboBox"
                   SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
                   ItemsSource="{Binding LibraryBrowser.AvailableLanguageFilters}" />
+
+        <!-- Book count pill -->
         <Border Grid.Column="2"
                 Classes="MetricPill"
-                MinWidth="138">
+                MinWidth="120">
           <TextBlock HorizontalAlignment="Center"
                      VerticalAlignment="Center"
+                     FontSize="13"
+                     FontWeight="SemiBold"
                      Text="{Binding LibraryBrowser.BookCountText}" />
         </Border>
       </Grid>
     </Border>
 
+    <!-- Book grid + details -->
     <Grid Grid.Row="1"
-          ColumnDefinitions="*,Auto"
-          ColumnSpacing="18">
-      <Border Classes="AppPanelCompact"
-              Padding="18">
-        <Grid RowDefinitions="*">
+          ColumnDefinitions="*,Auto">
+
+      <!-- Book grid panel -->
+      <Border Classes="AppPanelFlat"
+              Padding="16">
+        <Grid>
+
+          <!-- Empty state -->
           <Border Classes="AccentPanel"
                   IsVisible="{Binding LibraryBrowser.ShowEmptyState}">
-            <StackPanel Spacing="12"
+            <StackPanel Spacing="14"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        MaxWidth="420">
+                        MaxWidth="400">
               <PathIcon Classes="AppIconAccent"
-                        Width="36"
-                        Height="36"
+                        Width="40"
+                        Height="40"
                         HorizontalAlignment="Center"
                         Data="{StaticResource IconSearch}" />
               <TextBlock Classes="ViewTitle"
                          HorizontalAlignment="Center"
+                         TextAlignment="Center"
                          Text="{Binding LibraryBrowser.EmptyStateTitle}" />
               <TextBlock Classes="BodyMuted"
                          HorizontalAlignment="Center"
+                         TextAlignment="Center"
                          Text="{Binding LibraryBrowser.EmptyStateDescription}"
                          TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
+          <!-- Scrollable book grid -->
           <ScrollViewer x:Name="BooksViewport"
                         IsVisible="{Binding LibraryBrowser.HasBooks}"
                         VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled">
             <StackPanel Width="{Binding #BooksViewport.Bounds.Width}"
-                        Spacing="4">
+                        Spacing="0">
               <ItemsControl ItemsSource="{Binding LibraryBrowser.Books}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -120,15 +146,15 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Button Classes="BookCardButton"
-                            Width="184"
-                            Height="314"
-                            Margin="0,0,16,16"
+                            Width="172"
+                            Height="300"
+                            Margin="0,0,14,14"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
                             Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.SelectBookCommand}"
                             CommandParameter="{Binding .}">
                       <Border Classes="BookCard"
-                              Height="314">
+                              Height="300">
                         <Border.BorderBrush>
                           <Binding Path="CardBorderBrush" />
                         </Border.BorderBrush>
@@ -139,12 +165,12 @@
                           <Border Classes="BookCardHoverChrome"
                                   Classes.Selected="{Binding IsSelected}"
                                   IsHitTestVisible="False" />
-                          <Grid Margin="12"
+                          <Grid Margin="10"
                                 RowDefinitions="Auto,*"
                                 RowSpacing="10">
                             <Border Classes="CoverMatte"
-                                    Width="160"
-                                    Height="240"
+                                    Width="152"
+                                    Height="228"
                                     HorizontalAlignment="Center"
                                     Background="{Binding CoverBackgroundBrush}">
                               <Grid>
@@ -154,21 +180,22 @@
                                        HorizontalAlignment="Stretch"
                                        VerticalAlignment="Stretch" />
                                 <TextBlock IsVisible="{Binding ShowCoverPlaceholder}"
-                                           FontSize="42"
+                                           FontSize="44"
                                            FontWeight="Bold"
-                                           Foreground="#E8F3FF"
+                                           Foreground="{DynamicResource AppCoverPlaceholderBrush}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
                                            Text="{Binding CoverPlaceholderText}" />
                               </Grid>
                             </Border>
                             <TextBlock Grid.Row="1"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"
                                        TextAlignment="Center"
-                                       MaxWidth="160"
-                                       MinHeight="42"
-                                       MaxHeight="42"
+                                       MaxWidth="152"
+                                       MinHeight="38"
+                                       MaxHeight="38"
                                        Text="{Binding Title}"
                                        TextWrapping="Wrap"
                                        TextTrimming="CharacterEllipsis" />
@@ -180,7 +207,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <TextBlock HorizontalAlignment="Center"
-                         Margin="0,0,0,8"
+                         Margin="0,0,0,12"
                          Classes="Caption"
                          IsVisible="{Binding LibraryBrowser.ShowLoadMoreIndicator}"
                          Text="Loading more books..." />
@@ -189,38 +216,45 @@
         </Grid>
       </Border>
 
+      <!-- Details panel -->
       <Border Grid.Column="1"
-              Classes="AppPanelCompact"
-              Width="380"
+              Background="{DynamicResource AppSurfaceMutedBrush}"
+              BorderBrush="{DynamicResource AppBorderBrush}"
+              BorderThickness="1,0,0,0"
+              Width="360"
               Padding="18"
               HorizontalAlignment="Left"
               VerticalAlignment="Stretch"
               IsVisible="{Binding LibraryBrowser.ShowDetailsPanel}">
         <Grid RowDefinitions="Auto,Auto,*,Auto"
-              RowSpacing="14">
+              RowSpacing="16">
+
+          <!-- Panel header -->
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="10">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="2">
               <TextBlock Classes="SectionEyebrow"
-                         Text="Selected Book" />
+                         Text="SELECTED" />
               <TextBlock Classes="SectionTitle"
-                         Text="Selection Details" />
+                         Text="Book Details" />
             </StackPanel>
             <Button Grid.Column="1"
-                    Classes="IconAction"
-                    Width="44"
+                    Classes="IconActionSm"
                     Command="{Binding LibraryBrowser.CloseSelectionCommand}">
               <PathIcon Classes="AppIcon"
+                        Width="14"
+                        Height="14"
                         Data="{StaticResource IconClose}" />
             </Button>
           </Grid>
 
+          <!-- Cover + core metadata -->
           <Grid Grid.Row="1"
-                ColumnDefinitions="140,*"
+                ColumnDefinitions="130,*"
                 ColumnSpacing="14">
             <Border Classes="CoverMatte"
-                    Width="140"
-                    Height="210"
+                    Width="130"
+                    Height="196"
                     VerticalAlignment="Top"
                     Background="{Binding LibraryBrowser.SelectedBookCoverBackgroundBrush}">
               <Grid>
@@ -230,9 +264,9 @@
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch" />
                 <TextBlock IsVisible="{Binding LibraryBrowser.ShowSelectedBookCoverPlaceholder}"
-                           FontSize="64"
+                           FontSize="60"
                            FontWeight="Bold"
-                           Foreground="#E8F3FF"
+                           Foreground="{DynamicResource AppCoverPlaceholderBrush}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Text="{Binding LibraryBrowser.SelectedBookCoverPlaceholderText}" />
@@ -241,27 +275,27 @@
 
             <StackPanel Grid.Column="1"
                         Spacing="8">
-              <TextBlock Classes="ViewTitle"
+              <TextBlock Classes="SectionTitle"
                          Text="{Binding LibraryBrowser.SelectedBookTitle}"
                          TextWrapping="Wrap" />
               <TextBlock Classes="BodyMuted"
-                         FontSize="15"
+                         FontSize="13"
                          Text="{Binding LibraryBrowser.SelectedBookAuthorText}"
                          TextWrapping="Wrap" />
               <TextBlock IsVisible="{Binding LibraryBrowser.ShowDetailsPanelLoading}"
                          Classes="Caption"
                          Text="Loading details..." />
-
               <ItemsControl ItemsSource="{Binding LibraryBrowser.SelectedBookMetadataPairs}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="Auto,*"
-                          ColumnSpacing="10"
-                          Margin="0,0,0,6">
+                          ColumnSpacing="8"
+                          Margin="0,0,0,5">
                       <TextBlock Classes="MetaLabel"
                                  Text="{Binding Label}" />
                       <TextBlock Grid.Column="1"
-                                 Classes="BodyMuted"
+                                 Classes="Caption"
+                                 Foreground="{DynamicResource AppTextSecondaryBrush}"
                                  Text="{Binding Value}"
                                  TextWrapping="Wrap" />
                     </Grid>
@@ -271,40 +305,41 @@
             </StackPanel>
           </Grid>
 
+          <!-- Annotation -->
           <ScrollViewer Grid.Row="2"
                         VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="14">
-              <StackPanel Spacing="6">
-                <TextBlock Classes="MetaLabel"
-                           Text="Annotation" />
-                <Border Classes="AppPanelMuted"
-                        Padding="12">
-                  <TextBlock Classes="BodyMuted"
-                             Text="{Binding LibraryBrowser.SelectedBookAnnotationText}"
-                             TextWrapping="Wrap" />
-                </Border>
-              </StackPanel>
+            <StackPanel Spacing="8">
+              <TextBlock Classes="MetaLabel"
+                         Text="ANNOTATION" />
+              <Border Classes="AppPanelMuted"
+                      Padding="12">
+                <TextBlock Classes="BodyMuted"
+                           FontSize="13"
+                           Text="{Binding LibraryBrowser.SelectedBookAnnotationText}"
+                           TextWrapping="Wrap" />
+              </Border>
             </StackPanel>
           </ScrollViewer>
 
+          <!-- Actions -->
           <StackPanel Grid.Row="3"
-                      Spacing="10">
+                      Spacing="8">
             <Button Classes="AccentAction"
                     HorizontalAlignment="Stretch"
                     IsVisible="{Binding LibraryBrowser.ShowExportAsEpubAction}"
                     Command="{Binding LibraryBrowser.ExportSelectedBookAsEpubCommand}">
-              <Grid ColumnDefinitions="Auto,*"
-                    ColumnSpacing="10">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          HorizontalAlignment="Center">
                 <PathIcon Classes="AppIconAccent"
                           Data="{StaticResource IconExport}" />
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           Text="Export As EPUB" />
-              </Grid>
+                <TextBlock VerticalAlignment="Center"
+                           Text="Export as EPUB" />
+              </StackPanel>
             </Button>
             <Border Classes="AppPanelMuted"
-                    Padding="12"
+                    Padding="10"
                     IsVisible="{Binding LibraryBrowser.ShowExportAsEpubHint}">
               <TextBlock Classes="Caption"
                          Text="{Binding LibraryBrowser.ExportAsEpubHintText}"
@@ -313,32 +348,34 @@
             <Button Classes="SecondaryAction"
                     HorizontalAlignment="Stretch"
                     Command="{Binding LibraryBrowser.ExportSelectedBookCommand}">
-              <Grid ColumnDefinitions="Auto,*"
-                    ColumnSpacing="10">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          HorizontalAlignment="Center">
                 <PathIcon Classes="AppIconAccent"
                           Data="{StaticResource IconExport}" />
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
+                <TextBlock VerticalAlignment="Center"
                            Text="Export" />
-              </Grid>
+              </StackPanel>
             </Button>
             <Button Classes="DestructiveAction"
                     HorizontalAlignment="Stretch"
                     Command="{Binding LibraryBrowser.MoveSelectedBookToTrashCommand}">
-              <Grid ColumnDefinitions="Auto,*"
-                    ColumnSpacing="10">
-                <PathIcon Classes="AppIcon"
-                          Foreground="#FFE8E8"
-                          Data="{StaticResource IconTrash}" />
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           Foreground="#FFE8E8"
-                           Text="Move To Recycle Bin" />
-              </Grid>
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          HorizontalAlignment="Center">
+                <PathIcon Data="{StaticResource IconTrash}"
+                          Width="16"
+                          Height="16"
+                          Foreground="{DynamicResource AppDangerTextBrush}" />
+                <TextBlock VerticalAlignment="Center"
+                           Text="Move to Recycle Bin" />
+              </StackPanel>
             </Button>
           </StackPanel>
+
         </Grid>
       </Border>
+
     </Grid>
   </Grid>
 </UserControl>

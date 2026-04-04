@@ -23,6 +23,7 @@ Before making changes, read these documents in order:
 5. `docs/engineering/CommitMessageGuidelines.md` — commit format
 6. `docs/engineering/TestStrategy.md` — what tests to add and when
 7. `docs/engineering/TransportInvariants.md` — IPC contract rules
+8. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
 
 ---
 
@@ -99,6 +100,7 @@ When a task completes, update docs **in the same task** if any of the following 
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | no archive checkpoint document is maintained |
 | UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` |
+| UI styles, colours, components, or layout changed | `docs/UiDesignSystem.md` |
 
 `docs/ManualUiTestScenarios.md` must be written in **Russian**. UI labels, button names, and on-screen strings must appear exactly as they are in the English UI.
 

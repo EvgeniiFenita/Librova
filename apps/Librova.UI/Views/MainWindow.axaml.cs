@@ -5,11 +5,20 @@ using Avalonia.Platform.Storage;
 using Librova.UI.ViewModels;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Librova.UI.Views;
 
 internal sealed partial class MainWindow : Window
 {
+    // DWMWA_CAPTION_COLOR = 35, available on Windows 11 build 22000+
+    private const uint DwmwaCaptionColor = 35;
+    // #07090F as COLORREF (0x00BBGGRR): R=0x07 G=0x09 B=0x0F → 0x000F0907
+    private const uint TitleBarColor = 0x000F0907;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint dwAttribute, ref uint pvAttribute, uint cbAttribute);
+
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
@@ -17,6 +26,27 @@ internal sealed partial class MainWindow : Window
         MinHeight = ShellLayoutMetrics.MinimumWindowHeight;
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
+        Opened += OnOpened;
+    }
+
+    private static void OnOpened(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindow window)
+            return;
+
+        try
+        {
+            var hwnd = window.TryGetPlatformHandle()?.Handle;
+            if (hwnd is null or 0)
+                return;
+
+            var color = TitleBarColor;
+            DwmSetWindowAttribute(hwnd.Value, DwmwaCaptionColor, ref color, sizeof(uint));
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // dwmapi unavailable or DWMWA_CAPTION_COLOR not supported on this OS version
+        }
     }
 
     private void OnDragOver(object? sender, DragEventArgs eventArgs)
