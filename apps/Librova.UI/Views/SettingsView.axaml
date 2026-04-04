@@ -30,7 +30,7 @@
                        Text="Converter Executable" />
           </StackPanel>
           <TextBlock Classes="BodyMuted"
-                     Text="Converter settings are applied on the next app launch. Disable conversion to keep imported FB2 files as FB2 when fallback rules allow it."
+                     Text="Saving reloads the shell immediately with the new converter settings. Disable conversion to keep imported FB2 files as FB2 when fallback rules allow it."
                      TextWrapping="Wrap" />
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="10">
