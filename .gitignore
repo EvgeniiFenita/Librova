@@ -5,6 +5,7 @@ Desktop.ini
 
 # Editors and IDEs
 .idea/
+.obsidian/
 .vs/
 .vscode/
 .dotnet/
