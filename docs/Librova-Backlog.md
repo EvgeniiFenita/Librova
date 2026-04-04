@@ -36,10 +36,6 @@ Working rule:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 
-- `#36` separate language-list SQL binding from count-query binding in `SqliteBookQueryRepository`.
-  - Status: `Open`
-  - Note: `ListAvailableLanguages` currently reuses `BindSearchCountFilters` even though its SQL intentionally omits the `language` placeholder; the current UI path resets `Language` before calling it, but the repository method is still internally inconsistent and should get its own binder plus coverage for combined filters.
-
 - `#37` remove fixed-sleep readiness from named-pipe tests and replace it with deterministic synchronization.
   - Status: `Open`
   - Note: several IPC tests still rely on `sleep_for(20ms)` before connecting clients; replace those sleeps with explicit readiness signaling so host/channel/client tests follow the repository rule against fixed waits.
@@ -122,6 +118,10 @@ Working rule:
 - `#35` replace full-library probable-duplicate scans with indexed or query-level duplicate lookup.
   - Status: `Closed`
   - Note: `SqliteBookQueryRepository::FindDuplicates` now keeps duplicate detection on one SQLite connection, narrows probable-duplicate candidates through an exact normalized-author-set query instead of reading the full library into memory, and preserves strict/probable semantics under regression tests including full author-set matching and multiple-match cases.
+
+- `#36` separate language-list SQL binding from count-query binding in `SqliteBookQueryRepository`.
+  - Status: `Closed`
+  - Note: `ListAvailableLanguages` now uses its own binder that matches the language-list SQL shape instead of reusing count-query binding with a phantom `language` parameter, and regression coverage now keeps combined `Series` / `Tags` / `Format` filters correct even when the current language filter is populated.
 
 ### Critical
 

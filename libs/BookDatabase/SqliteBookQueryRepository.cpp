@@ -530,6 +530,38 @@ void BindSearchCountFilters(
     }
 }
 
+void BindAvailableLanguageFilters(
+    Librova::Sqlite::CSqliteStatement& statement,
+    const Librova::Domain::SSearchQuery& query)
+{
+    int parameterIndex = 1;
+
+    if (query.HasText())
+    {
+        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, *query.SeriesUtf8);
+    }
+
+    for (const std::string& tag : query.TagsUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    if (query.Format.has_value())
+    {
+        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
+    }
+}
+
 void AppendStrictDuplicateMatches(
     std::vector<Librova::Domain::SDuplicateMatch>& matches,
     std::unordered_set<std::int64_t>& seenIds,
@@ -680,7 +712,7 @@ std::vector<std::string> CSqliteBookQueryRepository::ListAvailableLanguages(cons
 {
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildAvailableLanguagesSql(query));
-    BindSearchCountFilters(statement, query);
+    BindAvailableLanguageFilters(statement, query);
 
     std::vector<std::string> languages;
     while (statement.Step())
