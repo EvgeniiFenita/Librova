@@ -13,9 +13,21 @@ Working rule:
 
 - if the user asks to "move to the next task", take the highest-priority task with status `Open`;
 - if a higher-priority task is marked `Needs Reproduction` or `Blocked`, take the next open task;
-- if several tasks share the same priority, prefer the most local and easiest-to-verify task first.
+- if several tasks share the same priority, prefer the most local and easiest-to-verify task first;
 - when a task is completed, move it out of `Open Backlog` into the matching priority section under `Closed Backlog` in the same change;
 - `Open Backlog` must never contain an item whose status is `Closed`.
+
+Backlog edit rules:
+
+- every task entry must be exactly three lines in this shape:
+  `- #<id> <summary>`
+  `  - Status: <status>`
+  `  - Note: <note>`
+- every new task must get a new unique id that is greater than every existing task id in the document;
+- every new open task must be inserted only under `## 3. Open Backlog` in the matching priority section;
+- when taking a task into work, do not duplicate, rename, or move it yet unless reprioritization is intentional; keep it in `Open Backlog` with status `Open`, `Needs Reproduction`, or `Blocked`;
+- when closing a task, in the same change remove the full three-line entry from `Open Backlog` and add the full three-line entry under the matching priority section in `## 4. Closed Backlog` with status `Closed`;
+- after any backlog edit, verify there are no orphan task-title lines without `Status` and `Note`, and that no task id appears in both `Open Backlog` and `Closed Backlog`.
 
 ## 2. Priority Meanings
 
@@ -28,15 +40,17 @@ Working rule:
 
 ### Major
 
-- `#26` strengthen `series` and `genres` support across parsing, storage, details, and browser filtering.
+- `#40` parse `series` and `genres` from `FB2` / `EPUB` and show them in book details.
   - Status: `Open`
-  - Note: treat `series` and `genres` as first-class metadata end-to-end instead of incidental parser output.
+  - Note: keep this slice limited to metadata extraction, persistence where needed, transport, and details-panel display; browser-level filtering and dedicated browsing UX stay out of scope for this task.
+
+- `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
+  - Status: `Open`
+  - Note: focus this item on browse-time behavior: filter sources, filter UI, request plumbing, result counts, and any related series/genres browsing flows rather than parser-only metadata extraction.
 
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
-
-- `#37` remove fixed-sleep readiness from named-pipe tests and replace it with deterministic synchronization.
 ### Minor
 
 - `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
@@ -46,8 +60,6 @@ Working rule:
 - `#39` show the application version in the UI and define it in exactly one source of truth.
   - Status: `Open`
   - Note: the displayed UI version must come from a single shared version definition used across the application instead of duplicated constants or per-project version strings, so native host, managed UI, packaging, and any future version display cannot drift apart.
-
-- `#38` make converter argument template expansion single-pass so literal placeholder text inside file paths is preserved.
 ### Low
 
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.

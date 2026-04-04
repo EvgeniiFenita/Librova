@@ -50,9 +50,12 @@ Before making changes, read these documents in order:
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.
+- When adding a backlog task, assign the next unused numeric id, place the full task entry only in the matching `Open Backlog` priority section, and include title, `Status`, and `Note` together.
+- When taking a backlog task into work, work from the existing open entry instead of creating a duplicate or partial copy elsewhere in the document.
 - When implementation state and `docs/Librova-Backlog.md` diverge, update the backlog in the same task instead of leaving stale task statuses behind.
 - When you complete a backlog item, mark it `Closed` and move it out of `Open Backlog` into the matching section under `Closed Backlog` in the same task.
 - `Open Backlog` must contain only items whose status is actually `Open`, `Needs Reproduction`, or `Blocked`; never leave a `Closed` item there.
+- After any backlog edit, verify there are no orphan title-only lines, no missing `Status` / `Note` lines, and no task ids duplicated between `Open Backlog` and `Closed Backlog`.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
