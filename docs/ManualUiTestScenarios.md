@@ -210,7 +210,7 @@
 1. Открой `Library`.
 Ожидаемое поведение:
 - верхняя панель с `Search titles, authors, tags, and descriptions...`, фильтром языка и счетчиком книг остается сверху.
-- в левом блоке `Current Library` под путем к библиотеке виден summary `Library: ...`, который показывает общее число managed books и суммарный managed-book size в `MB`, не включая database file.
+- в левом блоке `Current Library` под путем к библиотеке виден summary `Library: ...`, который показывает общее число managed books и единый total library size в `MB`, включая managed books, `Covers` и `Database/librova.db`.
 - карточки книг отображаются в адаптивной сетке.
 - если книг больше начальной порции, при прокрутке вниз grid автоматически догружает следующие книги без отдельной кнопки page navigation.
 1.1. Сузь окно до минимально доступной ширины и открой `Selection Details`.
@@ -336,7 +336,7 @@
 
 1. В левой панели найди блок `Current Library`.
 Ожидаемое поведение:
-- под путем к библиотеке виден summary `Library: ...` с общим числом managed books и их суммарным размером в `MB`, без database file.
+- под путем к библиотеке виден summary `Library: ...` с общим числом managed books и единым total library size в `MB`, включая `Covers` и `Database/librova.db`.
 2. Нажми `Open Library...` и выбери другой существующий library root.
 Ожидаемое поведение:
 - текущая библиотека закрывается.

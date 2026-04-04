@@ -1012,7 +1012,7 @@ public sealed class ViewModelsTests
             Statistics = new LibraryStatisticsModel
             {
                 BookCount = 42,
-                TotalManagedBookSizeBytes = 5UL * 1024UL * 1024UL
+                TotalLibrarySizeBytes = 5UL * 1024UL * 1024UL
             }
         };
         var viewModel = new LibraryBrowserViewModel(service);
@@ -1865,7 +1865,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new LibraryStatisticsModel
             {
                 BookCount = 1,
-                TotalManagedBookSizeBytes = 1024
+                TotalLibrarySizeBytes = 1024
             });
 
         public Task<string?> ExportBookAsync(
@@ -1927,7 +1927,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new LibraryStatisticsModel
             {
                 BookCount = 1,
-                TotalManagedBookSizeBytes = 512
+                TotalLibrarySizeBytes = 512
             });
 
         public Task<string?> ExportBookAsync(

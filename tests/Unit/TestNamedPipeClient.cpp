@@ -101,7 +101,8 @@ public:
     {
         return {
             .BookCount = 42,
-            .TotalManagedBookSizeBytes = 5ULL * 1024ULL * 1024ULL
+            .TotalManagedBookSizeBytes = 4ULL * 1024ULL * 1024ULL,
+            .TotalLibrarySizeBytes = 5ULL * 1024ULL * 1024ULL
         };
     }
 };
@@ -293,7 +294,8 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
 
     REQUIRE(response.has_statistics());
     REQUIRE(response.statistics().book_count() == 42);
-    REQUIRE(response.statistics().total_managed_book_size_bytes() == 5ULL * 1024ULL * 1024ULL);
+    REQUIRE(response.statistics().total_library_size_bytes() == 5ULL * 1024ULL * 1024ULL);
+    REQUIRE(response.statistics().total_managed_book_size_bytes() == 4ULL * 1024ULL * 1024ULL);
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);

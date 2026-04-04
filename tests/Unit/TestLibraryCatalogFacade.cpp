@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 
 #include "Application/LibraryCatalogFacade.hpp"
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
@@ -236,8 +237,11 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
 
 TEST_CASE("Library catalog facade returns aggregate library statistics", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-statistics.db";
-    std::filesystem::remove(databasePath);
+    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-library-catalog-statistics";
+    const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
+    std::filesystem::remove_all(libraryRoot);
+    std::filesystem::create_directories(databasePath.parent_path());
+    std::filesystem::create_directories(libraryRoot / "Covers");
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
     Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
@@ -252,6 +256,7 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
         "stats-hash-1",
         std::chrono::sys_days{std::chrono::March / 30 / 2026});
     firstBook.File.SizeBytes = 1024;
+    firstBook.CoverPath = std::filesystem::path("Covers/0000001301.png");
     static_cast<void>(writeRepository.Add(firstBook));
 
     Librova::Domain::SBook secondBook = MakeBook(
@@ -265,11 +270,16 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     secondBook.File.SizeBytes = 2048;
     static_cast<void>(writeRepository.Add(secondBook));
 
+    std::ofstream(libraryRoot / "Covers/0000001301.png", std::ios::binary) << "cover-bytes";
+
     const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
     const auto statistics = facade.GetLibraryStatistics();
+    const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(libraryRoot / "Covers/0000001301.png"));
+    const auto databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
 
     REQUIRE(statistics.BookCount == 2);
     REQUIRE(statistics.TotalManagedBookSizeBytes == 3072);
+    REQUIRE(statistics.TotalLibrarySizeBytes == 3072 + coverSize + databaseSize);
 
-    std::filesystem::remove(databasePath);
+    std::filesystem::remove_all(libraryRoot);
 }

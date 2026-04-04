@@ -362,6 +362,7 @@ TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapte
     librova::v1::GetLibraryStatisticsResponse typedResponse;
     REQUIRE(typedResponse.ParseFromString(response.Payload));
     REQUIRE(typedResponse.statistics().book_count() == 1);
+    REQUIRE(typedResponse.statistics().total_library_size_bytes() > 1536);
     REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 1536);
 
     std::filesystem::remove(databasePath);

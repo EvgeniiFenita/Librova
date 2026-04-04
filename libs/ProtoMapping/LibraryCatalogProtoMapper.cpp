@@ -241,6 +241,7 @@ librova::v1::LibraryStatistics CLibraryCatalogProtoMapper::ToProto(
     librova::v1::LibraryStatistics proto;
     proto.set_book_count(statistics.BookCount);
     proto.set_total_managed_book_size_bytes(statistics.TotalManagedBookSizeBytes);
+    proto.set_total_library_size_bytes(statistics.TotalLibrarySizeBytes);
     return proto;
 }
 

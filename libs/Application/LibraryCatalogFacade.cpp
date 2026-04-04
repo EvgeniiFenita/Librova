@@ -64,7 +64,8 @@ SLibraryStatistics CLibraryCatalogFacade::GetLibraryStatistics() const
     const auto statistics = m_bookQueryRepository.GetLibraryStatistics();
     return {
         .BookCount = statistics.BookCount,
-        .TotalManagedBookSizeBytes = statistics.TotalManagedBookSizeBytes
+        .TotalManagedBookSizeBytes = statistics.TotalManagedBookSizeBytes,
+        .TotalLibrarySizeBytes = statistics.TotalLibrarySizeBytes
     };
 }
 

@@ -30,6 +30,7 @@ public:
     {
         std::uint64_t BookCount = 0;
         std::uint64_t TotalManagedBookSizeBytes = 0;
+        std::uint64_t TotalLibrarySizeBytes = 0;
     };
 
     virtual std::vector<SBook> Search(const SSearchQuery& query) const = 0;

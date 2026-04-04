@@ -72,7 +72,7 @@ internal static class LibraryCatalogMapper
         new()
         {
             BookCount = response.Statistics?.BookCount ?? 0,
-            TotalManagedBookSizeBytes = response.Statistics?.TotalManagedBookSizeBytes ?? 0
+            TotalLibrarySizeBytes = response.Statistics?.TotalLibrarySizeBytes ?? response.Statistics?.TotalManagedBookSizeBytes ?? 0
         };
 
     public static string? FromProto(ExportBookResponse response) =>

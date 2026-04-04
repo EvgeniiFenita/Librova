@@ -47,10 +47,6 @@ Backlog edit rules:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 ### Minor
-
-- `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
-  - Status: `Open`
-  - Note: decide whether the UI should show a single total-library-size metric or an explicit breakdown for `Books`, `Covers`, and `Database`, then align product docs and statistics contracts with that choice.
 ### Low
 
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
@@ -149,6 +145,10 @@ Backlog edit rules:
   - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
 
 ### Minor
+
+- `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
+  - Status: `Closed`
+  - Note: the shell keeps one aggregate `Library: ...` size metric, and the statistics flow now aligns on total library size rather than a managed-books-only total.
 
 - `#28` downscale oversized imported covers before storing them in the managed library.
   - Status: `Closed`

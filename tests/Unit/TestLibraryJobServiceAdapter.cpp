@@ -386,6 +386,7 @@ TEST_CASE("Library job service adapter exposes aggregate library statistics over
     REQUIRE(response.has_statistics());
     REQUIRE(response.statistics().book_count() == 2);
     REQUIRE(response.statistics().total_managed_book_size_bytes() == 3072);
+    REQUIRE(response.statistics().total_library_size_bytes() > 3072);
 
     std::filesystem::remove(databasePath);
 }

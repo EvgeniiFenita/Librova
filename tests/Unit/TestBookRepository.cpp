@@ -82,7 +82,8 @@ public:
     {
         return {
             .BookCount = 1,
-            .TotalManagedBookSizeBytes = 4096
+            .TotalManagedBookSizeBytes = 4096,
+            .TotalLibrarySizeBytes = 4096
         };
     }
 

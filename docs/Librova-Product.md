@@ -92,7 +92,7 @@ The user can:
 - search books through a single full-text field that matches title, authors, tags, and description;
 - use that same full-text field with ordinary punctuation without breaking the search flow through raw FTS syntax errors;
 - filter the grid by language;
-- see a library summary in the left `Current Library` panel with total managed-book count and total managed-book size in megabytes, excluding the database;
+- see a library summary in the left `Current Library` panel with total managed-book count and one aggregate library-size metric in megabytes that includes managed books, stored covers, and the SQLite database;
 - browse books as cover-driven cards in a responsive grid;
 - see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
 - open a right-hand details panel without leaving the `Library` section;

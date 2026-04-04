@@ -283,6 +283,11 @@ public sealed class LibraryCatalogClientTests
                 }),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+            var coversRoot = Path.Combine(options.LibraryRoot, "Covers");
+            Directory.CreateDirectory(coversRoot);
+            var coverPath = Path.Combine(coversRoot, "manual-cover.png");
+            await File.WriteAllTextAsync(coverPath, "stub-cover-file");
+            var coverSizeBytes = (ulong)new FileInfo(coverPath).Length;
             var response = await client.GetLibraryStatisticsAsync(
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
@@ -296,8 +301,7 @@ public sealed class LibraryCatalogClientTests
             Assert.Equal(2UL, response.Statistics.BookCount);
             Assert.Equal(2, listResponse.Items.Count);
             Assert.True(databaseSizeBytes > 0);
-            Assert.Equal(expectedManagedBookSizeBytes, response.Statistics.TotalManagedBookSizeBytes);
-            Assert.NotEqual(expectedManagedBookSizeBytes + databaseSizeBytes, response.Statistics.TotalManagedBookSizeBytes);
+            Assert.Equal(expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes, response.Statistics.TotalLibrarySizeBytes);
         }
         finally
         {

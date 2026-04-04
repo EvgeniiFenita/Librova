@@ -83,6 +83,7 @@ struct SLibraryStatistics
 {
     std::uint64_t BookCount = 0;
     std::uint64_t TotalManagedBookSizeBytes = 0;
+    std::uint64_t TotalLibrarySizeBytes = 0;
 };
 
 class CLibraryCatalogFacade final

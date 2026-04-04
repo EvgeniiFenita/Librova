@@ -284,7 +284,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public string LibraryStatisticsText =>
         _isLibraryStatisticsUnavailable
             ? "Library summary unavailable."
-            : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalManagedBookSizeBytes)}";
+            : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalLibrarySizeBytes)}";
     public string EmptyStateTitle => HasActiveFilters ? "Nothing found" : "Library is empty";
     public string EmptyStateDescription => HasActiveFilters
         ? "Try a different search query or clear the current language filter."

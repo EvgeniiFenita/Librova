@@ -91,9 +91,9 @@ librova::v1::GetLibraryStatisticsResponse CLibraryJobServiceAdapter::GetLibraryS
 {
     const auto statistics = m_libraryCatalogFacade.GetLibraryStatistics();
     LogInfoIfInitialized(
-        "GetLibraryStatistics returned BookCount={} TotalManagedBookSizeBytes={}.",
+        "GetLibraryStatistics returned BookCount={} TotalLibrarySizeBytes={}.",
         statistics.BookCount,
-        statistics.TotalManagedBookSizeBytes);
+        statistics.TotalLibrarySizeBytes);
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(statistics);
 }
 

@@ -103,7 +103,8 @@ public:
     {
         return {
             .BookCount = 7,
-            .TotalManagedBookSizeBytes = 3ULL * 1024ULL * 1024ULL
+            .TotalManagedBookSizeBytes = 2ULL * 1024ULL * 1024ULL,
+            .TotalLibrarySizeBytes = 3ULL * 1024ULL * 1024ULL
         };
     }
 };
@@ -279,7 +280,8 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
     REQUIRE(typedResponse.ParseFromString(parsedResponse.Value->Payload));
     REQUIRE(typedResponse.has_statistics());
     REQUIRE(typedResponse.statistics().book_count() == 7);
-    REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 3ULL * 1024ULL * 1024ULL);
+    REQUIRE(typedResponse.statistics().total_library_size_bytes() == 3ULL * 1024ULL * 1024ULL);
+    REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 2ULL * 1024ULL * 1024ULL);
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);

@@ -161,6 +161,7 @@ message GetBookDetailsResponse {
 message LibraryStatistics {
   uint64 book_count = 1;
   uint64 total_managed_book_size_bytes = 2;
+  uint64 total_library_size_bytes = 3;
 }
 
 message GetLibraryStatisticsRequest {

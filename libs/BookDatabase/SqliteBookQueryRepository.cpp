@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -614,6 +615,70 @@ std::string BuildNormalizedTitle(const std::string& title)
     return Librova::Domain::NormalizeText(title);
 }
 
+std::filesystem::path ResolveLibraryRoot(const std::filesystem::path& databasePath)
+{
+    const std::filesystem::path databaseDirectory = databasePath.parent_path();
+
+    if (databaseDirectory.filename() == std::filesystem::path("Database"))
+    {
+        return databaseDirectory.parent_path();
+    }
+
+    return databaseDirectory;
+}
+
+std::uint64_t GetFileSizeOrZero(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const std::uintmax_t size = std::filesystem::file_size(path, errorCode);
+
+    if (errorCode)
+    {
+        return 0;
+    }
+
+    return static_cast<std::uint64_t>(size);
+}
+
+std::uint64_t GetDirectoryFileSizeRecursiveOrZero(const std::filesystem::path& root)
+{
+    std::error_code errorCode;
+
+    if (!std::filesystem::exists(root, errorCode))
+    {
+        return 0;
+    }
+
+    std::uint64_t totalSize = 0;
+    std::filesystem::recursive_directory_iterator iterator(
+        root,
+        std::filesystem::directory_options::skip_permission_denied,
+        errorCode);
+    std::filesystem::recursive_directory_iterator end;
+
+    if (errorCode)
+    {
+        return 0;
+    }
+
+    while (iterator != end)
+    {
+        if (iterator->is_regular_file(errorCode))
+        {
+            totalSize += GetFileSizeOrZero(iterator->path());
+        }
+
+        errorCode.clear();
+        iterator.increment(errorCode);
+        if (errorCode)
+        {
+            break;
+        }
+    }
+
+    return totalSize;
+}
+
 std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
     const Librova::Sqlite::CSqliteConnection& connection,
     const Librova::Domain::SCandidateBook& candidate)
@@ -802,9 +867,15 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
         return {};
     }
 
+    const std::uint64_t totalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1));
+    const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
+    const std::uint64_t totalCoverSizeBytes = GetDirectoryFileSizeRecursiveOrZero(libraryRoot / "Covers");
+    const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
+
     return {
         .BookCount = static_cast<std::uint64_t>(statement.GetColumnInt64(0)),
-        .TotalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1))
+        .TotalManagedBookSizeBytes = totalManagedBookSizeBytes,
+        .TotalLibrarySizeBytes = totalManagedBookSizeBytes + totalCoverSizeBytes + databaseSizeBytes
     };
 }
 
