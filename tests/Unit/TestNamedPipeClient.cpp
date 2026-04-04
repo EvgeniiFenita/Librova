@@ -18,6 +18,7 @@
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "PipeClient/NamedPipeClient.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
+#include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
@@ -160,11 +161,13 @@ TEST_CASE("Named pipe client performs typed StartImport call through host", "[pi
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
     std::jthread serverThread([&] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             host.RunSingleSession(server.WaitForClient());
         }
         catch (...)
@@ -173,7 +176,7 @@ TEST_CASE("Named pipe client performs typed StartImport call through host", "[pi
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
     const auto sourcePath = CreateImportSourcePath();
@@ -198,11 +201,13 @@ TEST_CASE("Named pipe client raises transport error on invalid pipe response", "
 {
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
     std::jthread serverThread([&] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             auto connection = server.WaitForClient();
             const auto ignoredRequest = connection.ReadMessage();
             (void)ignoredRequest;
@@ -214,7 +219,7 @@ TEST_CASE("Named pipe client raises transport error on invalid pipe response", "
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
 
@@ -255,11 +260,13 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
     std::jthread serverThread([&] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             host.RunSingleSession(server.WaitForClient());
         }
         catch (...)
@@ -268,7 +275,7 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
     librova::v1::GetLibraryStatisticsRequest request;

@@ -18,6 +18,7 @@
 
 #include "PipeTransport/NamedPipeChannel.hpp"
 #include "PipeTransport/PipeProtocol.hpp"
+#include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
@@ -34,11 +35,13 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
 {
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
-    std::jthread serverThread([&pipePath, &serverFailure] {
+    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             auto connection = server.WaitForClient();
 
             const auto requestBytes = connection.ReadMessage();
@@ -67,7 +70,7 @@ TEST_CASE("Named pipe channel exchanges framed request and response payloads", "
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
 
@@ -94,11 +97,13 @@ TEST_CASE("Named pipe channel rejects oversized framed payload before allocation
 {
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
-    std::jthread serverThread([&pipePath, &serverFailure] {
+    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             auto connection = server.WaitForClient();
             REQUIRE_THROWS_WITH(
                 connection.ReadMessage(),
@@ -110,7 +115,7 @@ TEST_CASE("Named pipe channel rejects oversized framed payload before allocation
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     const HANDLE clientHandle = CreateFileW(
         pipePath.c_str(),

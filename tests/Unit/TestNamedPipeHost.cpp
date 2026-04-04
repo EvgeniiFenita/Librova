@@ -20,6 +20,7 @@
 #include "Jobs/ImportJobRunner.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
+#include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
@@ -162,11 +163,13 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
     std::jthread serverThread([&] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             host.RunSingleSession(server.WaitForClient());
         }
         catch (...)
@@ -175,7 +178,7 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
     const auto sourcePath = CreateImportSourcePath();
@@ -230,11 +233,13 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
 
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
 
     std::jthread serverThread([&] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
             host.RunSingleSession(server.WaitForClient());
         }
         catch (...)
@@ -243,7 +248,7 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    readySignal.Wait();
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
 
