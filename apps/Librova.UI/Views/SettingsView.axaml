@@ -82,6 +82,24 @@
     <Border Classes="AppPanelMuted">
       <StackPanel Spacing="10">
         <TextBlock Classes="SectionEyebrow"
+                   Text="About" />
+        <TextBlock Classes="SectionTitle"
+                   Text="Application" />
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="10">
+          <TextBlock FontWeight="SemiBold"
+                     Text="Version" />
+          <TextBlock Grid.Column="1"
+                     Classes="BodyMuted"
+                     Text="{Binding ApplicationVersionText}"
+                     TextWrapping="Wrap" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Classes="AppPanelMuted">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="SectionEyebrow"
                    Text="Diagnostics" />
         <TextBlock Classes="SectionTitle"
                    Text="Runtime Paths" />

@@ -4,7 +4,7 @@ namespace Librova::Core {
 
 std::string_view CVersion::GetValue() noexcept
 {
-    return "0.1.0";
+    return LIBROVA_PRODUCT_VERSION;
 }
 
 } // namespace Librova::Core

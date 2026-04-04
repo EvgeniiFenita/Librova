@@ -8,3 +8,4 @@ target_include_directories(LibrovaCore
 )
 
 target_compile_features(LibrovaCore PUBLIC cxx_std_20)
+target_compile_definitions(LibrovaCore PUBLIC LIBROVA_PRODUCT_VERSION="${LIBROVA_PRODUCT_VERSION}")

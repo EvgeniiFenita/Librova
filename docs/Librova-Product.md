@@ -114,6 +114,8 @@ If the active session has a configured converter, managed `FB2` books can also b
 
 If a selected managed book is `FB2` but the current session has no configured converter, the details panel does not show the `Export As EPUB` action and instead points the user to `Settings` to configure a converter.
 
+The `Settings` section also shows the current application version.
+
 ### 3.5 Delete / Recycle
 
 The primary user-facing delete action now sends managed books to the Windows `Recycle Bin`.

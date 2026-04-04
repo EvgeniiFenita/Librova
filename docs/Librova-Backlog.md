@@ -51,10 +51,6 @@ Backlog edit rules:
 - `#32` expand the left `Current Library` summary so library size includes managed books, covers, and the SQLite database instead of only managed-book files.
   - Status: `Open`
   - Note: decide whether the UI should show a single total-library-size metric or an explicit breakdown for `Books`, `Covers`, and `Database`, then align product docs and statistics contracts with that choice.
-
-- `#39` show the application version in the UI and define it in exactly one source of truth.
-  - Status: `Open`
-  - Note: the displayed UI version must come from a single shared version definition used across the application instead of duplicated constants or per-project version strings, so native host, managed UI, packaging, and any future version display cannot drift apart.
 ### Low
 
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
@@ -157,6 +153,10 @@ Backlog edit rules:
 - `#28` downscale oversized imported covers before storing them in the managed library.
   - Status: `Closed`
   - Note: run cover optimization during import behind a native image-processing interface, keep aspect ratio, avoid upscaling, and keep the backend swappable so the initial Windows-only implementation does not leak into import policy.
+
+- `#39` show the application version in the UI and define it in exactly one source of truth.
+  - Status: `Closed`
+  - Note: `Settings` now shows the current application version, and both native `Core::Version` plus managed assembly metadata read it from the shared repository-root `VERSION.txt` file instead of duplicated per-project constants.
 
 - `#3` display file sizes in megabytes instead of raw bytes.
   - Status: `Closed`

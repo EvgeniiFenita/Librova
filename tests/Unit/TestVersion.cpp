@@ -4,5 +4,6 @@
 
 TEST_CASE("Core version is available", "[core][bootstrap]")
 {
-    REQUIRE(Librova::Core::CVersion::GetValue() == "0.1.0");
+    REQUIRE(!Librova::Core::CVersion::GetValue().empty());
+    REQUIRE(Librova::Core::CVersion::GetValue().find('.') != std::string_view::npos);
 }
