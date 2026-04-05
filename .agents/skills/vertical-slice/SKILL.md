@@ -81,5 +81,6 @@ Before marking the task done:
 - [ ] `Debug` and `Release` build both pass
 - [ ] All new tests are green
 - [ ] `docs/` updated for any changed product / architecture / backlog reality
+- [ ] Backlog item closed using `$backlog-update` skill (removed from `Librova-Backlog.md`, appended to `Librova-Backlog-Archive.md`)
 - [ ] No decorative tests added (see `docs/engineering/TestStrategy.md`)
 - [ ] No commits made unless explicitly requested

@@ -51,12 +51,8 @@ Before making changes, read these documents in order:
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.
-- When adding a backlog task, assign the next unused numeric id (greater than `Last assigned id` in `docs/Librova-Backlog.md`), update `Last assigned id` in the same change, place the full task entry only in the matching `Open Backlog` priority section, and include title, `Status`, `Type`, and `Note` together.
-- When taking a backlog task into work, work from the existing open entry instead of creating a duplicate or partial copy elsewhere in the document.
-- When implementation state and `docs/Librova-Backlog.md` diverge, update the backlog in the same task instead of leaving stale task statuses behind.
-- When you complete a backlog item, remove it from `Open Backlog`, set its status to `Closed`, replace its `Note` with a one-sentence summary of what was actually done (no exhaustive detail), and append the entry to the matching priority section in `docs/Librova-Backlog-Archive.md`.
-- `Open Backlog` must contain only items whose status is actually `Open`, `Needs Reproduction`, or `Blocked`; never leave a `Closed` item there.
-- After any backlog edit, verify there are no orphan title-only lines, no missing `Status` / `Type` / `Note` lines, and no task id present in both the main backlog and the archive.
+- For all backlog operations — adding tasks, taking into work, closing, and validating — follow the `$backlog-update` skill.
+- When implementation state and `docs/Librova-Backlog.md` diverge, update the backlog in the same task instead of leaving stale statuses behind.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
@@ -123,6 +119,7 @@ This applies to `README.md` as well: keep it current when project scope, archite
 
 Use these skills for common recurring workflows (type `$` in the CLI to pick a skill):
 
+- `$backlog-update` — add, close, or validate backlog tasks
 - `$vertical-slice` — end-to-end checklist for any new feature
 - `$transport-rpc` — step-by-step guide for adding a new IPC method
 - `$epub-import` — import pipeline extension checklist

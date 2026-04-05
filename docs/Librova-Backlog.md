@@ -2,36 +2,20 @@
 
 ## 1. Working Model
 
-Use a single backlog for active work.
+Use a single backlog for active work. For all backlog operations (adding, closing, validating tasks) follow the `$backlog-update` skill.
 
-Each task has:
+Each task has four required fields in this order:
 
-- `Priority`: `Critical`, `Major`, `Minor`, `Low`
-- `Type`: `Feature`, `Bug`
-- `Status`: `Open`, `Needs Reproduction`, `Blocked`, `Closed`
+```
+- `#<id>` <summary>
+  - Status: `Open | Needs Reproduction | Blocked | Closed`
+  - Type: `Feature | Bug`
+  - Note: <context or one-sentence completion summary>
+```
 
-Working rule:
-
-- if the user asks to "move to the next task", take the highest-priority task with status `Open`;
-- if a higher-priority task is marked `Needs Reproduction` or `Blocked`, take the next open task;
-- if several tasks share the same priority, prefer the most local and easiest-to-verify task first;
-- when a task is completed, move it out of `Open Backlog` into the matching priority section under `Closed Backlog` in the same change;
-- `Open Backlog` must never contain an item whose status is `Closed`.
+Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 Last assigned id: `#65`
-
-Backlog edit rules:
-
-- every task entry must be exactly four lines in this shape:
-  `- #<id> <summary>`
-  `  - Status: <status>`
-  `  - Type: <type>`
-  `  - Note: <note>`
-- every new task must get a new unique id greater than `Last assigned id`; update `Last assigned id` in the same change;
-- every new open task must be inserted only under `## 3. Open Backlog` in the matching priority section;
-- when taking a task into work, do not duplicate, rename, or move it yet unless reprioritization is intentional; keep it in `Open Backlog` with status `Open`, `Needs Reproduction`, or `Blocked`;
-- when closing a task, in the same change remove the full four-line entry from `Open Backlog`, set its status to `Closed`, replace its `Note` with a one-sentence summary of what was actually done (no exhaustive detail), and append the entry to the matching priority section in `docs/Librova-Backlog-Archive.md`;
-- after any backlog edit, verify there are no orphan task-title lines without `Status`, `Type`, and `Note` in this file, and that no id present here also appears in the archive.
 
 ## 2. Priority Meanings
 
