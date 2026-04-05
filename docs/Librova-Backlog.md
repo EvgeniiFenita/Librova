@@ -88,6 +88,10 @@ Backlog edit rules:
   - Status: `Open`
   - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
 
+- `#55` open the main window on the Import tab after first-run library creation.
+  - Status: `Open`
+  - Note: when the user creates a new library on first run, the shell currently opens on the Library tab; since the library is empty at that point the Library tab shows nothing useful; switch the initial active tab to Import so the user is immediately in context to add books.
+
 ### Low
 - `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
   - Status: `Open`
