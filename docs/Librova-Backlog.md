@@ -72,18 +72,6 @@ Backlog edit rules:
   - Status: `Open`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 ### Minor
-- `#50` replace whole-file bootstrap log merging with streamed copy during UI log reinitialization.
-  - Status: `Closed`
-  - Note: `ReinitializeUnsafe` now opens the previous log as a read `FileStream` and copies it into the destination via `Stream.CopyTo` instead of `File.ReadAllText` + `File.AppendAllText`; regression test verifies 5000-line bootstrap log is fully merged without truncation.
-
-- `#51` save UI preferences atomically so interrupted writes do not corrupt the preferences file.
-  - Status: `Closed`
-  - Note: `UiPreferencesStore.Save` now writes JSON to a sibling `.tmp` file then calls `File.Move(..., overwrite: true)` for an atomic replace; added regression tests for double-save overwrite correctness and `TryLoad` resilience against corrupted JSON.
-
-- `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
-  - Status: `Closed`
-  - Note: `Settings` now shows an `AppPanelCompact` About card with the Librova book icon, version, author name, and contact email; `ApplicationVersion` gained `Author` and `ContactEmail` static constants; `ShellViewModel` exposes `ApplicationAuthorText` and `ApplicationContactEmailText`; regression assertions added to the existing `ShellApplication` test.
-
 - `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
   - Status: `Open`
   - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
@@ -185,6 +173,14 @@ Backlog edit rules:
   - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
 
 ### Minor
+
+- `#57` disable the import options panel (Allow duplicate import, Force conversion to EPUB) during active import.
+  - Status: `Closed`
+  - Note: added `IsEnabled="{Binding ImportJobs.IsBusy, Converter={x:Static BoolConverters.Not}}"` on the OPTIONS `Border.AppPanelMuted` in `ImportView.axaml`; the existing `Border.AppPanelMuted:disabled { Opacity: 0.45 }` style (added in #56) handles visual dimming; both checkboxes are disabled via parent `IsEnabled` propagation.
+
+- `#56` dim the Library card in the sidebar during active import to match the disabled state of other sidebar elements.
+  - Status: `Closed`
+  - Note: added `IsEnabled="{Binding Shell.IsImportInProgress, Converter={x:Static BoolConverters.Not}}"` on the Library card `Border` in `MainWindow.axaml`; added `Border.AppPanelMuted:disabled { Opacity: 0.45 }` to the GLOBAL DISABLED OPACITY section of `Components.axaml` — consistent with `Button.NavItem:disabled` opacity.
 
 - `#55` open the main window on the Import tab after first-run library creation.
   - Status: `Closed`

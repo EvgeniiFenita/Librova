@@ -68,7 +68,8 @@
                  TextWrapping="Wrap" />
 
       <!-- Import options -->
-      <Border Classes="AppPanelMuted">
+      <Border Classes="AppPanelMuted"
+              IsEnabled="{Binding ImportJobs.IsBusy, Converter={x:Static BoolConverters.Not}}">
         <StackPanel Spacing="12">
           <TextBlock Classes="SectionEyebrow"
                      Text="OPTIONS" />

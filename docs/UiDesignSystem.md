@@ -257,9 +257,13 @@ Window (Background = AppBackgroundBrush)
 ## 11. Disabled / Lock-out State
 
 During import (`IsImportInProgress = true`) the UI is locked:
+
 - `ShowLibrarySectionCommand`, `ShowImportSectionCommand`, `ShowSettingsSectionCommand` → `CanExecute = false` → `NavItem:disabled` → `Opacity=0.45`
 - `TextBox:disabled`, `ComboBox:disabled`, `CheckBox:disabled` → `Opacity=0.38`
+- `Border.AppPanelMuted:disabled` → `Opacity=0.45`
 - Buttons: explicit `:disabled /template/ ContentPresenter` styles dim bg/fg
+- Library card in sidebar (`Border.AppPanelMuted`) — `IsEnabled` bound to `!Shell.IsImportInProgress`; dims to 0.45 opacity and prevents Open/New button interaction
+- OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims both checkboxes (Allow duplicate import, Force conversion to EPUB) via parent propagation
 - Only the "Cancel" button remains active
 
 > **Important:** Nav commands must NOT use `CurrentSection is not ShellSection.X` in CanExecute — that would disable the active button and break active-state styling.

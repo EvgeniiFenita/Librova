@@ -222,6 +222,7 @@
           <StackPanel DockPanel.Dock="Bottom"
                       Spacing="5">
             <Border Classes="AppPanelMuted"
+                    IsEnabled="{Binding Shell.IsImportInProgress, Converter={x:Static BoolConverters.Not}}"
                     Padding="12">
               <StackPanel Spacing="8">
                 <TextBlock Classes="SectionEyebrow"

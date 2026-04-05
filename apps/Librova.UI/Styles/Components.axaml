@@ -116,6 +116,9 @@
   <Style Selector="CheckBox:disabled">
     <Setter Property="Opacity" Value="0.38" />
   </Style>
+  <Style Selector="Border.AppPanelMuted:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
 
   <!-- Primary (accent-filled) -->
   <Style Selector="Button.PrimaryAction">
