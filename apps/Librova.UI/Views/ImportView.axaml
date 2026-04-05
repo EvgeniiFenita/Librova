@@ -6,6 +6,20 @@
              x:Class="Librova.UI.Views.ImportView"
              x:DataType="viewModels:ShellViewModel"
              mc:Ignorable="d">
+  <UserControl.Styles>
+    <Style Selector="UserControl:visible">
+      <Style.Animations>
+        <Animation Duration="0:0:0.15" FillMode="None">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled">
@@ -103,6 +117,11 @@
             <TextBlock Classes="SectionTitle"
                        Text="Import In Progress" />
           </StackPanel>
+          <ProgressBar IsIndeterminate="True"
+                       Height="4"
+                       CornerRadius="2"
+                       Foreground="{DynamicResource AppAccentBrush}"
+                       Background="{DynamicResource AppAccentMutedBrush}" />
           <TextBlock FontSize="15"
                      FontWeight="SemiBold"
                      Text="{Binding ImportJobs.StatusText}" />

@@ -19,11 +19,19 @@ namespace Librova.UI.ViewModels;
 internal sealed class LibraryBrowserViewModel : ObservableObject
 {
     private const double BytesPerMegabyte = 1024d * 1024d;
-    private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#171D27"));
-    private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#2B3647"));
-    private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#1A2634"));
-    private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#4CC2FF"));
-    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#0F141C"));
+    // Book card brush palette — must stay in sync with the warm sepia tokens in Colors.axaml.
+    // Avalonia IBrush cannot be looked up via DynamicResource from a ViewModel directly,
+    // so these are declared here as static fields mirroring the design token values.
+    //   DefaultCardBackground  ≈ Color.SurfaceMuted  (#1C160C)
+    //   DefaultCardBorder      ≈ Color.Border        (#2A200E)
+    //   SelectedCardBackground ≈ Color.SurfaceAlt    (#221A0E)
+    //   SelectedCardBorder     ≈ Color.Accent        (#F5A623)
+    //   RealCoverBackground    ≈ Color.Matte         (#0A0700)
+    private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#1C160C"));
+    private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#2A200E"));
+    private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#221A0E"));
+    private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#F5A623"));
+    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#0A0700"));
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly ICoverImageLoader _coverImageLoader;
@@ -1043,10 +1051,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         var palettes = new[]
         {
             (Start: Color.Parse("#6C4B3A"), End: Color.Parse("#D9A066")),
-            (Start: Color.Parse("#2F4D5A"), End: Color.Parse("#8FB7C7")),
+            (Start: Color.Parse("#5C3A28"), End: Color.Parse("#C4855A")),
             (Start: Color.Parse("#5A2F3D"), End: Color.Parse("#C18E78")),
             (Start: Color.Parse("#40523B"), End: Color.Parse("#B6C58E")),
-            (Start: Color.Parse("#314466"), End: Color.Parse("#D2B87A"))
+            (Start: Color.Parse("#6B4C1E"), End: Color.Parse("#D2B87A"))
         };
 
         var hash = HashCode.Combine(bookId, title, authorsText);

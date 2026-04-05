@@ -9,13 +9,13 @@ from PIL import Image, ImageDraw, ImageFilter
 class CIconGenerator:
     SIZES = (16, 24, 32, 48, 64, 128, 256)
 
-    # Colour palette — matches app's navy/cyan design tokens
-    ACCENT        = (76, 194, 255, 255)   # #4CC2FF
-    ACCENT_HIGH   = (140, 220, 255, 85)   # semi-transparent top highlight
-    ACCENT_SPINE  = (30,  140, 210, 175)  # slightly darker left-edge strip
-    SHADOW_COLOR  = (0,   20,  50,  95)   # soft bookmark drop-shadow
-    BG_TOP        = (18,  26,  44,  255)  # #121A2C
-    BG_BOTTOM     = (6,   9,   16,  255)  # #06090F
+    # Colour palette — matches app's warm sepia/amber design tokens
+    ACCENT        = (245, 166,  35, 255)   # #F5A623 amber
+    ACCENT_HIGH   = (255, 208, 122,  70)   # semi-transparent top highlight
+    ACCENT_SPINE  = (184, 122,  26, 175)   # slightly darker left-edge strip
+    SHADOW_COLOR  = (10,   7,   0,  95)    # soft bookmark drop-shadow
+    BG_TOP        = ( 26,  16,   3, 255)   # #1A1003 warm dark
+    BG_BOTTOM     = ( 13,  10,   7, 255)   # #0D0A07 near-black sepia
 
     @classmethod
     def Generate(cls, outputPath: str) -> None:
@@ -38,7 +38,7 @@ class CIconGenerator:
         gs = int(size * 0.56)
         gx = (size - gs) // 2
         gy = int(size * 0.08)
-        ImageDraw.Draw(glow).ellipse((gx, gy, gx + gs, gy + gs), fill=(76, 194, 255, 38))
+        ImageDraw.Draw(glow).ellipse((gx, gy, gx + gs, gy + gs), fill=(245, 166, 35, 30))
         glow = glow.filter(ImageFilter.GaussianBlur(size * 0.09))
         image = Image.alpha_composite(image, glow)
 

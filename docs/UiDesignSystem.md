@@ -7,7 +7,7 @@
 
 ## 1. Visual Language
 
-**Style:** Deep midnight navy + electric sky-blue accent. Modern, dark, low-noise.  
+**Style:** Deep warm sepia + amber/gold accent. Dark, cosy, library-like.  
 **Framework:** Avalonia 11 + FluentTheme (dark variant).  
 **Font:** `Segoe UI Variable, Segoe UI, sans-serif` — set globally on `Window`.  
 **Target OS:** Windows 11. DWM title-bar colour is set via P/Invoke (`DWMWA_CAPTION_COLOR`).
@@ -23,46 +23,46 @@ All colours live in `Colors.axaml` as `Color` primitives + `SolidColorBrush` res
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppBackgroundBrush` | `#07090F` | Window root, title bar |
-| `AppSidebarBrush` | `#0A0F1D` | Left navigation panel |
-| `AppSurfaceBrush` | `#111827` | Main content area |
-| `AppSurfaceMutedBrush` | `#162032` | Cards, NavItem default bg |
-| `AppSurfaceAltBrush` | `#1B2840` | Inputs, pointerover surfaces |
-| `AppSurfaceHoverBrush` | `#223050` | Button / control hover bg |
+| `AppBackgroundBrush` | `#0D0A07` | Window root, title bar |
+| `AppSidebarBrush` | `#100C08` | Left navigation panel |
+| `AppSurfaceBrush` | `#161108` | Main content area |
+| `AppSurfaceMutedBrush` | `#1C160C` | Cards, NavItem default bg |
+| `AppSurfaceAltBrush` | `#221A0E` | Inputs, pointerover surfaces |
+| `AppSurfaceHoverBrush` | `#2A2012` | Button / control hover bg |
 
 ### Borders
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppBorderBrush` | `#1C2C42` | Default 1 px borders |
-| `AppBorderStrongBrush` | `#2C4060` | Emphasis borders |
-| `AppSidebarBorderBrush` | `#16233A` | Sidebar / content divider |
+| `AppBorderBrush` | `#2A200E` | Default 1 px borders |
+| `AppBorderStrongBrush` | `#3A2E18` | Emphasis borders |
+| `AppSidebarBorderBrush` | `#211A0C` | Sidebar / content divider |
 
-### Accent (electric sky-blue)
+### Accent (amber / gold)
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppAccentBrush` | `#4CC2FF` | Primary accent, active borders |
-| `AppAccentBrightBrush` | `#99DEFF` | Hover on accent controls |
-| `AppAccentDimBrush` | `#2A8AB8` | Pressed accent |
-| `AppAccentMutedBrush` | `#0F2D45` | Accent tint overlay |
-| `AppAccentSurfaceBrush` | `#081E30` | Accent panel background |
-| `AppAccentBorderBrush` | `#1A4A6A` | Accent panel border |
+| `AppAccentBrush` | `#F5A623` | Primary accent, active borders |
+| `AppAccentBrightBrush` | `#FFD07A` | Hover on accent controls |
+| `AppAccentDimBrush` | `#B87A1A` | Pressed accent |
+| `AppAccentMutedBrush` | `#2A1C06` | Accent tint overlay |
+| `AppAccentSurfaceBrush` | `#1A1003` | Accent panel background |
+| `AppAccentBorderBrush` | `#3D2C0A` | Accent panel border |
 
 ### Navigation active state
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppNavActiveBrush` | `#0E2A48` | Active NavItem background |
-| `AppNavActiveHoverBrush` | `#12305A` | Active NavItem hover |
+| `AppNavActiveBrush` | `#1E1606` | Active NavItem background |
+| `AppNavActiveHoverBrush` | `#261C08` | Active NavItem hover |
 
 ### Text hierarchy
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppTextPrimaryBrush` | `#EAF0FA` | Default body text, active nav label |
-| `AppTextSecondaryBrush` | `#8AA3BF` | De-emphasised text |
-| `AppTextMutedBrush` | `#7899B6` | Placeholder, captions, inactive nav label |
+| `AppTextPrimaryBrush` | `#F5EDD8` | Default body text, active nav label |
+| `AppTextSecondaryBrush` | `#A89880` | De-emphasised text |
+| `AppTextMutedBrush` | `#967E68` | Placeholder, captions, inactive nav label |
 
 ### Semantic status
 
@@ -78,9 +78,10 @@ All colours live in `Colors.axaml` as `Color` primitives + `SolidColorBrush` res
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppOnAccentBrush` | `#04101A` | Text on filled accent (PrimaryAction) button |
-| `AppMatteBrush` | `#040710` | Book cover placeholder background |
-| `AppCoverPlaceholderBrush` | `#DDE8F8` | Initial letter on cover placeholder |
+| `AppOnAccentBrush` | `#0A0700` | Text on filled accent (PrimaryAction) button |
+| `AppMatteBrush` | `#0A0700` | Book cover placeholder background |
+| `AppCoverPlaceholderBrush` | `#F5EDD8` | Initial letter on cover placeholder |
+| `AppSidebarGradientBrush` | `#0A0806` → `#1A1409` | Sidebar vertical gradient (see §16) |
 
 ---
 
@@ -190,6 +191,9 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `IconInfo` | Info circle | Info hint |
 | `IconUploadCloud` | Cloud with arrow | Drop zone |
 | `IconChevronRight` | › chevron | Navigation hint |
+| `IconWarning` | Triangle with ! | Validation errors, warnings |
+| `IconCheck` | Checkmark in circle | Import success, operation complete |
+| `IconRefresh` | Circular arrow | Retry on startup error |
 
 ### PathIcon classes
 
@@ -225,18 +229,18 @@ Styled entirely via FluentTheme resource key overrides in `Colors.axaml` (no `/t
 Window (Background = AppBackgroundBrush)
 └── Grid
     ├── [IsStartingUp]    Border — full-bleed startup screen
-    ├── [IsFirstRun]      Border — setup wizard
+    ├── [IsFirstRun]      Border — two-column setup wizard (hero + form)
     ├── [HasStartupError] Border — recovery screen
     └── [HasShell]        Grid  ColumnDefinitions="244,*"
-        ├── Col 0: Border (AppSidebarBrush) — sidebar fill
+        ├── Col 0: Border (AppSidebarGradientBrush) — sidebar fill (gradient)
         │          Rectangle 1px — divider
         │          Border Padding="14,18" — sidebar content
         │              DockPanel
-        │                  Bottom: library card + Settings NavItem
-        │                  Fill:   branding + Library/Import NavItems
+        │                  Bottom: library card + Settings NavItem + version label
+        │                  Fill:   branding pill + tagline + Library/Import NavItems
         └── Col 1: Border (AppSurfaceBrush) — content fill
                    Grid (DataContext=Shell)
-                       LibraryView / ImportView / SettingsView
+                       LibraryView / ImportView / SettingsView (fade-in on :visible)
 ```
 
 **Sidebar width:** 244 px (fixed).  
@@ -273,7 +277,7 @@ During import (`IsImportInProgress = true`) the UI is locked:
 ## 12. Title Bar
 
 Controlled via DWM P/Invoke (`DWMWA_CAPTION_COLOR = 35`, Windows 11 only).  
-Colour: `#07090F` as COLORREF `0x000F0907`.  
+Colour: `#0D0A07` as COLORREF `0x00070A0D`.  
 Set in `MainWindow.axaml.cs → OnOpened`. Catches both `DllNotFoundException` and `EntryPointNotFoundException` for cross-version safety.
 
 ---
@@ -281,5 +285,40 @@ Set in `MainWindow.axaml.cs → OnOpened`. Catches both `DllNotFoundException` a
 ## 13. App Icon
 
 Generated by `scripts/GenerateLibrovaIcon.py` → `apps/Librova.UI/Assets/librova.ico`.  
-Design: navy rounded rectangle background + electric cyan bookmark silhouette with soft glow, highlight strip, spine strip.  
+Design: warm sepia rounded rectangle background + amber/gold bookmark silhouette with soft glow, highlight strip, spine strip.  
 Regenerate: `python scripts\GenerateLibrovaIcon.py apps\Librova.UI\Assets\librova.ico`
+
+---
+
+## 14. Palette Change Checklist
+
+To swap the entire colour palette, update exactly these four locations:
+
+| File | What to change |
+|---|---|
+| `apps/Librova.UI/Styles/Colors.axaml` | `Color.*` primitive tokens at the top (lines 10–80). All brushes and FluentTheme overrides propagate automatically via `{StaticResource}`. |
+| `apps/Librova.UI/Views/MainWindow.axaml.cs` | `TitleBarColor` constant — must match `Color.Background` as COLORREF `0x00BBGGRR`. |
+| `apps/Librova.UI/ViewModels/LibraryBrowserViewModel.cs` | 5 `static readonly IBrush` fields (lines ~30–34). Each has a comment naming the token it mirrors. |
+| `scripts/GenerateLibrovaIcon.py` | `ACCENT`, `BG`, glow colour constants, then re-run the script to regenerate `librova.ico`. |
+
+**Known Avalonia limitations affecting palette tokens:**
+
+- `BoxShadow` values (e.g., BookCard hover glow `#38F5A623`) and `TextControlSelectionHighlightColor` (`#40F5A623`) cannot reference `StaticResource` because `BoxShadow` is a parsed struct string and `<Color>` text content cannot be a markup extension. Both values are declared as named tokens (`Color.AccentGlow`, `Color.AccentSelection`) in `Colors.axaml` for documentation, but the consuming sites hardcode the literal hex with a comment referencing the token name. Update all four together when changing the palette.
+- `AppSidebarGradientBrush` gradient stops also use hardcoded hex values for the same reason — update alongside `Color.Sidebar` / `Color.Background`.
+
+---
+
+## 15. Section Transitions
+
+All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150 ms opacity fade-in animation triggered by the `UserControl:visible` pseudo-class. The animation plays each time the section becomes active. No ViewModel changes required — it is self-contained XAML in each view's `UserControl.Styles`.
+
+---
+
+## 16. Sidebar Details
+
+**Gradient** — The sidebar uses `AppSidebarGradientBrush` (a `LinearGradientBrush` from top `#0A0806` to bottom `#1A1409`) to create a subtle depth effect from recessed/shadowed top to warm amber base.
+
+**Version badge** — A small 11 px muted `TextBlock` at the bottom of the sidebar DockPanel, bound to `Shell.ApplicationVersionText`. Only visible when `HasShell=true`.
+
+**Annotation typography** — The book annotation text in the details panel uses `FontStyle="Italic"` to evoke a book excerpt feel.
+

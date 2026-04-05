@@ -326,6 +326,12 @@
     <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
   </Style>
+  <Style Selector="ComboBox.AppComboBox:pointerover /template/ ToggleButton /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+  </Style>
+  <Style Selector="ComboBox.AppComboBox /template/ ToggleButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+  </Style>
   <Style Selector="ComboBox.AppComboBox:focus /template/ ToggleButton">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
   </Style>

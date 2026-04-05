@@ -13,8 +13,8 @@ internal sealed partial class MainWindow : Window
 {
     // DWMWA_CAPTION_COLOR = 35, available on Windows 11 build 22000+
     private const uint DwmwaCaptionColor = 35;
-    // #07090F as COLORREF (0x00BBGGRR): R=0x07 G=0x09 B=0x0F → 0x000F0907
-    private const uint TitleBarColor = 0x000F0907;
+    // #0D0A07 as COLORREF (0x00BBGGRR): R=0x0D G=0x0A B=0x07 → 0x00070A0D
+    private const uint TitleBarColor = 0x00070A0D;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint dwAttribute, ref uint pvAttribute, uint cbAttribute);

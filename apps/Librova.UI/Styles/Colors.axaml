@@ -2,31 +2,31 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!-- ═══════════════════════════════════════════════
-       DEEP MIDNIGHT NAVY PALETTE
-       Base: near-black indigo → Electric sky-blue accent
+       WARM LIBRARY PALETTE
+       Base: near-black warm sepia → Amber/gold accent
        ═══════════════════════════════════════════════ -->
 
   <!-- Backgrounds — layered from darkest to lightest -->
-  <Color x:Key="Color.Background">#07090F</Color>
-  <Color x:Key="Color.BackgroundElevated">#0C1019</Color>
-  <Color x:Key="Color.Sidebar">#0A0F1D</Color>
-  <Color x:Key="Color.Surface">#111827</Color>
-  <Color x:Key="Color.SurfaceMuted">#162032</Color>
-  <Color x:Key="Color.SurfaceAlt">#1B2840</Color>
-  <Color x:Key="Color.SurfaceHover">#223050</Color>
+  <Color x:Key="Color.Background">#0D0A07</Color>
+  <Color x:Key="Color.BackgroundElevated">#110D09</Color>
+  <Color x:Key="Color.Sidebar">#100C08</Color>
+  <Color x:Key="Color.Surface">#161108</Color>
+  <Color x:Key="Color.SurfaceMuted">#1C160C</Color>
+  <Color x:Key="Color.SurfaceAlt">#221A0E</Color>
+  <Color x:Key="Color.SurfaceHover">#2A2012</Color>
 
   <!-- Borders -->
-  <Color x:Key="Color.Border">#1C2C42</Color>
-  <Color x:Key="Color.BorderStrong">#2C4060</Color>
-  <Color x:Key="Color.SidebarBorder">#16233A</Color>
+  <Color x:Key="Color.Border">#2A200E</Color>
+  <Color x:Key="Color.BorderStrong">#3A2E18</Color>
+  <Color x:Key="Color.SidebarBorder">#211A0C</Color>
 
-  <!-- Accent — electric sky blue -->
-  <Color x:Key="Color.Accent">#4CC2FF</Color>
-  <Color x:Key="Color.AccentBright">#99DEFF</Color>
-  <Color x:Key="Color.AccentDim">#2A8AB8</Color>
-  <Color x:Key="Color.AccentMuted">#0F2D45</Color>
-  <Color x:Key="Color.AccentSurface">#081E30</Color>
-  <Color x:Key="Color.AccentBorder">#1A4A6A</Color>
+  <!-- Accent — amber / gold -->
+  <Color x:Key="Color.Accent">#F5A623</Color>
+  <Color x:Key="Color.AccentBright">#FFD07A</Color>
+  <Color x:Key="Color.AccentDim">#B87A1A</Color>
+  <Color x:Key="Color.AccentMuted">#2A1C06</Color>
+  <Color x:Key="Color.AccentSurface">#1A1003</Color>
+  <Color x:Key="Color.AccentBorder">#3D2C0A</Color>
 
   <!-- Status — success -->
   <Color x:Key="Color.SuccessSurface">#08221A</Color>
@@ -43,18 +43,18 @@
   <Color x:Key="Color.DangerBorder">#551820</Color>
 
   <!-- Text hierarchy -->
-  <Color x:Key="Color.TextPrimary">#EAF0FA</Color>
-  <Color x:Key="Color.TextSecondary">#8AA3BF</Color>
-  <Color x:Key="Color.TextMuted">#7899B6</Color>
+  <Color x:Key="Color.TextPrimary">#F5EDD8</Color>
+  <Color x:Key="Color.TextSecondary">#A89880</Color>
+  <Color x:Key="Color.TextMuted">#967E68</Color>
 
   <!-- Cover matte (book cover placeholder bg) -->
-  <Color x:Key="Color.Matte">#040710</Color>
+  <Color x:Key="Color.Matte">#0A0700</Color>
 
   <!-- Cover placeholder initials text -->
-  <Color x:Key="Color.CoverPlaceholder">#DDE8F8</Color>
+  <Color x:Key="Color.CoverPlaceholder">#F5EDD8</Color>
 
   <!-- Text on filled accent (PrimaryAction) button -->
-  <Color x:Key="Color.OnAccent">#04101A</Color>
+  <Color x:Key="Color.OnAccent">#0A0700</Color>
 
   <!-- Danger button text colours -->
   <Color x:Key="Color.DangerText">#FFDDDD</Color>
@@ -62,14 +62,31 @@
   <Color x:Key="Color.DangerHoverBg">#3D0E12</Color>
 
   <!-- Nav sidebar active item -->
-  <Color x:Key="Color.NavActive">#0E2A48</Color>
-  <Color x:Key="Color.NavActiveHover">#12305A</Color>
+  <Color x:Key="Color.NavActive">#1E1606</Color>
+  <Color x:Key="Color.NavActiveHover">#261C08</Color>
+
+  <!-- Glow / overlay colours derived from accent — cannot be expressed as
+       DynamicResource inside BoxShadow strings (Avalonia limitation), so
+       they are declared here as named tokens. Update alongside Color.Accent
+       when changing the palette.
+         AccentGlow     = Accent at ~22% opacity  (book card hover shadow)
+         AccentSelection= Accent at ~25% opacity  (text selection highlight) -->
+  <Color x:Key="Color.AccentGlow">#38F5A623</Color>
+  <Color x:Key="Color.AccentSelection">#40F5A623</Color>
 
   <!-- ═══════════════ BRUSHES ═══════════════ -->
 
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource Color.Background}" />
   <SolidColorBrush x:Key="AppBackgroundElevatedBrush" Color="{StaticResource Color.BackgroundElevated}" />
   <SolidColorBrush x:Key="AppSidebarBrush" Color="{StaticResource Color.Sidebar}" />
+  <!-- Sidebar vertical gradient: recessed/shadowed at top, warm amber undertone at base.
+       GradientStop Colors reference Color.* tokens by value (Avalonia limitation — Color tokens
+       cannot be used inside GradientStop.Color via StaticResource in LinearGradientBrush).
+       Update alongside Color.Sidebar / Color.Background when changing the palette. -->
+  <LinearGradientBrush x:Key="AppSidebarGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Offset="0"   Color="#0A0806" />
+    <GradientStop Offset="1"   Color="#1A1409" />
+  </LinearGradientBrush>
   <SolidColorBrush x:Key="AppSidebarBorderBrush" Color="{StaticResource Color.SidebarBorder}" />
   <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource Color.Surface}" />
   <SolidColorBrush x:Key="AppSurfaceMutedBrush" Color="{StaticResource Color.SurfaceMuted}" />
@@ -113,10 +130,97 @@
   <Thickness x:Key="Padding.CardCompact">16</Thickness>
   <Thickness x:Key="Padding.Sidebar">16,20</Thickness>
 
+  <!-- ═══════════════ FLUENT TEXTBOX RESOURCE OVERRIDES ════════════════
+       Override the DynamicResource keys consumed by FluentTheme's TextBox
+       ControlTheme. Without these, Avalonia falls back to system accent
+       (blue) for the focus border and system gray for the background.
+       ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- Background states -->
+  <SolidColorBrush x:Key="TextControlBackground"                Color="{StaticResource Color.SurfaceAlt}" />
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver"     Color="{StaticResource Color.SurfaceHover}" />
+  <SolidColorBrush x:Key="TextControlBackgroundFocused"         Color="{StaticResource Color.SurfaceAlt}" />
+  <SolidColorBrush x:Key="TextControlBackgroundDisabled"        Color="{StaticResource Color.SurfaceMuted}" />
+
+  <!-- Border states — focused uses amber accent instead of system blue -->
+  <SolidColorBrush x:Key="TextControlBorderBrush"               Color="{StaticResource Color.Border}" />
+  <SolidColorBrush x:Key="TextControlBorderBrushPointerOver"    Color="{StaticResource Color.BorderStrong}" />
+  <SolidColorBrush x:Key="TextControlBorderBrushFocused"        Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="TextControlBorderBrushDisabled"       Color="{StaticResource Color.Border}" />
+
+  <!-- Text & placeholder -->
+  <SolidColorBrush x:Key="TextControlForeground"                              Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="TextControlForegroundPointerOver"                   Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="TextControlForegroundFocused"                       Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="TextControlForegroundDisabled"                      Color="{StaticResource Color.TextMuted}" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForeground"                   Color="{StaticResource Color.TextMuted}" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver"        Color="{StaticResource Color.TextMuted}" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused"            Color="{StaticResource Color.TextMuted}" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled"           Color="{StaticResource Color.TextMuted}" />
+
+  <!-- Selection highlight — Accent at ~25% opacity.
+       Color resources cannot reference other Color resources via StaticResource
+       in Avalonia (not supported inside <Color> text content). Value manually
+       mirrors Color.Accent (#F5A623) at 0x40 alpha. Update together. -->
+  <Color x:Key="TextControlSelectionHighlightColor">#40F5A623</Color>
+
+  <!-- ═══════════════ FLUENT CHECKBOX RESOURCE OVERRIDES ════════════════
+       Override the DynamicResource keys consumed by FluentTheme's CheckBox
+       ControlTheme. Without these the checkmark and fill stay system-blue.
+       ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- Checked fill and border -->
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked"             Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver"  Color="{StaticResource Color.AccentBright}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed"      Color="{StaticResource Color.AccentDim}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked"           Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeCheckedPointerOver" Color="{StaticResource Color.AccentBright}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeCheckedPressed"    Color="{StaticResource Color.AccentDim}" />
+
+  <!-- Unchecked border -->
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUnchecked"         Color="{StaticResource Color.BorderStrong}" />
+  <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedPointerOver" Color="{StaticResource Color.Accent}" />
+
+  <!-- Checkmark glyph colour (on top of filled background) -->
+  <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked"            Color="{StaticResource Color.OnAccent}" />
+  <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="{StaticResource Color.OnAccent}" />
+  <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed"     Color="{StaticResource Color.OnAccent}" />
+
+  <!-- ═══════════════ FLUENT COMBOBOX RESOURCE OVERRIDES ════════════════
+       Override the DynamicResource keys consumed by FluentTheme's ComboBox
+       ControlTheme. Without these, hover/pressed states fall back to black
+       background and white border from the Fluent dark-mode defaults.
+       ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- Background states -->
+  <SolidColorBrush x:Key="ComboBoxBackground"                  Color="{StaticResource Color.SurfaceAlt}" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver"       Color="{StaticResource Color.SurfaceHover}" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundPressed"           Color="{StaticResource Color.SurfaceHover}" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundFocused"           Color="{StaticResource Color.SurfaceAlt}" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundDisabled"          Color="{StaticResource Color.SurfaceMuted}" />
+
+  <!-- Border states -->
+  <SolidColorBrush x:Key="ComboBoxBorderBrush"                 Color="{StaticResource Color.Border}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver"      Color="{StaticResource Color.BorderStrong}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushPressed"          Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushFocused"          Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled"         Color="{StaticResource Color.Border}" />
+
+  <!-- Foreground states -->
+  <SolidColorBrush x:Key="ComboBoxForeground"                  Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="ComboBoxForegroundPointerOver"       Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="ComboBoxForegroundFocused"           Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="ComboBoxForegroundDisabled"          Color="{StaticResource Color.TextMuted}" />
+
+  <!-- Dropdown popup surface -->
+  <SolidColorBrush x:Key="ComboBoxDropDownBackground"          Color="{StaticResource Color.SurfaceMuted}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush"         Color="{StaticResource Color.Border}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground"     Color="{StaticResource Color.TextSecondary}" />
+
   <!-- ═══════════════ FLUENT SCROLLBAR RESOURCE OVERRIDES ═══════════════
        Override the DynamicResource keys used by FluentScrollBarThumb,
        FluentScrollBarLineButton, and the ScrollBar ControlTheme so that
-       all scrollbar states match the app's dark-navy palette.
+       all scrollbar states match the app's warm sepia palette.
        ═══════════════════════════════════════════════════════════════════ -->
 
   <!-- Scrollbar strip itself: always transparent -->
@@ -192,5 +296,14 @@
 
   <!-- Cloud / drop zone (Import drop area) -->
   <StreamGeometry x:Key="IconUploadCloud">M12,3 C15.87,3 19,5.92 19.46,9.68 C21.45,10.17 23,12.0 23,14.2 C23,16.85 20.85,19 18.2,19 L14,19 L14,13.41 L15.59,15 L17,13.59 L12,8.59 L7,13.59 L8.41,15 L10,13.41 L10,19 L5.8,19 C3.15,19 1,16.85 1,14.2 C1,12.0 2.55,10.17 4.54,9.68 C5,5.92 8.13,3 12,3 Z</StreamGeometry>
+
+  <!-- Warning triangle with exclamation mark — validation errors, startup warnings -->
+  <StreamGeometry x:Key="IconWarning">M12,2 L22,20 L2,20 Z M11,9 L11,14 L13,14 L13,9 Z M11,16 L11,18 L13,18 L13,16 Z</StreamGeometry>
+
+  <!-- Check circle — import success, operation complete -->
+  <StreamGeometry x:Key="IconCheck">M12,3.5 C16.69,3.5 20.5,7.31 20.5,12 C20.5,16.69 16.69,20.5 12,20.5 C7.31,20.5 3.5,16.69 3.5,12 C3.5,7.31 7.31,3.5 12,3.5 Z M7.5,12 L10.5,15 L16.5,9</StreamGeometry>
+
+  <!-- Refresh / retry circular arrow — retry on startup error -->
+  <StreamGeometry x:Key="IconRefresh">M17.65,6.35 C16.2,4.9 14.21,4 12,4 C7.58,4 4.01,7.58 4.01,12 C4.01,16.42 7.58,20 12,20 C15.73,20 18.84,17.45 19.73,14 L17.65,14 C16.83,16.33 14.61,18 12,18 C8.69,18 6,15.31 6,12 C6,8.69 8.69,6 12,6 C13.66,6 15.14,6.69 16.22,7.78 L13,11 L20,11 L20,4 Z</StreamGeometry>
 
 </ResourceDictionary>

@@ -9,6 +9,20 @@
              mc:Ignorable="d">
   <UserControl.Styles>
 
+    <!-- Fade in when section becomes visible -->
+    <Style Selector="UserControl:visible">
+      <Style.Animations>
+        <Animation Duration="0:0:0.15" FillMode="None">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
     <!-- Toolbar pill -->
     <Style Selector="Border.LibraryToolbar">
       <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
@@ -39,6 +53,7 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
       <Setter Property="BoxShadow" Value="0 2 12 0 #30000000" />
+      <Setter Property="ClipToBounds" Value="True" />
     </Style>
 
     <!-- Hover overlay (fills BookCard area) -->
@@ -56,6 +71,13 @@
       <Setter Property="BorderThickness" Value="2" />
     </Style>
 
+    <!-- Ambient amber glow on hover for all book cards.
+         BoxShadow colour cannot use DynamicResource (Avalonia limitation) —
+         value mirrors Color.AccentGlow token (#38F5A623). Update together. -->
+    <Style Selector="Button.BookCardButton:pointerover Border.BookCard">
+      <Setter Property="BoxShadow" Value="0 4 18 0 #38F5A623" />
+    </Style>
+
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
@@ -67,7 +89,7 @@
         <!-- Search: icon + TextBox side-by-side, no outer Border wrapper -->
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="10">
-          <PathIcon Classes="AppIconAccent"
+          <PathIcon Classes="AppIcon"
                     Width="16"
                     Height="16"
                     VerticalAlignment="Center"
@@ -117,7 +139,7 @@
                         Width="40"
                         Height="40"
                         HorizontalAlignment="Center"
-                        Data="{StaticResource IconSearch}" />
+                        Data="{StaticResource IconBook}" />
               <TextBlock Classes="ViewTitle"
                          HorizontalAlignment="Center"
                          TextAlignment="Center"
@@ -316,6 +338,7 @@
                       Padding="12">
                 <TextBlock Classes="BodyMuted"
                            FontSize="13"
+                           FontStyle="Italic"
                            Text="{Binding LibraryBrowser.SelectedBookAnnotationText}"
                            TextWrapping="Wrap" />
               </Border>
