@@ -77,8 +77,8 @@ Backlog edit rules:
   - Note: `ReinitializeUnsafe` now opens the previous log as a read `FileStream` and copies it into the destination via `Stream.CopyTo` instead of `File.ReadAllText` + `File.AppendAllText`; regression test verifies 5000-line bootstrap log is fully merged without truncation.
 
 - `#51` save UI preferences atomically so interrupted writes do not corrupt the preferences file.
-  - Status: `Open`
-  - Note: `UiPreferencesStore.Save` writes directly to the live JSON file; replace it with temp-file write plus atomic replace/move semantics and add regression coverage for interrupted or invalid-file recovery where practical.
+  - Status: `Closed`
+  - Note: `UiPreferencesStore.Save` now writes JSON to a sibling `.tmp` file then calls `File.Move(..., overwrite: true)` for an atomic replace; added regression tests for double-save overwrite correctness and `TryLoad` resilience against corrupted JSON.
 
 - `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
   - Status: `Closed`
@@ -209,6 +209,10 @@ Backlog edit rules:
 - `#50` replace whole-file bootstrap log merging with streamed copy during UI log reinitialization.
   - Status: `Closed`
   - Note: `ReinitializeUnsafe` now opens the previous log as a read `FileStream` and copies it into the destination via `Stream.CopyTo` instead of `File.ReadAllText` + `File.AppendAllText`; regression test verifies 5000-line bootstrap log is fully merged without truncation.
+
+- `#51` save UI preferences atomically so interrupted writes do not corrupt the preferences file.
+  - Status: `Closed`
+  - Note: `UiPreferencesStore.Save` now writes JSON to a sibling `.tmp` file then calls `File.Move(..., overwrite: true)` for an atomic replace; added regression tests for double-save overwrite correctness and `TryLoad` resilience against corrupted JSON.
 
 - `#41` remove custom EPUB converter support and keep only built-in `fbc` / `fb2cng` configuration.
   - Status: `Closed`

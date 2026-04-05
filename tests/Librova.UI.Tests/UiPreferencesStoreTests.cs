@@ -58,4 +58,32 @@ public sealed class UiPreferencesStoreTests
 
         Assert.False(File.Exists(filePath));
     }
+
+    [Fact]
+    public void Save_AtomicallyReplacesExistingPreferencesFile()
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-preferences.json");
+        var store = new UiPreferencesStore(filePath);
+
+        store.Save(new UiPreferencesSnapshot { PreferredLibraryRoot = @"D:\First" });
+        store.Save(new UiPreferencesSnapshot { PreferredLibraryRoot = @"D:\Second" });
+
+        var actual = store.TryLoad();
+        Assert.NotNull(actual);
+        Assert.Equal(@"D:\Second", actual!.PreferredLibraryRoot);
+        Assert.False(File.Exists(filePath + ".tmp"));
+    }
+
+    [Fact]
+    public void TryLoad_ReturnsNullForCorruptedPreferencesFile()
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-preferences.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        File.WriteAllText(filePath, "{ this is not valid json }{{{");
+        var store = new UiPreferencesStore(filePath);
+
+        var result = store.TryLoad();
+
+        Assert.Null(result);
+    }
 }

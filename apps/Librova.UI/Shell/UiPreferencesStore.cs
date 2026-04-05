@@ -44,9 +44,13 @@ internal sealed class UiPreferencesStore : IUiPreferencesStore
 
     public void Save(UiPreferencesSnapshot snapshot)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var dir = Path.GetDirectoryName(FilePath)!;
+        Directory.CreateDirectory(dir);
+
+        var tempPath = FilePath + ".tmp";
         var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
-        File.WriteAllText(FilePath, json);
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, FilePath, overwrite: true);
     }
 
     public void Clear()
