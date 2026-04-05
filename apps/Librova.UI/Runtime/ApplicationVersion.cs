@@ -5,6 +5,8 @@ namespace Librova.UI.Runtime;
 internal static class ApplicationVersion
 {
     public static string Value { get; } = ReadVersion();
+    public static string Author { get; } = "Evgenii Volokhovich";
+    public static string ContactEmail { get; } = "evgenii.github@gmail.com";
 
     private static string ReadVersion()
     {

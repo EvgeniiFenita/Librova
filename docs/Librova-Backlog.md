@@ -85,8 +85,8 @@ Backlog edit rules:
   - Note: the native side already resolves managed paths within the library root, but the Avalonia browser currently trusts `cover_path` values from IPC directly when loading images; add a local guard so UI file IO still rejects out-of-root paths if the contract is violated.
 
 - `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
-  - Status: `Open`
-  - Note: `#39` closed the single-source version display; this item expands that into a proper About section — a visually distinct card with application version, author name, and email address, styled in line with the existing design system.
+  - Status: `Closed`
+  - Note: `Settings` now shows an `AppPanelCompact` About card with the Librova book icon, version, author name, and contact email; `ApplicationVersion` gained `Author` and `ContactEmail` static constants; `ShellViewModel` exposes `ApplicationAuthorText` and `ApplicationContactEmailText`; regression assertions added to the existing `ShellApplication` test.
 
 - `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
   - Status: `Open`
@@ -201,6 +201,10 @@ Backlog edit rules:
 - `#39` show the application version in the UI and define it in exactly one source of truth.
   - Status: `Closed`
   - Note: `Settings` now shows the current application version, and both native `Core::Version` plus managed assembly metadata read it from the shared repository-root `VERSION.txt` file instead of duplicated per-project constants.
+
+- `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
+  - Status: `Closed`
+  - Note: `Settings` now shows an `AppPanelCompact` About card with the Librova book icon, version, author name, and contact email; `ApplicationVersion` gained `Author` and `ContactEmail` static constants; `ShellViewModel` exposes `ApplicationAuthorText` and `ApplicationContactEmailText`; regression assertions added to the existing `ShellApplication` test.
 
 - `#41` remove custom EPUB converter support and keep only built-in `fbc` / `fb2cng` configuration.
   - Status: `Closed`

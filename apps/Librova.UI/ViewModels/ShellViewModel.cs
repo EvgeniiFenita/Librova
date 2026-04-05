@@ -155,6 +155,8 @@ internal sealed class ShellViewModel : ObservableObject
     public string HostExecutablePath => _session.HostOptions.ExecutablePath;
     public string HostLogFilePath => Path.Combine(LibraryRoot, "Logs", "host.log");
     public string ApplicationVersionText => $"Version {ApplicationVersion.Value}";
+    public string ApplicationAuthorText => ApplicationVersion.Author;
+    public string ApplicationContactEmailText => ApplicationVersion.ContactEmail;
     public string DiagnosticsHintText =>
         "If startup or import flow looks suspicious, inspect the UI log first, then the host log.";
     public string ConverterHintText =>

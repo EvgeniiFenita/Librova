@@ -61,22 +61,55 @@
       </Border>
 
       <!-- About -->
-      <Border Classes="AppPanelMuted">
-        <StackPanel Spacing="12">
-          <StackPanel Spacing="2">
+      <Border Classes="AppPanelCompact">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="8">
             <TextBlock Classes="SectionEyebrow"
                        Text="ABOUT" />
-            <TextBlock Classes="SectionTitle"
-                       Text="Application" />
+            <StackPanel Orientation="Horizontal"
+                        Spacing="10">
+              <PathIcon Classes="AppIconAccent"
+                        Data="{DynamicResource IconBook}"
+                        Width="20"
+                        Height="20"
+                        VerticalAlignment="Center" />
+              <TextBlock Classes="SectionTitle"
+                         VerticalAlignment="Center"
+                         Text="Librova" />
+            </StackPanel>
           </StackPanel>
           <Grid ColumnDefinitions="Auto,*"
-                ColumnSpacing="16">
+                ColumnSpacing="20"
+                RowDefinitions="Auto,Auto,Auto"
+                RowSpacing="10">
             <TextBlock Classes="MetaLabel"
                        VerticalAlignment="Center"
                        Text="VERSION" />
             <TextBlock Grid.Column="1"
                        Classes="BodyMuted"
+                       VerticalAlignment="Center"
                        Text="{Binding ApplicationVersionText}" />
+
+            <TextBlock Grid.Row="1"
+                       Classes="MetaLabel"
+                       VerticalAlignment="Center"
+                       Text="AUTHOR" />
+            <TextBlock Grid.Row="1"
+                       Grid.Column="1"
+                       Classes="BodyMuted"
+                       VerticalAlignment="Center"
+                       Text="{Binding ApplicationAuthorText}" />
+
+            <TextBlock Grid.Row="2"
+                       Classes="MetaLabel"
+                       VerticalAlignment="Center"
+                       Text="CONTACT" />
+            <TextBlock Grid.Row="2"
+                       Grid.Column="1"
+                       Classes="Caption"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                       Text="{Binding ApplicationContactEmailText}" />
           </Grid>
         </StackPanel>
       </Border>

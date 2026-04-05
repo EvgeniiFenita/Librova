@@ -37,6 +37,8 @@ public sealed class ShellApplicationTests
         Assert.True(application.Shell.IsLibrarySectionActive);
         Assert.Equal("Library", application.Shell.CurrentSectionTitle);
         Assert.Equal($"Version {Librova.UI.Runtime.ApplicationVersion.Value}", application.Shell.ApplicationVersionText);
+        Assert.Equal(Librova.UI.Runtime.ApplicationVersion.Author, application.Shell.ApplicationAuthorText);
+        Assert.Equal(Librova.UI.Runtime.ApplicationVersion.ContactEmail, application.Shell.ApplicationContactEmailText);
         Assert.Equal(
             Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
             application.Shell.ImportJobs.WorkingDirectory);
