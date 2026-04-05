@@ -750,7 +750,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         try
         {
             var resolvedPath = Path.IsPathFullyQualified(coverPath)
-                ? coverPath
+                ? Path.GetFullPath(coverPath)
                 : string.IsNullOrWhiteSpace(_libraryRoot)
                     ? null
                     : Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));

@@ -909,6 +909,63 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_RejectsAbsoluteCoverPathWithDotDotEscapingRoot()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        var outsideFileName = $"escape-cover-{Guid.NewGuid():N}.png";
+        var resolvedOutsidePath = Path.Combine(Path.GetDirectoryName(sandboxRoot)!, outsideFileName);
+        var dotDotAbsolutePath = Path.Combine(sandboxRoot, "..", outsideFileName);
+
+        try
+        {
+            await File.WriteAllTextAsync(resolvedOutsidePath, "escape-cover-data");
+
+            var service = new FixedCoverLibraryCatalogService(dotDotAbsolutePath);
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.Empty(loader.LoadedPaths);
+        }
+        finally
+        {
+            try { File.Delete(resolvedOutsidePath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_AcceptsAbsoluteCoverPathWithinLibraryRoot()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        var coversDir = Path.Combine(sandboxRoot, "Covers");
+        Directory.CreateDirectory(coversDir);
+
+        var absoluteCoverPath = Path.Combine(coversDir, $"{Guid.NewGuid():N}.png");
+
+        try
+        {
+            await File.WriteAllTextAsync(absoluteCoverPath, "cover-data");
+
+            var service = new FixedCoverLibraryCatalogService(absoluteCoverPath);
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.Single(loader.LoadedPaths);
+            Assert.Equal(absoluteCoverPath, loader.LoadedPaths[0]);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_PassesSearchAndLanguageIntoCatalogRequest()
     {
         var service = new RecordingLibraryCatalogService();
