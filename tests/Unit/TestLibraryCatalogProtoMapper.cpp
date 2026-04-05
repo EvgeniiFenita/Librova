@@ -122,6 +122,38 @@ TEST_CASE("Library catalog proto mapper restores export request format and desti
     REQUIRE(restored.ExportFormat == Librova::Domain::EBookFormat::Epub);
 }
 
+TEST_CASE("Library catalog proto mapper rejects BOOK_FORMAT_ZIP in book list request", "[proto-mapping][catalog]")
+{
+    librova::v1::BookListRequest request;
+    request.set_format(librova::v1::BOOK_FORMAT_ZIP);
+
+    REQUIRE_THROWS_AS(
+        Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request),
+        std::invalid_argument);
+}
+
+TEST_CASE("Library catalog proto mapper rejects BOOK_FORMAT_ZIP in export request", "[proto-mapping][catalog]")
+{
+    librova::v1::ExportBookRequest request;
+    request.set_book_id(1);
+    request.set_destination_path("C:/Exports/book.epub");
+    request.set_export_format(librova::v1::BOOK_FORMAT_ZIP);
+
+    REQUIRE_THROWS_AS(
+        Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request),
+        std::invalid_argument);
+}
+
+TEST_CASE("Library catalog proto mapper rejects unknown numeric book format value", "[proto-mapping][catalog]")
+{
+    librova::v1::BookListRequest request;
+    request.set_format(static_cast<librova::v1::BookFormat>(99));
+
+    REQUIRE_THROWS_AS(
+        Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request),
+        std::invalid_argument);
+}
+
 TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-mapping][catalog]")
 {
     const Librova::Application::STrashedBookResult result{

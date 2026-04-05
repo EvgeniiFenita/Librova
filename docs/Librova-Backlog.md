@@ -93,10 +93,6 @@ Backlog edit rules:
   - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
 
 ### Low
-- `#53` fail fast on unexpected `BOOK_FORMAT_ZIP` or unknown catalog format values instead of silently mapping them to `EPUB`.
-  - Status: `Open`
-  - Note: the current catalog proto mapper treats `BOOK_FORMAT_ZIP` and default/unknown values as `Epub`, which hides contract drift; prefer explicit rejection or logging so unsupported values cannot masquerade as valid EPUB metadata.
-
 - `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
   - Status: `Open`
   - Note: when `Export As EPUB` needs to decode a compressed managed `FB2` and then run conversion, the UI currently looks idle while no output file has appeared yet; add visible export-in-progress feedback such as disabled actions, wait cursor, status text, or progress so the running operation is obvious.
@@ -242,6 +238,10 @@ Backlog edit rules:
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
   - Status: `Closed`
   - Note: completed as an internal managed-storage detail through persisted `storage_encoding`, with fallback-managed `FB2` compressed on import, transparently decoded on direct export and `Export As EPUB`, and library statistics now reflecting the real on-disk managed size.
+
+- `#53` fail fast on unexpected `BOOK_FORMAT_ZIP` or unknown catalog format values instead of silently mapping them to `EPUB`.
+  - Status: `Closed`
+  - Note: `FromProto(BookFormat)` in `LibraryCatalogProtoMapper` now explicitly rejects `BOOK_FORMAT_ZIP`, `BOOK_FORMAT_UNSPECIFIED`, and any unknown numeric value with an error log and `std::invalid_argument`; three regression tests cover the ZIP case via `BookListRequest`, via `ExportBookRequest`, and via an unknown numeric cast.
 
 ## 5. Done Criteria
 

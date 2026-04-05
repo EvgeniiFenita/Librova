@@ -1,7 +1,9 @@
 #include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
 
 #include <chrono>
+#include <stdexcept>
 
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {
@@ -307,17 +309,34 @@ std::filesystem::path CLibraryCatalogProtoMapper::PathFromUtf8(const std::string
     return Librova::Unicode::PathFromUtf8(value);
 }
 
-Librova::Domain::EBookFormat CLibraryCatalogProtoMapper::FromProto(const librova::v1::BookFormat format) noexcept
+Librova::Domain::EBookFormat CLibraryCatalogProtoMapper::FromProto(const librova::v1::BookFormat format)
 {
     switch (format)
     {
     case librova::v1::BOOK_FORMAT_FB2:
         return Librova::Domain::EBookFormat::Fb2;
     case librova::v1::BOOK_FORMAT_EPUB:
+        return Librova::Domain::EBookFormat::Epub;
     case librova::v1::BOOK_FORMAT_ZIP:
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Error(
+                "catalog proto mapper received unsupported book format BOOK_FORMAT_ZIP ({}); "
+                "rejecting to prevent contract drift",
+                static_cast<int>(format));
+        }
+        throw std::invalid_argument("BOOK_FORMAT_ZIP is not a valid catalog book format");
     case librova::v1::BOOK_FORMAT_UNSPECIFIED:
     default:
-        return Librova::Domain::EBookFormat::Epub;
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Error(
+                "catalog proto mapper received unexpected book format value {}; "
+                "rejecting to prevent contract drift",
+                static_cast<int>(format));
+        }
+        throw std::invalid_argument(
+            "unexpected book format value in catalog proto mapper: " + std::to_string(static_cast<int>(format)));
     }
 }
 
