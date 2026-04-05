@@ -1,6 +1,6 @@
 ---
 name: backlog-update
-description: Guide for all backlog management operations in Librova: adding new tasks, taking tasks into work, closing tasks, and maintaining the archive. Use whenever adding, modifying, or closing a backlog item.
+description: "Guide for all backlog management operations in Librova: adding new tasks, taking tasks into work, closing tasks, and maintaining the archive. Use whenever adding, modifying, or closing a backlog item."
 ---
 
 # Backlog Management Playbook

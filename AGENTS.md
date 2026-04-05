@@ -17,13 +17,47 @@ Repository-level overview lives in `README.md`. Keep it aligned with the current
 Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
-2. `docs/Librova-Architecture.md` — frozen architectural decisions
-3. `docs/Librova-Backlog.md` — active backlog and task priorities
-4. `docs/engineering/CodeStyleGuidelines.md` — naming and style rules
-5. `docs/engineering/CommitMessageGuidelines.md` — commit format
-6. `docs/engineering/TestStrategy.md` — what tests to add and when
-7. `docs/engineering/TransportInvariants.md` — IPC contract rules
-8. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
+2. `docs/Librova-Backlog.md` — active backlog and task priorities
+3. `docs/engineering/CommitMessageGuidelines.md` — commit format
+4. `docs/engineering/TestStrategy.md` — what tests to add and when
+5. `docs/engineering/TransportInvariants.md` — IPC contract rules
+6. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
+
+When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.  
+Architecture reference (frozen decisions, read when a structural question is not answered by Hard Constraints below): `docs/Librova-Architecture.md`.
+
+---
+
+## Build and Test
+
+Run the full build and test suite (native + managed, `Debug` by default):
+
+```powershell
+.\Run-Tests.ps1
+```
+
+Individual steps:
+
+```powershell
+# Configure and build native (C++)
+cmake --preset x64-debug
+cmake --build --preset x64-debug --config Debug
+
+# Run native tests
+ctest --test-dir out\build\x64-debug -C Debug --output-on-failure
+
+# Build and run managed tests
+dotnet test tests\Librova.UI.Tests\Librova.UI.Tests.csproj -c Debug
+
+# Proto validation — required after any change under proto/
+scripts\ValidateProto.ps1
+
+# Build and launch the app (for manual verification)
+.\Run-Librova.ps1
+.\Run-Librova.ps1 -FirstRun    # first-run setup screen
+```
+
+> `build → test` must always be **sequential** — never run tests against a stale build.
 
 ---
 
@@ -91,11 +125,11 @@ When a task completes, update docs **in the same task** if any of the following 
 |---|---|
 | Product scope or user-visible behavior | `docs/Librova-Product.md` |
 | Architecture decision | `docs/Librova-Architecture.md` |
-| Backlog item closed, added, or reprioritized | `docs/Librova-Backlog.md`; closed items go to `docs/Librova-Backlog-Archive.md` |
+| Backlog item closed, added, or reprioritized | `docs/Librova-Backlog.md`; closed items appended to `docs/Librova-Backlog-Archive.md` via `$backlog-update` skill (append-only; do not load archive as upfront context) |
 | Repository overview or project-status summary visible from the root | `README.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | no archive checkpoint document is maintained |
-| UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` |
+| UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` — Russian; `## N. Feature` sections, numbered steps, `Ожидаемое поведение:` blocks, UI labels in English as-is; append new sections at end; do not load as upfront context |
 | UI styles, colours, components, or layout changed | `docs/UiDesignSystem.md` |
 
 `docs/ManualUiTestScenarios.md` must be written in **Russian**. UI labels, button names, and on-screen strings must appear exactly as they are in the English UI.
@@ -120,6 +154,7 @@ This applies to `README.md` as well: keep it current when project scope, archite
 Use these skills for common recurring workflows (type `$` in the CLI to pick a skill):
 
 - `$backlog-update` — add, close, or validate backlog tasks
+- `$code-style` — project-specific naming and formatting rules for C++, C#, proto, Python (full reference in `docs/engineering/CodeStyleGuidelines.md`)
 - `$vertical-slice` — end-to-end checklist for any new feature
 - `$transport-rpc` — step-by-step guide for adding a new IPC method
 - `$epub-import` — import pipeline extension checklist
