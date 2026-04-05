@@ -73,8 +73,8 @@ Backlog edit rules:
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 ### Minor
 - `#50` replace whole-file bootstrap log merging with streamed copy during UI log reinitialization.
-  - Status: `Open`
-  - Note: `UiLogging.Reinitialize` currently loads the previous log file with `File.ReadAllText` before appending it into the library log, which is unnecessary memory pressure for large bootstrap logs; switch to a streamed merge while preserving the current move/cleanup behavior.
+  - Status: `Closed`
+  - Note: `ReinitializeUnsafe` now opens the previous log as a read `FileStream` and copies it into the destination via `Stream.CopyTo` instead of `File.ReadAllText` + `File.AppendAllText`; regression test verifies 5000-line bootstrap log is fully merged without truncation.
 
 - `#51` save UI preferences atomically so interrupted writes do not corrupt the preferences file.
   - Status: `Open`
@@ -205,6 +205,10 @@ Backlog edit rules:
 - `#52` validate IPC-provided cover paths against the active library root on the UI side before file IO.
   - Status: `Closed`
   - Note: `LibraryBrowserViewModel.LoadCoverImage()` now resolves the final path and rejects it via `IsWithinLibraryRoot()` before any file IO; absolute out-of-root paths and relative path-traversal attempts both return `null` with a warning log; two regression tests added.
+
+- `#50` replace whole-file bootstrap log merging with streamed copy during UI log reinitialization.
+  - Status: `Closed`
+  - Note: `ReinitializeUnsafe` now opens the previous log as a read `FileStream` and copies it into the destination via `Stream.CopyTo` instead of `File.ReadAllText` + `File.AppendAllText`; regression test verifies 5000-line bootstrap log is fully merged without truncation.
 
 - `#41` remove custom EPUB converter support and keep only built-in `fbc` / `fb2cng` configuration.
   - Status: `Closed`

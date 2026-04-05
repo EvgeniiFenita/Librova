@@ -1,5 +1,6 @@
 using Librova.UI.Logging;
 using Librova.UI.Shell;
+using System.Linq;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -71,6 +72,54 @@ public sealed class UiLoggingTests
             var contents = await File.ReadAllTextAsync(libraryLogPath);
             Assert.Contains("Bootstrap message", contents);
             Assert.Contains("Library message", contents);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Reinitialize_StreamsLargeBootstrapLogIntoLibraryLog()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-logging-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        var bootstrapLogPath = Path.Combine(sandboxRoot, "bootstrap-ui.log");
+        var libraryLogPath = Path.Combine(sandboxRoot, "Library", "Logs", "ui.log");
+
+        try
+        {
+            var lines = Enumerable.Range(1, 5000).Select(i => $"Bootstrap line {i}").ToArray();
+            await File.WriteAllLinesAsync(bootstrapLogPath, lines);
+
+            UiLogging.ReinitializeForTests(bootstrapLogPath);
+            UiLogging.Reinitialize(libraryLogPath);
+            UiLogging.Information("Post-merge library message");
+            UiLogging.Shutdown();
+
+            Assert.False(File.Exists(bootstrapLogPath));
+            Assert.True(File.Exists(libraryLogPath));
+
+            var contents = await File.ReadAllTextAsync(libraryLogPath);
+            Assert.Contains("Bootstrap line 1", contents);
+            Assert.Contains("Bootstrap line 2500", contents);
+            Assert.Contains("Bootstrap line 5000", contents);
+            Assert.Contains("Post-merge library message", contents);
         }
         finally
         {

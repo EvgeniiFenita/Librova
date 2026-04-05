@@ -119,10 +119,11 @@ internal static class UiLogging
             && File.Exists(previousLogFilePath))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)!);
-            var previousContents = File.ReadAllText(previousLogFilePath);
-            if (!string.IsNullOrWhiteSpace(previousContents))
+
+            using (var source = new FileStream(previousLogFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var dest = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
             {
-                File.AppendAllText(logFilePath, previousContents);
+                source.CopyTo(dest);
             }
 
             try
