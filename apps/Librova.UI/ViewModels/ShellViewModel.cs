@@ -69,6 +69,11 @@ internal sealed class ShellViewModel : ObservableObject
 
         UpdateConverterValidation();
 
+        if (session.HostOptions.LibraryOpenMode == UiLibraryOpenMode.CreateNew)
+        {
+            _currentSection = ShellSection.Import;
+        }
+
         if (launchOptions?.InitialSourcePaths is { Length: > 0 } launchSourcePaths)
         {
             ImportJobs.ApplyDroppedSourcePaths(launchSourcePaths);

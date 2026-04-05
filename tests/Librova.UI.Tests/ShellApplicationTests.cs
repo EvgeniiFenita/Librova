@@ -704,6 +704,31 @@ public sealed class ShellApplicationTests
         }
     }
 
+    [Fact]
+    public void Create_WithCreateNewOpenMode_DefaultsToImportSection()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+
+        Assert.True(application.Shell.IsImportSectionActive);
+        Assert.False(application.Shell.IsLibrarySectionActive);
+        Assert.Equal("Import", application.Shell.CurrentSectionTitle);
+    }
+
     private static ShellStateStore CreateIsolatedStateStore() =>
         new(Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json"));
 
