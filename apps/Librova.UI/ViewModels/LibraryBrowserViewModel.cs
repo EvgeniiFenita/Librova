@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Librova.UI.Desktop;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
 using System.Collections.Generic;
@@ -754,7 +755,21 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                     ? null
                     : Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));
 
-            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
+            if (string.IsNullOrWhiteSpace(resolvedPath))
+            {
+                return null;
+            }
+
+            if (!IsWithinLibraryRoot(resolvedPath, _libraryRoot))
+            {
+                UiLogging.Warning(
+                    "Rejected cover path that does not resolve within the library root. Path={Path} LibraryRoot={LibraryRoot}",
+                    resolvedPath,
+                    _libraryRoot);
+                return null;
+            }
+
+            if (!File.Exists(resolvedPath))
             {
                 return null;
             }
@@ -765,6 +780,21 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             return null;
         }
+    }
+
+    private static bool IsWithinLibraryRoot(string resolvedPath, string libraryRoot)
+    {
+        if (string.IsNullOrWhiteSpace(libraryRoot))
+        {
+            return false;
+        }
+
+        var normalizedRoot = Path.GetFullPath(libraryRoot);
+        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
+
+        return resolvedPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)

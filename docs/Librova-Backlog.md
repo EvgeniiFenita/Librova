@@ -80,10 +80,6 @@ Backlog edit rules:
   - Status: `Open`
   - Note: `UiPreferencesStore.Save` writes directly to the live JSON file; replace it with temp-file write plus atomic replace/move semantics and add regression coverage for interrupted or invalid-file recovery where practical.
 
-- `#52` validate IPC-provided cover paths against the active library root on the UI side before file IO.
-  - Status: `Open`
-  - Note: the native side already resolves managed paths within the library root, but the Avalonia browser currently trusts `cover_path` values from IPC directly when loading images; add a local guard so UI file IO still rejects out-of-root paths if the contract is violated.
-
 - `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
   - Status: `Closed`
   - Note: `Settings` now shows an `AppPanelCompact` About card with the Librova book icon, version, author name, and contact email; `ApplicationVersion` gained `Author` and `ContactEmail` static constants; `ShellViewModel` exposes `ApplicationAuthorText` and `ApplicationContactEmailText`; regression assertions added to the existing `ShellApplication` test.
@@ -205,6 +201,10 @@ Backlog edit rules:
 - `#54` replace the version-only line in Settings with a styled About card showing version, author name, and contact email.
   - Status: `Closed`
   - Note: `Settings` now shows an `AppPanelCompact` About card with the Librova book icon, version, author name, and contact email; `ApplicationVersion` gained `Author` and `ContactEmail` static constants; `ShellViewModel` exposes `ApplicationAuthorText` and `ApplicationContactEmailText`; regression assertions added to the existing `ShellApplication` test.
+
+- `#52` validate IPC-provided cover paths against the active library root on the UI side before file IO.
+  - Status: `Closed`
+  - Note: `LibraryBrowserViewModel.LoadCoverImage()` now resolves the final path and rejects it via `IsWithinLibraryRoot()` before any file IO; absolute out-of-root paths and relative path-traversal attempts both return `null` with a warning log; two regression tests added.
 
 - `#41` remove custom EPUB converter support and keep only built-in `fbc` / `fb2cng` configuration.
   - Status: `Closed`

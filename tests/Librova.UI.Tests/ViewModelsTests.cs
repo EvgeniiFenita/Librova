@@ -860,6 +860,55 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_RejectsAbsoluteCoverPathOutsideLibraryRoot()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        var outsidePath = Path.Combine(Path.GetTempPath(), $"outside-cover-{Guid.NewGuid():N}.png");
+
+        try
+        {
+            await File.WriteAllTextAsync(outsidePath, "cover-outside-root");
+
+            var service = new FixedCoverLibraryCatalogService(outsidePath);
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.Empty(loader.LoadedPaths);
+        }
+        finally
+        {
+            try { File.Delete(outsidePath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_RejectsPathTraversalCoverPath()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var service = new FixedCoverLibraryCatalogService("../../outside-cover.png");
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.Empty(loader.LoadedPaths);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_PassesSearchAndLanguageIntoCatalogRequest()
     {
         var service = new RecordingLibraryCatalogService();
@@ -1948,6 +1997,42 @@ public sealed class ViewModelsTests
                 BookId = bookId,
                 Destination = DeleteDestinationModel.RecycleBin
             });
+    }
+
+    private sealed class FixedCoverLibraryCatalogService(string coverPath) : ILibraryCatalogService
+    {
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Test Book",
+                        Authors = ["Author"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/book.epub",
+                        CoverPath = coverPath,
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel { BookCount = 1 });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(null);
     }
 
     private sealed class RecordingCoverImageLoader : ICoverImageLoader
