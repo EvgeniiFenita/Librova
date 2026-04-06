@@ -14,6 +14,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.0`
   - Note: fixed import coordinator to write `RelativeBookPath`/`RelativeCoverPath` (computed via `std::filesystem::relative`) into `SBook` instead of absolute `FinalBookPath`/`FinalCoverPath`; consolidated duplicated `IsSafeRelativeManagedPath` helper into `ManagedPathSafety`; regression tests added.
 
+- `#46` make staged delete crash-safe across filesystem moves and catalog removal.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: reversed delete ordering — catalog removal (DB) is now the commit point; file moves to Trash happen after and are best-effort with orphan logging on failure; regression tests updated.
+
 - `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
   - Status: `Closed`
   - Type: `Feature`

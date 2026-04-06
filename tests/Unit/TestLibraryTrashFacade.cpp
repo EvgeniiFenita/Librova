@@ -327,7 +327,7 @@ TEST_CASE("Library trash facade rejects symlinked managed book path escaping lib
     std::filesystem::remove_all(sandbox);
 }
 
-TEST_CASE("Library trash facade restores moved book when cover move fails", "[application][trash]")
+TEST_CASE("Library trash facade orphans cover and keeps book in trash when cover move fails after DB removal", "[application][trash]")
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-cover";
     std::filesystem::remove_all(sandbox);
@@ -352,26 +352,23 @@ TEST_CASE("Library trash facade restores moved book when cover move fails", "[ap
     trashService.FailOnMoveCall = 2;
 
     const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
+    const auto result = facade.MoveBookToTrash(book.Id);
 
-    try
-    {
-        (void)facade.MoveBookToTrash(book.Id);
-        FAIL("Expected trash facade to surface cover move failure.");
-    }
-    catch (const std::exception& error)
-    {
-        REQUIRE(std::string{error.what()} == "trash move failed");
-    }
-    REQUIRE(std::filesystem::exists(bookPath));
+    // DB removal committed before file moves — operation succeeds even if cover move fails.
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE_FALSE(repository.GetById(book.Id).has_value());
+    // Book was successfully moved to Trash.
+    REQUIRE_FALSE(std::filesystem::exists(bookPath));
+    // Cover move failed — file is orphaned at original location.
     REQUIRE(std::filesystem::exists(coverPath));
-    REQUIRE(repository.GetById(book.Id).has_value());
-    REQUIRE(repository.RemoveCalls == 0);
-    REQUIRE(trashService.RestoreCalls == 1);
+    // No rollback restores.
+    REQUIRE(trashService.RestoreCalls == 0);
 
     std::filesystem::remove_all(sandbox);
 }
 
-TEST_CASE("Library trash facade restores book and cover when repository remove fails", "[application][trash]")
+TEST_CASE("Library trash facade propagates DB remove failure without moving any files", "[application][trash]")
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-remove";
     std::filesystem::remove_all(sandbox);
@@ -410,54 +407,41 @@ TEST_CASE("Library trash facade restores book and cover when repository remove f
     REQUIRE(std::filesystem::exists(coverPath));
     REQUIRE(repository.GetById(book.Id).has_value());
     REQUIRE(repository.RemoveCalls == 1);
-    REQUIRE(trashService.RestoreCalls == 2);
-    REQUIRE(trashService.RestoreSequence.size() == 2);
-    REQUIRE(trashService.RestoreSequence[0] == "0000000004.jpg");
-    REQUIRE(trashService.RestoreSequence[1] == "book.epub");
+    // DB remove happens first — no file moves before the throw.
+    REQUIRE(trashService.MoveCalls == 0);
 
     std::filesystem::remove_all(sandbox);
 }
 
-TEST_CASE("Library trash facade logs rollback restore failures when logger is initialized", "[application][trash]")
+TEST_CASE("Library trash facade logs orphaned file warning when book move fails after DB removal", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-log";
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-orphan-log";
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Books/0000000005");
-    std::filesystem::create_directories(sandbox / "Library/Covers");
 
     const auto bookPath = sandbox / "Library/Books/0000000005/book.epub";
-    const auto coverPath = sandbox / "Library/Covers/0000000005.jpg";
     const auto logPath = sandbox / "Logs" / "host.log";
     std::ofstream(bookPath, std::ios::binary) << "epub";
-    std::ofstream(coverPath, std::ios::binary) << "cover";
 
     Librova::Domain::SBook book;
     book.Id = {5};
-    book.Metadata.TitleUtf8 = "Rollback Log";
+    book.Metadata.TitleUtf8 = "Orphan Log";
     book.File.Format = Librova::Domain::EBookFormat::Epub;
     book.File.ManagedPath = "Books/0000000005/book.epub";
     book.File.SizeBytes = 12;
-    book.CoverPath = std::filesystem::path{"Covers/0000000005.jpg"};
 
     CFakeBookRepository repository(book);
-    repository.ThrowOnRemove = true;
     CFakeTrashService trashService(sandbox / "Trash");
-    trashService.FailOnRestoreCall = 1;
+    trashService.FailOnMoveCall = 1;
 
     Librova::Logging::CLogging::InitializeHostLogger(logPath);
     try
     {
         const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
-
-        try
-        {
-            (void)facade.MoveBookToTrash(book.Id);
-            FAIL("Expected trash facade to surface repository remove failure.");
-        }
-        catch (const std::exception& error)
-        {
-            REQUIRE(std::string{error.what()} == "repository remove failed");
-        }
+        const auto result = facade.MoveBookToTrash(book.Id);
+        // Operation succeeds (DB already removed) even though book move failed.
+        REQUIRE(result.has_value());
+        REQUIRE_FALSE(repository.GetById(book.Id).has_value());
     }
     catch (...)
     {
@@ -469,9 +453,45 @@ TEST_CASE("Library trash facade logs rollback restore failures when logger is in
     {
         std::ifstream logStream(logPath, std::ios::binary);
         const std::string logText{std::istreambuf_iterator<char>{logStream}, std::istreambuf_iterator<char>{}};
-        REQUIRE(logText.find("Failed to restore") != std::string::npos);
-        REQUIRE(logText.find("trash restore failed") != std::string::npos);
+        REQUIRE(logText.find("orphan") != std::string::npos);
+        REQUIRE(logText.find("trash move failed") != std::string::npos);
     }
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library trash facade removes catalog entry before moving files so crash leaves catalog consistent", "[application][trash]")
+{
+    // Regression test for crash-safe delete ordering (#46).
+    // Simulates: DB remove succeeds, then book move throws. The catalog must already
+    // be consistent (book removed) so a crash at that point does not leave a catalog
+    // entry pointing at a missing managed file.
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-catalog-first";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000009");
+
+    std::ofstream(sandbox / "Library/Books/0000000009/book.epub", std::ios::binary) << "epub";
+
+    Librova::Domain::SBook book;
+    book.Id = {9};
+    book.Metadata.TitleUtf8 = "Catalog First";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000009/book.epub";
+    book.File.SizeBytes = 12;
+
+    CFakeBookRepository repository(book);
+    CFakeTrashService trashService(sandbox / "Trash");
+    trashService.FailOnMoveCall = 1;
+
+    const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
+    const auto result = facade.MoveBookToTrash(book.Id);
+
+    // Catalog is consistent: record is gone even though the file move failed.
+    REQUIRE(result.has_value());
+    REQUIRE_FALSE(repository.GetById(book.Id).has_value());
+    REQUIRE(repository.RemoveCalls == 1);
+    // File is orphaned (move failed), but catalog integrity is preserved.
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Books/0000000009/book.epub"));
 
     std::filesystem::remove_all(sandbox);
 }

@@ -10,7 +10,7 @@
 namespace Librova::Application {
 namespace {
 
-void LogRollbackFailure(const std::string_view label, const std::filesystem::path& sourcePath, const std::exception& error) noexcept
+void LogOrphanedFile(const std::string_view label, const std::filesystem::path& sourcePath, const std::exception& error) noexcept
 {
     if (!Librova::Logging::CLogging::IsInitialized())
     {
@@ -19,8 +19,8 @@ void LogRollbackFailure(const std::string_view label, const std::filesystem::pat
 
     try
     {
-        Librova::Logging::Error(
-            "Failed to restore {} during trash rollback. Path='{}' Error='{}'.",
+        Librova::Logging::Warn(
+            "Failed to move {} to trash after catalog removal; file left as orphan. Path='{}' Error='{}'.",
             label,
             Librova::Unicode::PathToUtf8(sourcePath),
             error.what());
@@ -140,62 +140,42 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
         ? std::make_optional(ResolveManagedSourcePath(*book->CoverPath))
         : std::nullopt;
 
-    std::optional<std::filesystem::path> stagedBookPath;
-    std::optional<std::filesystem::path> stagedCoverPath;
+    // Catalog removal is the commit point. Once this returns, the book is logically
+    // deleted regardless of what happens to the files. If this throws, no files have
+    // been touched — safe to propagate.
+    m_bookRepository.Remove(id);
+
+    // File moves are best-effort after the catalog commit. On failure the file is
+    // left as an orphan in the managed library; the catalog remains consistent.
+    std::vector<std::filesystem::path> stagedPaths;
 
     try
     {
-        stagedBookPath = m_trashService.MoveToTrash(sourceBookPath);
-
-        if (sourceCoverPath.has_value())
-        {
-            stagedCoverPath = m_trashService.MoveToTrash(*sourceCoverPath);
-        }
-
-        m_bookRepository.Remove(id);
+        stagedPaths.push_back(m_trashService.MoveToTrash(sourceBookPath));
     }
-    catch (...)
+    catch (const std::exception& error)
     {
-        if (stagedCoverPath.has_value() && sourceCoverPath.has_value())
-        {
-            try
-            {
-                m_trashService.RestoreFromTrash(*stagedCoverPath, *sourceCoverPath);
-            }
-            catch (const std::exception& error)
-            {
-                LogRollbackFailure("cover", *sourceCoverPath, error);
-            }
-        }
-
-        if (stagedBookPath.has_value())
-        {
-            try
-            {
-                m_trashService.RestoreFromTrash(*stagedBookPath, sourceBookPath);
-            }
-            catch (const std::exception& error)
-            {
-                LogRollbackFailure("book", sourceBookPath, error);
-            }
-        }
-
-        throw;
+        LogOrphanedFile("book", sourceBookPath, error);
     }
 
-    if (m_recycleBinService == nullptr)
+    if (sourceCoverPath.has_value())
+    {
+        try
+        {
+            stagedPaths.push_back(m_trashService.MoveToTrash(*sourceCoverPath));
+        }
+        catch (const std::exception& error)
+        {
+            LogOrphanedFile("cover", *sourceCoverPath, error);
+        }
+    }
+
+    if (m_recycleBinService == nullptr || stagedPaths.empty())
     {
         return STrashedBookResult{
             .BookId = id,
             .Destination = ETrashDestination::ManagedTrash
         };
-    }
-
-    std::vector<std::filesystem::path> stagedPaths;
-    stagedPaths.push_back(*stagedBookPath);
-    if (stagedCoverPath.has_value())
-    {
-        stagedPaths.push_back(*stagedCoverPath);
     }
 
     try

@@ -32,12 +32,6 @@ Last assigned id: `#68`
 ## 3. Open Backlog
 
 ### Critical
-- `#46` make staged delete crash-safe across filesystem moves and catalog removal.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the current delete flow moves managed files into library `Trash` before removing the database row, so a crash in between can leave a catalog entry pointing at a missing managed file; tighten ordering or add durable recovery semantics so delete remains consistent across process interruption.
-
 - `#47` harden duplicate protection against concurrent imports with database-level enforcement.
   - Status: `Open`
   - Type: `Bug`
