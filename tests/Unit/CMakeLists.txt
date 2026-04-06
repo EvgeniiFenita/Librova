@@ -4,6 +4,7 @@ if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
 
     add_executable(LibrovaCoreTests
+        TestHashing.cpp
         TestImportJobClient.cpp
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
@@ -75,6 +76,7 @@ if(BUILD_TESTING)
             LibrovaDatabaseSchema
             LibrovaEpubParsing
             LibrovaFb2Parsing
+            LibrovaHashing
             LibrovaImportConversion
             LibrovaImporting
             LibrovaJobs

@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "Hashing/Sha256.hpp"
 #include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
@@ -285,7 +286,27 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         progressSink.ReportValue(15, "Parsing source book");
         const Librova::Domain::SParsedBook parsedBook = m_parserRegistry.Parse(request.SourcePath);
-        const auto duplicates = m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, request.Sha256Hex));
+
+        std::optional<std::string> effectiveSha256Hex = request.Sha256Hex;
+        if (!effectiveSha256Hex.has_value())
+        {
+            try
+            {
+                effectiveSha256Hex = Librova::Hashing::ComputeFileSha256Hex(request.SourcePath);
+            }
+            catch (const std::exception& ex)
+            {
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "SHA-256 computation failed for '{}': {}",
+                        Librova::Unicode::PathToUtf8(request.SourcePath),
+                        ex.what());
+                }
+            }
+        }
+
+        const auto duplicates = m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, effectiveSha256Hex));
 
         if (IsCancellationRequested(stopToken, progressSink))
         {
@@ -401,7 +422,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 .StorageEncoding = storageEncoding,
                 .ManagedPath = preparedStorage->RelativeBookPath,
                 .SizeBytes = std::filesystem::file_size(preparedStorage->StagedBookPath),
-                .Sha256Hex = request.Sha256Hex.value_or("")
+                .Sha256Hex = effectiveSha256Hex.value_or("")
             },
             .CoverPath = preparedStorage->RelativeCoverPath,
             .AddedAtUtc = std::chrono::system_clock::now()

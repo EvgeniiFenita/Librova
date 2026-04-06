@@ -32,12 +32,6 @@ Last assigned id: `#68`
 ## 3. Open Backlog
 
 ### Critical
-- `#48` compute and propagate SHA-256 for batch and ZIP imports so strict duplicate detection works beyond single-source manual requests.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the normal UI and multi-source import flow do not populate `sha256_hex`, so strict duplicate detection by content hash is effectively absent for batch and ZIP imports; compute the hash in the real import pipeline and cover it with regression tests.
-
 ### Major
 - `#66` validate a configured converter by running a test conversion when the user saves converter settings.
   - Status: `Open`

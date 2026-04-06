@@ -98,6 +98,8 @@ Duplicate detection operates at two layers:
 - **Read side** (`FindDuplicates`): checked before any staging begins; returns early with `RejectedDuplicate` or `DecisionRequired` on matches.
 - **Write side** (`IBookRepository::Add`): re-checks the `sha256_hex` hash inside a `BEGIN IMMEDIATE` SQLite transaction at insert time, closing the race window between a concurrent pair of imports that both passed the read-side check. On conflict it throws `CDuplicateHashException`; the coordinator either rejects or retries via `ForceAdd` depending on `AllowProbableDuplicates`. Empty `sha256_hex` is treated as "hash unknown" and skips the write-side check so books without a computed hash are never false-positives.
 
+`CSingleFileImportCoordinator` computes the SHA-256 of the source file using the Windows BCrypt API (`libs/Hashing`) when the caller does not supply one. This ensures all import paths — single-file, batch, and ZIP — participate in hash-based duplicate detection. If computation fails (I/O error or BCrypt failure) the import continues with an empty hash and a warning is logged; the write-side check is then skipped for that book.
+
 `IBookRepository::ForceAdd` is a separate pure virtual method that inserts without the hash check. It is the explicit override path for callers that have already decided to allow the duplicate.
 
 ## 4. Import And Conversion Rules

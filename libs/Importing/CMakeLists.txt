@@ -14,6 +14,8 @@ target_link_libraries(LibrovaImporting
         LibrovaImportConversion
         LibrovaParserRegistry
         LibrovaUnicode
+    PRIVATE
+        LibrovaHashing
 )
 
 target_compile_features(LibrovaImporting PUBLIC cxx_std_20)

@@ -942,6 +942,71 @@ TEST_CASE("Single file import keeps detailed parser diagnostics out of transport
     REQUIRE(result.DiagnosticError.find("xml_preview=\"<empty>\"") != std::string::npos);
 }
 
+TEST_CASE("Single file import computes and stores SHA-256 when not provided by caller", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-auto-hash");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+        // Sha256Hex intentionally not set
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(bookRepository.AddedBook->File.Sha256Hex.size() == 64);
+    for (const char ch : bookRepository.AddedBook->File.Sha256Hex)
+    {
+        REQUIRE(((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')));
+    }
+}
+
+TEST_CASE("Single file import succeeds and stores empty hash when caller provides empty Sha256Hex", "[importing]")
+{
+    // Covers the graceful-degradation contract: when sha256 is empty (as it would be
+    // if auto-computation failed at runtime), the import must not fail — it simply
+    // skips write-side hash deduplication for that book.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-empty-hash");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = std::string{}
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE(bookRepository.AddedBook->File.Sha256Hex.empty());
+}
+
 TEST_CASE("Single file import returns RejectedDuplicate when hash conflict detected at write time", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-reject");

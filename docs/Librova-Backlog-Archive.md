@@ -26,6 +26,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.0`
   - Note: `Add()` now re-checks sha256_hex inside a `BEGIN IMMEDIATE` transaction and throws `CDuplicateHashException` on conflict; `ForceAdd()` bypasses the check for explicit duplicate overrides; coordinator catches the exception and either rejects or force-inserts based on `AllowProbableDuplicates`; `ForceAdd` made pure virtual to enforce explicit implementation in all mocks; double-warning guard added; regression tests cover conflict detection, force-add path, empty-hash no-throw, and rollback correctness.
 
+- `#48` compute and propagate SHA-256 for batch and ZIP imports so strict duplicate detection works beyond single-source manual requests.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: added `libs/Hashing` slice with `ComputeFileSha256Hex` backed by Windows BCrypt API; `SingleFileImportCoordinator` now computes SHA-256 from the source file when the caller does not provide one, so all import paths (single-file, batch, ZIP) participate in hash-based duplicate detection; regression tests added for both the hash utility and the coordinator's auto-compute path.
+
 - `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
   - Status: `Closed`
   - Type: `Feature`
