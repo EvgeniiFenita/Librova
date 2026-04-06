@@ -140,35 +140,17 @@ For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with t
 
 The `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path, and leaving that path empty keeps EPUB conversion disabled.
 
-## 4. Current Included Scope
+## 4. Design Boundaries
 
-The current implemented scope includes:
+The following are outside the product scope by design:
 
-- import of `EPUB`, `FB2`, and `ZIP`;
-- duplicate handling;
-- local managed storage;
-- SQLite-based metadata storage and search;
-- export;
-- move to the Windows `Recycle Bin`, with managed-library `Trash` fallback if needed;
-- a UI shell with sections `Library`, `Import`, and `Settings`;
-- first-run setup;
-- diagnostics and logging;
-- a native host process behind the UI.
+- built-in book reading — Librova manages a library, it does not render books;
+- cloud sync or remote storage — the product is intentionally offline-first and single-user;
+- multiple simultaneous libraries — one user, one managed library;
+- plugin ecosystem — no extension or scripting surface is planned;
+- metadata editing — book records reflect the source file at import time.
 
-The active open work is tracked only in the single project backlog document.
-
-## 5. Currently Not Included
-
-The following are currently outside the implemented scope:
-
-- built-in book reading;
-- metadata editing;
-- cloud sync;
-- multiple libraries;
-- plugin ecosystem work;
-- richer library management features such as ratings, shelves, and favorites.
-
-## 6. High-Level Technical Picture
+## 5. High-Level Technical Picture
 
 Librova consists of two processes:
 
@@ -180,26 +162,8 @@ They communicate through:
 - `Protobuf`
 - Windows named pipes
 
-## 7. Current Project State
-
-The current product baseline is now functionally close to completion.
-
-Already implemented:
-
-- import pipeline;
-- browser and details with a card-grid `Library` view;
-- export;
-- delete through the Windows `Recycle Bin`, with managed-library `Trash` fallback;
-- first-run setup;
-- converter settings and diagnostics;
-- logging;
-- a strong automated test baseline;
-- a manual UI validation checklist.
-
-Any remaining implementation work belongs in [Librova Backlog](Librova-Backlog.md).
-
-## 8. Related Documents
+## 6. Related Documents
 
 - [Librova-Architecture](Librova-Architecture.md)
-- [Librova Backlog](Librova-Backlog.md)
+- [Librova Backlog](Librova-Backlog.md) — single source of truth for all open and planned work
 - [ManualUiTestScenarios](ManualUiTestScenarios.md)

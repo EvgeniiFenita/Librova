@@ -1,451 +1,50 @@
 # Librova: Сценарии Ручного UI-Тестирования
 
-Этот документ задает чеклист ручной проверки текущего UI.
-
-Запускать приложение через:
-
-- `.\Run-Librova.ps1`
-
-Перед началом:
-
-- для обычного запуска держи открытыми:
-  - [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
-  - [out\runtime\library\Logs\host.log](out/runtime/library/Logs/host.log)
-- для `-FirstRun` и `-SecondRun` до выбора или открытия библиотеки UI временно пишет bootstrap log в:
-  - [out\runtime\bootstrap-ui.log](out/runtime/bootstrap-ui.log)
-- после успешного выбора или открытия библиотеки bootstrap log должен быть перенесен в:
-  - [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
+Реестр всех сценариев ручной проверки UI. Сценарии разбиты по файлам в [`docs/manual-tests/`](manual-tests/).
 
 Используй эти сценарии после заметных UI или runtime изменений и перед тем, как считать сборку стабильной.
 
-## 1. First Run Setup
+## Как запускать
 
-1. Удали `out\runtime\ui-preferences.json` и `out\runtime\ui-shell-state.json`.
-2. Запусти `.\Run-Librova.ps1 -FirstRun`.
-3. Убедись, что в стартовом окне показан экран `Set up your Librova library`.
-4. Нажми `Continue`, указав невалидный относительный путь.
-Ожидаемое поведение:
-- `Continue` неактивна или показывается validation error.
-- host не стартует.
-5. Нажми `Browse...` и выбери валидную пустую папку.
-6. Нажми `Continue`.
-Ожидаемое поведение:
-- startup screen переходит в loading state, затем открывается основной shell приложения.
-- создается [out\runtime\ui-preferences.json](out/runtime/ui-preferences.json).
-- в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
-- UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
-7. Повтори `-FirstRun`, но выбери уже непустую папку, которая не является существующей библиотекой Librova.
-Ожидаемое поведение:
-- `Continue` не запускает host.
-- validation error явно требует пустую папку для создания новой библиотеки.
-8. Повтори `-FirstRun`, но выбери пустую папку с кириллическим путем, например `C:\Books\Моя библиотека`.
-Ожидаемое поведение:
-- setup и дальнейший startup завершаются успешно;
-- в `Logs\host.log` и `Logs\ui.log` путь к библиотеке отображается без `????` и без mojibake.
+Запускать приложение через `.\Run-Librova.ps1`.
 
-## 2. Startup Error Recovery
+Перед началом держи открытыми:
 
-1. Закрой приложение.
-2. Отредактируй `out\runtime\ui-preferences.json`, чтобы `PreferredLibraryRoot` указывал на плохой или недоступный путь.
-3. Запусти `.\Run-Librova.ps1 -SecondRun`.
-Ожидаемое поведение:
-- показывается startup error screen.
-- на экране видны пути к UI log, UI state и preferences.
-- на экране также есть блок `Choose Another Library Root`.
-- пока библиотека еще не открыта, UI log path может указывать на bootstrap log в `out\runtime\bootstrap-ui.log`.
-4. Введи валидную папку и нажми `Retry With This Library`.
-Ожидаемое поведение:
-- приложение успешно стартует без ручной чистки файлов.
-- исправленный library root сохраняется для следующего запуска.
+- [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
+- [out\runtime\library\Logs\host.log](out/runtime/library/Logs/host.log)
 
-## 3. Startup Error Recovery: Corrupted Library
+Для `-FirstRun` и `-SecondRun` до выбора или открытия библиотеки UI временно пишет bootstrap log в:
 
-1. Закрой приложение.
-2. Оставь валидный `PreferredLibraryRoot`, но повреди библиотеку внутри него, например испорть файл базы данных.
-3. Запусти `.\Run-Librova.ps1 -SecondRun`.
-Ожидаемое поведение:
-- показывается `Startup Error Recovery`.
-- startup error объясняет проблему открытия библиотеки заметно лучше, чем просто голый timeout.
-- в поле `Choose Another Library Root` показан текущий library root.
-- `Retry With This Library` неактивна, пока выбран тот же самый путь.
-4. Введи другой валидный library root.
-Ожидаемое поведение:
-- `Retry With This Library` становится активной.
-- приложение не пытается молча пересоздавать или чинить поврежденную библиотеку по тому же пути.
-5. Введи путь к существующей, но не-Librova папке, и нажми `Retry With This Library`.
-Ожидаемое поведение:
-- recovery validation отклоняет путь как несуществующую managed library Librova;
-- приложение не подменяет `Open Library` логикой неявного `Create Library`.
+- [out\runtime\bootstrap-ui.log](out/runtime/bootstrap-ui.log)
 
-## 4. Shell Navigation
+После успешного выбора или открытия библиотеки bootstrap log должен быть перенесен в `out\runtime\library\Logs\ui.log`.
 
-1. В левой навигации нажми `Library`.
-Ожидаемое поведение:
-- в верхней части левого rail под `Librova` показан нетехнический продуктовый слоган `A personal desktop library for your books.`;
-- отдельная верхняя hero-card с названием секции не показывается.
-- в основной области виден только library content.
-2. Нажми `Import`.
-Ожидаемое поведение:
-- отдельная верхняя hero-card с названием секции не показывается.
-- виден только import content.
-3. Нажми `Settings`.
-Ожидаемое поведение:
-- кнопка `Settings` находится внизу левой навигационной панели, отдельно от верхней рабочей навигации;
-- отдельная верхняя hero-card с названием секции не показывается.
-- виден только settings content.
-4. Прокрути каждый раздел.
-Ожидаемое поведение:
-- контент прокручивается вертикально.
-- панели не накладываются друг на друга.
-- в заголовке окна и на панели задач у приложения есть собственная иконка, а не дефолтный системный placeholder.
+## Реестр сценариев
 
-## 4.1 Host Lifetime
+Колонка **RG** (Release Gate) — сценарии, обязательные перед каждым релизом.
 
-1. Запусти `.\Run-Librova.ps1` и дождись открытия основного окна.
-2. Открой `Task Manager` и найди `Librova.UI.exe` и `LibrovaCoreHostApp.exe`.
-3. Закрой UI обычным способом.
-Ожидаемое поведение:
-- `LibrovaCoreHostApp.exe` тоже завершается и не остается висеть фоновым процессом.
-- в `host.log` виден нормальный shutdown-path, а не только crash-like termination.
-4. Повтори запуск приложения.
-5. Принудительно заверши `Librova.UI.exe` через `Task Manager`.
-Ожидаемое поведение:
-- `LibrovaCoreHostApp.exe` тоже исчезает вскоре после смерти UI.
-- host не остается orphaned process после crash-like termination UI.
+| Файл | # | Сценарий | RG |
+|------|---|----------|----|
+| [startup.md](manual-tests/startup.md) | 1 | First Run Setup | ✓ |
+| [startup.md](manual-tests/startup.md) | 2 | Startup Error Recovery | ✓ |
+| [startup.md](manual-tests/startup.md) | 3 | Startup Error Recovery: Corrupted Library | |
+| [startup.md](manual-tests/startup.md) | 4 | Shell Navigation | ✓ |
+| [startup.md](manual-tests/startup.md) | 4.1 | Host Lifetime | ✓ |
+| [import.md](manual-tests/import.md) | 1 | Import Validation | ✓ |
+| [import.md](manual-tests/import.md) | 2 | Import Workflow | ✓ |
+| [import.md](manual-tests/import.md) | 2.1 | Probable Duplicate Override | |
+| [import.md](manual-tests/import.md) | 3 | Drag And Drop Import Source | ✓ |
+| [import.md](manual-tests/import.md) | 4 | Import Updates Browser | ✓ |
+| [library.md](manual-tests/library.md) | 1 | Library Browser Basics | ✓ |
+| [library.md](manual-tests/library.md) | 2 | Full Details Loading | ✓ |
+| [library.md](manual-tests/library.md) | 2.1 | Covers And Legacy FB2 Metadata | ✓ |
+| [export.md](manual-tests/export.md) | 1 | Export Book | ✓ |
+| [export.md](manual-tests/export.md) | 2 | Export As EPUB Progress Feedback | ✓ |
+| [delete.md](manual-tests/delete.md) | 1 | Move To Recycle Bin | ✓ |
+| [settings.md](manual-tests/settings.md) | 1 | Open Or Create Library | ✓ |
+| [settings.md](manual-tests/settings.md) | 2 | Settings: Converter Configuration | ✓ |
+| [settings.md](manual-tests/settings.md) | 3 | Diagnostics And Logs | |
+| [settings.md](manual-tests/settings.md) | 4 | Settings: About Card | |
+| [regression.md](manual-tests/regression.md) | 1 | Relaunch State Persistence | |
+| [regression.md](manual-tests/regression.md) | 2 | Smoke Pass After Release Build | ✓ |
 
-## 5. Import Validation
-
-1. Открой раздел `Import`.
-2. Не выбирай файл и не делай drag-and-drop.
-Ожидаемое поведение:
-- большая зона импорта и кнопка `Select Files...` остаются доступны.
-- import не стартует сам по себе без выбранного файла.
-3. Нажми `Select Files...` и выбери реальный `.txt` файл.
-Ожидаемое поведение:
-- validation message сообщает, что поддерживаются только `.fb2`, `.epub`, `.zip`.
-- import не запускается.
-4. Нажми `Select Files...` и выбери валидный `.fb2`, `.epub` или `.zip`.
-Ожидаемое поведение:
-- import стартует без дополнительной кнопки `Start Import`.
-- экран переходит в running state.
-4.1. Нажми `Select Files...` и выбери одновременно один валидный `.fb2/.epub/.zip` и один неподдерживаемый файл, например `.txt`.
-Ожидаемое поведение:
-- batch import не блокируется целиком только из-за неподдерживаемого файла;
-- валидные источники продолжают импортироваться;
-- неподдерживаемые источники должны отражаться в итоговых warnings/summary, а не ломать весь запуск.
-4.2. Нажми `Select Files...` и выбери одновременно одну валидную книгу и один поврежденный `.zip`.
-Ожидаемое поведение:
-- batch import не падает целиком на этапе подготовки workload;
-- валидная книга продолжает импортироваться;
-- поврежденный архив попадает в warnings/summary как failed source.
-5. Нажми `Select Folder...` и выбери папку, где есть вложенные `.fb2`, `.epub` или `.zip`.
-Ожидаемое поведение:
-- import стартует для выбранной директории.
-- supported книги и архивы ищутся рекурсивно.
-- `Select Files...` и `Select Folder...` выглядят одинаково, так как это две равнозначные точки входа в импорт.
-6. Если в текущей сессии настроен converter path, проверь чекбокс `Force conversion to EPUB during import`.
-Ожидаемое поведение:
-- чекбокс виден только когда converter path реально настроен для текущей сессии;
-- при отключенном converter path этот чекбокс не показывается;
-- включение чекбокса означает, что импортируемые `FB2` будут сохраняться как `EPUB`, а без него останутся `FB2`.
-
-## 6. Import Workflow
-
-1. В `Import` нажми `Select Files...` и выбери валидный `.fb2`, `.epub` или `.zip`.
-Ожидаемое поведение:
-- status меняется с idle на running/completed.
-- в running state показывается агрегированный progress summary с общим числом файлов, числом уже обработанных файлов и текущими `Imported / Failed / Skipped`.
-- во время импорта главный сценарий экрана блокируется.
-- активной остается только `Cancel`.
-1.1. Повтори сценарий, выбрав сразу несколько файлов через `Select Files...`.
-Ожидаемое поведение:
-- import стартует как batch import;
-- progress summary считает все выбранные файлы как единый workload;
-- summary показывает агрегированный результат по всем выбранным источникам.
-1.2. Повтори сценарий через `Select Folder...` для папки с вложенными книгами.
-Ожидаемое поведение:
-- running progress summary показывает общее число рекурсивно найденных файлов и их обработку по мере выполнения;
-- import summary отражает рекурсивно найденные и обработанные файлы.
-1.3. Повтори сценарий через `.zip`, где внутри есть несколько книг и хотя бы один неподдерживаемый файл.
-Ожидаемое поведение:
-- running progress summary считает файлы внутри архива как единый workload;
-- processed/imported/failed/skipped меняются по мере обработки содержимого архива;
-- итоговый summary совпадает по логике со running summary и не теряет aggregate counts после завершения.
-2. Пока import идет, попробуй переключиться на `Library` или `Settings`.
-Ожидаемое поведение:
-- навигация недоступна до завершения или отмены импорта.
-3. Если job еще выполняется, нажми `Cancel`.
-Ожидаемое поведение:
-- status отражает cancellation request или cancelled result.
-- для batch / folder / ZIP import уже успевшие импортироваться книги откатываются назад;
-- после отмены библиотека и managed files возвращаются в состояние до запуска этого импорта.
-4. После завершения импорта посмотри блок результата.
-Ожидаемое поведение:
-- показываются summary, last known progress, warnings и error state последнего импорта.
-- terminal summary сохраняет aggregate counts по файлам даже для batch / folder / ZIP import.
-- browser позже может быть обновлен автоматически.
-
-## 6.1 Probable Duplicate Override
-
-1. Импортируй книгу так, чтобы повторный импорт той же книги считался duplicate.
-2. На `Import` включи `Allow duplicate import`.
-3. Повтори импорт той же книги.
-Ожидаемое поведение:
-- повторный импорт завершается успешно.
-- в `Library` появляются две отдельные записи книги.
-- записи имеют разные managed files и удаляются независимо друг от друга.
-- duplicate override работает и для случая strict duplicate.
-
-## 7. Drag And Drop Import Source
-
-1. Открой раздел `Import`.
-2. Перетащи на главное окно локальный `.fb2`, `.epub`, `.zip`, несколько файлов сразу или папку.
-Ожидаемое поведение:
-- приложение переключается на `Import`, если нужно.
-- import стартует автоматически.
-- не происходит crash или дублирования UI state.
-
-## 8. Library Browser Basics
-
-1. Открой `Library`.
-Ожидаемое поведение:
-- верхняя панель с `Search titles, authors, tags, and descriptions...`, фильтром языка и счетчиком книг остается сверху.
-- в левом блоке `Current Library` под путем к библиотеке виден summary `Library: ...`, который показывает общее число managed books и единый total library size в `MB`, включая managed books, `Covers` и `Database/librova.db`.
-- карточки книг отображаются в адаптивной сетке.
-- если книг больше начальной порции, при прокрутке вниз grid автоматически догружает следующие книги без отдельной кнопки page navigation.
-1.1. Сузь окно до минимально доступной ширины и открой `Selection Details`.
-Ожидаемое поведение:
-- окно не позволяет сузиться до состояния, где `Library` ломается по ширине;
-- при открытой панели `Selection Details` в grid остаются видимыми как минимум две колонки карточек книг.
-1.2. Уменьши окно до минимально доступной высоты.
-Ожидаемое поведение:
-- окно не позволяет ужаться до состояния, где `Library` теряет вторую строку карточек;
-- в основной grid остаются видимыми как минимум две строки карточек книг.
-2. Если книги есть, нажми на одну карточку книги.
-Ожидаемое поведение:
-- справа открывается `Selection Details`.
-- сетка сжимается, а не перекрывается overlay.
-- выбранная карточка после перестройки grid не уезжает из видимой области, а остается примерно по центру текущего viewport.
-- если `Selection Details` закрыть, сетка снова занимает полную ширину секции `Library`.
-3. Нажми на ту же карточку повторно.
-Ожидаемое поведение:
-- `Selection Details` закрывается.
-- бывшая выбранная карточка после обратной перестройки grid остается видимой и не уезжает за пределы viewport.
-6. Поводи мышью по карточкам и выбери несколько разных книг.
-Ожидаемое поведение:
-- hover заметен визуально через мягкую rounded-подсветку карточки и аккуратную рамку в форме самой карточки, но не вызывает мерцания, заметного скачка текста или перестройки карточки;
-- у уже выбранной карточки hover не добавляет вторую рамку поверх selected-state;
-- выбор книги не вызывает массового мерцания всей сетки.
-4. Если книг нет, посмотри на основную область.
-Ожидаемое поведение:
-- показывается пустое состояние `Library is empty` или `Nothing found`, а не пустой сломанный блок.
-5. Используй `Search titles, authors, tags, and descriptions...` и фильтр языка.
-Ожидаемое поведение:
-- сетка обновляется без кнопки `Apply`.
-- выдача обновляется прямо во время ввода, без `Enter`.
-- после очистки поля поиска полный список книг возвращается сразу.
-- счетчик книг показывает общее число результатов текущего запроса или фильтра, а не только число уже загруженных карточек на экране.
-- одна строка поиска работает как общий full-text search по `title`, `authors`, `tags` и `description`, а не как отдельный режим только для title/author.
-- ввод обычной пунктуации вроде `roadside: ("zone")` не ломает поиск ошибкой и не оставляет browser пустым только из-за FTS syntax parsing.
-- если выбрать конкретный язык, в `All languages` dropdown не исчезают другие языки, которые входят в тот же текущий search/filter result set.
-- список языков не зависит от того, насколько далеко пользователь уже проскроллил grid; язык книги из еще не загруженной карточки все равно доступен в dropdown.
-- summary `Library: ...` в левом блоке `Current Library` при этом продолжает показывать totals всей текущей библиотеки, а не только текущую page/filter выдачу.
-
-## 9. Full Details Loading
-
-1. В `Library` выбери книгу.
-Ожидаемое поведение:
-- правая панель сама загружает детали выбранной книги.
-- панель остается справа внутри секции `Library`, а не уезжает за экран или в отдельную прокручиваемую область.
-- отображаются richer metadata, например publisher, year, language, format, series и genres, если они доступны.
-- размер файла отображается в `MB`, а не в raw bytes.
-- аннотация показывается в отдельном прокручиваемом блоке.
-
-## 9.2 Settings About Card
-
-1. Перейди в секцию `Settings`.
-Ожидаемое поведение:
-- виден отдельный блок `ABOUT` с иконкой книги и заголовком `Librova`;
-- блок выглядит визуально более выраженным, чем блок `Diagnostics` (более светлый фон карточки);
-- в блоке показаны три строки: `VERSION`, `AUTHOR`, `CONTACT`;
-- `VERSION` содержит текущую версию приложения (не пустое значение и без placeholder);
-- `AUTHOR` содержит имя автора `Evgenii Volokhovich`;
-- `CONTACT` содержит email `evgenii.github@gmail.com`.
-
-## 9.1 Covers And Legacy FB2 Metadata
-
-1. Импортируй `FB2`, у которого есть извлеченная cover в `Covers`.
-Ожидаемое поведение:
-- в карточке книги отображается реальная cover, а не placeholder gradient;
-- cover сохраняет свои пропорции и не обрезается;
-- если вокруг cover остаются поля, они выглядят как нейтральный matte background, а не как цветные gradient bands.
-2. Выбери эту книгу в `Library`.
-Ожидаемое поведение:
-- в `Selection Details` тоже отображается реальная cover;
-- cover сохраняет свои пропорции и не получает цветных полос placeholder background по краям.
-3. Импортируй `FB2` с русскими метаданными и `encoding="windows-1251"`.
-Ожидаемое поведение:
-- импорт завершается без crash;
-- книга появляется в `Library`;
-- title и author отображаются корректным Unicode-текстом, без битой кодировки и без ошибки `String is invalid UTF-8`.
-
-## 10. Export Book
-
-1. В `Library` выбери книгу.
-2. В правой панели нажми `Export`.
-3. Выбери destination path вне managed library.
-Ожидаемое поведение:
-- диалог предлагает имя файла, собранное из title и author, а недопустимые для Windows символы не попадают в suggested file name.
-- export успешно завершается.
-- destination file появляется на диске.
-- исходный managed file не меняется.
-- кнопка `Export` визуально оформлена как основное действие в панели `Selection Details`.
-4. Если выбранная книга хранится как `FB2`, а приложение запущено с настроенным converter path, нажми `Export As EPUB`.
-Ожидаемое поведение:
-- в панели `Selection Details` видна отдельная кнопка `Export As EPUB`;
-- если converter path не настроен в текущей сессии, кнопка `Export As EPUB` для `FB2` не показывается, а вместо нее видна подсказка про настройку converter в `Settings`;
-- dialog предлагает имя файла с расширением `.epub`;
-- экспорт завершается созданием `.epub` файла вне managed library.
-4.1. Повтори `Export` и `Export As EPUB` для `FB2`, который был импортирован без `Force conversion to EPUB during import`.
-Ожидаемое поведение:
-- обычный `Export` создает читаемый `.fb2` файл с тем же содержимым, что и исходная книга, несмотря на внутреннее сжатие managed файла;
-- `Export As EPUB` тоже завершается успешно и не оставляет временные распакованные `FB2` в `Library\\Temp` после завершения.
-5. Повтори `Export` после импорта через `Select Folder...`, выбрав книгу, попавшую в библиотеку из рекурсивно импортированной папки.
-Ожидаемое поведение:
-- экспорт остается доступен и успешно завершает копирование managed file;
-- directory import не оставляет книгу в состоянии, где `Export` ломается или молча ничего не делает.
-
-## 11. Move To Recycle Bin
-
-1. В `Library` выбери книгу.
-2. В правой панели нажми `Move To Recycle Bin`.
-Ожидаемое поведение:
-- выбранная книга исчезает из browser после refresh.
-- status text сообщает, что книга перемещена в `Recycle Bin`.
-- основной файл книги исчезает из `Books`, а cover больше не остается активным артефактом библиотеки.
-- кнопка `Move To Recycle Bin` визуально отделена от обычных secondary-кнопок как destructive-действие.
-- если удаленная книга была последней книгой для какого-то языка, этот язык исчезает из language filter без ручного переключения в `All languages`.
-3. Повтори `Move To Recycle Bin` после импорта через `Select Folder...`, выбрав книгу, попавшую в библиотеку из рекурсивно импортированной папки.
-Ожидаемое поведение:
-- удаление в `Recycle Bin` остается доступным;
-- книга пропадает из browser, а остальные книги из того же directory import остаются доступными.
-
-## 12. Import Updates Browser
-
-1. Открой `Library` и запомни текущее количество книг.
-2. Перейди в `Import` и импортируй новую валидную книгу.
-3. Вернись в `Library`, если нужно.
-Ожидаемое поведение:
-- browser обновляется автоматически после успешного импорта.
-- новая книга появляется без ручного перезапуска приложения.
-
-## 13. Open Or Create Library
-
-1. В левой панели найди блок `Current Library`.
-Ожидаемое поведение:
-- под путем к библиотеке виден summary `Library: ...` с общим числом managed books и единым total library size в `MB`, включая `Covers` и `Database/librova.db`.
-2. Нажми `Open Library...` и выбери другой существующий library root.
-Ожидаемое поведение:
-- текущая библиотека закрывается.
-- приложение показывает loading state и затем открывает новую библиотеку.
-- `Library` screen теперь работает уже с новым root.
-2.1. Повтори `Open Library...`, но выбери обычную непустую папку без структуры Librova.
-Ожидаемое поведение:
-- переключение библиотеки не начинается;
-- validation error объясняет, что `Open Library...` требует существующую библиотеку Librova.
-3. Нажми `Create Library...` и выбери новый пустой путь.
-Ожидаемое поведение:
-- Librova создает managed library structure в новом месте.
-- приложение переключается на новую библиотеку как на активную.
-3.2. Повтори `Create Library...` с новым пустым путем, содержащим кириллицу.
-Ожидаемое поведение:
-- библиотека создается успешно;
-- diagnostics и `host.log` продолжают показывать этот путь корректным Unicode-текстом.
-3.1. Повтори `Create Library...`, но выбери обычную непустую папку.
-Ожидаемое поведение:
-- переключение библиотеки не начинается;
-- validation error объясняет, что `Create Library...` требует пустую целевую папку.
-
-## 14. Settings: Converter Configuration
-
-1. Открой `Settings`.
-2. Выбери `BuiltInFb2Cng`.
-3. Введи относительный путь к executable.
-Ожидаемое поведение:
-- показывается converter validation error.
-- сохранение недоступно.
-4. Введи абсолютный путь к executable.
-Ожидаемое поведение:
-- validation error исчезает.
-4.1. Нажми `Browse...` рядом с built-in executable path и выбери `fbc.exe`.
-Ожидаемое поведение:
-- путь к `fbc.exe` подставляется в поле автоматически;
-- путь остается абсолютным;
-- если был validation error из-за пустого пути, он исчезает после валидного выбора файла.
-4.2. Проверь built-in `fb2cng` block целиком.
-Ожидаемое поведение:
-- в текущем UI нет отдельного поля для YAML-конфига `fbc.yaml`;
-- для built-in режима на экране остаётся только путь к `fbc.exe`.
-5. Нажми `Save`.
-Ожидаемое поведение:
-- converter settings успешно сохраняются.
-- после `Save` текущая shell session перезагружается и начинает работать уже с обновленной converter-конфигурацией;
-- после `Save` приложение остается на вкладке `Settings`, а не перебрасывает пользователя в `Library`;
-- если после этого перейти в `Library` и выбрать `FB2`, кнопка `Export As EPUB` становится активной;
-- если до настройки converter выбрать `FB2` в `Library`, вместо `Export As EPUB` показывается подсказка про `Settings`;
-- если после этого перейти в `Import`, появляется чекбокс `Force conversion to EPUB during import`.
-- кнопка `Save` оформлена как основное действие, а не как вторичная навигационная кнопка.
-6. В built-in режиме через `fbc.exe` выполни импорт `FB2` с включенным `Force conversion to EPUB during import`, затем выполни `Export As EPUB` для другой `FB2` книги.
-Ожидаемое поведение:
-- рядом с import working directory и рядом с user-chosen export destination не появляются `fb2cng.log` или `fb2cng-report.zip`;
-- если `fbc.exe` пишет свои стандартные log/report файлы, они оказываются внутри `Library\\Logs`.
-
-## 15. Diagnostics And Logs
-
-1. Открой `Settings`.
-2. Посмотри блок `Diagnostics`.
-Ожидаемое поведение:
-- видны UI log, host log, UI state, preferences и host executable paths.
-3. Выполни обычный import, затем открой оба log-файла.
-Ожидаемое поведение:
-- UI log содержит startup, command и error-relevant entries.
-- host log содержит host/runtime-side operational entries.
-- логи полезны для диагностики и не зашумлены частым polling.
-- при уже открытой библиотеке оба runtime log-файла лежат в `LibraryRoot\Logs`.
-4. Выполни batch, directory или `.zip` import, где есть хотя бы один skipped или failed source/entry.
-Ожидаемое поведение:
-- `host.log` содержит отдельные записи с конкретными именами проблемных файлов или ZIP entry, а не только общий итоговый summary;
-- для skipped/failed ZIP entry в `host.log` видны имя архива, имя entry и причина;
-- для failed или skipped source в batch / directory import в `host.log` видны путь источника и причина.
-
-## 16. Relaunch State Persistence
-
-1. В `Import` выбери валидный `Source File`.
-2. Нормально закрой приложение.
-3. Снова запусти `.\Run-Librova.ps1`.
-Ожидаемое поведение:
-- раздел `Import` восстанавливает предыдущий source path и последнее состояние import flow, если оно было сохранено.
-
-## 17. Smoke Pass After Release Build
-
-1. Выполни:
-   `.\Run-Tests.ps1 -Preset x64-release -Configuration Release`
-2. Выполни:
-   `.\Run-Librova.ps1 -Preset x64-release -Configuration Release`
-Ожидаемое поведение:
-- release build завершается успешно.
-- UI успешно запускается из release artifacts.
-- host корректно резолвится из `Release` layout.
-
-## 18. Export As EPUB Progress Feedback
-
-1. Импортируй FB2-книгу (желательно сжатую или конвертируемую через fb2c).
-2. Открой Library, выбери FB2-книгу.
-3. Убедись, что конвертер настроен в Settings.
-4. Нажми Export as EPUB в панели деталей. В диалоге выбери целевой файл.
-Ожидаемое поведение:
-- Сразу после закрытия диалога сохранения в нижней части панели деталей появляется блок с indeterminate progress bar (amber/gold).
-- Над progress bar отображается текст: Exporting '<Title>' as EPUB....
-- Кнопки Export as EPUB, Export и Move to Recycle Bin заблокированы на всё время экспорта.
-- По завершении progress bar исчезает, в статус-тексте появляется Exported '<Title>' as EPUB to '<path>'.
-- Если нажать Export (не EPUB), аналогичный progress блок тоже отображается (Exporting '<Title>'...).

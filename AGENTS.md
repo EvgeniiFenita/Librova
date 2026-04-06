@@ -129,7 +129,7 @@ When a task completes, update docs **in the same task** if any of the following 
 | Repository overview or project-status summary visible from the root | `README.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | no archive checkpoint document is maintained |
-| UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` — Russian; `## N. Feature` sections, numbered steps, `Ожидаемое поведение:` blocks, UI labels in English as-is; append new sections at end; do not load as upfront context |
+| UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` — index only; добавляй сценарии в соответствующий файл в `docs/manual-tests/` (startup / import / library / export / delete / settings / regression); Russian; numbered steps, `Ожидаемое поведение:` blocks, UI labels in English as-is; добавляй строку в таблицу реестра в `ManualUiTestScenarios.md`; do not load as upfront context |
 | UI styles, colours, components, or layout changed | `docs/UiDesignSystem.md` |
 
 `docs/ManualUiTestScenarios.md` must be written in **Russian**. UI labels, button names, and on-screen strings must appear exactly as they are in the English UI.

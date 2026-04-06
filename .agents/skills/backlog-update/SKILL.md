@@ -14,18 +14,22 @@ Two files make up the Librova backlog:
 
 ## Task Format
 
-Every task entry is exactly four lines:
+Every task entry is four required lines plus one optional line:
 
 ```
 - `#<id>` <summary>
   - Status: `<status>`
   - Type: `<type>`
+  - Milestone: `<version>`
   - Note: <note text>
 ```
 
 **Status values**: `Open` · `Needs Reproduction` · `Blocked` · `Closed`  
 **Type values**: `Feature` · `Bug`  
+**Milestone values**: a version string such as `1.0` or `1.1`, or the literal `unscheduled`  
 **Priority sections** (used in both files): `Critical` → `Major` → `Minor` → `Low`
+
+`Milestone` is optional. When omitted, the task is treated as `unscheduled`. When present, it must appear between `Type` and `Note`.
 
 ---
 
@@ -33,9 +37,12 @@ Every task entry is exactly four lines:
 
 When the user says "next task" or "take the next task":
 
-1. Take the highest-priority task with status `Open`.
-2. If the top candidate is `Needs Reproduction` or `Blocked`, skip it and take the next `Open` task.
-3. Among equal-priority tasks, prefer the most local and easiest-to-verify one first.
+1. Filter to `Open` tasks whose `Milestone` matches the current active release (e.g. `1.0`).
+2. Among those, pick the highest-priority one: `Critical` → `Major` → `Minor` → `Low`.
+3. If no tasks with the current milestone remain, fall back to `unscheduled` tasks in the same priority order.
+4. Never pick tasks milestoned to a future release (e.g. `1.1`) while the current release is still open.
+5. If the top candidate is `Needs Reproduction` or `Blocked`, skip it and take the next qualifying task.
+6. Among equal-priority tasks, prefer the most local and easiest-to-verify one first.
 
 ---
 
@@ -45,7 +52,8 @@ When the user says "next task" or "take the next task":
 - [ ] Use N+1 as the new task id; update `Last assigned id` to N+1 in the same change.
 - [ ] Choose priority: `Critical` / `Major` / `Minor` / `Low` (see Priority Guide below).
 - [ ] Choose type: `Feature` (new capability or improvement) / `Bug` (deviation from expected behavior).
-- [ ] Insert the four-line entry in the correct priority subsection under `## 3. Open Backlog`.
+- [ ] Choose milestone: assign the target release version (`1.0`, `1.1`, …) or `unscheduled` if not yet decided. Omit the field entirely only for tasks where milestone is deliberately undefined.
+- [ ] Insert the entry in the correct priority subsection under `## 3. Open Backlog`.
 - [ ] Write a `Note` that explains context or acceptance criteria concisely.
 
 ---
@@ -62,8 +70,8 @@ When the user says "next task" or "take the next task":
 
 - [ ] Write a one-sentence `Note` summarizing what was actually done (no file-by-file detail, no exhaustive list of changes).
 - [ ] Set `Status` to `Closed`.
-- [ ] Remove the full four-line entry from `docs/Librova-Backlog.md`.
-- [ ] Append the entry to the matching priority section (`### Critical` / `### Major` / `### Minor` / `### Low`) in `docs/Librova-Backlog-Archive.md`.
+- [ ] Remove the full entry from `docs/Librova-Backlog.md`.
+- [ ] Append the entry to the matching priority section (`### Critical` / `### Major` / `### Minor` / `### Low`) in `docs/Librova-Backlog-Archive.md`. Preserve the `Milestone` field if it was present.
 - [ ] Verify the task id is no longer present in `docs/Librova-Backlog.md`.
 
 ---
@@ -72,12 +80,13 @@ When the user says "next task" or "take the next task":
 
 After any backlog edit, confirm all of the following:
 
-- [ ] Every task has all four fields in the correct order: title line → `Status` → `Type` → `Note`.
-- [ ] No orphan title-only lines without the three sub-fields.
+- [ ] Every task has the required fields in the correct order: title line → `Status` → `Type` → `Note`. The optional `Milestone` field, when present, appears between `Type` and `Note`.
+- [ ] No orphan title-only lines without the required sub-fields.
 - [ ] No id appears in both `Librova-Backlog.md` and `Librova-Backlog-Archive.md`.
 - [ ] `Last assigned id` in `Librova-Backlog.md` equals the highest id ever assigned across both files.
 - [ ] `Open Backlog` contains only tasks with status `Open`, `Needs Reproduction`, or `Blocked`.
 - [ ] Archive contains only tasks with status `Closed`.
+- [ ] `Milestone` values, when present, are one of: a version string (e.g. `1.0`, `1.1`) or the literal `unscheduled`.
 
 ---
 
