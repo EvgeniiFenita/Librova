@@ -21,6 +21,7 @@ private:
     [[nodiscard]] std::filesystem::path BuildTrashDestination(const std::filesystem::path& sourcePath) const;
 
     std::filesystem::path m_libraryRoot;
+    std::filesystem::path m_canonicalLibraryRoot;
 };
 
 } // namespace Librova::ManagedTrash

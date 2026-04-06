@@ -248,3 +248,8 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Feature`
   - Note: added `IsExportBusy` property to `LibraryBrowserViewModel`; details panel now shows an indeterminate progress bar and status text while any export is in flight; EPUB export timeout increased to 2 min transport / 3 min outer to accommodate decompression and external converter time; regular export timeout set to 10 s / 30 s; regression test verifies `IsExportBusy` transitions during a gated export.
+
+- `#45` prevent managed-trash cleanup from deleting required top-level library directories such as `Covers`.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Note: `CleanupEmptyParentDirectory` in `ManagedTrashService` now skips removal when the parent is a direct child of the library root; canonical root is computed once in the constructor and passed to the cleanup helper; two regression tests cover both the protection of `Covers/` and the allowed removal of per-book subdirectories.

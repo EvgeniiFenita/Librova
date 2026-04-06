@@ -37,11 +37,6 @@ Last assigned id: `#65`
   - Type: `Bug`
   - Note: current import persistence writes absolute managed paths into SQLite, which breaks library portability and drifts from the transport/tests that expect `Books/...` and `Covers/...` relative paths; fix persistence, read-side resolution, and any affected transport mapping together.
 
-- `#45` prevent managed-trash cleanup from deleting required top-level library directories such as `Covers`.
-  - Status: `Open`
-  - Type: `Bug`
-  - Note: deleting the last cover currently allows post-move cleanup to remove `LibraryRoot/Covers`, which then causes existing-library bootstrap validation to fail on the next startup; keep cleanup below the protected top-level layout only.
-
 - `#46` make staged delete crash-safe across filesystem moves and catalog removal.
   - Status: `Open`
   - Type: `Bug`

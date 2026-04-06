@@ -38,10 +38,19 @@ void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
     }
 }
 
-void CleanupEmptyParentDirectory(const std::filesystem::path& path) noexcept
+void CleanupEmptyParentDirectory(
+    const std::filesystem::path& path,
+    const std::filesystem::path& canonicalLibraryRoot) noexcept
 {
     const auto parentPath = path.parent_path();
     if (parentPath.empty())
+    {
+        return;
+    }
+
+    // Never remove top-level library directories (Books/, Covers/, Trash/, etc.).
+    // These are direct children of the library root and must always exist.
+    if (parentPath.lexically_normal().parent_path() == canonicalLibraryRoot)
     {
         return;
     }
@@ -78,6 +87,11 @@ void CleanupEmptyParentDirectory(const std::filesystem::path& path) noexcept
 CManagedTrashService::CManagedTrashService(std::filesystem::path libraryRoot)
     : m_libraryRoot(std::move(libraryRoot))
 {
+    std::error_code errorCode;
+    const auto canonical = std::filesystem::weakly_canonical(m_libraryRoot, errorCode);
+    m_canonicalLibraryRoot = errorCode
+        ? m_libraryRoot.lexically_normal()
+        : canonical.lexically_normal();
 }
 
 std::filesystem::path CManagedTrashService::MoveToTrash(const std::filesystem::path& path)
@@ -91,7 +105,7 @@ std::filesystem::path CManagedTrashService::MoveToTrash(const std::filesystem::p
     const auto destinationPath = BuildTrashDestination(sourcePath);
     EnsureDirectory(destinationPath.parent_path());
     MoveFile(sourcePath, destinationPath);
-    CleanupEmptyParentDirectory(sourcePath);
+    CleanupEmptyParentDirectory(sourcePath, m_canonicalLibraryRoot);
     return destinationPath;
 }
 
@@ -106,7 +120,7 @@ void CManagedTrashService::RestoreFromTrash(
 
     EnsureDirectory(destinationPath.parent_path());
     MoveFile(trashedPath, destinationPath);
-    CleanupEmptyParentDirectory(trashedPath);
+    CleanupEmptyParentDirectory(trashedPath, m_canonicalLibraryRoot);
 }
 
 std::filesystem::path CManagedTrashService::ResolveManagedPath(const std::filesystem::path& path) const
