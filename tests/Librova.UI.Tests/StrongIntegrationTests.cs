@@ -556,6 +556,58 @@ public sealed class StrongIntegrationTests
             stateStore: new ShellStateStore(Path.Combine(sandboxRoot, "ui-shell-state.json")),
             preferencesStore: new UiPreferencesStore(Path.Combine(sandboxRoot, "ui-preferences.json")));
 
+    [Fact]
+    public async Task LibraryBrowserViewModel_ImportedBook_HasForwardSlashManagedPathAndNonEmptySha256AgainstRealHost()
+    {
+        // End-to-end regression guard for C23 (relative paths) and C26 (SHA-256).
+        // Verifies that:
+        //   1. The ManagedPath stored via IPC and returned in the catalog uses
+        //      forward slashes (PathToUtf8 + generic_u8string contract).
+        //   2. SHA-256 is computed during the import pipeline and stored non-empty
+        //      in the book record that is returned by GetBookDetails.
+        var sandboxRoot = CreateSandboxRoot("browser-sha256-path-format");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = CreateHostOptions(sandboxRoot, "BrowserSha256PathFormat");
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
+
+            await ImportBookAsync(
+                session.ImportJobs,
+                sandboxRoot,
+                "path-format.fb2",
+                "Path Format Book",
+                "Arkady",
+                "Strugatsky",
+                cancellation.Token);
+
+            var viewModel = new LibraryBrowserViewModel(session.LibraryCatalog, libraryRoot: options.LibraryRoot);
+            await viewModel.RefreshAsync();
+
+            var book = Assert.Single(viewModel.Books);
+
+            // ManagedPath from BookListItem must use forward slashes
+            Assert.DoesNotContain('\\', book.ManagedPath);
+            Assert.Contains('/', book.ManagedPath);
+
+            // Load full details to access Sha256Hex
+            await viewModel.ToggleSelectedBookAsync(book);
+            Assert.NotNull(viewModel.SelectedBookDetails);
+
+            // SHA-256 must be non-empty: computed by the import pipeline for all paths
+            Assert.NotEmpty(viewModel.SelectedBookDetails!.Sha256Hex);
+
+            // ManagedPath from BookDetails must also use forward slashes
+            Assert.DoesNotContain('\\', viewModel.SelectedBookDetails.ManagedPath);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static CoreHostLaunchOptions CreateHostOptions(string sandboxRoot, string suffix) =>
         new()
         {

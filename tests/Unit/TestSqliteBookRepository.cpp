@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <thread>
 #include <unordered_set>
 
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
@@ -943,6 +945,131 @@ TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even w
 
     REQUIRE_NOTHROW(repository.Add(makeBook("Book One", "Books/0000000001/a.fb2")));
     REQUIRE_NOTHROW(repository.Add(makeBook("Book Two", "Books/0000000002/b.fb2")));
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository stores managed_path and cover_path with forward slashes in SQLite on all platforms", "[book-database]")
+{
+    // Regression guard for C23 (relative paths). PathToUtf8 uses generic_u8string()
+    // which always produces forward slashes. This test proves the contract survives
+    // round-trips through the database layer even when the in-memory path was
+    // constructed with native backslash separators on Windows.
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-path-format.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Path Format Test";
+    book.Metadata.AuthorsUtf8 = {"Author"};
+    book.Metadata.Language = "en";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    // Construct with native backslash separators — PathToUtf8 must normalise to forward slashes
+    book.File.ManagedPath = std::filesystem::path{L"Books\\0000000200\\book.epub"};
+    book.CoverPath = std::filesystem::path{L"Covers\\0000000200.jpg"};
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "format-test-hash";
+    book.AddedAtUtc = std::chrono::system_clock::now();
+
+    const Librova::Domain::SBookId bookId = repository.Add(book);
+
+    {
+        Librova::Sqlite::CSqliteConnection conn(databasePath);
+        Librova::Sqlite::CSqliteStatement stmt(
+            conn.GetNativeHandle(),
+            "SELECT managed_path, cover_path FROM books WHERE id = ?;");
+        stmt.BindInt64(1, bookId.Value);
+        REQUIRE(stmt.Step());
+
+        const std::string storedManagedPath = stmt.GetColumnText(0);
+        const std::string storedCoverPath = stmt.GetColumnText(1);
+
+        REQUIRE(storedManagedPath.find('\\') == std::string::npos);
+        REQUIRE(storedManagedPath.find('/') != std::string::npos);
+        REQUIRE(storedCoverPath.find('\\') == std::string::npos);
+        REQUIRE(storedCoverPath.find('/') != std::string::npos);
+    }
+
+    // GetById round-trip must also reconstruct paths correctly
+    const auto loaded = repository.GetById(bookId);
+    REQUIRE(loaded.has_value());
+    REQUIRE(loaded->File.ManagedPath == book.File.ManagedPath);
+    REQUIRE(loaded->CoverPath == book.CoverPath);
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the same sha256_hex", "[book-database]")
+{
+    // Integration guard for C25 (concurrent import race). CSqliteConnection sets
+    // busy_timeout=5000ms, so the loser of BEGIN IMMEDIATE waits for the winner
+    // to commit. When the loser then executes SELECT sha256_hex inside its own
+    // transaction it finds the already-inserted row and throws CDuplicateHashException
+    // rather than inserting a second copy.
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-concurrent-hash.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    const std::string sharedHash = "concurrent-hash-test-abc123";
+
+    const auto makeBook = [&](const std::string& path) -> Librova::Domain::SBook {
+        Librova::Domain::SBook book;
+        book.Metadata.TitleUtf8 = "Concurrent Book";
+        book.Metadata.AuthorsUtf8 = {"Author"};
+        book.Metadata.Language = "en";
+        book.File.Format = Librova::Domain::EBookFormat::Fb2;
+        book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+        book.File.ManagedPath = std::filesystem::path{path};
+        book.File.SizeBytes = 1024;
+        book.File.Sha256Hex = sharedHash;
+        book.AddedAtUtc = std::chrono::system_clock::now();
+        return book;
+    };
+
+    std::atomic<int> successCount{0};
+    std::atomic<int> duplicateCount{0};
+    std::exception_ptr unexpectedException;
+    std::atomic<bool> readyFlag{false};
+
+    const auto runImport = [&](const std::string& path) {
+        while (!readyFlag.load(std::memory_order_acquire)) {}
+        try
+        {
+            Librova::BookDatabase::CSqliteBookRepository repo(databasePath);
+            static_cast<void>(repo.Add(makeBook(path)));
+            successCount.fetch_add(1, std::memory_order_relaxed);
+        }
+        catch (const Librova::Domain::CDuplicateHashException&)
+        {
+            duplicateCount.fetch_add(1, std::memory_order_relaxed);
+        }
+        catch (...)
+        {
+            unexpectedException = std::current_exception();
+        }
+    };
+
+    std::thread thread1([&]() { runImport("Books/0000000001/concurrent.fb2"); });
+    std::thread thread2([&]() { runImport("Books/0000000002/concurrent.fb2"); });
+
+    readyFlag.store(true, std::memory_order_release);
+    thread1.join();
+    thread2.join();
+
+    REQUIRE(unexpectedException == nullptr);
+    REQUIRE(successCount.load() + duplicateCount.load() == 2);
+    REQUIRE(successCount.load() == 1);
+    REQUIRE(duplicateCount.load() == 1);
+
+    {
+        Librova::Sqlite::CSqliteConnection conn(databasePath);
+        Librova::Sqlite::CSqliteStatement stmt(conn.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
+        REQUIRE(stmt.Step());
+        REQUIRE(stmt.GetColumnInt(0) == 1);
+    }
 
     std::filesystem::remove(databasePath);
 }

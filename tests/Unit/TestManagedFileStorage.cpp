@@ -195,6 +195,32 @@ TEST_CASE("Managed file storage restores staging state when commit fails after m
     REQUIRE(ReadTextFile(*prepared.StagedCoverPath) == "cover-content");
 }
 
+TEST_CASE("Managed file storage PrepareImport produces forward-slash relative paths with Cyrillic library root", "[managed-storage]")
+{
+    // Regression guard for C23. std::filesystem::relative() on Windows returns
+    // paths with native backslash separators; the stored relative path must still
+    // use forward slashes (via generic_string()) so that ManagedPath is portable
+    // across comparisons and SQLite storage even when the library root contains
+    // non-ASCII (Cyrillic) directory names.
+    const auto cyrillicRoot = std::filesystem::temp_directory_path() / u8"librova-\u0411\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0430-test";
+    CScopedDirectory sandbox(cyrillicRoot);
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+
+    WriteTextFile(sourceBookPath, "epub-content");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath());
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {42},
+        .Format = Librova::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath
+    });
+
+    REQUIRE_FALSE(prepared.RelativeBookPath.is_absolute());
+    // generic_string() must not contain backslashes regardless of platform or root encoding
+    REQUIRE(prepared.RelativeBookPath.generic_string().find('\\') == std::string::npos);
+    REQUIRE(prepared.RelativeBookPath == std::filesystem::path{"Books/0000000042/book.epub"});
+}
+
 TEST_CASE("Managed file storage cleans staging directory when preparation fails", "[managed-storage]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-prepare-failure");

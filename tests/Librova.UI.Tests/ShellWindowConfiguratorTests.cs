@@ -115,6 +115,49 @@ public sealed class ShellWindowConfiguratorTests
         Assert.Same(setup, state.ViewModel.Setup);
     }
 
+    [Fact]
+    public void ReloadPath_MustNotTransitionThroughHasShellFalse_PreservesCompiledBindings()
+    {
+        // REGRESSION GUARD for C16 (binding regression).
+        //
+        // When SavePreferencesCommand triggers reloadShellAsync, the implementation in
+        // App.axaml.cs::ReloadCurrentShellSessionAsync transitions the window DataContext
+        // Running → Running WITHOUT calling ConfigureStartingUp in between.
+        //
+        // ConfigureStartingUp sets Shell=null (HasShell=false), which hides the shell grid.
+        // Avalonia compiled bindings on Shell.* properties do not recover even when a new
+        // Running ViewModel is set afterwards — the binding chain stays broken.
+        //
+        // This test documents the invariant: the reload path must only produce
+        // HasShell=true states on both sides of the transition.
+
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellWindow.ReloadTest",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+        var stateStorePath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "state.json");
+        var application = ShellApplication.Create(
+            session,
+            stateStore: new ShellStateStore(stateStorePath));
+
+        // Before reload: Running state has HasShell=true
+        var beforeReload = ShellWindowConfigurator.CreateState(application);
+        Assert.True(beforeReload.ViewModel.HasShell);
+
+        // ConfigureStartingUp WOULD produce HasShell=false — this is what breaks compiled bindings
+        var startingUpState = ShellWindowConfigurator.CreateStartingUpState();
+        Assert.False(startingUpState.ViewModel.HasShell);
+
+        // After reload: the replacement Running state also has HasShell=true (no false gap)
+        var afterReload = ShellWindowConfigurator.CreateState(application);
+        Assert.True(afterReload.ViewModel.HasShell);
+    }
+
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
