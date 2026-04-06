@@ -32,12 +32,6 @@ Last assigned id: `#68`
 ## 3. Open Backlog
 
 ### Critical
-- `#47` harden duplicate protection against concurrent imports with database-level enforcement.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: duplicate detection currently relies on read-side `FindDuplicates` checks plus a non-unique `sha256_hex` index, which still allows parallel import races to insert the same book twice; add a schema-level uniqueness barrier and make the write path handle the conflict explicitly.
-
 - `#48` compute and propagate SHA-256 for batch and ZIP imports so strict duplicate detection works beyond single-source manual requests.
   - Status: `Open`
   - Type: `Bug`

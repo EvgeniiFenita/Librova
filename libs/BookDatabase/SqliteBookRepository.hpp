@@ -14,6 +14,7 @@ public:
 
     [[nodiscard]] Librova::Domain::SBookId ReserveId() override;
     [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override;
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override;
     [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId id) const override;
     void Remove(Librova::Domain::SBookId id) override;
 

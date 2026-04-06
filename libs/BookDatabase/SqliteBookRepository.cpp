@@ -278,18 +278,10 @@ std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
     return metadata;
 }
 
-} // namespace
-
-CSqliteBookRepository::CSqliteBookRepository(std::filesystem::path databasePath)
-    : m_databasePath(std::move(databasePath))
+std::int64_t DoAddBook(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const Librova::Domain::SBook& book)
 {
-}
-
-Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook& book)
-{
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
-    CSqliteTransaction transaction(connection);
-
     const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(book.Metadata.Isbn);
     const std::string normalizedTitle = Librova::Domain::NormalizeText(book.Metadata.TitleUtf8);
     const std::string addedAtUtc = SerializeTimePoint(book.AddedAtUtc);
@@ -360,8 +352,47 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
     InsertFormatRow(connection, bookId, book.File);
     Librova::SearchIndex::CSearchIndexMaintenance::InsertBook(connection, bookId, book.Metadata);
 
+    return bookId;
+}
+
+} // namespace
+
+CSqliteBookRepository::CSqliteBookRepository(std::filesystem::path databasePath)
+    : m_databasePath(std::move(databasePath))
+{
+}
+
+Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook& book)
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    CSqliteTransaction transaction(connection);
+
+    if (!book.File.Sha256Hex.empty())
+    {
+        Librova::Sqlite::CSqliteStatement hashCheck(
+            connection.GetNativeHandle(),
+            "SELECT id FROM books WHERE sha256_hex = ? LIMIT 1;");
+        hashCheck.BindText(1, book.File.Sha256Hex);
+
+        if (hashCheck.Step())
+        {
+            throw Librova::Domain::CDuplicateHashException{
+                Librova::Domain::SBookId{hashCheck.GetColumnInt64(0)}};
+        }
+    }
+
+    const Librova::Domain::SBookId bookId{DoAddBook(connection, book)};
     transaction.Commit();
-    return Librova::Domain::SBookId{bookId};
+    return bookId;
+}
+
+Librova::Domain::SBookId CSqliteBookRepository::ForceAdd(const Librova::Domain::SBook& book)
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    CSqliteTransaction transaction(connection);
+    const Librova::Domain::SBookId bookId{DoAddBook(connection, book)};
+    transaction.Commit();
+    return bookId;
 }
 
 Librova::Domain::SBookId CSqliteBookRepository::ReserveId()

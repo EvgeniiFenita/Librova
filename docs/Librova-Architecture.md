@@ -93,6 +93,13 @@ The system is expected to:
 
 The import pipeline now accepts one or many selected source paths, including folders. Directory import follows the same transactional and summary-oriented principles as single-file import while scaling to recursive scans over mixed-content folders.
 
+Duplicate detection operates at two layers:
+
+- **Read side** (`FindDuplicates`): checked before any staging begins; returns early with `RejectedDuplicate` or `DecisionRequired` on matches.
+- **Write side** (`IBookRepository::Add`): re-checks the `sha256_hex` hash inside a `BEGIN IMMEDIATE` SQLite transaction at insert time, closing the race window between a concurrent pair of imports that both passed the read-side check. On conflict it throws `CDuplicateHashException`; the coordinator either rejects or retries via `ForceAdd` depending on `AllowProbableDuplicates`. Empty `sha256_hex` is treated as "hash unknown" and skips the write-side check so books without a computed hash are never false-positives.
+
+`IBookRepository::ForceAdd` is a separate pure virtual method that inserts without the hash check. It is the explicit override path for callers that have already decided to allow the duplicate.
+
 ## 4. Import And Conversion Rules
 
 - `EPUB` is stored as `EPUB`.

@@ -408,7 +408,40 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         };
 
         progressSink.ReportValue(85, "Writing book metadata");
-        addedBookId = m_bookRepository.Add(book);
+
+        try
+        {
+            addedBookId = m_bookRepository.Add(book);
+        }
+        catch (const Librova::Domain::CDuplicateHashException& duplicateEx)
+        {
+            if (request.AllowProbableDuplicates)
+            {
+                if (std::find(importWarnings.begin(), importWarnings.end(), GForcedStrictDuplicateWarning) == importWarnings.end())
+                {
+                    importWarnings.emplace_back(GForcedStrictDuplicateWarning);
+                }
+                addedBookId = m_bookRepository.ForceAdd(book);
+            }
+            else
+            {
+                m_managedStorage.RollbackImport(*preparedStorage);
+                RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+                RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+                importWarnings.push_back(GStrictDuplicateWarning);
+
+                return {
+                    .Status = ESingleFileImportStatus::RejectedDuplicate,
+                    .StoredFormat = conversionOutcome.Format,
+                    .DuplicateMatches = {Librova::Domain::SDuplicateMatch{
+                        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+                        .Reason = Librova::Domain::EDuplicateReason::SameHash,
+                        .ExistingBookId = duplicateEx.ExistingBookId()
+                    }},
+                    .Warnings = std::move(importWarnings)
+                };
+            }
+        }
 
         progressSink.ReportValue(95, "Committing managed files");
         m_managedStorage.CommitImport(*preparedStorage);

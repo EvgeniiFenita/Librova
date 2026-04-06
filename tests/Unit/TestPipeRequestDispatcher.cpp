@@ -93,6 +93,7 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
     public:
         [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
         [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override { return book.Id; }
         [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
         void Remove(const Librova::Domain::SBookId) override {}
     } bookRepository;
@@ -169,6 +170,7 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
     public:
         [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
         [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override { return book.Id; }
         [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
         void Remove(const Librova::Domain::SBookId) override {}
     } bookRepository;

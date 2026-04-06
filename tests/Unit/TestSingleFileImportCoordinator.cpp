@@ -135,6 +135,22 @@ public:
             throw std::runtime_error("Repository add failed.");
         }
 
+        if (DuplicateHashConflictId.has_value())
+        {
+            throw Librova::Domain::CDuplicateHashException{*DuplicateHashConflictId};
+        }
+
+        AddedBook = book;
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        ForceAddCalled = true;
+        if (ThrowOnForceAdd)
+        {
+            throw std::runtime_error("Repository force add failed.");
+        }
         AddedBook = book;
         return book.Id;
     }
@@ -154,6 +170,9 @@ public:
     std::optional<Librova::Domain::SBook> AddedBook;
     std::vector<Librova::Domain::SBookId> RemovedIds;
     bool ThrowOnAdd = false;
+    bool ThrowOnForceAdd = false;
+    bool ForceAddCalled = false;
+    std::optional<Librova::Domain::SBookId> DuplicateHashConflictId;
 };
 
 class CStubQueryRepository final : public Librova::Domain::IBookQueryRepository
@@ -921,4 +940,148 @@ TEST_CASE("Single file import keeps detailed parser diagnostics out of transport
     REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
     REQUIRE(result.Error == "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(sourcePath) + ": No document element found");
     REQUIRE(result.DiagnosticError.find("xml_preview=\"<empty>\"") != std::string::npos);
+}
+
+TEST_CASE("Single file import returns RejectedDuplicate when hash conflict detected at write time", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-reject");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.DuplicateHashConflictId = Librova::Domain::SBookId{42};
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = "deadbeef"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
+    REQUIRE(result.DuplicateMatches.size() == 1);
+    REQUIRE(result.DuplicateMatches.front().Severity == Librova::Domain::EDuplicateSeverity::Strict);
+    REQUIRE(result.DuplicateMatches.front().Reason == Librova::Domain::EDuplicateReason::SameHash);
+    REQUIRE(result.DuplicateMatches.front().ExistingBookId.Value == 42);
+    REQUIRE_FALSE(bookRepository.ForceAddCalled);
+    REQUIRE(bookRepository.RemovedIds.empty());
+    REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+}
+
+TEST_CASE("Single file import commits and warns when hash conflict detected at write time but duplicates are allowed", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-force");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.DuplicateHashConflictId = Librova::Domain::SBookId{42};
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = "deadbeef",
+        .AllowProbableDuplicates = true
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
+    REQUIRE(bookRepository.ForceAddCalled);
+    REQUIRE(managedStorage.CommitCalled);
+    REQUIRE_FALSE(managedStorage.RollbackCalled);
+    const bool hasStrictDuplicateWarning = std::any_of(
+        result.Warnings.begin(), result.Warnings.end(),
+        [](const std::string& w) { return w.find("strict duplicate") != std::string::npos; });
+    REQUIRE(hasStrictDuplicateWarning);
+}
+
+TEST_CASE("Single file import emits exactly one strict duplicate warning when FindDuplicates and late hash check both fire", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-double-warning-guard");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.DuplicateHashConflictId = Librova::Domain::SBookId{99};
+    CStubQueryRepository queryRepository;
+    queryRepository.Duplicates = {{
+        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+        .Reason = Librova::Domain::EDuplicateReason::SameHash,
+        .ExistingBookId = Librova::Domain::SBookId{99}
+    }};
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = "deadbeef",
+        .AllowProbableDuplicates = true
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
+    REQUIRE(bookRepository.ForceAddCalled);
+    const auto strictCount = std::count_if(
+        result.Warnings.begin(), result.Warnings.end(),
+        [](const std::string& w) { return w.find("strict duplicate") != std::string::npos; });
+    REQUIRE(strictCount == 1);
+}
+
+TEST_CASE("Single file import returns Failed and rolls back when ForceAdd throws after hash conflict", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-force-add-throws");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.DuplicateHashConflictId = Librova::Domain::SBookId{42};
+    bookRepository.ThrowOnForceAdd = true;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = "deadbeef",
+        .AllowProbableDuplicates = true
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+    REQUIRE(bookRepository.RemovedIds.empty());
 }

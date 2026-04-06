@@ -821,3 +821,128 @@ TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after nor
 
     std::filesystem::remove(databasePath);
 }
+
+TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256_hex already exists", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-hash-conflict.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "First Book";
+    firstBook.Metadata.AuthorsUtf8 = {"Author A"};
+    firstBook.Metadata.Language = "en";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    firstBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    firstBook.File.ManagedPath = std::filesystem::path{"Books/0000000001/first.fb2"};
+    firstBook.File.SizeBytes = 1024;
+    firstBook.File.Sha256Hex = "aabbccddeeff";
+    firstBook.AddedAtUtc = std::chrono::system_clock::now();
+
+    const Librova::Domain::SBookId firstId = repository.Add(firstBook);
+    REQUIRE(firstId.IsValid());
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Second Book";
+    secondBook.Metadata.AuthorsUtf8 = {"Author B"};
+    secondBook.Metadata.Language = "en";
+    secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    secondBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    secondBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/second.fb2"};
+    secondBook.File.SizeBytes = 2048;
+    secondBook.File.Sha256Hex = "aabbccddeeff";
+    secondBook.AddedAtUtc = std::chrono::system_clock::now();
+
+    try
+    {
+        static_cast<void>(repository.Add(secondBook));
+        FAIL("Expected CDuplicateHashException to be thrown");
+    }
+    catch (const Librova::Domain::CDuplicateHashException& e)
+    {
+        REQUIRE(e.ExistingBookId().Value == firstId.Value);
+    }
+
+    // Transaction must have been rolled back; only the first book must exist in the catalog.
+    {
+        Librova::Sqlite::CSqliteConnection conn(databasePath);
+        Librova::Sqlite::CSqliteStatement stmt(conn.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
+        REQUIRE(stmt.Step());
+        REQUIRE(stmt.GetColumnInt(0) == 1);
+    }
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already exists", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-force-add.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "First Book";
+    firstBook.Metadata.AuthorsUtf8 = {"Author A"};
+    firstBook.Metadata.Language = "en";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    firstBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    firstBook.File.ManagedPath = std::filesystem::path{"Books/0000000001/first.fb2"};
+    firstBook.File.SizeBytes = 1024;
+    firstBook.File.Sha256Hex = "aabbccddeeff";
+    firstBook.AddedAtUtc = std::chrono::system_clock::now();
+
+    const Librova::Domain::SBookId firstId = repository.Add(firstBook);
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Second Book (duplicate allowed)";
+    secondBook.Metadata.AuthorsUtf8 = {"Author B"};
+    secondBook.Metadata.Language = "en";
+    secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    secondBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    secondBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/second.fb2"};
+    secondBook.File.SizeBytes = 2048;
+    secondBook.File.Sha256Hex = "aabbccddeeff";
+    secondBook.AddedAtUtc = std::chrono::system_clock::now();
+
+    Librova::Domain::SBookId secondId;
+    REQUIRE_NOTHROW(secondId = repository.ForceAdd(secondBook));
+    REQUIRE(secondId.IsValid());
+    REQUIRE(secondId.Value != firstId.Value);
+
+    REQUIRE(repository.GetById(firstId).has_value());
+    REQUIRE(repository.GetById(secondId).has_value());
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even when another book has empty sha256_hex", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-empty-hash.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    const auto makeBook = [](const std::string& title, const std::string& path) -> Librova::Domain::SBook {
+        Librova::Domain::SBook book;
+        book.Metadata.TitleUtf8 = title;
+        book.Metadata.AuthorsUtf8 = {"Author"};
+        book.Metadata.Language = "en";
+        book.File.Format = Librova::Domain::EBookFormat::Fb2;
+        book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+        book.File.ManagedPath = std::filesystem::path{path};
+        book.File.SizeBytes = 1024;
+        book.File.Sha256Hex = "";
+        book.AddedAtUtc = std::chrono::system_clock::now();
+        return book;
+    };
+
+    REQUIRE_NOTHROW(repository.Add(makeBook("Book One", "Books/0000000001/a.fb2")));
+    REQUIRE_NOTHROW(repository.Add(makeBook("Book Two", "Books/0000000002/b.fb2")));
+
+    std::filesystem::remove(databasePath);
+}

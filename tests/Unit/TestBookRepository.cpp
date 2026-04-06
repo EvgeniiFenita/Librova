@@ -19,6 +19,11 @@ public:
         return m_book.Id;
     }
 
+    Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return Add(book);
+    }
+
     std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId id) const override
     {
         if (id.Value == m_book.Id.Value)

@@ -20,6 +20,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.0`
   - Note: reversed delete ordering — catalog removal (DB) is now the commit point; file moves to Trash happen after and are best-effort with orphan logging on failure; regression tests updated.
 
+- `#47` harden duplicate protection against concurrent imports with database-level enforcement.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `Add()` now re-checks sha256_hex inside a `BEGIN IMMEDIATE` transaction and throws `CDuplicateHashException` on conflict; `ForceAdd()` bypasses the check for explicit duplicate overrides; coordinator catches the exception and either rejects or force-inserts based on `AllowProbableDuplicates`; `ForceAdd` made pure virtual to enforce explicit implementation in all mocks; double-warning guard added; regression tests cover conflict detection, force-add path, empty-hash no-throw, and rollback correctness.
+
 - `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
   - Status: `Closed`
   - Type: `Feature`
