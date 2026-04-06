@@ -18,7 +18,7 @@ Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
 2. `docs/Librova-Backlog.md` — active backlog and task priorities
-3. `docs/engineering/CommitMessageGuidelines.md` — commit format
+3. Use `$commit-message` skill for commit format
 4. `docs/engineering/TestStrategy.md` — what tests to add and when
 5. `docs/engineering/TransportInvariants.md` — IPC contract rules
 6. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
@@ -143,7 +143,7 @@ This applies to `README.md` as well: keep it current when project scope, archite
 ## Commit Discipline
 
 - **Never commit** unless explicitly requested by the user.
-- When a commit is requested, follow `docs/engineering/CommitMessageGuidelines.md`.
+- When a commit is requested, use the `$commit-message` skill.
 - Prefer one coherent commit per logical change.
 - Stage only the intended files.
 
@@ -154,6 +154,7 @@ This applies to `README.md` as well: keep it current when project scope, archite
 Use these skills for common recurring workflows (type `$` in the CLI to pick a skill):
 
 - `$backlog-update` — add, close, or validate backlog tasks
+- `$commit-message` — compose, verify, and apply git commits
 - `$code-style` — project-specific naming and formatting rules for C++, C#, proto, Python (full reference in `docs/engineering/CodeStyleGuidelines.md`)
 - `$vertical-slice` — end-to-end checklist for any new feature
 - `$transport-rpc` — step-by-step guide for adding a new IPC method
