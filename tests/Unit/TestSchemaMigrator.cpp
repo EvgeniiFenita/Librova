@@ -54,7 +54,7 @@ TEST_CASE("Schema migrator rejects database with a schema version newer than the
 
     REQUIRE_THROWS_WITH(
         Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath),
-        Catch::Matchers::ContainsSubstring("9999"));
+        Catch::Matchers::ContainsSubstring("9999") && Catch::Matchers::ContainsSubstring("3"));
 
     // user_version must NOT have been downgraded — the database must remain untouched
     REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 9999);

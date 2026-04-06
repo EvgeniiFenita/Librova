@@ -122,9 +122,6 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
 {
     Librova::Sqlite::CSqliteConnection connection(databasePath);
 
-    connection.Execute("PRAGMA foreign_keys = ON;");
-    connection.Execute("PRAGMA journal_mode = WAL;");
-
     const int currentVersion = ReadUserVersionValue(connection);
     const int expectedVersion = Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion();
 
@@ -137,6 +134,9 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
                 currentVersion,
                 expectedVersion));
     }
+
+    connection.Execute("PRAGMA foreign_keys = ON;");
+    connection.Execute("PRAGMA journal_mode = WAL;");
 
     if (currentVersion == 0)
     {

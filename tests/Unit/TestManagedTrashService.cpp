@@ -111,6 +111,32 @@ TEST_CASE("Managed trash service removes per-book subdirectory when it becomes e
     std::filesystem::remove_all(sandbox);
 }
 
+TEST_CASE("Managed trash service cleans up empty trash subdirectory after restore but preserves parent dirs", "[managed-trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-restore-cleanup";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000001");
+    std::filesystem::create_directories(sandbox / "Library/Trash/Books/0000000001");
+
+    const auto trashedPath = sandbox / "Library/Trash/Books/0000000001/book.epub";
+    const auto destinationPath = sandbox / "Library/Books/0000000001/book.epub";
+    std::ofstream(trashedPath, std::ios::binary) << "epub";
+
+    Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
+    service.RestoreFromTrash(trashedPath, destinationPath);
+
+    REQUIRE(std::filesystem::exists(destinationPath));
+
+    // Per-book trash subdirectory must be removed (one-level cleanup, same as MoveToTrash)
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000001"));
+
+    // Trash/Books/ and Trash/ itself are preserved (not cleaned up — same behavior as Books/ in MoveToTrash)
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books"));
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash"));
+
+    std::filesystem::remove_all(sandbox);
+}
+
 TEST_CASE("Managed trash service rejects symlinked managed path escaping library root", "[managed-trash]")
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-symlink";
