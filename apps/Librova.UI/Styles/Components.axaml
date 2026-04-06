@@ -161,8 +161,11 @@
     <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
+  <Style Selector="Button.SecondaryAction:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
   <Style Selector="Button.SecondaryAction:disabled /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
 
@@ -184,8 +187,11 @@
     <Setter Property="Background" Value="{DynamicResource AppAccentMutedBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
   </Style>
+  <Style Selector="Button.AccentAction:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
   <Style Selector="Button.AccentAction:disabled /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
 
@@ -208,8 +214,11 @@
     <Setter Property="Background" Value="{DynamicResource AppDangerHoverBgBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppDangerTextHoverBrush}" />
   </Style>
+  <Style Selector="Button.DestructiveAction:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
   <Style Selector="Button.DestructiveAction:disabled /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
 

@@ -243,3 +243,8 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Note: `FromProto(BookFormat)` in `LibraryCatalogProtoMapper` now explicitly rejects `BOOK_FORMAT_ZIP`, `BOOK_FORMAT_UNSPECIFIED`, and any unknown numeric value with an error log and `std::invalid_argument`; three regression tests cover the ZIP case via `BookListRequest`, via `ExportBookRequest`, and via an unknown numeric cast.
+
+- `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Note: added `IsExportBusy` property to `LibraryBrowserViewModel`; details panel now shows an indeterminate progress bar and status text while any export is in flight; EPUB export timeout increased to 2 min transport / 3 min outer to accommodate decompression and external converter time; regular export timeout set to 10 s / 30 s; regression test verifies `IsExportBusy` transitions during a gated export.

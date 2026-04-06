@@ -348,6 +348,21 @@
           <!-- Actions -->
           <StackPanel Grid.Row="3"
                       Spacing="8">
+            <!-- Export in-progress indicator -->
+            <Border Classes="AccentPanel"
+                    IsVisible="{Binding LibraryBrowser.IsExportBusy}"
+                    Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock FontSize="13"
+                           FontWeight="SemiBold"
+                           Text="{Binding LibraryBrowser.StatusText}" />
+                <ProgressBar IsIndeterminate="True"
+                             Height="4"
+                             CornerRadius="2"
+                             Foreground="{DynamicResource AppAccentBrush}"
+                             Background="{DynamicResource AppAccentMutedBrush}" />
+              </StackPanel>
+            </Border>
             <Button Classes="AccentAction"
                     HorizontalAlignment="Stretch"
                     IsVisible="{Binding LibraryBrowser.ShowExportAsEpubAction}"

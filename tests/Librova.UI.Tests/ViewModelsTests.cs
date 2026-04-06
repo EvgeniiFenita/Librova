@@ -836,13 +836,13 @@ public sealed class ViewModelsTests
 
             Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
             var gridCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.Books[0].CoverBackgroundBrush);
-            Assert.Equal(Color.Parse("#0F141C"), gridCoverBackground.Color);
+            Assert.Equal(Color.Parse("#0A0700"), gridCoverBackground.Color);
 
             await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
             Assert.False(viewModel.ShowSelectedBookCoverPlaceholder);
             var detailsCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.SelectedBookCoverBackgroundBrush);
-            Assert.Equal(Color.Parse("#0F141C"), detailsCoverBackground.Color);
+            Assert.Equal(Color.Parse("#0A0700"), detailsCoverBackground.Color);
         }
         finally
         {
@@ -1275,6 +1275,42 @@ public sealed class ViewModelsTests
         Assert.True(viewModel.ShowExportAsEpubHint);
         Assert.Contains("Settings", viewModel.ExportAsEpubHintText, StringComparison.Ordinal);
         Assert.False(viewModel.ExportSelectedBookAsEpubCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_SetsIsExportBusyDuringExportAndClearsAfterCompletion()
+    {
+        var exportGate = new TaskCompletionSource();
+        var service = new GatedExportLibraryCatalogService(exportGate.Task);
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\busy.epub"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService, hasConfiguredConverter: true);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.False(viewModel.IsExportBusy);
+
+        // Start export without awaiting — the export will block at the gate inside the service.
+        var exportTask = viewModel.ExportSelectedBookAsEpubAsync();
+
+        // Yield so the async method runs up to the first real await (the gated service call).
+        // At that point IsBusy and IsExportBusy must already be true.
+        await Task.Yield();
+
+        Assert.True(viewModel.IsExportBusy);
+        Assert.True(viewModel.IsBusy);
+        Assert.Contains("Exporting", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+
+        // Release the gate to let the export complete.
+        exportGate.SetResult();
+        await exportTask;
+
+        Assert.False(viewModel.IsExportBusy);
+        Assert.False(viewModel.IsBusy);
+        Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2582,5 +2618,50 @@ public sealed class ViewModelsTests
                 Destination = DeleteDestinationModel.RecycleBin
             });
         }
+    }
+
+    private sealed class GatedExportLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly Task _gate;
+
+        public GatedExportLibraryCatalogService(Task gate)
+        {
+            _gate = gate;
+        }
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Slow Book",
+                        Authors = ["Slow Author"],
+                        Language = "en",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Books/0000000001/book.fb2",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel());
+
+        public async Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            await _gate;
+            return destinationPath;
+        }
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(null);
     }
 }

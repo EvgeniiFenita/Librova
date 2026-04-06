@@ -436,3 +436,16 @@
 - release build завершается успешно.
 - UI успешно запускается из release artifacts.
 - host корректно резолвится из `Release` layout.
+
+## 18. Export As EPUB Progress Feedback
+
+1. Импортируй FB2-книгу (желательно сжатую или конвертируемую через fb2c).
+2. Открой Library, выбери FB2-книгу.
+3. Убедись, что конвертер настроен в Settings.
+4. Нажми Export as EPUB в панели деталей. В диалоге выбери целевой файл.
+Ожидаемое поведение:
+- Сразу после закрытия диалога сохранения в нижней части панели деталей появляется блок с indeterminate progress bar (amber/gold).
+- Над progress bar отображается текст: Exporting '<Title>' as EPUB....
+- Кнопки Export as EPUB, Export и Move to Recycle Bin заблокированы на всё время экспорта.
+- По завершении progress bar исчезает, в статус-тексте появляется Exported '<Title>' as EPUB to '<path>'.
+- Если нажать Export (не EPUB), аналогичный progress блок тоже отображается (Exporting '<Title>'...).

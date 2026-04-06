@@ -270,8 +270,14 @@ internal sealed partial class App : Application
         }
 
         UiLogging.Information("Reloading shell session to apply updated preferences. LibraryRoot={LibraryRoot}", libraryRoot);
-        ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
 
+        // Do NOT call ConfigureStartingUp here.
+        // ConfigureStartingUp sets Shell = null on the DataContext (HasShell = false), which hides
+        // the shell grid and causes Avalonia compiled binding chains (Shell.LibraryRoot,
+        // all SettingsView bindings, etc.) to go blank. When the new Running DataContext is set
+        // afterwards, the bindings on previously-hidden elements do not recover.
+        // For a preferences reload the shell grid must stay visible at all times so that
+        // we transition directly from the old Running ViewModel to the new one.
         var previousApplication = _shellApplication;
         _shellApplication = null;
         if (previousApplication is not null)
@@ -279,14 +285,20 @@ internal sealed partial class App : Application
             await previousApplication.DisposeAsync();
         }
 
-        await StartShellWithLibraryRootAsync(
+        var effectivePreferences = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
+            preferencesStore.TryLoad(),
+            libraryRoot);
+        await StartShellWithLaunchOptionsAsync(
             mainWindow,
             pathSelectionService,
             preferencesStore,
             launchOptions,
-            libraryRoot,
+            CoreHostDevelopmentDefaults.CreateForLibraryRoot(
+                libraryRoot,
+                effectivePreferences,
+                libraryOpenMode: UiLibraryOpenMode.OpenExisting),
             cancellationToken,
-            UiLibraryOpenMode.OpenExisting);
+            effectivePreferences);
 
         if (_shellApplication is not null && currentSection is not ShellSection.Library)
         {

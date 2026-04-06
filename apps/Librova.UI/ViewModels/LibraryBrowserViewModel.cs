@@ -44,6 +44,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private string _languageFilter = string.Empty;
     private string _statusText = "Library view is idle.";
     private bool _isBusy;
+    private bool _isExportBusy;
     private bool _isLoadingMore;
     private bool _isLoadingSelectionDetails;
     private int _pageSize = 120;
@@ -254,6 +255,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
+    public bool IsExportBusy
+    {
+        get => _isExportBusy;
+        private set => SetProperty(ref _isExportBusy, value);
+    }
+
     public bool IsLoadingSelectionDetails
     {
         get => _isLoadingSelectionDetails;
@@ -425,18 +432,28 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
 
         IsBusy = true;
+        IsExportBusy = true;
         StatusText = exportFormat is BookFormatModel.Epub
-            ? $"Exporting '{SelectedBook.Title}' as EPUB..."
-            : $"Exporting '{SelectedBook.Title}'...";
+            ? $"Exporting '{TruncateTitle(SelectedBook.Title)}' as EPUB..."
+            : $"Exporting '{TruncateTitle(SelectedBook.Title)}'...";
+
+        // EPUB export may require decompressing a managed FB2 and running an external converter,
+        // which can take tens of seconds. Use a generous timeout for that path.
+        var operationTimeout = exportFormat is BookFormatModel.Epub
+            ? TimeSpan.FromMinutes(3)
+            : TimeSpan.FromSeconds(30);
+        var transportTimeout = exportFormat is BookFormatModel.Epub
+            ? TimeSpan.FromMinutes(2)
+            : TimeSpan.FromSeconds(10);
 
         try
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = new CancellationTokenSource(operationTimeout);
             var exportedPath = await _libraryCatalogService.ExportBookAsync(
                 SelectedBook.BookId,
                 destinationPath,
                 exportFormat,
-                TimeSpan.FromSeconds(5),
+                transportTimeout,
                 cancellation.Token);
 
             StatusText = string.IsNullOrWhiteSpace(exportedPath)
@@ -447,6 +464,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
         finally
         {
+            IsExportBusy = false;
             IsBusy = false;
         }
     }
@@ -933,6 +951,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private static string FormatBookCount(ulong bookCount) =>
         bookCount == 1 ? "1 book" : $"{bookCount:N0} books";
+
+    private static string TruncateTitle(string? title, int maxLength = 40)
+    {
+        if (string.IsNullOrEmpty(title) || title.Length <= maxLength)
+            return title ?? string.Empty;
+        return string.Concat(title.AsSpan(0, maxLength), "…");
+    }
 
     private static string FormatSizeInMegabytes(ulong sizeBytes)
     {

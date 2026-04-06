@@ -119,12 +119,6 @@ Last assigned id: `#65`
   - Type: `Feature`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
-### Low
-- `#43` show explicit busy or progress feedback during long-running `Export As EPUB` operations.
-  - Status: `Open`
-  - Type: `Feature`
-  - Note: when `Export As EPUB` needs to decode a compressed managed `FB2` and then run conversion, the UI currently looks idle while no output file has appeared yet; add visible export-in-progress feedback such as disabled actions, wait cursor, status text, or progress so the running operation is obvious.
-
 ## 4. Done Criteria
 
 A task can be considered closed only when:

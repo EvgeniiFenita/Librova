@@ -167,7 +167,11 @@ All buttons inherit the global `Button` style: `Cursor=Hand`, background transit
 - Disabled (import in progress) → whole button `Opacity=0.45`
 
 ### Disabled states
-Every button class has explicit `:disabled /template/ ContentPresenter` overrides that set `Background=SurfaceMuted`, `Foreground=TextMuted`. This prevents FluentTheme from applying its own dimming on top.
+Every action button class (`AccentAction`, `SecondaryAction`, `DestructiveAction`) uses two rules when disabled:
+- `Button.*:disabled { Opacity = 0.4 }` — dims the entire button uniformly, including icons with explicit `Foreground` bindings.
+- `Button.*:disabled /template/ ContentPresenter { Background = <original-enabled-bg>, Foreground = TextMuted }` — keeps the button shape visible and mutes inherited text colour.
+
+The `Background` in the ContentPresenter rule is set to the button's own enabled surface (not `SurfaceMuted`) so the button chrome does not blend into the panel background.
 
 ---
 
@@ -265,7 +269,7 @@ During import (`IsImportInProgress = true`) the UI is locked:
 - `ShowLibrarySectionCommand`, `ShowImportSectionCommand`, `ShowSettingsSectionCommand` → `CanExecute = false` → `NavItem:disabled` → `Opacity=0.45`
 - `TextBox:disabled`, `ComboBox:disabled`, `CheckBox:disabled` → `Opacity=0.38`
 - `Border.AppPanelMuted:disabled` → `Opacity=0.45`
-- Buttons: explicit `:disabled /template/ ContentPresenter` styles dim bg/fg
+- Buttons (`AccentAction`, `SecondaryAction`, `DestructiveAction`): `Opacity=0.4` on button + ContentPresenter keeps original bg, text muted to `TextMuted`
 - Library card in sidebar (`Border.AppPanelMuted`) — `IsEnabled` bound to `!Shell.IsImportInProgress`; dims to 0.45 opacity and prevents Open/New button interaction
 - OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims both checkboxes (Allow duplicate import, Force conversion to EPUB) via parent propagation
 - Only the "Cancel" button remains active
