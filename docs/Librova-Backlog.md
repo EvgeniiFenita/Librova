@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#65`
+Last assigned id: `#68`
 
 ## 2. Priority Meanings
 
@@ -53,6 +53,21 @@ Last assigned id: `#65`
   - Note: the normal UI and multi-source import flow do not populate `sha256_hex`, so strict duplicate detection by content hash is effectively absent for batch and ZIP imports; compute the hash in the real import pipeline and cover it with regression tests.
 
 ### Major
+- `#66` validate a configured converter by running a test conversion when the user saves converter settings.
+  - Status: `Open`
+  - Type: `Feature`
+  - Note: when the user saves a converter path in Settings, Librova must run a probe conversion on a minimal embedded FB2 fixture before accepting the path; if the probe fails the UI must show a clear error message and leave the previous converter state unchanged; a successful probe is the only way to confirm the executable path is valid and the converter is operational; the probe must be fast, require no visible progress UI, and not write any managed output to the library.
+
+- `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
+  - Status: `Open`
+  - Type: `Feature`
+  - Note: the current Settings section requires the user to manually erase the converter path text field to disable conversion; add an explicit Remove button that clears the converter path and immediately reloads the session so that Export As EPUB and import conversion are hidden as they would be after a clean start with no converter configured.
+
+- `#68` add a Batch Convert to EPUB workflow that re-converts all managed FB2 books to EPUB using the active converter, with aggregate progress and summary.
+  - Status: `Open`
+  - Type: `Feature`
+  - Note: the scenario is a user who already has an FB2 library and then configures a converter for the first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted, failed, skipped); a per-book conversion failure must keep the original FB2 intact as the managed file — never remove it; the terminal summary must remain visible after the job finishes; cancellation must stop new conversions and leave already-converted books in their new EPUB state; the feature spans a new native pipeline stage, IPC contract, and UI workflow.
+
 - `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
   - Status: `Open`
   - Type: `Feature`
