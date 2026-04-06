@@ -6,6 +6,8 @@
 
 namespace Librova::ManagedPaths {
 
+[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path);
+
 [[nodiscard]] std::filesystem::path ResolveExistingPathWithinRoot(
     const std::filesystem::path& root,
     const std::filesystem::path& managedPath,

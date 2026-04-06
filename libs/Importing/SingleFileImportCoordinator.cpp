@@ -399,11 +399,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             .File = {
                 .Format = conversionOutcome.Format,
                 .StorageEncoding = storageEncoding,
-                .ManagedPath = preparedStorage->FinalBookPath,
+                .ManagedPath = preparedStorage->RelativeBookPath,
                 .SizeBytes = std::filesystem::file_size(preparedStorage->StagedBookPath),
                 .Sha256Hex = request.Sha256Hex.value_or("")
             },
-            .CoverPath = preparedStorage->FinalCoverPath,
+            .CoverPath = preparedStorage->RelativeCoverPath,
             .AddedAtUtc = std::chrono::system_clock::now()
         };
 

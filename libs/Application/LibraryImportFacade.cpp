@@ -107,30 +107,6 @@ void LogImportSourceIssueIfInitialized(
         reason);
 }
 
-[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
-{
-    if (path.empty() || path.is_absolute())
-    {
-        return false;
-    }
-
-    const auto normalized = path.lexically_normal();
-    if (normalized.empty() || normalized.is_absolute())
-    {
-        return false;
-    }
-
-    for (const auto& part : normalized)
-    {
-        if (part == "..")
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 [[nodiscard]] std::optional<std::filesystem::path> TryResolveManagedPathWithinRoot(
     const std::filesystem::path& root,
     const std::filesystem::path& managedPath)
@@ -141,21 +117,9 @@ void LogImportSourceIssueIfInitialized(
     }
 
     const auto normalizedManagedPath = managedPath.lexically_normal();
-    std::filesystem::path candidatePath;
-
-    if (normalizedManagedPath.is_absolute())
-    {
-        candidatePath = normalizedManagedPath;
-    }
-    else
-    {
-        if (!IsSafeRelativeManagedPath(normalizedManagedPath))
-        {
-            throw std::runtime_error("Managed rollback path is unsafe.");
-        }
-
-        candidatePath = (root / normalizedManagedPath).lexically_normal();
-    }
+    const std::filesystem::path candidatePath = normalizedManagedPath.is_absolute()
+        ? normalizedManagedPath
+        : (root / normalizedManagedPath).lexically_normal();
 
     if (!std::filesystem::exists(candidatePath))
     {

@@ -5,6 +5,10 @@ description: "Step-by-step guide for composing and verifying git commits in Libr
 
 # Commit Message Guide
 
+## Before You Start
+
+Read this file completely before composing a message.
+
 ## Message Format
 
 ```

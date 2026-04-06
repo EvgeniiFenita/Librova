@@ -4,9 +4,8 @@
 #include <system_error>
 
 namespace Librova::ManagedPaths {
-namespace {
 
-[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
+bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
 {
     if (path.empty() || path.is_absolute())
     {
@@ -29,6 +28,8 @@ namespace {
 
     return true;
 }
+
+namespace {
 
 [[nodiscard]] bool IsPathWithinRoot(
     const std::filesystem::path& root,

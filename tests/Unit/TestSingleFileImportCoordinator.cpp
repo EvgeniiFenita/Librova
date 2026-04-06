@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <optional>
@@ -226,15 +227,19 @@ public:
             finalCoverPath =
                 Root
                 / "Covers"
-                / std::to_string(plan.BookId.Value)
-                / std::filesystem::path{"cover"}.replace_extension(plan.CoverSourcePath->extension());
+                / std::filesystem::path{
+                    std::format("{:010}{}", plan.BookId.Value, plan.CoverSourcePath->extension().string())};
         }
 
         return {
             .StagedBookPath = stagedBookPath,
             .StagedCoverPath = stagedCoverPath,
             .FinalBookPath = finalBookPath,
-            .FinalCoverPath = finalCoverPath
+            .FinalCoverPath = finalCoverPath,
+            .RelativeBookPath = std::filesystem::relative(finalBookPath, Root),
+            .RelativeCoverPath = finalCoverPath.has_value()
+                ? std::make_optional(std::filesystem::relative(*finalCoverPath, Root))
+                : std::nullopt
         };
     }
 
@@ -363,6 +368,9 @@ TEST_CASE("Single file import imports FB2 without conversion when forced convers
     REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(bookRepository.AddedBook->File.StorageEncoding == Librova::Domain::EStorageEncoding::Compressed);
     REQUIRE(bookRepository.AddedBook->File.Sha256Hex == "fb2-hash");
+    REQUIRE_FALSE(bookRepository.AddedBook->File.ManagedPath.is_absolute());
+    REQUIRE(bookRepository.AddedBook->CoverPath.has_value());
+    REQUIRE_FALSE(bookRepository.AddedBook->CoverPath->is_absolute());
     REQUIRE(managedStorage.LastPlan.has_value());
     REQUIRE(managedStorage.LastPlan->Format == Librova::Domain::EBookFormat::Fb2);
     REQUIRE(managedStorage.LastPlan->StorageEncoding == Librova::Domain::EStorageEncoding::Compressed);
@@ -852,6 +860,38 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
     REQUIRE_FALSE(std::filesystem::exists(managedStorage.LastPreparedStorage->StagedBookPath));
     REQUIRE(bookRepository.RemovedIds.size() == 1);
     REQUIRE(bookRepository.RemovedIds.front().Value == 1);
+}
+
+TEST_CASE("Single file import stores library-relative paths in book record", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-relative-paths");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(bookRepository.AddedBook->File.ManagedPath.is_absolute());
+    REQUIRE(bookRepository.AddedBook->File.ManagedPath == std::filesystem::path{"Books/0000000001/book.fb2"});
+    REQUIRE(bookRepository.AddedBook->CoverPath.has_value());
+    REQUIRE_FALSE(bookRepository.AddedBook->CoverPath->is_absolute());
+    REQUIRE(bookRepository.AddedBook->CoverPath == std::filesystem::path{"Covers/0000000001.jpg"});
 }
 
 TEST_CASE("Single file import keeps detailed parser diagnostics out of transport-facing error text", "[importing]")

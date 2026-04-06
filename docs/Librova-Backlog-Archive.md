@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#44` store managed book and cover paths as stable library-relative values instead of absolute filesystem paths.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: fixed import coordinator to write `RelativeBookPath`/`RelativeCoverPath` (computed via `std::filesystem::relative`) into `SBook` instead of absolute `FinalBookPath`/`FinalCoverPath`; consolidated duplicated `IsSafeRelativeManagedPath` helper into `ManagedPathSafety`; regression tests added.
+
 - `#30` add a reproducible Windows portable release packaging flow that produces a fully runnable distribution folder for `Librova.UI` plus `Librova.Core.Host`, with every required runtime dependency either statically linked or copied into the output.
   - Status: `Closed`
   - Type: `Feature`

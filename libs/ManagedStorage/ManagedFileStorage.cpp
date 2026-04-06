@@ -131,7 +131,8 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
 
         Librova::Domain::SPreparedStorage preparedStorage{
             .StagedBookPath = stagedBookPath,
-            .FinalBookPath = finalBookPath
+            .FinalBookPath = finalBookPath,
+            .RelativeBookPath = std::filesystem::relative(finalBookPath, m_libraryRoot)
         };
 
         if (plan.CoverSourcePath.has_value())
@@ -141,9 +142,12 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
 
             CopyFile(*plan.CoverSourcePath, stagedCoverPath);
 
-            preparedStorage.StagedCoverPath = stagedCoverPath;
-            preparedStorage.FinalCoverPath =
+            const std::filesystem::path finalCoverPath =
                 Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+
+            preparedStorage.StagedCoverPath = stagedCoverPath;
+            preparedStorage.FinalCoverPath = finalCoverPath;
+            preparedStorage.RelativeCoverPath = std::filesystem::relative(finalCoverPath, m_libraryRoot);
         }
 
         return preparedStorage;

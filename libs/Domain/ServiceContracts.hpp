@@ -135,6 +135,9 @@ struct SPreparedStorage
     std::optional<std::filesystem::path> StagedCoverPath;
     std::filesystem::path FinalBookPath;
     std::optional<std::filesystem::path> FinalCoverPath;
+    // Paths relative to the library root — stored in the database.
+    std::filesystem::path RelativeBookPath;
+    std::optional<std::filesystem::path> RelativeCoverPath;
 
     [[nodiscard]] bool HasStagedBook() const noexcept
     {

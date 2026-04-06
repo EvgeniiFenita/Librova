@@ -69,10 +69,16 @@ class CStubManagedStorage final : public Librova::Domain::IManagedStorage
 public:
     Librova::Domain::SPreparedStorage PrepareImport(const Librova::Domain::SStoragePlan& plan) override
     {
+        const auto relativeBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub";
+        const auto relativeCoverPath = plan.CoverSourcePath.has_value()
+            ? std::make_optional(std::filesystem::path{"Covers"} / (std::to_string(plan.BookId.Value) + ".jpg"))
+            : std::nullopt;
         return {
             .StagedBookPath = std::filesystem::path{"Temp"} / "book.epub",
             .StagedCoverPath = plan.CoverSourcePath.has_value() ? std::make_optional(std::filesystem::path{"Temp"} / "cover.jpg") : std::nullopt,
-            .FinalBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub"
+            .FinalBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub",
+            .RelativeBookPath = relativeBookPath,
+            .RelativeCoverPath = relativeCoverPath
         };
     }
 

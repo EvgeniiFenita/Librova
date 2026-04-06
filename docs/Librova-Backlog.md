@@ -32,12 +32,6 @@ Last assigned id: `#68`
 ## 3. Open Backlog
 
 ### Critical
-- `#44` store managed book and cover paths as stable library-relative values instead of absolute filesystem paths.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: current import persistence writes absolute managed paths into SQLite, which breaks library portability and drifts from the transport/tests that expect `Books/...` and `Covers/...` relative paths; fix persistence, read-side resolution, and any affected transport mapping together.
-
 - `#46` make staged delete crash-safe across filesystem moves and catalog removal.
   - Status: `Open`
   - Type: `Bug`

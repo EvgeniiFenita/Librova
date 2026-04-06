@@ -76,6 +76,11 @@ TEST_CASE("Managed file storage stages source and cover files before commit", "[
     REQUIRE(prepared.FinalCoverPath.has_value());
     REQUIRE(prepared.FinalBookPath == std::filesystem::path{sandbox.GetPath() / "Library/Books/0000000017/book.fb2"});
     REQUIRE(*prepared.FinalCoverPath == std::filesystem::path{sandbox.GetPath() / "Library/Covers/0000000017.jpg"});
+    REQUIRE_FALSE(prepared.RelativeBookPath.is_absolute());
+    REQUIRE(prepared.RelativeCoverPath.has_value());
+    REQUIRE_FALSE(prepared.RelativeCoverPath->is_absolute());
+    REQUIRE(prepared.RelativeBookPath == std::filesystem::path{"Books/0000000017/book.fb2"});
+    REQUIRE(*prepared.RelativeCoverPath == std::filesystem::path{"Covers/0000000017.jpg"});
 }
 
 TEST_CASE("Managed file storage commit finalizes staged files and removes temp staging", "[managed-storage]")
