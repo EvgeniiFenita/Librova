@@ -53,11 +53,6 @@ Last assigned id: `#65`
   - Note: the normal UI and multi-source import flow do not populate `sha256_hex`, so strict duplicate detection by content hash is effectively absent for batch and ZIP imports; compute the hash in the real import pipeline and cover it with regression tests.
 
 ### Major
-- `#49` reject databases created by a newer schema version instead of silently downgrading `user_version`.
-  - Status: `Open`
-  - Type: `Bug`
-  - Note: schema migration currently accepts forward-version databases and then unconditionally rewrites `PRAGMA user_version` to the local version, which risks running an older binary against an incompatible schema; fail fast with explicit recovery guidance.
-
 - `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
   - Status: `Open`
   - Type: `Feature`

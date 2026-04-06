@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <filesystem>
 
@@ -37,6 +38,26 @@ TEST_CASE("Schema migrator is idempotent for existing database", "[database-runt
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
     REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 3);
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Schema migrator rejects database with a schema version newer than the current binary supports", "[database-runtime]")
+{
+    const auto databasePath = std::filesystem::temp_directory_path() / "librova-schema-migrator-future.db";
+    std::filesystem::remove(databasePath);
+
+    {
+        Librova::Sqlite::CSqliteConnection connection(databasePath);
+        connection.Execute("PRAGMA user_version = 9999;");
+    }
+
+    REQUIRE_THROWS_WITH(
+        Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath),
+        Catch::Matchers::ContainsSubstring("9999"));
+
+    // user_version must NOT have been downgraded — the database must remain untouched
+    REQUIRE(Librova::DatabaseRuntime::CSchemaMigrator::ReadUserVersion(databasePath) == 9999);
 
     std::filesystem::remove(databasePath);
 }

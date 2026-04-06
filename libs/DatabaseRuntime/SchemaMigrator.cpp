@@ -126,6 +126,17 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
     connection.Execute("PRAGMA journal_mode = WAL;");
 
     const int currentVersion = ReadUserVersionValue(connection);
+    const int expectedVersion = Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion();
+
+    if (currentVersion > expectedVersion)
+    {
+        throw std::runtime_error(
+            std::format(
+                "Database schema version {} is newer than this version of Librova supports ({}). "
+                "Update Librova to open this library.",
+                currentVersion,
+                expectedVersion));
+    }
 
     if (currentVersion == 0)
     {

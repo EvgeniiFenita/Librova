@@ -253,3 +253,8 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Note: `CleanupEmptyParentDirectory` in `ManagedTrashService` now skips removal when the parent is a direct child of the library root; canonical root is computed once in the constructor and passed to the cleanup helper; two regression tests cover both the protection of `Covers/` and the allowed removal of per-book subdirectories.
+
+- `#49` reject databases created by a newer schema version instead of silently downgrading `user_version`.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Note: `CSchemaMigrator::Migrate` now throws `std::runtime_error` with the detected and expected versions when `currentVersion > GetCurrentVersion()`; `user_version` is never overwritten in that path; regression test verifies both the throw and that the future version is preserved on disk.
