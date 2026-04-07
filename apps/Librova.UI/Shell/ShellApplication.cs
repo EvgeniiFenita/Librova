@@ -38,7 +38,8 @@ internal sealed class ShellApplication : IAsyncDisposable
         IUiPreferencesStore? preferencesStore = null,
         UiPreferencesSnapshot? savedPreferencesOverride = null,
         Func<string, UiLibraryOpenMode, Task>? switchLibraryAsync = null,
-        Func<Task>? reloadShellAsync = null)
+        Func<Task>? reloadShellAsync = null,
+        Func<string, CancellationToken, Task<Fb2ProbeResult>>? converterProbe = null)
     {
         var effectiveStateStore = stateStore ?? ShellStateStore.CreateDefault();
         var effectivePreferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
@@ -54,7 +55,8 @@ internal sealed class ShellApplication : IAsyncDisposable
                 effectivePreferencesStore,
                 savedPreferences,
                 switchLibraryAsync,
-                reloadShellAsync),
+                reloadShellAsync,
+                converterProbe),
             effectiveStateStore);
     }
 

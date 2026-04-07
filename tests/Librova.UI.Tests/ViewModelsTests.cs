@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Media;
+using Librova.UI.CoreHost;
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using Xunit;
 
@@ -2732,6 +2734,181 @@ public sealed class ViewModelsTests
 
         public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
+    // ── ShellViewModel / converter probe tests ──────────────────────────────────────────────
+
+    [Fact]
+    public async Task ShellViewModel_ConverterProbeBlocksSaveWhileRunning()
+    {
+        var probeTcs = new TaskCompletionSource<Fb2ProbeResult>();
+        var viewModel = MakeTestShellViewModel(probe: async (_, ct) => await probeTcs.Task);
+
+        viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
+
+        Assert.True(viewModel.IsConverterProbeInProgress);
+        Assert.False(viewModel.SavePreferencesCommand.CanExecute(null));
+
+        probeTcs.SetResult(Fb2ProbeResult.Success);
+        await viewModel._converterProbeTask;
+
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.True(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShellViewModel_ConverterProbeSuccessEnablesSaveAndClearsMessage()
+    {
+        var viewModel = MakeTestShellViewModel(
+            probe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
+
+        viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
+        await viewModel._converterProbeTask;
+
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.False(viewModel.HasConverterValidationError);
+        Assert.True(viewModel.ShowConverterHelperText);
+        Assert.True(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShellViewModel_ConverterProbeFailureShowsErrorAndBlocksSave()
+    {
+        var failResult = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ExecutionFailed, Detail = "1" };
+        var viewModel = MakeTestShellViewModel(probe: (_, _) => Task.FromResult(failResult));
+
+        viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
+        await viewModel._converterProbeTask;
+
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.True(viewModel.HasConverterValidationError);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.ConverterValidationMessage));
+        Assert.False(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ShellViewModel_EmptyPathSkipsProbeAndEnablesSave()
+    {
+        var probeCallCount = 0;
+        var viewModel = MakeTestShellViewModel(probe: (_, _) => { probeCallCount++; return Task.FromResult(Fb2ProbeResult.Success); });
+
+        viewModel.Fb2CngExecutablePath = string.Empty;
+
+        Assert.Equal(0, probeCallCount);
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.False(viewModel.HasConverterValidationError);
+        Assert.True(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ShellViewModel_RelativePathFailsSyncCheckWithoutProbe()
+    {
+        var probeCallCount = 0;
+        var viewModel = MakeTestShellViewModel(probe: (_, _) => { probeCallCount++; return Task.FromResult(Fb2ProbeResult.Success); });
+
+        viewModel.Fb2CngExecutablePath = "fb2cng.exe";
+
+        Assert.Equal(0, probeCallCount);
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.True(viewModel.HasConverterValidationError);
+        Assert.False(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShellViewModel_ConverterProbeIsCancelledWhenPathChangesAgain()
+    {
+        var firstProbeCts = new CancellationTokenSource();
+        var firstProbeStarted = new TaskCompletionSource();
+        var viewModel = MakeTestShellViewModel(probe: async (_, ct) =>
+        {
+            firstProbeStarted.TrySetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return Fb2ProbeResult.Success;
+        });
+
+        viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
+        await firstProbeStarted.Task;
+        var firstTask = viewModel._converterProbeTask;
+
+        // Change path — cancels the in-flight probe
+        viewModel.Fb2CngExecutablePath = string.Empty;
+
+        await firstTask; // should complete quickly after cancellation
+
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.False(viewModel.HasConverterValidationError);
+    }
+
+    private static ShellViewModel MakeTestShellViewModel(
+        Func<string, CancellationToken, Task<Fb2ProbeResult>>? probe = null)
+    {
+        var session = new ShellSession(
+            hostLifetime: NullLifetime.Instance,
+            hostOptions: new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\fake\host.exe",
+                PipePath = @"\\.\pipe\test",
+                LibraryRoot = @"C:\fake\lib"
+            },
+            importJobs: new FakeImportJobsService());
+
+        return new ShellViewModel(session, converterProbe: probe);
+    }
+
+    private sealed class NullLifetime : IAsyncDisposable
+    {
+        public static readonly NullLifetime Instance = new();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    // ── Fb2ProbeResult.BuildValidationMessage coverage ──────────────────────────────────────
+
+    [Fact]
+    public void Fb2ProbeResult_Succeeded_ReturnsEmptyMessage()
+    {
+        Assert.Equal(string.Empty, Fb2ProbeResult.Success.BuildValidationMessage());
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_ExecutableNotFound_ReturnsNonEmptyMessage()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ExecutableNotFound };
+        Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_ExecutionFailed_WithDetail_IncludesExitCode()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ExecutionFailed, Detail = "2" };
+        Assert.Contains("2", result.BuildValidationMessage());
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_ExecutionFailed_WithoutDetail_ReturnsNonEmptyMessage()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ExecutionFailed };
+        Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_NoOutputProduced_ReturnsNonEmptyMessage()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.NoOutputProduced };
+        Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_TimedOut_ReturnsNonEmptyMessage()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.TimedOut };
+        Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
+    }
+
+    [Fact]
+    public void Fb2ProbeResult_ProbeError_ReturnsNonEmptyMessage()
+    {
+        var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ProbeError };
+        Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
     }
 }
 

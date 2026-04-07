@@ -33,12 +33,6 @@ Last assigned id: `#68`
 
 ### Critical
 ### Major
-- `#66` validate a configured converter by running a test conversion when the user saves converter settings.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.0`
-  - Note: when the user saves a converter path in Settings, Librova must run a probe conversion on a minimal embedded FB2 fixture before accepting the path; if the probe fails the UI must show a clear error message and leave the previous converter state unchanged; a successful probe is the only way to confirm the executable path is valid and the converter is operational; the probe must be fast, require no visible progress UI, and not write any managed output to the library.
-
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Open`
   - Type: `Feature`

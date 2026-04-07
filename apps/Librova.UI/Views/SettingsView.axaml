@@ -63,6 +63,10 @@
                      Text="{Binding ConverterValidationMessage}"
                      TextWrapping="Wrap" />
           <TextBlock Classes="Caption"
+                     IsVisible="{Binding IsConverterProbeInProgress}"
+                     Text="{Binding ConverterProbeStatusText}"
+                     TextWrapping="Wrap" />
+          <TextBlock Classes="Caption"
                      IsVisible="{Binding ShowConverterHelperText}"
                      Text="{Binding ConverterHintText}"
                      TextWrapping="Wrap" />

@@ -377,10 +377,12 @@ public sealed class ShellApplicationTests
             {
                 reloadCalls++;
                 return Task.CompletedTask;
-            });
+            },
+            converterProbe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
         application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
         application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
 
+        await application.Shell._converterProbeTask;
         await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
         Assert.NotNull(preferencesStore.LastSavedSnapshot);

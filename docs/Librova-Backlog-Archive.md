@@ -160,6 +160,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.0`
   - Note: added `SortKeyOption` record and `AvailableSortKeys` to `LibraryCatalogModels`; wired `SelectedSortKey` state and `initialSortKey` constructor param into `LibraryBrowserViewModel`; updated `BuildRequest`/`BuildInitialRangeRequest` to pass `SortBy`; added sort `ComboBox` (`AppComboBox` class) to the Library toolbar with scroll-reset on change; persists and restores sort preference across sessions via `UiPreferencesSnapshot.PreferredSortKey`; preservation across library-root switches handled in `UiPreferencesSnapshotBuilder`.
 
+- `#66` validate a configured converter by running a test conversion when the user saves converter settings.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: added `Fb2ConverterProbe` (static C# class with 500 ms debounce) that writes a minimal embedded FB2 to a temp directory, runs `fb2cng convert --to epub2 --overwrite` with a 5 s timeout, and checks exit code plus output file; wired into `ShellViewModel` as an injectable delegate (`_converterProbe`); `IsConverterProbeInProgress` disables Save while the probe runs; on failure the validation message is shown in the existing error TextBlock and Save stays disabled; empty path clears the error immediately without running the probe; added `ConverterProbeStatusText` and a neutral status TextBlock in `SettingsView.axaml`; 6 new managed tests cover all probe outcome paths.
+
 ### Minor
 
 - `#57` disable the import options panel (Allow duplicate import, Force conversion to EPUB) during active import.

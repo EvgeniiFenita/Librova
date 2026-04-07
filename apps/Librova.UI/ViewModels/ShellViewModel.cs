@@ -21,9 +21,13 @@ internal sealed class ShellViewModel : ObservableObject
     private readonly IUiPreferencesStore _preferencesStore;
     private readonly Func<string, UiLibraryOpenMode, Task>? _switchLibraryAsync;
     private readonly Func<Task>? _reloadShellAsync;
+    private readonly Func<string, CancellationToken, Task<Fb2ProbeResult>> _converterProbe;
     private string _fb2CngExecutablePath = string.Empty;
     private string _converterValidationMessage = string.Empty;
     private ShellSection _currentSection = ShellSection.Library;
+    private CancellationTokenSource? _converterProbeCts;
+    private bool _isConverterProbeInProgress;
+    internal Task _converterProbeTask = Task.CompletedTask;
 
     public ShellViewModel(
         ShellSession session,
@@ -33,13 +37,15 @@ internal sealed class ShellViewModel : ObservableObject
         IUiPreferencesStore? preferencesStore = null,
         UiPreferencesSnapshot? savedPreferences = null,
         Func<string, UiLibraryOpenMode, Task>? switchLibraryAsync = null,
-        Func<Task>? reloadShellAsync = null)
+        Func<Task>? reloadShellAsync = null,
+        Func<string, CancellationToken, Task<Fb2ProbeResult>>? converterProbe = null)
     {
         _session = session;
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _switchLibraryAsync = switchLibraryAsync;
         _reloadShellAsync = reloadShellAsync;
+        _converterProbe = converterProbe ?? Fb2ConverterProbe.RunAsync;
         var hasConfiguredConverter = HasConfiguredBuiltInConverter(session.HostOptions);
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
         LibraryBrowser = new LibraryBrowserViewModel(
@@ -106,8 +112,7 @@ internal sealed class ShellViewModel : ObservableObject
         {
             if (SetProperty(ref _fb2CngExecutablePath, value))
             {
-                UpdateConverterValidation();
-                SavePreferencesCommand.RaiseCanExecuteChanged();
+                ScheduleConverterValidation();
             }
         }
     }
@@ -135,7 +140,9 @@ internal sealed class ShellViewModel : ObservableObject
     }
 
     public bool HasConverterValidationError => !string.IsNullOrWhiteSpace(ConverterValidationMessage);
-    public bool ShowConverterHelperText => !HasConverterValidationError;
+    public bool ShowConverterHelperText => !HasConverterValidationError && !_isConverterProbeInProgress;
+    public bool IsConverterProbeInProgress => _isConverterProbeInProgress;
+    public string ConverterProbeStatusText => _isConverterProbeInProgress ? "Validating converter…" : string.Empty;
     public bool IsLibrarySectionActive => CurrentSection is ShellSection.Library;
     public bool IsImportSectionActive => CurrentSection is ShellSection.Import;
     public bool IsSettingsSectionActive => CurrentSection is ShellSection.Settings;
@@ -271,13 +278,89 @@ internal sealed class ShellViewModel : ObservableObject
     }
 
     private bool CanSavePreferences() =>
-        !HasConverterValidationError;
+        !HasConverterValidationError && !_isConverterProbeInProgress;
 
     private void UpdateConverterValidation()
     {
         ConverterValidationMessage = BuildConverterValidationMessage();
         RaisePropertyChanged(nameof(HasConverterValidationError));
         RaisePropertyChanged(nameof(ShowConverterHelperText));
+        SavePreferencesCommand.RaiseCanExecuteChanged();
+    }
+
+    // Called from the property setter — cancels any in-flight probe, applies sync checks, then
+    // starts an async probe with a 500 ms debounce so rapid keystrokes don't hammer the filesystem.
+    private void ScheduleConverterValidation()
+    {
+        _converterProbeCts?.Cancel();
+        _converterProbeCts?.Dispose();
+        _converterProbeCts = null;
+
+        var syncMessage = BuildConverterValidationMessage();
+
+        if (!string.IsNullOrEmpty(syncMessage) || string.IsNullOrWhiteSpace(Fb2CngExecutablePath))
+        {
+            _isConverterProbeInProgress = false;
+            ConverterValidationMessage = syncMessage;
+            RaiseProbeProperties();
+            return;
+        }
+
+        _isConverterProbeInProgress = true;
+        ConverterValidationMessage = string.Empty;
+        RaiseProbeProperties();
+
+        var cts = new CancellationTokenSource();
+        _converterProbeCts = cts;
+        _converterProbeTask = RunConverterProbeAsync(cts.Token);
+    }
+
+    private async Task RunConverterProbeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(500, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        Fb2ProbeResult result;
+        try
+        {
+            UiLogging.Information("Running converter probe. Executable={Executable}", Fb2CngExecutablePath);
+            result = await _converterProbe(Fb2CngExecutablePath, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            UiLogging.Warning("Converter probe threw unexpected exception. {Error}", ex.Message);
+            result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ProbeError };
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _isConverterProbeInProgress = false;
+        ConverterValidationMessage = result.BuildValidationMessage();
+        UiLogging.Information(
+            "Converter probe completed. Outcome={Outcome} Executable={Executable}",
+            result.Outcome, Fb2CngExecutablePath);
+        RaiseProbeProperties();
+    }
+
+    private void RaiseProbeProperties()
+    {
+        RaisePropertyChanged(nameof(HasConverterValidationError));
+        RaisePropertyChanged(nameof(ShowConverterHelperText));
+        RaisePropertyChanged(nameof(IsConverterProbeInProgress));
+        RaisePropertyChanged(nameof(ConverterProbeStatusText));
         SavePreferencesCommand.RaiseCanExecuteChanged();
     }
 
