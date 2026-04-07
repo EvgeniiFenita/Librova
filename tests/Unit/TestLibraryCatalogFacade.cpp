@@ -151,6 +151,53 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Library catalog facade sorts by title descending when direction is Descending", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-sort-direction.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    static_cast<void>(writeRepository.Add(MakeBook(
+        "Alpha", {"Author A"}, "en",
+        Librova::Domain::EBookFormat::Epub, "Books/0000002001/alpha.epub",
+        "dir-hash-1", std::chrono::sys_days{std::chrono::March / 30 / 2026})));
+    static_cast<void>(writeRepository.Add(MakeBook(
+        "Beta", {"Author B"}, "en",
+        Librova::Domain::EBookFormat::Epub, "Books/0000002002/beta.epub",
+        "dir-hash-2", std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1})));
+    static_cast<void>(writeRepository.Add(MakeBook(
+        "Gamma", {"Author C"}, "en",
+        Librova::Domain::EBookFormat::Epub, "Books/0000002003/gamma.epub",
+        "dir-hash-3", std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2})));
+
+    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
+
+    const auto ascending = facade.ListBooks({
+        .SortBy = Librova::Domain::EBookSort::Title,
+        .SortDirection = Librova::Domain::ESortDirection::Ascending,
+        .Limit = 10
+    });
+    REQUIRE(ascending.Items.size() == 3);
+    REQUIRE(ascending.Items[0].TitleUtf8 == "Alpha");
+    REQUIRE(ascending.Items[1].TitleUtf8 == "Beta");
+    REQUIRE(ascending.Items[2].TitleUtf8 == "Gamma");
+
+    const auto descending = facade.ListBooks({
+        .SortBy = Librova::Domain::EBookSort::Title,
+        .SortDirection = Librova::Domain::ESortDirection::Descending,
+        .Limit = 10
+    });
+    REQUIRE(descending.Items.size() == 3);
+    REQUIRE(descending.Items[0].TitleUtf8 == "Gamma");
+    REQUIRE(descending.Items[1].TitleUtf8 == "Beta");
+    REQUIRE(descending.Items[2].TitleUtf8 == "Alpha");
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Library catalog facade rejects zero page size", "[application][catalog]")
 {
     class CUnusedQueryRepository final : public Librova::Domain::IBookQueryRepository

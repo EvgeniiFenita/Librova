@@ -8,6 +8,12 @@
 
 namespace Librova::Domain {
 
+enum class ESortDirection
+{
+    Ascending,
+    Descending
+};
+
 enum class EBookSort
 {
     Title,
@@ -27,6 +33,7 @@ struct SSearchQuery
     std::vector<std::string> TagsUtf8;
     std::optional<EBookFormat> Format;
     std::optional<EBookSort> SortBy;
+    std::optional<ESortDirection> SortDirection;
     std::size_t Offset = 0;
     std::size_t Limit = 50;
 

@@ -398,6 +398,65 @@
     <Setter Property="Padding" Value="14,8" />
   </Style>
 
+  <!-- Accent-tinted book count stat pill -->
+  <Style Selector="Border.MetricPillAccent">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="14,8" />
+  </Style>
+
+  <!-- ════════════════════════════════════════════
+       SORT GROUP (unified key + direction capsule)
+       ════════════════════════════════════════════ -->
+
+  <!-- Outer pill — clips children so hover fills match the rounded shape -->
+  <Style Selector="Border.SortGroup">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <!-- ComboBox inside SortGroup: merge into shared surface (no own border/bg) -->
+  <Style Selector="Border.SortGroup ComboBox.AppComboBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Border.SortGroup ComboBox.AppComboBox /template/ ToggleButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="Border.SortGroup ComboBox.AppComboBox:pointerover /template/ ToggleButton">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.SortGroup ComboBox.AppComboBox /template/ ToggleButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+  </Style>
+
+  <!-- IconAction button inside SortGroup: flush ghost, left border = separator -->
+  <Style Selector="Border.SortGroup Button.IconAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Width" Value="42" />
+    <Setter Property="Height" Value="42" />
+  </Style>
+  <Style Selector="Border.SortGroup Button.IconAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Border.SortGroup Button.IconAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
   <!-- ════════════════════════════════════════════
        BOOK COVER MATTE
        ════════════════════════════════════════════ -->

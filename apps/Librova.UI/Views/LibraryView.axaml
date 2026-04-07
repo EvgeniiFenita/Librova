@@ -28,7 +28,7 @@
       <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="Padding" Value="20,14" />
+      <Setter Property="Padding" Value="20,12" />
     </Style>
 
     <!-- Transparent book-card button wrapper -->
@@ -84,11 +84,13 @@
 
     <!-- Toolbar -->
     <Border Classes="LibraryToolbar">
-      <Grid ColumnDefinitions="2.3*,1.1*,Auto"
-            ColumnSpacing="12">
-        <!-- Search: icon + TextBox side-by-side, no outer Border wrapper -->
+      <Grid ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="16">
+
+        <!-- Zone 1: Search (fills remaining space) -->
         <Grid ColumnDefinitions="Auto,*"
-              ColumnSpacing="10">
+              ColumnSpacing="10"
+              VerticalAlignment="Center">
           <PathIcon Classes="AppIcon"
                     Width="16"
                     Height="16"
@@ -100,22 +102,77 @@
                    Text="{Binding LibraryBrowser.SearchText, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 
-        <!-- Language filter -->
-        <ComboBox Grid.Column="1"
-                  Classes="AppComboBox"
-                  SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
-                  ItemsSource="{Binding LibraryBrowser.AvailableLanguageFilters}" />
+        <!-- Zone 2: View options cluster (language filter + sort group) -->
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center">
 
-        <!-- Book count pill -->
+          <!-- Language filter -->
+          <ComboBox Classes="AppComboBox"
+                    MinWidth="110"
+                    SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
+                    ItemsSource="{Binding LibraryBrowser.AvailableLanguageFilters}" />
+
+          <!-- Vertical divider -->
+          <Border Width="1"
+                  Margin="4,6"
+                  Background="{DynamicResource AppBorderStrongBrush}" />
+
+          <!-- Sort group: key selector + direction toggle in one unified pill -->
+          <Border Classes="SortGroup">
+            <StackPanel Orientation="Horizontal">
+              <ComboBox Classes="AppComboBox"
+                        MinWidth="110"
+                        ItemsSource="{Binding LibraryBrowser.AvailableSortKeys}"
+                        SelectedItem="{Binding LibraryBrowser.SelectedSortKey}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+
+              <!-- Direction toggle (left border acts as separator — avoids ClipToBounds artifact) -->
+              <Button Classes="IconAction"
+                      Command="{Binding LibraryBrowser.ToggleSortDirectionCommand}"
+                      ToolTip.Tip="Toggle sort direction">
+                <Panel Width="14"
+                       Height="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center">
+                  <PathIcon IsVisible="{Binding !LibraryBrowser.SortDescending}"
+                            Classes="AppIcon"
+                            Width="14"
+                            Height="14"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource IconSortAsc}" />
+                  <PathIcon IsVisible="{Binding LibraryBrowser.SortDescending}"
+                            Classes="AppIcon"
+                            Width="14"
+                            Height="14"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource IconSortDesc}" />
+                </Panel>
+              </Button>
+            </StackPanel>
+          </Border>
+
+        </StackPanel>
+
+        <!-- Zone 3: Book count accent stat -->
         <Border Grid.Column="2"
-                Classes="MetricPill"
-                MinWidth="120">
+                Classes="MetricPillAccent"
+                MinWidth="110">
           <TextBlock HorizontalAlignment="Center"
                      VerticalAlignment="Center"
                      FontSize="13"
                      FontWeight="SemiBold"
                      Text="{Binding LibraryBrowser.BookCountText}" />
         </Border>
+
       </Grid>
     </Border>
 

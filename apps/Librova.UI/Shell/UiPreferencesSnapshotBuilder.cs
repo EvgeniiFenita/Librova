@@ -23,7 +23,9 @@ internal static class UiPreferencesSnapshotBuilder
             ConverterMode = executablePath is null ? UiConverterMode.Disabled : UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = executablePath,
             Fb2CngConfigPath = executablePath is null ? null : existing?.Fb2CngConfigPath,
-            ForceEpubConversionOnImport = executablePath is not null && (existing?.ForceEpubConversionOnImport ?? false)
+            ForceEpubConversionOnImport = executablePath is not null && (existing?.ForceEpubConversionOnImport ?? false),
+            PreferredSortKey = existing?.PreferredSortKey,
+            PreferredSortDescending = existing?.PreferredSortDescending ?? false
         };
     }
 }

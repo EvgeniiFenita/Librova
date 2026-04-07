@@ -42,6 +42,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private bool _isLibraryStatisticsUnavailable;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
+    private SortKeyOption _selectedSortKey = SortKeyOption.Default;
+    private bool _sortDescending;
     private string _statusText = "Library view is idle.";
     private bool _isBusy;
     private bool _isExportBusy;
@@ -60,13 +62,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         IPathSelectionService? pathSelectionService = null,
         string? libraryRoot = null,
         ICoverImageLoader? coverImageLoader = null,
-        bool hasConfiguredConverter = false)
+        bool hasConfiguredConverter = false,
+        BookSortModel? initialSortKey = null,
+        bool initialSortDescending = false)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _coverImageLoader = coverImageLoader ?? new FileCoverImageLoader();
         _libraryRoot = libraryRoot ?? string.Empty;
         _hasConfiguredConverter = hasConfiguredConverter;
+        _selectedSortKey = SortKeyOption.For(initialSortKey ?? BookSortModel.Title);
+        _sortDescending = initialSortDescending;
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => HasSelectedBook && !IsLoadingSelectionDetails, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
@@ -74,11 +80,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         MoveSelectedBookToTrashCommand = new AsyncCommand(MoveSelectedBookToTrashAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
+        ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
         AvailableLanguageFilters.Add("All languages");
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
     public ObservableCollection<string> AvailableLanguageFilters { get; } = [];
+    public IReadOnlyList<SortKeyOption> AvailableSortKeys { get; } = SortKeyOption.All;
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
     public AsyncCommand ExportSelectedBookCommand { get; }
@@ -86,6 +94,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     public AsyncCommand MoveSelectedBookToTrashCommand { get; }
     public AsyncCommand<BookListItemModel?> SelectBookCommand { get; }
     public AsyncCommand CloseSelectionCommand { get; }
+    public AsyncCommand ToggleSortDirectionCommand { get; }
 
     public string SearchText
     {
@@ -130,6 +139,40 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 ? string.Empty
                 : value;
             LanguageFilter = effectiveValue;
+        }
+    }
+
+    public SortKeyOption? SelectedSortKey
+    {
+        get => _selectedSortKey;
+        set
+        {
+            if (value is null)
+            {
+                RaisePropertyChanged(nameof(SelectedSortKey));
+                return;
+            }
+
+            if (_selectedSortKey == value)
+            {
+                return;
+            }
+
+            _selectedSortKey = value;
+            RaisePropertyChanged(nameof(SelectedSortKey));
+            ScheduleRefresh();
+        }
+    }
+
+    public bool SortDescending
+    {
+        get => _sortDescending;
+        private set
+        {
+            if (SetProperty(ref _sortDescending, value))
+            {
+                ScheduleRefresh();
+            }
         }
     }
 
@@ -731,6 +774,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             Text = SearchText,
             Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+            SortBy = _selectedSortKey.Key,
+            SortDirection = _sortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = checked((ulong)Math.Max(0, batchNumber - 1) * (ulong)PageSize),
             Limit = (ulong)PageSize
         };
@@ -740,9 +785,17 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             Text = SearchText,
             Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+            SortBy = _selectedSortKey.Key,
+            SortDirection = _sortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = 0,
             Limit = (ulong)Math.Max(1, itemLimit)
         };
+
+    private Task ToggleSortDirectionAsync()
+    {
+        SortDescending = !SortDescending;
+        return Task.CompletedTask;
+    }
 
     private BookListItemModel Prepare(BookListItemModel item)
     {

@@ -38,6 +38,7 @@
 | [library.md](manual-tests/library.md) | 1 | Library Browser Basics | ✓ |
 | [library.md](manual-tests/library.md) | 2 | Full Details Loading | ✓ |
 | [library.md](manual-tests/library.md) | 2.1 | Covers And Legacy FB2 Metadata | ✓ |
+| [library.md](manual-tests/library.md) | 3 | Library Sort Controls | ✓ |
 | [export.md](manual-tests/export.md) | 1 | Export Book | ✓ |
 | [export.md](manual-tests/export.md) | 2 | Export As EPUB Progress Feedback | ✓ |
 | [delete.md](manual-tests/delete.md) | 1 | Move To Recycle Bin | ✓ |

@@ -48,8 +48,10 @@ private:
     [[nodiscard]] static std::filesystem::path PathFromUtf8(const std::string& value);
     [[nodiscard]] static Librova::Domain::EBookFormat FromProto(librova::v1::BookFormat format);
     [[nodiscard]] static Librova::Domain::EBookSort FromProto(librova::v1::BookSort sort) noexcept;
+    [[nodiscard]] static Librova::Domain::ESortDirection FromProto(librova::v1::BookSortDirection dir) noexcept;
     [[nodiscard]] static librova::v1::BookFormat ToProto(Librova::Domain::EBookFormat format) noexcept;
     [[nodiscard]] static librova::v1::BookSort ToProto(Librova::Domain::EBookSort sort) noexcept;
+    [[nodiscard]] static librova::v1::BookSortDirection ToProto(Librova::Domain::ESortDirection dir) noexcept;
 };
 
 } // namespace Librova::ProtoMapping

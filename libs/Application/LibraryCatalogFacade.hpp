@@ -19,6 +19,7 @@ struct SBookListRequest
     std::vector<std::string> TagsUtf8;
     std::optional<Librova::Domain::EBookFormat> Format;
     std::optional<Librova::Domain::EBookSort> SortBy;
+    std::optional<Librova::Domain::ESortDirection> SortDirection;
     std::size_t Offset = 0;
     std::size_t Limit = 50;
 

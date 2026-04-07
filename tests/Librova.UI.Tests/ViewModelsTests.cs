@@ -983,7 +983,7 @@ public sealed class ViewModelsTests
         Assert.Equal("en", service.LastRequest.Language);
         Assert.Null(service.LastRequest.Author);
         Assert.Null(service.LastRequest.Format);
-        Assert.Null(service.LastRequest.SortBy);
+        Assert.Equal(BookSortModel.Title, service.LastRequest.SortBy);
         Assert.Equal(0UL, service.LastRequest.Offset);
         Assert.Equal(10UL, service.LastRequest.Limit);
     }
@@ -1422,6 +1422,75 @@ public sealed class ViewModelsTests
             {
             }
         }
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_DefaultSortKeyIsTitle()
+    {
+        var viewModel = new LibraryBrowserViewModel();
+
+        Assert.NotNull(viewModel.SelectedSortKey);
+        Assert.Equal(BookSortModel.Title, viewModel.SelectedSortKey!.Key);
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_ExposesThreeSortKeys()
+    {
+        var viewModel = new LibraryBrowserViewModel();
+
+        Assert.Equal(3, viewModel.AvailableSortKeys.Count);
+        Assert.Contains(viewModel.AvailableSortKeys, o => o.Key == BookSortModel.Title);
+        Assert.Contains(viewModel.AvailableSortKeys, o => o.Key == BookSortModel.Author);
+        Assert.Contains(viewModel.AvailableSortKeys, o => o.Key == BookSortModel.DateAdded);
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_AppliesInitialSortKeyFromConstructorParameter()
+    {
+        var viewModel = new LibraryBrowserViewModel(initialSortKey: BookSortModel.DateAdded);
+
+        Assert.NotNull(viewModel.SelectedSortKey);
+        Assert.Equal(BookSortModel.DateAdded, viewModel.SelectedSortKey!.Key);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_SortKeyChangeIncludesSortByInCatalogRequest()
+    {
+        var service = new RecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(BookSortModel.Title, service.LastRequest!.SortBy);
+
+        var authorOption = viewModel.AvailableSortKeys.First(o => o.Key == BookSortModel.Author);
+        viewModel.SelectedSortKey = authorOption;
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(BookSortModel.Author, service.LastRequest!.SortBy);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_SortDescendingToggleChangesSortDirectionInRequest()
+    {
+        var service = new RecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(BookSortDirectionModel.Ascending, service.LastRequest!.SortDirection);
+
+        await viewModel.ToggleSortDirectionCommand.ExecuteAsyncForTests();
+        await viewModel.RefreshAsync();
+        Assert.Equal(BookSortDirectionModel.Descending, service.LastRequest!.SortDirection);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_AppliesInitialSortDescendingFromConstructorParameter()
+    {
+        var service = new RecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service, initialSortDescending: true);
+
+        await viewModel.RefreshAsync();
+        Assert.Equal(BookSortDirectionModel.Descending, service.LastRequest!.SortDirection);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService
@@ -2665,3 +2734,4 @@ public sealed class ViewModelsTests
             => Task.FromResult<DeleteBookResultModel?>(null);
     }
 }
+

@@ -52,6 +52,11 @@ Librova::Application::SBookListRequest CLibraryCatalogProtoMapper::FromProto(
         result.SortBy = FromProto(request.sort_by());
     }
 
+    if (request.has_sort_direction())
+    {
+        result.SortDirection = FromProto(request.sort_direction());
+    }
+
     return result;
 }
 
@@ -91,6 +96,11 @@ librova::v1::BookListRequest CLibraryCatalogProtoMapper::ToProto(
     if (request.SortBy.has_value())
     {
         proto.set_sort_by(ToProto(*request.SortBy));
+    }
+
+    if (request.SortDirection.has_value())
+    {
+        proto.set_sort_direction(ToProto(*request.SortDirection));
     }
 
     return proto;
@@ -390,6 +400,33 @@ librova::v1::BookSort CLibraryCatalogProtoMapper::ToProto(const Librova::Domain:
     case Librova::Domain::EBookSort::Title:
     default:
         return librova::v1::BOOK_SORT_TITLE;
+    }
+}
+
+Librova::Domain::ESortDirection CLibraryCatalogProtoMapper::FromProto(
+    const librova::v1::BookSortDirection dir) noexcept
+{
+    switch (dir)
+    {
+    case librova::v1::BOOK_SORT_DIRECTION_DESC:
+        return Librova::Domain::ESortDirection::Descending;
+    case librova::v1::BOOK_SORT_DIRECTION_ASC:
+    case librova::v1::BOOK_SORT_DIRECTION_UNSPECIFIED:
+    default:
+        return Librova::Domain::ESortDirection::Ascending;
+    }
+}
+
+librova::v1::BookSortDirection CLibraryCatalogProtoMapper::ToProto(
+    const Librova::Domain::ESortDirection dir) noexcept
+{
+    switch (dir)
+    {
+    case Librova::Domain::ESortDirection::Descending:
+        return librova::v1::BOOK_SORT_DIRECTION_DESC;
+    case Librova::Domain::ESortDirection::Ascending:
+    default:
+        return librova::v1::BOOK_SORT_DIRECTION_ASC;
     }
 }
 

@@ -70,9 +70,16 @@ internal sealed partial class LibraryView : UserControl
         }
 
         if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SearchText)
-            or nameof(LibraryBrowserViewModel.LanguageFilter))
+            or nameof(LibraryBrowserViewModel.LanguageFilter)
+            or nameof(LibraryBrowserViewModel.SelectedSortKey)
+            or nameof(LibraryBrowserViewModel.SortDescending))
         {
             InvalidateOpenPanelSnapshot();
+            if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SelectedSortKey)
+                or nameof(LibraryBrowserViewModel.SortDescending))
+            {
+                ResetScrollToTop();
+            }
             return;
         }
 
@@ -348,6 +355,15 @@ internal sealed partial class LibraryView : UserControl
         }
 
         _ = _libraryBrowser.LoadMoreAsync();
+    }
+
+    private void ResetScrollToTop()
+    {
+        _booksViewport ??= this.FindControl<ScrollViewer>("BooksViewport");
+        if (_booksViewport is not null)
+        {
+            SetViewportOffset(new Vector(0, 0));
+        }
     }
 
     private enum SelectionViewportAction

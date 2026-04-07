@@ -14,6 +14,7 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
         .TagsUtf8 = {"classic", "sci-fi"},
         .Format = Librova::Domain::EBookFormat::Epub,
         .SortBy = Librova::Domain::EBookSort::DateAdded,
+        .SortDirection = Librova::Domain::ESortDirection::Descending,
         .Offset = 10,
         .Limit = 25
     };
@@ -28,8 +29,34 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
     REQUIRE(restored.TagsUtf8 == request.TagsUtf8);
     REQUIRE(restored.Format == request.Format);
     REQUIRE(restored.SortBy == request.SortBy);
+    REQUIRE(restored.SortDirection == request.SortDirection);
     REQUIRE(restored.Offset == request.Offset);
     REQUIRE(restored.Limit == request.Limit);
+}
+
+TEST_CASE("Library catalog proto mapper round-trips sort direction ascending", "[proto-mapping][catalog]")
+{
+    const Librova::Application::SBookListRequest request{
+        .SortBy = Librova::Domain::EBookSort::Title,
+        .SortDirection = Librova::Domain::ESortDirection::Ascending,
+        .Limit = 10
+    };
+
+    const auto proto = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProto(request);
+    const auto restored = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(proto);
+
+    REQUIRE(restored.SortDirection == Librova::Domain::ESortDirection::Ascending);
+}
+
+TEST_CASE("Library catalog proto mapper treats absent sort direction as ascending", "[proto-mapping][catalog]")
+{
+    librova::v1::BookListRequest proto;
+    // sort_direction field is not set — simulates old client or explicit omission
+
+    const auto restored = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(proto);
+
+    // nullopt means "no preference"; SQL query defaults to ASC
+    REQUIRE_FALSE(restored.SortDirection.has_value());
 }
 
 TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "[proto-mapping][catalog]")

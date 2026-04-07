@@ -63,12 +63,6 @@ Last assigned id: `#68`
   - Milestone: `1.0`
   - Note: use this item for the remaining hardening pass instead of tracking stabilization in a separate standing-work section; startup now enforces explicit `Open Library` vs `Create Library` contracts, blocks silent in-place recreation for damaged libraries, keeps native CLI/logging Unicode-safe under Cyrillic library roots, keeps first-run bootstrap UI logs out of the chosen empty `Create Library` target until startup succeeds, uses explicit graceful host shutdown before any forced kill fallback, hardens free-text search against raw FTS punctuation input, and removes read-side `N+1` hydration from search plus probable-duplicate detection.
 
-- `#58` expose sort controls in the Library section and wire them to the existing backend sort implementation.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.0`
-  - Note: the backend already supports six sort keys (title, author, date added, series, publication year, file size) at the proto, domain, and SQL levels; the Library browser currently sends no sort preference and has no sort state; add a sort selector control to the Library section header, capture sort state in the browser ViewModel, include the selected sort key in every book-list request, reset the scroll position on sort change, and persist the last-used sort preference across sessions; the author-sort SQL path uses an uncached per-row subquery and should be tracked as a separate performance concern.
-
 - `#59` add Favorites and Read as built-in user collections with per-book membership, sidebar navigation, filtered browse, card-level toggle controls, and details-panel membership display.
   - Status: `Open`
   - Type: `Feature`

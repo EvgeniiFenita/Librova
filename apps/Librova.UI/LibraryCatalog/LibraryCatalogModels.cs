@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Media;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -13,6 +14,12 @@ internal enum BookFormatModel
     Fb2
 }
 
+internal enum BookSortDirectionModel
+{
+    Ascending,
+    Descending
+}
+
 internal enum BookSortModel
 {
     Title,
@@ -21,6 +28,21 @@ internal enum BookSortModel
     Series,
     Year,
     FileSize
+}
+
+internal sealed record SortKeyOption(BookSortModel Key, string Label)
+{
+    public static IReadOnlyList<SortKeyOption> All { get; } =
+    [
+        new(BookSortModel.Title, "Title"),
+        new(BookSortModel.Author, "Author"),
+        new(BookSortModel.DateAdded, "Date Added"),
+    ];
+
+    public static SortKeyOption Default { get; } = All[0];
+
+    public static SortKeyOption For(BookSortModel key) =>
+        All.FirstOrDefault(o => o.Key == key) ?? Default;
 }
 
 internal sealed class BookListRequestModel
@@ -32,6 +54,7 @@ internal sealed class BookListRequestModel
     public IReadOnlyList<string> Tags { get; init; } = [];
     public BookFormatModel? Format { get; init; }
     public BookSortModel? SortBy { get; init; }
+    public BookSortDirectionModel SortDirection { get; init; } = BookSortDirectionModel.Ascending;
     public ulong Offset { get; init; }
     public ulong Limit { get; init; } = 50;
 }

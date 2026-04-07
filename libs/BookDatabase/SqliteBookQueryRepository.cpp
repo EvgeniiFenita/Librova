@@ -352,10 +352,15 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
         sql += "AND b.preferred_format = ? ";
     }
 
+    const std::string_view dir =
+        query.SortDirection == Librova::Domain::ESortDirection::Descending ? "DESC" : "ASC";
+
     switch (query.SortBy.value_or(Librova::Domain::EBookSort::Title))
     {
     case Librova::Domain::EBookSort::Title:
-        sql += "ORDER BY b.title COLLATE NOCASE ASC ";
+        sql += "ORDER BY b.title COLLATE NOCASE ";
+        sql += dir;
+        sql += " ";
         break;
     case Librova::Domain::EBookSort::Author:
         sql +=
@@ -364,10 +369,14 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
             "FROM book_authors ba_sort "
             "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
             "WHERE ba_sort.book_id = b.id"
-            ") COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC ";
+            ") COLLATE NOCASE ";
+        sql += dir;
+        sql += ", b.title COLLATE NOCASE ASC ";
         break;
     case Librova::Domain::EBookSort::DateAdded:
-        sql += "ORDER BY b.added_at_utc DESC, b.title COLLATE NOCASE ASC ";
+        sql += "ORDER BY b.added_at_utc ";
+        sql += dir;
+        sql += ", b.title COLLATE NOCASE ASC ";
         break;
     case Librova::Domain::EBookSort::Series:
         sql += "ORDER BY b.series COLLATE NOCASE ASC, b.series_index ASC, b.title COLLATE NOCASE ASC ";

@@ -54,6 +54,10 @@ internal static class LibraryCatalogMapper
             };
         }
 
+        request.SortDirection = model.SortDirection == BookSortDirectionModel.Descending
+            ? BookSortDirection.Desc
+            : BookSortDirection.Asc;
+
         return request;
     }
 

@@ -79,6 +79,7 @@ Librova::Domain::SSearchQuery CLibraryCatalogFacade::ToDomainQuery(const SBookLi
         .TagsUtf8 = request.TagsUtf8,
         .Format = request.Format,
         .SortBy = request.SortBy,
+        .SortDirection = request.SortDirection,
         .Offset = request.Offset,
         .Limit = request.Limit
     };

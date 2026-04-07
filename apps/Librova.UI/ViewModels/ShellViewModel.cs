@@ -46,7 +46,9 @@ internal sealed class ShellViewModel : ObservableObject
             session.LibraryCatalog,
             _pathSelectionService,
             session.HostOptions.LibraryRoot,
-            hasConfiguredConverter: hasConfiguredConverter);
+            hasConfiguredConverter: hasConfiguredConverter,
+            initialSortKey: savedPreferences?.PreferredSortKey,
+            initialSortDescending: savedPreferences?.PreferredSortDescending ?? false);
         ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged += OnLibraryBrowserPropertyChanged;
@@ -260,7 +262,9 @@ internal sealed class ShellViewModel : ObservableObject
             PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
             ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
             Fb2CngExecutablePath = hasConfiguredConverter ? Fb2CngExecutablePath : null,
-            ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport
+            ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport,
+            PreferredSortKey = LibraryBrowser.SelectedSortKey?.Key,
+            PreferredSortDescending = LibraryBrowser.SortDescending
         });
         UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
         return _reloadShellAsync is null ? Task.CompletedTask : _reloadShellAsync();
@@ -327,6 +331,40 @@ internal sealed class ShellViewModel : ObservableObject
         if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.LibraryStatisticsText))
         {
             RaisePropertyChanged(nameof(CurrentLibraryStatisticsText));
+        }
+
+        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SelectedSortKey)
+            && LibraryBrowser.SelectedSortKey is not null)
+        {
+            SaveSortPreference(LibraryBrowser.SelectedSortKey.Key, LibraryBrowser.SortDescending);
+        }
+
+        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SortDescending)
+            && LibraryBrowser.SelectedSortKey is not null)
+        {
+            SaveSortPreference(LibraryBrowser.SelectedSortKey.Key, LibraryBrowser.SortDescending);
+        }
+    }
+
+    private void SaveSortPreference(BookSortModel sortKey, bool sortDescending)
+    {
+        try
+        {
+            var current = _preferencesStore.TryLoad();
+            _preferencesStore.Save(new UiPreferencesSnapshot
+            {
+                PreferredLibraryRoot = current?.PreferredLibraryRoot ?? _session.HostOptions.LibraryRoot,
+                ConverterMode = current?.ConverterMode ?? UiConverterMode.Disabled,
+                Fb2CngExecutablePath = current?.Fb2CngExecutablePath,
+                Fb2CngConfigPath = current?.Fb2CngConfigPath,
+                ForceEpubConversionOnImport = current?.ForceEpubConversionOnImport ?? false,
+                PreferredSortKey = sortKey,
+                PreferredSortDescending = sortDescending
+            });
+        }
+        catch (Exception error)
+        {
+            UiLogging.Warning("Failed to persist sort preference. {Error}", error.Message);
         }
     }
 }

@@ -142,6 +142,8 @@ Defined in `Components.axaml`.
 | `DangerPanel` | Large | Card | DangerSurface | Error / startup failure screens |
 | `DropZone` | Large | 32,40 | AccentSurface | Drag-and-drop target |
 | `MetricPill` | Medium | 14,8 | SurfaceAlt | Book count badge |
+| `MetricPillAccent` | Medium | 14,8 | AccentSurface + AccentBorder | Accent-tinted stat pill (book count in toolbar) |
+| `SortGroup` | Medium | — | SurfaceAlt + Border, `ClipToBounds=True` | Unified capsule wrapping sort key ComboBox + direction button; child `ComboBox.AppComboBox` and `Button.IconAction` lose their own borders inside this container |
 | `CoverMatte` | 12 (hard) | — | Matte | Book cover rounded frame |
 
 ---

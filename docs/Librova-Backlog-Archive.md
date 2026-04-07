@@ -154,6 +154,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Type: `Feature`
   - Note: `FB2` parsing now extracts `<genre>` plus `sequence`, `EPUB` parsing now extracts `dc:subject` plus collection-based series metadata, and real-host/UI regressions keep those fields visible in the `Library` details panel while browse-time filtering remains tracked under `#26`.
 
+- `#58` expose sort controls in the Library section and wire them to the existing backend sort implementation.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: added `SortKeyOption` record and `AvailableSortKeys` to `LibraryCatalogModels`; wired `SelectedSortKey` state and `initialSortKey` constructor param into `LibraryBrowserViewModel`; updated `BuildRequest`/`BuildInitialRangeRequest` to pass `SortBy`; added sort `ComboBox` (`AppComboBox` class) to the Library toolbar with scroll-reset on change; persists and restores sort preference across sessions via `UiPreferencesSnapshot.PreferredSortKey`; preservation across library-root switches handled in `UiPreferencesSnapshotBuilder`.
+
 ### Minor
 
 - `#57` disable the import options panel (Allow duplicate import, Force conversion to EPUB) during active import.
