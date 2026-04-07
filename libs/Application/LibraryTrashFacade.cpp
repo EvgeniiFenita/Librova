@@ -170,11 +170,13 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
         }
     }
 
+    const size_t expectedMoveCount = 1 + (sourceCoverPath.has_value() ? 1 : 0);
     if (m_recycleBinService == nullptr || stagedPaths.empty())
     {
         return STrashedBookResult{
             .BookId = id,
-            .Destination = ETrashDestination::ManagedTrash
+            .Destination = ETrashDestination::ManagedTrash,
+            .HasOrphanedFiles = stagedPaths.size() < expectedMoveCount
         };
     }
 

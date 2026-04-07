@@ -24,10 +24,7 @@ internal enum BookSortModel
 {
     Title,
     Author,
-    DateAdded,
-    Series,
-    Year,
-    FileSize
+    DateAdded
 }
 
 internal sealed record SortKeyOption(BookSortModel Key, string Label)

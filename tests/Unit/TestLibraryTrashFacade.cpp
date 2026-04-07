@@ -194,6 +194,7 @@ TEST_CASE("Library trash facade keeps deleted files in managed trash when no rec
     REQUIRE(result.has_value());
     REQUIRE(result->BookId.Value == bookId.Value);
     REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE_FALSE(result->HasOrphanedFiles);
     REQUIRE(std::filesystem::exists(expectedTrashedBookPath));
     REQUIRE(std::filesystem::exists(expectedTrashedCoverPath));
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Books/0000000001/book.epub"));
@@ -362,6 +363,7 @@ TEST_CASE("Library trash facade orphans cover and keeps book in trash when cover
     // DB removal committed before file moves — operation succeeds even if cover move fails.
     REQUIRE(result.has_value());
     REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE(result->HasOrphanedFiles);
     REQUIRE_FALSE(repository.GetById(book.Id).has_value());
     // Book was successfully moved to Trash.
     REQUIRE_FALSE(std::filesystem::exists(bookPath));
@@ -493,6 +495,7 @@ TEST_CASE("Library trash facade removes catalog entry before moving files so cra
 
     // Catalog is consistent: record is gone even though the file move failed.
     REQUIRE(result.has_value());
+    REQUIRE(result->HasOrphanedFiles);
     REQUIRE_FALSE(repository.GetById(book.Id).has_value());
     REQUIRE(repository.RemoveCalls == 1);
     // File is orphaned (move failed), but catalog integrity is preserved.

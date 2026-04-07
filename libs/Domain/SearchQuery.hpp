@@ -18,10 +18,7 @@ enum class EBookSort
 {
     Title,
     Author,
-    DateAdded,
-    Series,
-    Year,
-    FileSize
+    DateAdded
 };
 
 struct SSearchQuery

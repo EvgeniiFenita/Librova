@@ -117,6 +117,13 @@ void LogImportSourceIssueIfInitialized(
     }
 
     const auto normalizedManagedPath = managedPath.lexically_normal();
+
+    if (!normalizedManagedPath.is_absolute()
+        && !Librova::ManagedPaths::IsSafeRelativeManagedPath(normalizedManagedPath))
+    {
+        return std::nullopt;
+    }
+
     const std::filesystem::path candidatePath = normalizedManagedPath.is_absolute()
         ? normalizedManagedPath
         : (root / normalizedManagedPath).lexically_normal();

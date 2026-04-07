@@ -47,7 +47,7 @@ internal sealed class UiPreferencesStore : IUiPreferencesStore
         var dir = Path.GetDirectoryName(FilePath)!;
         Directory.CreateDirectory(dir);
 
-        var tempPath = FilePath + ".tmp";
+        var tempPath = FilePath + $".{Guid.NewGuid():N}.tmp";
         var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
         File.WriteAllText(tempPath, json);
         File.Move(tempPath, FilePath, overwrite: true);

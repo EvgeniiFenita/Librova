@@ -47,9 +47,6 @@ internal static class LibraryCatalogMapper
             {
                 BookSortModel.Author => BookSort.Author,
                 BookSortModel.DateAdded => BookSort.DateAdded,
-                BookSortModel.Series => BookSort.Series,
-                BookSortModel.Year => BookSort.Year,
-                BookSortModel.FileSize => BookSort.FileSize,
                 _ => BookSort.Title
             };
         }

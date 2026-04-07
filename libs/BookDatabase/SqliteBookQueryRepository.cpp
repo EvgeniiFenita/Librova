@@ -378,15 +378,6 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
         sql += dir;
         sql += ", b.title COLLATE NOCASE ASC ";
         break;
-    case Librova::Domain::EBookSort::Series:
-        sql += "ORDER BY b.series COLLATE NOCASE ASC, b.series_index ASC, b.title COLLATE NOCASE ASC ";
-        break;
-    case Librova::Domain::EBookSort::Year:
-        sql += "ORDER BY b.year DESC, b.title COLLATE NOCASE ASC ";
-        break;
-    case Librova::Domain::EBookSort::FileSize:
-        sql += "ORDER BY b.file_size_bytes DESC, b.title COLLATE NOCASE ASC ";
-        break;
     }
 
     sql += "LIMIT ? OFFSET ?;";

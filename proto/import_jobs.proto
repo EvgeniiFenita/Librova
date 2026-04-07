@@ -28,9 +28,6 @@ enum BookSort {
   BOOK_SORT_TITLE = 1;
   BOOK_SORT_AUTHOR = 2;
   BOOK_SORT_DATE_ADDED = 3;
-  BOOK_SORT_SERIES = 4;
-  BOOK_SORT_YEAR = 5;
-  BOOK_SORT_FILE_SIZE = 6;
 }
 
 enum ImportMode {

@@ -358,12 +358,6 @@ Librova::Domain::EBookSort CLibraryCatalogProtoMapper::FromProto(const librova::
         return Librova::Domain::EBookSort::Author;
     case librova::v1::BOOK_SORT_DATE_ADDED:
         return Librova::Domain::EBookSort::DateAdded;
-    case librova::v1::BOOK_SORT_SERIES:
-        return Librova::Domain::EBookSort::Series;
-    case librova::v1::BOOK_SORT_YEAR:
-        return Librova::Domain::EBookSort::Year;
-    case librova::v1::BOOK_SORT_FILE_SIZE:
-        return Librova::Domain::EBookSort::FileSize;
     case librova::v1::BOOK_SORT_TITLE:
     case librova::v1::BOOK_SORT_UNSPECIFIED:
     default:
@@ -391,12 +385,6 @@ librova::v1::BookSort CLibraryCatalogProtoMapper::ToProto(const Librova::Domain:
         return librova::v1::BOOK_SORT_AUTHOR;
     case Librova::Domain::EBookSort::DateAdded:
         return librova::v1::BOOK_SORT_DATE_ADDED;
-    case Librova::Domain::EBookSort::Series:
-        return librova::v1::BOOK_SORT_SERIES;
-    case Librova::Domain::EBookSort::Year:
-        return librova::v1::BOOK_SORT_YEAR;
-    case Librova::Domain::EBookSort::FileSize:
-        return librova::v1::BOOK_SORT_FILE_SIZE;
     case Librova::Domain::EBookSort::Title:
     default:
         return librova::v1::BOOK_SORT_TITLE;

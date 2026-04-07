@@ -135,11 +135,12 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
     if (result.has_value())
     {
         LogInfoIfInitialized(
-            "MoveBookToTrash completed for book {} with destination {}.",
+            "MoveBookToTrash completed for book {} with destination {}{}.",
             request.book_id(),
             result->Destination == Librova::Application::ETrashDestination::RecycleBin
                 ? "RecycleBin"
-                : "ManagedTrash");
+                : "ManagedTrash",
+            result->HasOrphanedFiles ? " (WARNING: files could not be moved — orphaned on disk)" : "");
     }
     else
     {

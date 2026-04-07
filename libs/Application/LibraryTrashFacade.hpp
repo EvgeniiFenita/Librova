@@ -18,6 +18,7 @@ struct STrashedBookResult
 {
     Librova::Domain::SBookId BookId;
     ETrashDestination Destination = ETrashDestination::ManagedTrash;
+    bool HasOrphanedFiles = false;
 };
 
 class CLibraryTrashFacade final
