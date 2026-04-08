@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#83` replace infinite waits in external converter termination and cancellation paths with bounded shutdown logic.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: external converter shutdown now uses bounded waits with structured fallback through the job object and a regression test that proves cancellation returns promptly instead of hanging behind converter sleep.
+
 - `#82` preserve `Fb2CngConfigPath` when saving Settings preferences.
   - Status: `Closed`
   - Type: `Bug`

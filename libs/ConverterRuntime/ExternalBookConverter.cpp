@@ -13,10 +13,13 @@
 #include <utility>
 #include <vector>
 
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ConverterRuntime {
 namespace {
+
+constexpr auto GShutdownWaitTimeout = std::chrono::milliseconds{2000};
 
 std::wstring PathToWide(const std::filesystem::path& path)
 {
@@ -232,16 +235,89 @@ void AssignProcessToKillOnCloseJob(const HANDLE jobHandle, const HANDLE processH
     }
 }
 
-void TerminateProcessNoThrow(const HANDLE processHandle) noexcept
+void LogShutdownWarning(
+    const std::string_view stage,
+    const std::string_view detail,
+    const DWORD code) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    Librova::Logging::Warn(
+        "External converter shutdown issue. Stage={} Detail={} Win32Code={}",
+        stage,
+        detail,
+        code);
+}
+
+[[nodiscard]] bool WaitForProcessExit(const HANDLE processHandle, const std::string_view stage) noexcept
+{
+    const DWORD waitResult = WaitForSingleObject(
+        processHandle,
+        static_cast<DWORD>(GShutdownWaitTimeout.count()));
+
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        return true;
+    }
+
+    if (waitResult == WAIT_TIMEOUT)
+    {
+        LogShutdownWarning(stage, "timed out while waiting for process exit", WAIT_TIMEOUT);
+        return false;
+    }
+
+    LogShutdownWarning(stage, "failed while waiting for process exit", waitResult);
+    return false;
+}
+
+void TerminateProcessNoThrow(
+    const HANDLE processHandle,
+    const HANDLE jobHandle,
+    const std::string_view stage) noexcept
 {
     if (processHandle == nullptr)
     {
         return;
     }
 
-    TerminateProcess(processHandle, 1);
-    WaitForSingleObject(processHandle, INFINITE);
+    if (WaitForSingleObject(processHandle, 0) == WAIT_OBJECT_0)
+    {
+        return;
+    }
+
+    if (!TerminateProcess(processHandle, 1))
+    {
+        LogShutdownWarning(stage, "TerminateProcess failed", GetLastError());
+    }
+
+    if (WaitForProcessExit(processHandle, stage))
+    {
+        return;
+    }
+
+    if (jobHandle == nullptr)
+    {
+        return;
+    }
+
+    if (!TerminateJobObject(jobHandle, 1))
+    {
+        LogShutdownWarning(stage, "TerminateJobObject failed", GetLastError());
+        return;
+    }
+
+    const bool exitedAfterJobTermination = WaitForProcessExit(processHandle, stage);
+    static_cast<void>(exitedAfterJobTermination);
 }
+
+struct SWaitOutcome
+{
+    DWORD ExitCode = 0;
+    bool WasCancelled = false;
+};
 
 std::unordered_set<std::filesystem::path> SnapshotDirectoryFiles(const std::filesystem::path& directoryPath)
 {
@@ -375,7 +451,8 @@ void CleanupProducedFiles(
     }
 }
 
-DWORD WaitForProcessWithCancellation(
+SWaitOutcome WaitForProcessWithCancellation(
+    const HANDLE jobHandle,
     const HANDLE processHandle,
     Librova::Domain::IProgressSink& progressSink,
     const std::stop_token stopToken,
@@ -394,7 +471,9 @@ DWORD WaitForProcessWithCancellation(
                 throw std::runtime_error("Failed to read converter process exit code.");
             }
 
-            return exitCode;
+            return {
+                .ExitCode = exitCode
+            };
         }
 
         if (waitResult != WAIT_TIMEOUT)
@@ -404,9 +483,11 @@ DWORD WaitForProcessWithCancellation(
 
         if (stopToken.stop_requested() || progressSink.IsCancellationRequested())
         {
-            TerminateProcess(processHandle, 1);
-            WaitForSingleObject(processHandle, INFINITE);
-            return 1;
+            TerminateProcessNoThrow(processHandle, jobHandle, "cancellation");
+            return {
+                .ExitCode = 1,
+                .WasCancelled = true
+            };
         }
     }
 }
@@ -476,7 +557,6 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     startupInfo.cb = sizeof(startupInfo);
 
     PROCESS_INFORMATION processInformation{};
-    const CJobHandle jobHandle = CreateKillOnCloseJob();
 
     progressSink.ReportValue(0, "Starting converter process");
 
@@ -495,27 +575,40 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
         throw std::runtime_error("Failed to launch external converter process.");
     }
 
-    CProcessInfo process(processInformation);
+    DWORD exitCode = 0;
+    bool wasCancelled = false;
 
-    try
     {
-        AssignProcessToKillOnCloseJob(jobHandle.Get(), process.GetProcessHandle());
-    }
-    catch (...)
-    {
-        TerminateProcessNoThrow(process.GetProcessHandle());
-        throw;
+        const CJobHandle jobHandle = CreateKillOnCloseJob();
+        CProcessInfo process(processInformation);
+
+        try
+        {
+            AssignProcessToKillOnCloseJob(jobHandle.Get(), process.GetProcessHandle());
+        }
+        catch (...)
+        {
+            TerminateProcessNoThrow(process.GetProcessHandle(), jobHandle.Get(), "job-assignment-failure");
+            throw;
+        }
+
+        if (ResumeThread(processInformation.hThread) == static_cast<DWORD>(-1))
+        {
+            TerminateProcessNoThrow(process.GetProcessHandle(), jobHandle.Get(), "resume-failure");
+            throw std::runtime_error("Failed to resume external converter process.");
+        }
+
+        const SWaitOutcome waitOutcome = WaitForProcessWithCancellation(
+            jobHandle.Get(),
+            process.GetProcessHandle(),
+            progressSink,
+            stopToken,
+            m_settings.PollInterval);
+        exitCode = waitOutcome.ExitCode;
+        wasCancelled = waitOutcome.WasCancelled;
     }
 
-    if (ResumeThread(processInformation.hThread) == static_cast<DWORD>(-1))
-    {
-        TerminateProcessNoThrow(process.GetProcessHandle());
-        throw std::runtime_error("Failed to resume external converter process.");
-    }
-
-    const DWORD exitCode = WaitForProcessWithCancellation(process.GetProcessHandle(), progressSink, stopToken, m_settings.PollInterval);
-
-    if (stopToken.stop_requested() || progressSink.IsCancellationRequested())
+    if (wasCancelled)
     {
         CleanupProducedFiles(command.ExpectedOutputDirectory, outputSnapshot, command.ExpectedOutputPath);
         return BuildCancelledResult();

@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#83` replace infinite waits in external converter termination and cancellation paths with bounded shutdown logic.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: converter cleanup currently calls `WaitForSingleObject(..., INFINITE)` after `TerminateProcess`, which can hang the host forever during cancellation or forced shutdown; cleanup must use bounded waits, actionable logging, and a deterministic fallback path.
-
 - `#84` enforce forced FB2-to-EPUB conversion as a hard requirement instead of silently storing the original FB2 on converter failure.
   - Status: `Open`
   - Type: `Bug`

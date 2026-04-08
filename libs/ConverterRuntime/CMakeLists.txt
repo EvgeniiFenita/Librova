@@ -9,6 +9,7 @@ target_include_directories(LibrovaConverterRuntime PUBLIC
 target_link_libraries(LibrovaConverterRuntime PUBLIC
     LibrovaConverterCommand
     LibrovaDomain
+    LibrovaLogging
     LibrovaUnicode
 )
 

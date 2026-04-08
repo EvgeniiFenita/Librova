@@ -189,6 +189,7 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
     });
     CTestProgressSink progressSink;
     std::stop_source stopSource;
+    const auto startTime = std::chrono::steady_clock::now();
 
     Librova::Domain::SConversionResult result;
     std::jthread worker([&] {
@@ -203,12 +204,14 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
     std::this_thread::sleep_for(std::chrono::milliseconds{200});
     stopSource.request_stop();
     worker.join();
+    const auto elapsed = std::chrono::steady_clock::now() - startTime;
 
     REQUIRE_FALSE(result.IsSuccess());
     REQUIRE(result.IsCancelled());
     REQUIRE(result.Status == Librova::Domain::EConversionStatus::Cancelled);
     REQUIRE(result.Warnings == std::vector<std::string>({"Conversion cancelled."}));
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
+    REQUIRE(elapsed < std::chrono::seconds{3});
 }
 
 TEST_CASE("External book converter removes partial output files after cancellation", "[converter-runtime]")
