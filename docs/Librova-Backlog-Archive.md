@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#93` improve diagnostics for converter launch failures and managed cover-loading failures.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: converter launch failures now include executable, working directory, command line, and Win32 error details, while UI cover-loading failures emit actionable error logs with the cover path and library root; native and managed regressions cover both diagnostics paths.
+
 - `#92` decide and implement the real role of the `formats` table instead of keeping it as unused dual-write state.
   - Status: `Closed`
   - Type: `Bug`

@@ -8,6 +8,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <unordered_set>
 #include <utility>
@@ -86,6 +87,12 @@ std::wstring BuildCommandLine(const Librova::ConverterCommand::SResolvedConverte
     }
 
     return commandLine;
+}
+
+std::string DescribeWin32Error(const DWORD error)
+{
+    const std::error_code errorCode(static_cast<int>(error), std::system_category());
+    return errorCode.message();
 }
 
 class CProcessHandle final
@@ -572,7 +579,14 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
             &startupInfo,
             &processInformation))
     {
-        throw std::runtime_error("Failed to launch external converter process.");
+        const DWORD launchError = GetLastError();
+        throw std::runtime_error(std::format(
+            "Failed to launch external converter process. executable='{}' working_directory='{}' command_line='{}' win32_error={} ({})",
+            Librova::Unicode::PathToUtf8(command.ExecutablePath),
+            Librova::Unicode::PathToUtf8(processWorkingDirectory),
+            Librova::Unicode::WideToUtf8(commandLine),
+            launchError,
+            DescribeWin32Error(launchError)));
     }
 
     DWORD exitCode = 0;

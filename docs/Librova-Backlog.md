@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#93` improve diagnostics for converter launch failures and managed cover-loading failures.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: converter startup failures currently omit useful process-launch context, and cover image loading swallows most exceptions without actionable logs; add structured diagnostics so field failures are triageable from logs alone.
-
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Open`
   - Type: `Feature`

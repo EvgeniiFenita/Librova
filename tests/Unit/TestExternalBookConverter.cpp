@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <thread>
+#include <stdexcept>
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
 #include "ConverterRuntime/ExternalBookConverter.hpp"
@@ -299,4 +300,44 @@ TEST_CASE("External book converter can run with an explicit working directory", 
     REQUIRE(std::filesystem::exists(destinationPath));
     REQUIRE(std::filesystem::exists(markerPath));
     REQUIRE(ReadTextFile(markerPath).find(workingDirectory.string()) != std::string::npos);
+}
+
+TEST_CASE("External book converter launch failures include executable and working-directory diagnostics", "[converter-runtime]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-launch-failure");
+    const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
+    const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
+    const std::filesystem::path missingExecutable = sandbox.GetPath() / "missing-converter.exe";
+    const std::filesystem::path workingDirectory = sandbox.GetPath() / "converter-work";
+    WriteTextFile(sourcePath, "content");
+
+    Librova::ConverterCommand::SConverterCommandProfile profile{
+        .ExecutablePath = missingExecutable,
+        .ArgumentTemplate = {"{source}", "{destination}"},
+        .OutputMode = Librova::ConverterCommand::EConverterOutputMode::ExactDestinationPath
+    };
+
+    const Librova::ConverterRuntime::CExternalBookConverter converter({
+        .CommandProfile = profile,
+        .WorkingDirectory = workingDirectory
+    });
+    CTestProgressSink progressSink;
+
+    try
+    {
+        static_cast<void>(converter.Convert({
+            .SourcePath = sourcePath,
+            .DestinationPath = destinationPath,
+            .SourceFormat = Librova::Domain::EBookFormat::Fb2,
+            .DestinationFormat = Librova::Domain::EBookFormat::Epub
+        }, progressSink, {}));
+        FAIL("Expected converter launch to fail");
+    }
+    catch (const std::runtime_error& error)
+    {
+        const std::string message = error.what();
+        REQUIRE(message.find("missing-converter.exe") != std::string::npos);
+        REQUIRE(message.find("converter-work") != std::string::npos);
+        REQUIRE(message.find("win32_error=") != std::string::npos);
+    }
 }

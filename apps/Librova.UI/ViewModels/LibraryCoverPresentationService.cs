@@ -57,8 +57,13 @@ internal sealed class LibraryCoverPresentationService
 
             return _coverImageLoader.Load(resolvedPath);
         }
-        catch (Exception)
+        catch (Exception error)
         {
+            UiLogging.Error(
+                error,
+                "Failed to load managed cover image. CoverPath={CoverPath} LibraryRoot={LibraryRoot}",
+                coverPath,
+                _libraryRoot);
             return null;
         }
     }

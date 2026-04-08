@@ -4,6 +4,7 @@ using Librova.UI.CoreHost;
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Logging;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using System.Diagnostics;
@@ -1517,6 +1518,57 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public void LibraryCoverPresentationService_LogsCoverLoadFailuresWithPathContext()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Covers"));
+        var logPath = Path.Combine(sandboxRoot, "ui.log");
+        var coverPath = "Covers/failing-cover.png";
+        File.WriteAllText(Path.Combine(libraryRoot, coverPath), "stub-cover");
+
+        try
+        {
+            UiLogging.ReinitializeForTests(logPath);
+            var service = new LibraryCoverPresentationService(
+                libraryRoot,
+                new ThrowingCoverImageLoader(new InvalidOperationException("decoder exploded")));
+
+            var item = service.Prepare(new BookListItemModel
+            {
+                BookId = 42,
+                Title = "Covered Book",
+                Authors = ["Author"],
+                CoverPath = coverPath
+            });
+
+            UiLogging.Shutdown();
+
+            Assert.Null(item.ResolvedCoverImage);
+            var logText = File.ReadAllText(logPath);
+            Assert.Contains("Failed to load managed cover image.", logText, StringComparison.Ordinal);
+            Assert.Contains(coverPath, logText, StringComparison.Ordinal);
+            Assert.Contains(libraryRoot, logText, StringComparison.Ordinal);
+            Assert.Contains("decoder exploded", logText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_ClampsInvalidPageSize()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
@@ -2510,6 +2562,11 @@ public sealed class ViewModelsTests
     private sealed class StubCoverImageLoader : ICoverImageLoader
     {
         public Avalonia.Media.IImage? Load(string absolutePath) => new StubCoverImage();
+    }
+
+    private sealed class ThrowingCoverImageLoader(Exception error) : ICoverImageLoader
+    {
+        public Avalonia.Media.IImage? Load(string absolutePath) => throw error;
     }
 
     private sealed class StubCoverImage : IImage
