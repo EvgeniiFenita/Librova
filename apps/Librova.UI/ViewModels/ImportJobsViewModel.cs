@@ -112,6 +112,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public bool HasSelectedSource => SourcePaths.Count > 0;
     public bool ShowIdleImportPicker => !IsBusy;
     public bool ShowRunningImportState => IsBusy;
+    public bool CanAcceptNewSources => !IsBusy;
     public bool HasImportResult => LastResult is not null;
     public string SelectedSourceLabel => SourcePaths.Count switch
     {
@@ -248,6 +249,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public void ApplyDroppedSourcePaths(IReadOnlyList<string> sourcePaths)
     {
+        if (IsBusy)
+        {
+            UiLogging.Warning("Ignored dropped source paths because an import job is already running.");
+            return;
+        }
+
         if (sourcePaths.Count == 0 || sourcePaths.All(string.IsNullOrWhiteSpace))
         {
             UiLogging.Warning("Ignored dropped source paths because they were empty.");
@@ -589,6 +596,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         {
             RaisePropertyChanged(nameof(ShowIdleImportPicker));
             RaisePropertyChanged(nameof(ShowRunningImportState));
+            RaisePropertyChanged(nameof(CanAcceptNewSources));
             ImportActivityChanged?.Invoke(IsBusy);
         }
         else if (eventArgs.PropertyName is nameof(LastResult))

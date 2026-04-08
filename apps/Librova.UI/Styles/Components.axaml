@@ -85,6 +85,9 @@
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}" />
     <Setter Property="Padding" Value="32,40" />
   </Style>
+  <Style Selector="Border.DropZone:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
 
   <!-- ════════════════════════════════════════════
        BUTTONS

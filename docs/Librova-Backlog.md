@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#68`
+Last assigned id: `#69`
 
 ## 2. Priority Meanings
 

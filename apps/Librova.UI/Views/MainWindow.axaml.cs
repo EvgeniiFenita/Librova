@@ -51,6 +51,13 @@ internal sealed partial class MainWindow : Window
 
     private void OnDragOver(object? sender, DragEventArgs eventArgs)
     {
+        if (DataContext is ShellWindowViewModel { HasShell: true, Shell.IsImportInProgress: true })
+        {
+            eventArgs.DragEffects = DragDropEffects.None;
+            eventArgs.Handled = true;
+            return;
+        }
+
         eventArgs.DragEffects = TryGetDroppedSourcePaths(eventArgs).Count == 0
             ? DragDropEffects.None
             : DragDropEffects.Copy;
@@ -61,6 +68,12 @@ internal sealed partial class MainWindow : Window
     {
         if (DataContext is not ShellWindowViewModel { HasShell: true, Shell: not null } viewModel)
         {
+            return;
+        }
+
+        if (viewModel.Shell.IsImportInProgress)
+        {
+            eventArgs.Handled = true;
             return;
         }
 

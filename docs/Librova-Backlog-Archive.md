@@ -54,6 +54,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#69` block drag-and-drop import while another import job is already running.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: window-level drag-and-drop now rejects new sources during active import, the drop zone dims with the rest of the import lock-out state, and a regression test keeps the running source text stable until the current job finishes.
+
 - `#19` rework the visual style around a modern dark media-app direction, covering palette, typography, and a unified icon set.
   - Status: `Closed`
   - Type: `Feature`

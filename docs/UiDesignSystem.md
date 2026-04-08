@@ -273,6 +273,7 @@ During import (`IsImportInProgress = true`) the UI is locked:
 - `Border.AppPanelMuted:disabled` → `Opacity=0.45`
 - Buttons (`AccentAction`, `SecondaryAction`, `DestructiveAction`): `Opacity=0.4` on button + ContentPresenter keeps original bg, text muted to `TextMuted`
 - Library card in sidebar (`Border.AppPanelMuted`) — `IsEnabled` bound to `!Shell.IsImportInProgress`; dims to 0.45 opacity and prevents Open/New button interaction
+- Drop zone in `ImportView` (`Border.DropZone`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims to 0.45 opacity, disables the picker buttons, and must not accept drag-over/drop while an import is already running
 - OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims both checkboxes (Allow duplicate import, Force conversion to EPUB) via parent propagation
 - Only the "Cancel" button remains active
 
@@ -327,4 +328,3 @@ All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150
 **Version badge** — A small 11 px muted `TextBlock` at the bottom of the sidebar DockPanel, bound to `Shell.ApplicationVersionText`. Only visible when `HasShell=true`.
 
 **Annotation typography** — The book annotation text in the details panel uses `FontStyle="Italic"` to evoke a book excerpt feel.
-

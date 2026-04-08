@@ -458,6 +458,54 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_ApplyDroppedSourcePathsAndStartAsync_IgnoresDroppedSourcesWhileImportIsRunning()
+    {
+        var service = new CancelAwareImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var originalSourcePath = CreateSupportedSourceFile(sandboxRoot, "running.fb2");
+            var droppedSourcePath = CreateSupportedSourceFile(sandboxRoot, "dropped.epub");
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = originalSourcePath,
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var runTask = viewModel.StartImportAsync();
+            await service.WaitForStartAsync();
+            await service.WaitForPollingAsync();
+
+            Assert.True(viewModel.IsBusy);
+            Assert.False(viewModel.CanAcceptNewSources);
+
+            await viewModel.ApplyDroppedSourcePathsAndStartAsync([droppedSourcePath]);
+
+            Assert.Equal([originalSourcePath], viewModel.SourcePaths);
+            Assert.Equal(originalSourcePath, viewModel.SelectedSourcePathText);
+            Assert.Equal(1, service.StartCalls);
+
+            await viewModel.CancelCurrentAsync();
+            await runTask;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_AllowsMixedValidAndUnsupportedSelectedSourcesWhenAtLeastOneSourceIsImportable()
     {
         var service = new FakeImportJobsService();
@@ -1664,6 +1712,7 @@ public sealed class ViewModelsTests
         private volatile bool _cancelled;
 
         public int CancelCalls { get; private set; }
+        public int StartCalls { get; private set; }
         public Task WaitForStartAsync() => _started.Task;
         public Task WaitForPollingAsync() => _polling.Task;
 
@@ -1721,7 +1770,10 @@ public sealed class ViewModelsTests
             => Task.FromResult(true);
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(77UL);
+        {
+            StartCalls++;
+            return Task.FromResult(77UL);
+        }
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

@@ -38,7 +38,8 @@
       </StackPanel>
 
       <!-- Drop zone card -->
-      <Border Classes="DropZone">
+      <Border Classes="DropZone"
+              IsEnabled="{Binding ImportJobs.CanAcceptNewSources}">
         <StackPanel Spacing="20"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
