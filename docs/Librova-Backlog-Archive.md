@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#88` add explicit disposal and lifetime cancellation to `LibraryBrowserViewModel` background refresh work.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: the library browser now cancels debounced and in-flight background work on disposal, and shell disposal explicitly tears down the browser slice with regression coverage for both lifetimes.
+
 - `#87` clean up extracted ZIP import payloads after each import job instead of keeping them for the whole host session.
   - Status: `Closed`
   - Type: `Bug`

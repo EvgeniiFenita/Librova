@@ -1140,6 +1140,20 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_DisposeCancelsPendingDebouncedRefresh()
+    {
+        var service = new RecordingLibraryCatalogService();
+        using var viewModel = new LibraryBrowserViewModel(service);
+
+        viewModel.SearchText = "road";
+        viewModel.Dispose();
+
+        await Task.Delay(400);
+
+        Assert.Null(service.LastRequest);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_KeepsOtherKnownLanguagesVisibleWhenLanguageFilterIsApplied()
     {
         var service = new QueryFilteringLibraryCatalogService();
@@ -3248,6 +3262,30 @@ public sealed class ViewModelsTests
 
         Assert.False(viewModel.IsConverterProbeInProgress);
         Assert.False(viewModel.HasConverterValidationError);
+    }
+
+    [Fact]
+    public async Task ShellViewModel_DisposeCancelsPendingLibraryBrowserRefresh()
+    {
+        var catalogService = new RecordingLibraryCatalogService();
+        using var viewModel = new ShellViewModel(
+            new ShellSession(
+                hostLifetime: NullLifetime.Instance,
+                hostOptions: new CoreHostLaunchOptions
+                {
+                    ExecutablePath = @"C:\fake\host.exe",
+                    PipePath = @"\\.\pipe\test",
+                    LibraryRoot = @"C:\fake\lib"
+                },
+                importJobs: new FakeImportJobsService(),
+                libraryCatalog: catalogService));
+
+        viewModel.LibraryBrowser.SearchText = "road";
+        viewModel.Dispose();
+
+        await Task.Delay(400);
+
+        Assert.Null(catalogService.LastRequest);
     }
 
     private static ShellViewModel MakeTestShellViewModel(

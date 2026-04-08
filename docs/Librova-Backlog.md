@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#88` add explicit disposal and lifetime cancellation to `LibraryBrowserViewModel` background refresh work.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: debounce-triggered refresh tasks outlive the browser view-model and `ShellViewModel` never disposes the browser slice, so background work can continue after owner teardown and operate on stale services or UI state.
-
 - `#89` harden managed storage commit rollback so partial file moves are recoverable and diagnosable after restore failures.
   - Status: `Open`
   - Type: `Bug`

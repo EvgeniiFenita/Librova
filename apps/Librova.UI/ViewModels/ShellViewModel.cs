@@ -394,6 +394,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ImportJobs.ImportCompletedSuccessfully -= HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged -= OnImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged -= OnLibraryBrowserPropertyChanged;
+        LibraryBrowser.Dispose();
         _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;
         _converterValidationCoordinator.Dispose();
         _converterProbeTask = Task.CompletedTask;

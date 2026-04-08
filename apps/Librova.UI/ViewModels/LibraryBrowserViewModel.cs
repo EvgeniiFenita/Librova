@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Librova.UI.ViewModels;
 
-internal sealed class LibraryBrowserViewModel : ObservableObject
+internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 {
     private const double BytesPerMegabyte = 1024d * 1024d;
     private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#1C160C"));
@@ -25,8 +25,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     private readonly IPathSelectionService _pathSelectionService;
     private readonly LibraryCoverPresentationService _coverPresentationService;
     private readonly bool _hasConfiguredConverter;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _loadMoreCancellation;
+    private bool _isDisposed;
     private bool _isLibraryStatisticsUnavailable;
     private string _searchText = string.Empty;
     private string _languageFilter = string.Empty;
@@ -361,12 +363,23 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public async Task RefreshAsync()
     {
-        await RefreshBatchAsync(1);
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await RefreshBatchAsync(1);
+        }
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
+        {
+        }
     }
 
     public async Task LoadMoreAsync()
     {
-        if (IsBusy || IsLoadingMore || !HasMoreResults)
+        if (_isDisposed || IsBusy || IsLoadingMore || !HasMoreResults)
         {
             return;
         }
@@ -374,6 +387,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         try
         {
             await AppendNextBatchAsync();
+        }
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
+        {
         }
         catch (Exception error)
         {
@@ -383,7 +399,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public async Task ToggleSelectedBookAsync(BookListItemModel? book)
     {
-        if (book is null)
+        if (_isDisposed || book is null)
         {
             return;
         }
@@ -402,6 +418,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public Task CloseSelectionAsync()
     {
+        if (_isDisposed)
+        {
+            return Task.CompletedTask;
+        }
+
         SelectedBook = null;
         StatusText = "Closed book details.";
         return Task.CompletedTask;
@@ -409,7 +430,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     public async Task LoadSelectedBookDetailsAsync()
     {
-        if (SelectedBook is null)
+        if (_isDisposed || SelectedBook is null)
         {
             return;
         }
@@ -419,20 +440,31 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
         try
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var details = await _libraryCatalogService.GetBookDetailsAsync(
                 SelectedBook.BookId,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
 
             SelectedBookDetails = details is null ? null : Prepare(details);
             StatusText = SelectedBookDetails is null
                 ? "Book details were not found."
                 : $"Loaded details for '{SelectedBookDetails.Title}'.";
         }
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
+        {
+        }
         finally
         {
-            IsLoadingSelectionDetails = false;
+            if (!_isDisposed)
+            {
+                IsLoadingSelectionDetails = false;
+            }
         }
     }
 
@@ -448,7 +480,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private async Task ExportSelectedBookCoreAsync(BookFormatModel? exportFormat)
     {
-        if (SelectedBook is null)
+        if (_isDisposed || SelectedBook is null)
         {
             return;
         }
@@ -478,7 +510,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
         try
         {
-            using var cancellation = new CancellationTokenSource(operationTimeout);
+            using var cancellation = CreateOperationCancellationSource(operationTimeout);
             var exportedPath = await _libraryCatalogService.ExportBookAsync(
                 SelectedBook.BookId,
                 destinationPath,
@@ -486,22 +518,33 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 transportTimeout,
                 cancellation.Token);
 
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
+
             StatusText = string.IsNullOrWhiteSpace(exportedPath)
                 ? "Selected book could not be exported."
                 : exportFormat is BookFormatModel.Epub
                     ? $"Exported '{SelectedBook.Title}' as EPUB to '{exportedPath}'."
                     : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
         }
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
+        {
+        }
         finally
         {
-            IsExportBusy = false;
-            IsBusy = false;
+            if (!_isDisposed)
+            {
+                IsExportBusy = false;
+                IsBusy = false;
+            }
         }
     }
 
     public async Task MoveSelectedBookToTrashAsync()
     {
-        if (SelectedBook is null)
+        if (_isDisposed || SelectedBook is null)
         {
             return;
         }
@@ -513,11 +556,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         {
             var deletedTitle = SelectedBook.Title;
             var loadedPageCount = Math.Max(_loadedPageCount, 1);
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var deleteResult = await _libraryCatalogService.MoveBookToTrashAsync(
                 SelectedBook.BookId,
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
 
             if (deleteResult is null)
             {
@@ -529,9 +577,15 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
             StatusText = GetDeleteStatusText(deletedTitle, deleteResult);
         }
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
+        {
+        }
         finally
         {
-            IsBusy = false;
+            if (!_isDisposed)
+            {
+                IsBusy = false;
+            }
         }
     }
 
@@ -551,8 +605,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private void ScheduleRefresh()
     {
-        _refreshDebounce?.Cancel();
-        _refreshDebounce?.Dispose();
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        CancelAndDispose(ref _refreshDebounce);
         _refreshDebounce = new CancellationTokenSource();
 
         _ = RefreshAfterDebounceAsync(_refreshDebounce.Token);
@@ -566,7 +624,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
             cancellationToken.ThrowIfCancellationRequested();
             await RefreshBatchAsync(1);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (IsLifetimeCancellationRequested(cancellationToken))
         {
         }
         catch (Exception error)
@@ -577,17 +635,28 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private async Task RefreshBatchAsync(int batchNumber)
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         IsBusy = true;
         StatusText = "Refreshing library...";
         var previousSelectionId = SelectedBook?.BookId;
 
         try
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var page = await _libraryCatalogService.ListBooksAsync(
                 BuildRequest(batchNumber),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
+
             var libraryStatisticsUnavailable = false;
 
             try
@@ -596,9 +665,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                     TimeSpan.FromSeconds(5),
                     cancellation.Token);
             }
+            catch (OperationCanceledException) when (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
             catch (Exception)
             {
                 libraryStatisticsUnavailable = true;
+            }
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
             }
 
             var visibleItems = page.Items.Select(Prepare).ToArray();
@@ -637,7 +715,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            if (!_isDisposed)
+            {
+                IsBusy = false;
+            }
         }
     }
 
@@ -648,15 +729,20 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private async Task AppendNextBatchAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (_loadedPageCount <= 0)
         {
             await RefreshBatchAsync(1);
             return;
         }
 
-        _loadMoreCancellation?.Cancel();
-        _loadMoreCancellation?.Dispose();
-        _loadMoreCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        CancelAndDispose(ref _loadMoreCancellation);
+        _loadMoreCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        _loadMoreCancellation.CancelAfter(TimeSpan.FromSeconds(10));
 
         IsLoadingMore = true;
         StatusText = "Loading more books...";
@@ -668,6 +754,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                 BuildRequest(nextBatchNumber),
                 TimeSpan.FromSeconds(5),
                 _loadMoreCancellation.Token);
+
+            if (IsLifetimeCancellationRequested(_loadMoreCancellation.Token))
+            {
+                return;
+            }
 
             foreach (var item in page.Items.Select(Prepare))
             {
@@ -692,7 +783,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
         finally
         {
-            IsLoadingMore = false;
+            if (!_isDisposed)
+            {
+                IsLoadingMore = false;
+            }
         }
     }
 
@@ -704,17 +798,28 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private async Task RefreshRangeAsync(int itemLimit)
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         IsBusy = true;
         StatusText = "Refreshing library...";
         var previousSelectionId = SelectedBook?.BookId;
 
         try
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var page = await _libraryCatalogService.ListBooksAsync(
                 BuildInitialRangeRequest(itemLimit),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
+
             var libraryStatisticsUnavailable = false;
 
             try
@@ -723,9 +828,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
                     TimeSpan.FromSeconds(5),
                     cancellation.Token);
             }
+            catch (OperationCanceledException) when (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
             catch (Exception)
             {
                 libraryStatisticsUnavailable = true;
+            }
+
+            if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
             }
 
             var visibleItems = page.Items.Select(Prepare).ToArray();
@@ -764,8 +878,49 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            if (!_isDisposed)
+            {
+                IsBusy = false;
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        CancelAndDispose(ref _refreshDebounce);
+        CancelAndDispose(ref _loadMoreCancellation);
+        _lifetimeCancellation.Cancel();
+        _lifetimeCancellation.Dispose();
+    }
+
+    private CancellationTokenSource CreateOperationCancellationSource(TimeSpan timeout)
+    {
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        cancellation.CancelAfter(timeout);
+        return cancellation;
+    }
+
+    private bool IsLifetimeCancellationRequested(CancellationToken cancellationToken = default) =>
+        _isDisposed
+        || _lifetimeCancellation.IsCancellationRequested
+        || cancellationToken.IsCancellationRequested;
+
+    private static void CancelAndDispose(ref CancellationTokenSource? cancellation)
+    {
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        cancellation.Cancel();
+        cancellation.Dispose();
+        cancellation = null;
     }
 
     private BookListRequestModel BuildRequest(int batchNumber) =>
@@ -1040,7 +1195,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         item.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
         item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
     }
-
 }
 
 internal sealed record MetadataPair(string Label, string Value);
