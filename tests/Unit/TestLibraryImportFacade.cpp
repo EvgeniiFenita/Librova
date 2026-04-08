@@ -734,6 +734,7 @@ TEST_CASE("Library import facade logs rollback cleanup issues for unsafe managed
         }, progressSink, {});
 
         REQUIRE(result.WasCancelled);
+        REQUIRE(result.HasRollbackCleanupResidue);
     }
 
     Librova::Logging::CLogging::Shutdown();

@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#81` surface rollback cleanup residue when import cancellation leaves managed files or covers on disk.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: cancellation rollback now returns explicit residue warnings for managed artifacts left on disk and promotes that condition into the terminal cancelled message, with native and UI regression coverage.
+
 - `#79` stop classifying duplicate-only batch and ZIP imports as `UnsupportedFormat`.
   - Status: `Closed`
   - Type: `Bug`

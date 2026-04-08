@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#81` surface rollback cleanup residue when import cancellation leaves managed files or covers on disk.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: import rollback currently logs filesystem cleanup failures but does not report them through the terminal result; cancellation and partial-failure summaries must explicitly tell the user when orphaned managed artifacts remain after rollback.
-
 - `#82` preserve `Fb2CngConfigPath` when saving Settings preferences.
   - Status: `Open`
   - Type: `Bug`

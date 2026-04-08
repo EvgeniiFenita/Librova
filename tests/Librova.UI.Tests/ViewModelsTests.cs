@@ -205,6 +205,43 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_ShowsRollbackResidueInCancelledTerminalState()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new CancellationResidueImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(
+                "Import was cancelled. Some managed files could not be removed during rollback.",
+                viewModel.StatusText);
+            Assert.Contains("left managed artifact", viewModel.WarningsText, StringComparison.Ordinal);
+            Assert.Contains("Cancellation", viewModel.ErrorText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_RemoveCommandClearsCurrentJobState()
     {
         var service = new FakeImportJobsService();
@@ -1971,6 +2008,69 @@ public sealed class ViewModelsTests
 
         public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(91UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+    }
+
+    private sealed class CancellationResidueImportJobsService : IImportJobsService
+    {
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(new ImportJobResultModel
+            {
+                Snapshot = new ImportJobSnapshotModel
+                {
+                    JobId = jobId,
+                    Status = ImportJobStatusModel.Cancelled,
+                    Message = "Import was cancelled. Some managed files could not be removed during rollback.",
+                    Percent = 50,
+                    TotalEntries = 2,
+                    ProcessedEntries = 2,
+                    ImportedEntries = 0,
+                    FailedEntries = 1,
+                    SkippedEntries = 0
+                },
+                Summary = new ImportSummaryModel
+                {
+                    Mode = ImportModeModel.Batch,
+                    TotalEntries = 2,
+                    ImportedEntries = 0,
+                    FailedEntries = 1,
+                    SkippedEntries = 0,
+                    Warnings =
+                    [
+                        "Cancellation rollback left managed artifact 'C:/Library/Books/0000000011/book.epub' on disk because Path could not be resolved safely within the library root."
+                    ]
+                },
+                Error = new DomainErrorModel
+                {
+                    Code = ImportErrorCodeModel.Cancellation,
+                    Message = "Import was cancelled. Some managed files could not be removed during rollback."
+                }
+            });
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Running",
+                Percent = 0,
+                TotalEntries = 2,
+                ProcessedEntries = 0,
+                ImportedEntries = 0,
+                FailedEntries = 0,
+                SkippedEntries = 0
+            });
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(81UL);
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);

@@ -59,6 +59,7 @@ struct SImportResult
     std::optional<Librova::ZipImporting::SZipImportResult> ZipResult;
     std::vector<Librova::Domain::SBookId> ImportedBookIds;
     ENoSuccessfulImportReason NoSuccessfulImportReason = ENoSuccessfulImportReason::None;
+    bool HasRollbackCleanupResidue = false;
     bool WasCancelled = false;
 
     [[nodiscard]] bool IsSuccess() const noexcept
@@ -91,6 +92,7 @@ private:
     {
         std::vector<Librova::Domain::SBookId> RemainingBookIds;
         std::vector<std::string> Warnings;
+        bool HasCleanupResidue = false;
     };
 
     [[nodiscard]] static bool IsZipPath(const std::filesystem::path& path);

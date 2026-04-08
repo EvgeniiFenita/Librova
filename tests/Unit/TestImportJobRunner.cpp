@@ -5,6 +5,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -13,6 +14,8 @@
 #include <zip.h>
 
 #include "Application/LibraryImportFacade.hpp"
+#include "Domain/Book.hpp"
+#include "Domain/BookRepository.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 
 namespace {
@@ -124,6 +127,74 @@ public:
             .ImportedBookId = Librova::Domain::SBookId{3}
         };
     }
+};
+
+class CImporterThatCancelsAfterFirstSuccess final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
+        std::stop_token) const override
+    {
+        progressSink.ReportValue(40, "Importing source file");
+        ++CallCount;
+
+        if (CallCount == 1)
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+                .ImportedBookId = Librova::Domain::SBookId{11}
+            };
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Cancelled,
+            .Error = "Cancelled by test."
+        };
+    }
+
+    mutable int CallCount = 0;
+};
+
+class CRollbackAwareBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    Librova::Domain::SBookId ReserveId() override
+    {
+        return {++m_nextId};
+    }
+
+    Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return ForceAdd(book);
+    }
+
+    Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        m_books[book.Id.Value] = book;
+        return book.Id;
+    }
+
+    std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId id) const override
+    {
+        const auto iterator = m_books.find(id.Value);
+        if (iterator == m_books.end())
+        {
+            return std::nullopt;
+        }
+
+        return iterator->second;
+    }
+
+    void Remove(const Librova::Domain::SBookId id) override
+    {
+        m_books.erase(id.Value);
+    }
+
+private:
+    std::int64_t m_nextId = 0;
+    std::map<std::int64_t, Librova::Domain::SBook> m_books;
 };
 
 struct SImportSandbox
@@ -309,6 +380,46 @@ TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs
     REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
     REQUIRE(result.Snapshot.Message == "Import was cancelled.");
     std::filesystem::remove_all(sandbox.Root);
+}
+
+TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled terminal message", "[jobs][import][rollback]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-cancelled-residue");
+    std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
+    std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
+    const auto outsidePath = sandbox.GetPath().parent_path() / "librova-job-runner-cancelled-residue.epub";
+    std::ofstream(outsidePath).put('x');
+
+    CImporterThatCancelsAfterFirstSuccess importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CRollbackAwareBookRepository repository;
+    repository.ForceAdd({
+        .Id = {11},
+        .Metadata = {.TitleUtf8 = "Rollback Residue"},
+        .File = {
+            .Format = Librova::Domain::EBookFormat::Epub,
+            .ManagedPath = outsidePath
+        }
+    });
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox.GetPath());
+    Librova::Jobs::CImportJobRunner runner(facade);
+
+    const auto result = runner.Run({
+        .SourcePaths = {sandbox.GetPath() / "first.fb2", sandbox.GetPath() / "second.fb2"},
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, {});
+
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
+    REQUIRE(result.Error.has_value());
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
+    REQUIRE(result.Snapshot.Message == "Import was cancelled. Some managed files could not be removed during rollback.");
+    REQUIRE(result.ImportResult.has_value());
+    REQUIRE(result.ImportResult->HasRollbackCleanupResidue);
+    REQUIRE(std::ranges::any_of(result.ImportResult->Summary.Warnings, [](const auto& warning) {
+        return warning.find("left managed artifact") != std::string::npos;
+    }));
+
+    std::filesystem::remove(outsidePath);
 }
 
 TEST_CASE("Import job runner reports partial success for ZIP import with failures", "[jobs][import]")

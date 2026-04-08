@@ -102,11 +102,15 @@ CImportJobRunner::CImportJobRunner(const Librova::Application::CLibraryImportFac
 std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
     const Librova::Application::SImportResult& importResult)
 {
+    const auto cancellationMessage = importResult.HasRollbackCleanupResidue
+        ? "Import was cancelled. Some managed files could not be removed during rollback."
+        : "Import was cancelled.";
+
     if (importResult.WasCancelled)
     {
         return Librova::Domain::SDomainError{
             .Code = Librova::Domain::EDomainErrorCode::Cancellation,
-            .Message = "Import was cancelled."
+            .Message = cancellationMessage
         };
     }
 
@@ -122,7 +126,7 @@ std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
         {
             return Librova::Domain::SDomainError{
                 .Code = Librova::Domain::EDomainErrorCode::Cancellation,
-                .Message = "Import was cancelled."
+                .Message = cancellationMessage
             };
         }
     }
@@ -146,7 +150,7 @@ std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
         case Librova::Importing::ESingleFileImportStatus::Cancelled:
             return Librova::Domain::SDomainError{
                 .Code = Librova::Domain::EDomainErrorCode::Cancellation,
-                .Message = "Import was cancelled."
+                .Message = cancellationMessage
             };
         case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
             return Librova::Domain::SDomainError{
