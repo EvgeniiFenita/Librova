@@ -840,27 +840,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
         try
         {
-            var resolvedPath = Path.IsPathFullyQualified(coverPath)
-                ? Path.GetFullPath(coverPath)
-                : string.IsNullOrWhiteSpace(_libraryRoot)
-                    ? null
-                    : Path.GetFullPath(Path.Combine(_libraryRoot, coverPath));
-
+            var resolvedPath = ResolveExistingCoverPathWithinLibraryRoot(coverPath, _libraryRoot);
             if (string.IsNullOrWhiteSpace(resolvedPath))
-            {
-                return null;
-            }
-
-            if (!IsWithinLibraryRoot(resolvedPath, _libraryRoot))
-            {
-                UiLogging.Warning(
-                    "Rejected cover path that does not resolve within the library root. Path={Path} LibraryRoot={LibraryRoot}",
-                    resolvedPath,
-                    _libraryRoot);
-                return null;
-            }
-
-            if (!File.Exists(resolvedPath))
             {
                 return null;
             }
@@ -873,19 +854,88 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         }
     }
 
-    private static bool IsWithinLibraryRoot(string resolvedPath, string libraryRoot)
+    private static string? ResolveExistingCoverPathWithinLibraryRoot(string coverPath, string libraryRoot)
     {
         if (string.IsNullOrWhiteSpace(libraryRoot))
         {
-            return false;
+            return null;
         }
 
-        var normalizedRoot = Path.GetFullPath(libraryRoot);
-        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
-            ? normalizedRoot
-            : normalizedRoot + Path.DirectorySeparatorChar;
+        var candidatePath = Path.IsPathFullyQualified(coverPath)
+            ? Path.GetFullPath(coverPath)
+            : Path.GetFullPath(Path.Combine(libraryRoot, coverPath));
+        if (!File.Exists(candidatePath))
+        {
+            return null;
+        }
 
-        return resolvedPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
+        var canonicalRoot = CanonicalizeExistingPath(libraryRoot);
+        var canonicalCandidate = CanonicalizeExistingPath(candidatePath);
+        if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
+        {
+            UiLogging.Warning(
+                "Rejected cover path that does not resolve within the library root. Path={Path} LibraryRoot={LibraryRoot}",
+                canonicalCandidate,
+                canonicalRoot);
+            return null;
+        }
+
+        return canonicalCandidate;
+    }
+
+    private static string CanonicalizeExistingPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var root = Path.GetPathRoot(fullPath);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            throw new IOException("Path does not contain a root.");
+        }
+
+        var relativePath = Path.GetRelativePath(root, fullPath);
+        var current = root;
+
+        if (string.Equals(relativePath, ".", StringComparison.Ordinal))
+        {
+            return Path.GetFullPath(current);
+        }
+
+        foreach (var segment in relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(current, segment);
+            current = ResolveExistingPathSegment(candidate);
+        }
+
+        return Path.GetFullPath(current);
+    }
+
+    private static string ResolveExistingPathSegment(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            var directory = new DirectoryInfo(path);
+            var resolved = directory.ResolveLinkTarget(returnFinalTarget: true);
+            return Path.GetFullPath(resolved?.FullName ?? directory.FullName);
+        }
+
+        if (File.Exists(path))
+        {
+            var file = new FileInfo(path);
+            var resolved = file.ResolveLinkTarget(returnFinalTarget: true);
+            return Path.GetFullPath(resolved?.FullName ?? file.FullName);
+        }
+
+        throw new IOException("Path segment does not exist.");
+    }
+
+    private static bool IsPathWithinRoot(string rootPath, string candidatePath)
+    {
+        var relativePath = Path.GetRelativePath(rootPath, candidatePath);
+        return string.Equals(relativePath, ".", StringComparison.Ordinal)
+            || (!relativePath.Equals("..", StringComparison.Ordinal)
+                && !relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal)
+                && !Path.IsPathRooted(relativePath));
     }
 
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)

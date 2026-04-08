@@ -60,6 +60,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#71` reject cover-image paths that escape the active library root through symlinks or junctions before the UI attempts to load them.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: cover loading now canonicalizes existing paths through reparse-point resolution before root comparison, and managed UI regression coverage rejects a junction-based escape from the active library root.
+
 - `#69` block drag-and-drop import while another import job is already running.
   - Status: `Closed`
   - Type: `Bug`

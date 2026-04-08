@@ -6,6 +6,7 @@ using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
+using System.Diagnostics;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -1012,6 +1013,38 @@ public sealed class ViewModelsTests
         finally
         {
             try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_RejectsCoverPathEscapingLibraryRootThroughJunction()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        var outsideRoot = Path.Combine(Path.GetTempPath(), "librova-ui-outside", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        Directory.CreateDirectory(outsideRoot);
+
+        var junctionPath = Path.Combine(sandboxRoot, "CoversLink");
+        var outsideCoverPath = Path.Combine(outsideRoot, "escaped-cover.png");
+
+        try
+        {
+            await File.WriteAllTextAsync(outsideCoverPath, "cover-data");
+            CreateDirectoryJunction(junctionPath, outsideRoot);
+
+            var service = new FixedCoverLibraryCatalogService(Path.Combine("CoversLink", "escaped-cover.png"));
+            var loader = new RecordingCoverImageLoader();
+            var viewModel = new LibraryBrowserViewModel(service, libraryRoot: sandboxRoot, coverImageLoader: loader);
+
+            await viewModel.RefreshAsync();
+
+            Assert.Empty(loader.LoadedPaths);
+        }
+        finally
+        {
+            try { Directory.Delete(junctionPath, false); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { Directory.Delete(sandboxRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { Directory.Delete(outsideRoot, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
     }
 
@@ -2968,6 +3001,28 @@ public sealed class ViewModelsTests
             importJobs: new FakeImportJobsService());
 
         return new ShellViewModel(session, converterProbe: probe);
+    }
+
+    private static void CreateDirectoryJunction(string junctionPath, string targetPath)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = $"/c mklink /J \"{junctionPath}\" \"{targetPath}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true
+        };
+
+        using var process = Process.Start(startInfo);
+        Assert.NotNull(process);
+        process!.WaitForExit();
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        Assert.True(
+            process.ExitCode == 0,
+            $"Failed to create junction. ExitCode={process.ExitCode} Output={output} Error={error}");
     }
 
     private sealed class NullLifetime : IAsyncDisposable

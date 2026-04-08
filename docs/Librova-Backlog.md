@@ -33,12 +33,6 @@ Last assigned id: `#75`
 
 ### Critical
 ### Major
-- `#71` reject cover-image paths that escape the active library root through symlinks or junctions before the UI attempts to load them.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `LibraryBrowserViewModel` currently guards cover paths with string-based root prefix checks that block `..` traversal but do not resolve symlink or junction escapes; switch to canonical path validation aligned with managed-path safety rules and add regression tests for escaped cover paths.
-
 - `#72` replace raw Win32 handle management in `CoreHostProcess` with `SafeHandle`-backed lifetime management and failure-path verification.
   - Status: `Open`
   - Type: `Bug`
