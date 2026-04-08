@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#92` decide and implement the real role of the `formats` table instead of keeping it as unused dual-write state.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: import writes to both `books` and `formats`, but read-side code ignores `formats`; either wire it into the domain model for real multi-format support or remove the dead write path before 1.0 hardens the schema further.
-
 - `#93` improve diagnostics for converter launch failures and managed cover-loading failures.
   - Status: `Open`
   - Type: `Bug`

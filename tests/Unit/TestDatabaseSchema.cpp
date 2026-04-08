@@ -6,7 +6,7 @@ TEST_CASE("Database schema exposes current version and migration steps", "[datab
 {
     const auto& migrations = Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements();
 
-    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 3);
+    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 4);
     REQUIRE(migrations.size() == 3);
     REQUIRE(migrations[0] == "PRAGMA foreign_keys = ON;");
     REQUIRE(migrations[1] == "PRAGMA journal_mode = WAL;");
@@ -21,7 +21,7 @@ TEST_CASE("Database schema script contains required MVP tables", "[database-sche
     REQUIRE(script.find("CREATE TABLE IF NOT EXISTS book_authors") != std::string_view::npos);
     REQUIRE(script.find("CREATE TABLE IF NOT EXISTS tags") != std::string_view::npos);
     REQUIRE(script.find("CREATE TABLE IF NOT EXISTS book_tags") != std::string_view::npos);
-    REQUIRE(script.find("CREATE TABLE IF NOT EXISTS formats") != std::string_view::npos);
+    REQUIRE(script.find("CREATE TABLE IF NOT EXISTS formats") == std::string_view::npos);
 }
 
 TEST_CASE("Database schema script contains search index and core indexes", "[database-schema]")

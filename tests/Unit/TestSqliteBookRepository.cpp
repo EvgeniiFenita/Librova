@@ -153,8 +153,7 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
 
         Librova::Sqlite::CSqliteStatement formatStatement(
             connection.GetNativeHandle(),
-            "SELECT COUNT(*) FROM formats WHERE book_id = ?;");
-        formatStatement.BindInt64(1, bookId.Value);
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'formats';");
         REQUIRE(formatStatement.Step());
         REQUIRE(formatStatement.GetColumnInt(0) == 0);
 

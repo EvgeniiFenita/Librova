@@ -116,6 +116,14 @@ void UpgradeToVersion3(const Librova::Sqlite::CSqliteConnection& connection)
     }
 }
 
+void UpgradeToVersion4(const Librova::Sqlite::CSqliteConnection& connection)
+{
+    if (HasTable(connection, "formats"))
+    {
+        connection.Execute("DROP TABLE formats;");
+    }
+}
+
 } // namespace
 
 void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
@@ -151,6 +159,11 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
     if (currentVersion < 3)
     {
         UpgradeToVersion3(connection);
+    }
+
+    if (currentVersion < 4)
+    {
+        UpgradeToVersion4(connection);
     }
 
     connection.Execute(std::format("PRAGMA user_version = {};", Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion()));

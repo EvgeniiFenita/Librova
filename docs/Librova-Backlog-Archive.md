@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#92` decide and implement the real role of the `formats` table instead of keeping it as unused dual-write state.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: removed the unused `formats` dual-write path before 1.0 by making `books` the only canonical file-metadata store, adding a schema `v4` migration that drops obsolete `formats`, and covering both the migration and repository behavior with native regressions.
+
 - `#91` make startup temp cleanup apply the same root-containment and reparse-point safety rules as managed file operations.
   - Status: `Closed`
   - Type: `Bug`

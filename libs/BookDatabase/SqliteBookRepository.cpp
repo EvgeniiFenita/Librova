@@ -188,23 +188,6 @@ void InsertTags(
     }
 }
 
-void InsertFormatRow(
-    const Librova::Sqlite::CSqliteConnection& connection,
-    const std::int64_t bookId,
-    const Librova::Domain::SBookFileInfo& fileInfo)
-{
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        "INSERT INTO formats (book_id, format, storage_encoding, managed_path, file_size_bytes, sha256_hex) VALUES (?, ?, ?, ?, ?, ?);");
-    statement.BindInt64(1, bookId);
-    statement.BindText(2, Librova::Domain::ToString(fileInfo.Format));
-    statement.BindText(3, Librova::Domain::ToString(fileInfo.StorageEncoding));
-    statement.BindText(4, Librova::Unicode::PathToUtf8(fileInfo.ManagedPath));
-    statement.BindInt64(5, static_cast<std::int64_t>(fileInfo.SizeBytes));
-    statement.BindText(6, fileInfo.Sha256Hex);
-    static_cast<void>(statement.Step());
-}
-
 std::vector<std::string> ReadAuthors(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
 {
     Librova::Sqlite::CSqliteStatement statement(
@@ -349,7 +332,6 @@ std::int64_t DoAddBook(
 
     InsertAuthors(connection, bookId, book.Metadata.AuthorsUtf8);
     InsertTags(connection, bookId, book.Metadata.TagsUtf8);
-    InsertFormatRow(connection, bookId, book.File);
     Librova::SearchIndex::CSearchIndexMaintenance::InsertBook(connection, bookId, book.Metadata);
 
     return bookId;

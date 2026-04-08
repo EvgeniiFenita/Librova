@@ -67,16 +67,6 @@ CREATE TABLE IF NOT EXISTS book_tags (
     FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS formats (
-    book_id INTEGER PRIMARY KEY,
-    format TEXT NOT NULL,
-    storage_encoding TEXT NOT NULL DEFAULT 'plain',
-    managed_path TEXT NOT NULL,
-    file_size_bytes INTEGER NOT NULL,
-    sha256_hex TEXT NOT NULL,
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-);
-
 CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
     title,
     authors,
@@ -107,7 +97,7 @@ const std::vector<std::string_view> GMigrationStatements{
 
 int CDatabaseSchema::GetCurrentVersion() noexcept
 {
-    return 3;
+    return 4;
 }
 
 const std::vector<std::string_view>& CDatabaseSchema::GetMigrationStatements()
