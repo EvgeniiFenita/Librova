@@ -200,8 +200,9 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
     REQUIRE(result.Entries[3].ArchivePath == std::filesystem::path("nested/archive.zip"));
     REQUIRE(result.Entries[3].Status == Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped);
 
-    REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "folder" / "first.fb2"));
-    REQUIRE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "second.fb2"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "folder" / "first.fb2"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "second.fb2"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted"));
 }
 
 TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted entries", "[zip-import]")
@@ -245,6 +246,8 @@ TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-imp
     REQUIRE(importer.Calls.size() == 1);
     REQUIRE(importer.Calls[0].SourcePath.filename() == "inside.fb2");
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "outside.fb2"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted" / "safe" / "inside.fb2"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted"));
 }
 
 TEST_CASE("ZIP import coordinator opens Unicode archive paths on Windows", "[zip-import]")

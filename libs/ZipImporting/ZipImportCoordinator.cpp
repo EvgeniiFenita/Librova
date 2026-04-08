@@ -269,6 +269,61 @@ void EnsureDirectory(const std::filesystem::path& path)
     }
 }
 
+void RemovePathNoThrow(const std::filesystem::path& path) noexcept
+{
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove(path, errorCode);
+}
+
+void RemoveEmptyDirectoriesUpToRootNoThrow(
+    const std::filesystem::path& rootPath,
+    std::filesystem::path currentPath) noexcept
+{
+    if (rootPath.empty() || currentPath.empty())
+    {
+        return;
+    }
+
+    const std::filesystem::path normalizedRootPath = rootPath.lexically_normal();
+
+    std::error_code errorCode;
+    while (!currentPath.empty() && currentPath.lexically_normal() != normalizedRootPath.parent_path())
+    {
+        std::filesystem::remove(currentPath, errorCode);
+        if (errorCode)
+        {
+            errorCode.clear();
+            break;
+        }
+
+        if (currentPath.lexically_normal() == normalizedRootPath)
+        {
+            break;
+        }
+
+        currentPath = currentPath.parent_path();
+    }
+}
+
+void CleanupExtractedEntryNoThrow(
+    const std::filesystem::path& workingDirectory,
+    const std::filesystem::path& extractedPath) noexcept
+{
+    if (extractedPath.empty())
+    {
+        return;
+    }
+
+    const std::filesystem::path extractedRoot = workingDirectory / "extracted";
+    RemovePathNoThrow(extractedPath);
+    RemoveEmptyDirectoriesUpToRootNoThrow(extractedRoot, extractedPath.parent_path());
+}
+
 std::filesystem::path ExtractEntryToWorkspace(
     const CZipArchive& archive,
     const zip_uint64_t index,
@@ -538,15 +593,30 @@ SZipImportResult CZipImportCoordinator::Run(
 
         const std::filesystem::path extractedPath =
             ExtractEntryToWorkspace(archive, index, entryName, request.WorkingDirectory);
+        auto cleanupExtractedPath = [&]() noexcept
+        {
+            CleanupExtractedEntryNoThrow(request.WorkingDirectory, extractedPath);
+        };
         CScopedStructuredProgressSink entryProgressSink(progressSink, totalEntries, processedEntries, 1);
         entryProgressSink.ReportValue(5, "Importing ZIP entry");
 
-        const auto singleFileResult = m_singleFileImporter.Run({
-            .SourcePath = extractedPath,
-            .WorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem(),
-            .AllowProbableDuplicates = request.AllowProbableDuplicates,
-            .ForceEpubConversion = request.ForceEpubConversion
-        }, entryProgressSink, stopToken);
+        const auto singleFileResult = [&]() {
+            try
+            {
+                return m_singleFileImporter.Run({
+                    .SourcePath = extractedPath,
+                    .WorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem(),
+                    .AllowProbableDuplicates = request.AllowProbableDuplicates,
+                    .ForceEpubConversion = request.ForceEpubConversion
+                }, entryProgressSink, stopToken);
+            }
+            catch (...)
+            {
+                cleanupExtractedPath();
+                throw;
+            }
+        }();
+        cleanupExtractedPath();
 
         result.Entries.push_back({
             .ArchivePath = entryPath,

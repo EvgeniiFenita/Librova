@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#87` clean up extracted ZIP import payloads after each import job instead of keeping them for the whole host session.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: ZIP imports leave extracted entry copies under the working directory even after success, failure, or cancellation; extracted artifacts must be treated as temporary staging data and removed deterministically.
-
 - `#88` add explicit disposal and lifetime cancellation to `LibraryBrowserViewModel` background refresh work.
   - Status: `Open`
   - Type: `Bug`

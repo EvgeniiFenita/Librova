@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#87` clean up extracted ZIP import payloads after each import job instead of keeping them for the whole host session.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: ZIP entry payloads are now deleted immediately after each per-entry import attempt, with regressions proving `work/extracted` does not retain extracted files after ZIP jobs finish.
+
 - `#77` fix the remaining April 8 review findings across rollback, delete status messaging, converter-probe lifecycle, and cover helper safety.
   - Status: `Closed`
   - Type: `Bug`
