@@ -320,7 +320,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     std::filesystem::remove(databasePath);
 }
 
-TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and е ё equivalence", "[book-database]")
+TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo equivalence", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic.db";
     std::filesystem::remove(databasePath);

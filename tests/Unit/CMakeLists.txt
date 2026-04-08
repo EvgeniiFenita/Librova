@@ -2,6 +2,7 @@ include(CTest)
 
 if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
+    include(Catch)
 
     add_executable(LibrovaCoreTests
         TestHashing.cpp
@@ -108,5 +109,9 @@ if(BUILD_TESTING)
         target_compile_options(LibrovaCoreTests PRIVATE /FS)
     endif()
 
-    add_test(NAME LibrovaCoreTests COMMAND LibrovaCoreTests)
+    catch_discover_tests(
+        LibrovaCoreTests
+        DISCOVERY_MODE POST_BUILD
+        DISCOVERY_TIMEOUT 60
+    )
 endif()
