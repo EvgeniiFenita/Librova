@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#70` harden import cancellation rollback so partial rollback failures cannot leave the library in a half-removed state.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: cancellation rollback now removes catalog rows before best-effort file cleanup, preserves fully intact books when repository removal fails, and adds a regression test for repository failure during rollback.
+
 - `#44` store managed book and cover paths as stable library-relative values instead of absolute filesystem paths.
   - Status: `Closed`
   - Type: `Bug`

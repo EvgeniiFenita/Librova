@@ -32,11 +32,6 @@ Last assigned id: `#75`
 ## 3. Open Backlog
 
 ### Critical
-- `#70` harden import cancellation rollback so partial rollback failures cannot leave the library in a half-removed state.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `LibraryImportFacade` currently removes managed files first and then deletes catalog rows during cancellation rollback; make rollback exception-safe so secondary repository failures cannot leave books partially removed after cancel, and add regression coverage for repository failure during rollback.
 ### Major
 - `#71` reject cover-image paths that escape the active library root through symlinks or junctions before the UI attempts to load them.
   - Status: `Open`

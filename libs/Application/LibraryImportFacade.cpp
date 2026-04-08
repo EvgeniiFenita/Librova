@@ -182,6 +182,21 @@ void RemoveManagedPathNoThrow(
     }
 }
 
+void LogRollbackFailureIfInitialized(
+    const Librova::Domain::SBookId bookId,
+    const std::exception& error)
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    Librova::Logging::Error(
+        "Import cancellation rollback failed for book {}. Error='{}'.",
+        bookId.Value,
+        error.what());
+}
+
 } // namespace
 
 namespace Librova::Application {
@@ -203,16 +218,36 @@ bool CLibraryImportFacade::IsZipPath(const std::filesystem::path& path)
     return ToLower(path.extension().string()) == ".zip";
 }
 
-void CLibraryImportFacade::RollbackImportedBooks(const std::vector<Librova::Domain::SBookId>& importedBookIds) const
+CLibraryImportFacade::SRollbackResult CLibraryImportFacade::RollbackImportedBooks(
+    const std::vector<Librova::Domain::SBookId>& importedBookIds) const
 {
+    SRollbackResult rollbackResult;
+
     if (m_bookRepository == nullptr || m_libraryRoot.empty())
     {
-        return;
+        rollbackResult.RemainingBookIds = importedBookIds;
+        return rollbackResult;
     }
 
     for (auto iterator = importedBookIds.rbegin(); iterator != importedBookIds.rend(); ++iterator)
     {
         const auto book = m_bookRepository->GetById(*iterator);
+        try
+        {
+            m_bookRepository->Remove(*iterator);
+        }
+        catch (const std::exception& error)
+        {
+            rollbackResult.RemainingBookIds.push_back(*iterator);
+            rollbackResult.Warnings.push_back(
+                "Cancellation rollback left book "
+                + std::to_string(iterator->Value)
+                + " in the library because catalog removal failed: "
+                + error.what());
+            LogRollbackFailureIfInitialized(*iterator, error);
+            continue;
+        }
+
         if (book.has_value())
         {
             if (book->CoverPath.has_value())
@@ -225,16 +260,26 @@ void CLibraryImportFacade::RollbackImportedBooks(const std::vector<Librova::Doma
                 RemoveManagedPathNoThrow(m_libraryRoot, book->File.ManagedPath);
             }
         }
-
-        m_bookRepository->Remove(*iterator);
     }
 
     if (Librova::Logging::CLogging::IsInitialized())
     {
-        Librova::Logging::Warn(
-            "Rolled back {} previously imported book(s) after cancellation.",
-            importedBookIds.size());
+        if (rollbackResult.RemainingBookIds.empty())
+        {
+            Librova::Logging::Warn(
+                "Rolled back {} previously imported book(s) after cancellation.",
+                importedBookIds.size());
+        }
+        else
+        {
+            Librova::Logging::Warn(
+                "Cancellation rollback left {} of {} imported book(s) in the library after catalog-removal failures.",
+                rollbackResult.RemainingBookIds.size(),
+                importedBookIds.size());
+        }
     }
+
+    return rollbackResult;
 }
 
 namespace {
@@ -821,9 +866,10 @@ SImportResult CLibraryImportFacade::Run(
     result.WasCancelled = result.WasCancelled || stopToken.stop_requested() || progressSink.IsCancellationRequested();
     if (result.WasCancelled && !result.ImportedBookIds.empty())
     {
-        RollbackImportedBooks(result.ImportedBookIds);
-        result.ImportedBookIds.clear();
-        result.Summary.ImportedEntries = 0;
+        const auto rollbackResult = RollbackImportedBooks(result.ImportedBookIds);
+        MergeWarnings(result.Summary.Warnings, rollbackResult.Warnings);
+        result.ImportedBookIds = rollbackResult.RemainingBookIds;
+        result.Summary.ImportedEntries = result.ImportedBookIds.size();
     }
 
     return result;

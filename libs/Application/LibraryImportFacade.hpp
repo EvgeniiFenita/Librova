@@ -78,8 +78,15 @@ public:
         std::stop_token stopToken) const;
 
 private:
+    struct SRollbackResult
+    {
+        std::vector<Librova::Domain::SBookId> RemainingBookIds;
+        std::vector<std::string> Warnings;
+    };
+
     [[nodiscard]] static bool IsZipPath(const std::filesystem::path& path);
-    void RollbackImportedBooks(const std::vector<Librova::Domain::SBookId>& importedBookIds) const;
+    [[nodiscard]] SRollbackResult RollbackImportedBooks(
+        const std::vector<Librova::Domain::SBookId>& importedBookIds) const;
 
     const Librova::Importing::ISingleFileImporter& m_singleFileImporter;
     const Librova::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
