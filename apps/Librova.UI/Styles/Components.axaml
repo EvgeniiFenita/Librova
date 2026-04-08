@@ -286,6 +286,62 @@
        Selector uses the PARENT button's Active class. -->
 
   <!-- ════════════════════════════════════════════
+       OPTION CARDS  (binary / small-set mode selector)
+       Two equal cards side-by-side; the active one gets an
+       accent border + accent-tint background.
+       ════════════════════════════════════════════ -->
+
+  <Style Selector="Button.OptionCard">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Button.OptionCard /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard TextBlock.OptionCardTitle">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.OptionCard.Active">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard.Active /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard.Active:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard.Active PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.OptionCard.Active TextBlock.OptionCardTitle">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.OptionCard:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="Button.OptionCard:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+  </Style>
+
+  <!-- ════════════════════════════════════════════
        TEXT INPUTS
        ════════════════════════════════════════════ -->
 

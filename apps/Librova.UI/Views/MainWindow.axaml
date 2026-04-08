@@ -108,24 +108,39 @@
               <StackPanel Spacing="14">
                 <TextBlock Classes="SectionTitle"
                            Text="Library Root Folder" />
-                <StackPanel Spacing="10"
-                            IsVisible="{Binding Setup.ShowLibraryOpenModeSelector}">
-                  <TextBlock Classes="BodyMuted"
-                             Text="Choose whether to create a new managed library or open an existing one."
-                             TextWrapping="Wrap" />
-                  <Grid ColumnDefinitions="*,*"
-                        ColumnSpacing="10">
-                    <Button Classes="NavItem"
-                            Classes.Active="{Binding Setup.IsCreateLibraryModeSelected}"
-                            Command="{Binding Setup.SelectCreateLibraryModeCommand}"
-                            Content="Create Library" />
-                    <Button Grid.Column="1"
-                            Classes="NavItem"
-                            Classes.Active="{Binding Setup.IsOpenLibraryModeSelected}"
-                            Command="{Binding Setup.SelectOpenLibraryModeCommand}"
-                            Content="Open Library" />
-                  </Grid>
-                </StackPanel>
+                <Grid ColumnDefinitions="*,*"
+                      ColumnSpacing="10"
+                      IsVisible="{Binding Setup.ShowLibraryOpenModeSelector}">
+                  <Button Classes="OptionCard"
+                          Classes.Active="{Binding Setup.IsCreateLibraryModeSelected}"
+                          Command="{Binding Setup.SelectCreateLibraryModeCommand}">
+                    <StackPanel Spacing="10">
+                      <PathIcon Data="{StaticResource IconAddFolder}"
+                                Width="22"
+                                Height="22" />
+                      <TextBlock Classes="OptionCardTitle"
+                                 Text="Create New" />
+                      <TextBlock Classes="Caption"
+                                 Text="Start a fresh library in a new or empty folder."
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                  <Button Grid.Column="1"
+                          Classes="OptionCard"
+                          Classes.Active="{Binding Setup.IsOpenLibraryModeSelected}"
+                          Command="{Binding Setup.SelectOpenLibraryModeCommand}">
+                    <StackPanel Spacing="10">
+                      <PathIcon Data="{StaticResource IconFolderOpen}"
+                                Width="22"
+                                Height="22" />
+                      <TextBlock Classes="OptionCardTitle"
+                                 Text="Open Existing" />
+                      <TextBlock Classes="Caption"
+                                 Text="Point to a folder that already contains a Librova library."
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
                 <TextBlock Classes="BodyMuted"
                            Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
                            TextWrapping="Wrap" />
@@ -147,7 +162,7 @@
                            TextWrapping="Wrap" />
                 <TextBlock Classes="Caption"
                            IsVisible="{Binding Setup.ShowHelperText}"
-                           Text="Choose an absolute directory path. The folder may be new; Librova will create its managed structure on first launch."
+                           Text="{Binding Setup.HelperText}"
                            TextWrapping="Wrap" />
                 <Button Classes="PrimaryAction"
                         Width="180"
