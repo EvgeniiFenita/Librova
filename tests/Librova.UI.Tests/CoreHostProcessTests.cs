@@ -132,6 +132,21 @@ public sealed class CoreHostProcessTests
         Assert.Contains("Library root must be on an available drive.", message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task DisposeAsync_ReleasesInjectedKernelHandlesWhenProcessWasNeverAssigned()
+    {
+        var process = new CoreHostProcess();
+        var jobHandle = new TestSafeKernelHandle(new IntPtr(1));
+        var shutdownEventHandle = new TestSafeKernelHandle(new IntPtr(2));
+        process.SetLifetimeJobHandleForTests(jobHandle);
+        process.SetShutdownEventHandleForTests(shutdownEventHandle);
+
+        await process.DisposeAsync();
+
+        Assert.Equal(1, jobHandle.ReleaseCount);
+        Assert.Equal(1, shutdownEventHandle.ReleaseCount);
+    }
+
     private static async Task<string> ReadAllTextWhenAvailableAsync(string path, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -182,4 +197,21 @@ public sealed class CoreHostProcessTests
 
     [DllImport("kernel32.dll")]
     private static extern IntPtr LocalFree(IntPtr handle);
+
+    private sealed class TestSafeKernelHandle : SafeKernelHandle
+    {
+        public TestSafeKernelHandle(IntPtr handle)
+        {
+            SetHandle(handle);
+        }
+
+        public int ReleaseCount { get; private set; }
+
+        protected override bool ReleaseHandle()
+        {
+            ReleaseCount++;
+            handle = IntPtr.Zero;
+            return true;
+        }
+    }
 }

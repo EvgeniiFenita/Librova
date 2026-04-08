@@ -60,6 +60,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#72` replace raw Win32 handle management in `CoreHostProcess` with `SafeHandle`-backed lifetime management and failure-path verification.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `CoreHostProcess` now owns shutdown-event and job-object handles through `SafeHandle`, releases both handles even when no process was assigned, and adds a regression test for the no-process cleanup path.
+
 - `#71` reject cover-image paths that escape the active library root through symlinks or junctions before the UI attempts to load them.
   - Status: `Closed`
   - Type: `Bug`

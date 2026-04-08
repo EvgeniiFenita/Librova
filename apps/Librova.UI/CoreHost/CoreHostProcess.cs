@@ -6,14 +6,15 @@ using System.Threading.Tasks;
 using Librova.UI.Logging;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
+using Microsoft.Win32.SafeHandles;
 
 namespace Librova.UI.CoreHost;
 
 internal sealed class CoreHostProcess : IAsyncDisposable
 {
     private Process? _process;
-    private IntPtr _jobHandle;
-    private IntPtr _shutdownEventHandle;
+    private SafeKernelHandle? _jobHandle;
+    private SafeKernelHandle? _shutdownEventHandle;
 
     public async Task StartAsync(CoreHostLaunchOptions options, CancellationToken cancellationToken)
     {
@@ -85,6 +86,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         if (_process is null)
         {
             ReleaseLifetimeJob();
+            ReleaseShutdownEvent();
             return;
         }
 
@@ -262,9 +264,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             return;
         }
 
-        var eventHandle = CreateEvent(IntPtr.Zero, true, false, options.ShutdownEventName);
-        if (eventHandle == IntPtr.Zero)
+        var eventHandle = SafeKernelHandle.CreateOwned(CreateEvent(IntPtr.Zero, true, false, options.ShutdownEventName));
+        if (eventHandle.IsInvalid)
         {
+            eventHandle.Dispose();
             throw new InvalidOperationException(
                 $"Failed to create shutdown event for core host lifetime management. Error={Marshal.GetLastWin32Error()}.");
         }
@@ -274,7 +277,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     private async Task<bool> TryRequestGracefulShutdownAsync(Process process)
     {
-        if (_shutdownEventHandle == IntPtr.Zero)
+        if (_shutdownEventHandle is null || _shutdownEventHandle.IsInvalid)
         {
             return false;
         }
@@ -306,14 +309,15 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     private void AttachProcessToLifetimeJob(Process process)
     {
-        if (!OperatingSystem.IsWindows() || _jobHandle != IntPtr.Zero)
+        if (!OperatingSystem.IsWindows() || _jobHandle is not null)
         {
             return;
         }
 
-        var jobHandle = CreateJobObject(IntPtr.Zero, null);
-        if (jobHandle == IntPtr.Zero)
+        var jobHandle = SafeKernelHandle.CreateOwned(CreateJobObject(IntPtr.Zero, null));
+        if (jobHandle.IsInvalid)
         {
+            jobHandle.Dispose();
             UiLogging.Warning("Failed to create Windows job object for core host lifetime management. Error={ErrorCode}", Marshal.GetLastWin32Error());
             return;
         }
@@ -334,14 +338,14 @@ internal sealed class CoreHostProcess : IAsyncDisposable
             if (!SetInformationJobObject(jobHandle, JobObjectExtendedLimitInformation, pointer, (uint)length))
             {
                 UiLogging.Warning("Failed to configure Windows job object for core host lifetime management. Error={ErrorCode}", Marshal.GetLastWin32Error());
-                CloseHandle(jobHandle);
+                jobHandle.Dispose();
                 return;
             }
 
             if (!AssignProcessToJobObject(jobHandle, process.Handle))
             {
                 UiLogging.Warning("Failed to assign core host to Windows job object. ProcessId={ProcessId} Error={ErrorCode}", process.Id, Marshal.GetLastWin32Error());
-                CloseHandle(jobHandle);
+                jobHandle.Dispose();
                 return;
             }
 
@@ -358,25 +362,29 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     private void ReleaseLifetimeJob()
     {
-        if (_jobHandle == IntPtr.Zero)
+        if (_jobHandle is null)
         {
             return;
         }
 
-        CloseHandle(_jobHandle);
-        _jobHandle = IntPtr.Zero;
+        _jobHandle.Dispose();
+        _jobHandle = null;
     }
 
     private void ReleaseShutdownEvent()
     {
-        if (_shutdownEventHandle == IntPtr.Zero)
+        if (_shutdownEventHandle is null)
         {
             return;
         }
 
-        CloseHandle(_shutdownEventHandle);
-        _shutdownEventHandle = IntPtr.Zero;
+        _shutdownEventHandle.Dispose();
+        _shutdownEventHandle = null;
     }
+
+    internal void SetLifetimeJobHandleForTests(SafeKernelHandle handle) => _jobHandle = handle;
+
+    internal void SetShutdownEventHandleForTests(SafeKernelHandle handle) => _shutdownEventHandle = handle;
 
     private const uint JobObjectExtendedLimitInformation = 9;
     private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
@@ -422,15 +430,11 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetInformationJobObject(IntPtr job, uint infoType, IntPtr jobObjectInfo, uint jobObjectInfoLength);
+    private static extern bool SetInformationJobObject(SafeHandle job, uint infoType, IntPtr jobObjectInfo, uint jobObjectInfoLength);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CloseHandle(IntPtr handle);
+    private static extern bool AssignProcessToJobObject(SafeHandle job, IntPtr process);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -441,5 +445,26 @@ internal sealed class CoreHostProcess : IAsyncDisposable
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetEvent(IntPtr handle);
+    private static extern bool SetEvent(SafeHandle handle);
+}
+
+internal class SafeKernelHandle : SafeHandleZeroOrMinusOneIsInvalid
+{
+    protected SafeKernelHandle()
+        : base(ownsHandle: true)
+    {
+    }
+
+    internal static SafeKernelHandle CreateOwned(IntPtr handle)
+    {
+        var ownedHandle = new SafeKernelHandle();
+        ownedHandle.SetHandle(handle);
+        return ownedHandle;
+    }
+
+    protected override bool ReleaseHandle() => CloseHandle(handle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
 }

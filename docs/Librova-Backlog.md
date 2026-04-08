@@ -33,12 +33,6 @@ Last assigned id: `#75`
 
 ### Critical
 ### Major
-- `#72` replace raw Win32 handle management in `CoreHostProcess` with `SafeHandle`-backed lifetime management and failure-path verification.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the UI host launcher currently owns shutdown-event and job-object handles through raw `IntPtr` fields with manual `CloseHandle` cleanup; move this slice to `SafeHandle`-style ownership so startup and shutdown failure paths cannot leak or double-close native resources, and add tests for the cleanup paths.
-
 - `#73` reduce orchestration sprawl in the shell and library browser view-models by extracting non-UI responsibilities into focused helpers without changing behavior.
   - Status: `Open`
   - Type: `Feature`
