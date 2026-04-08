@@ -12,7 +12,7 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Milestone: `1.0`
-  - Note: portable library-root preferences now ignore relative paths that escape the packaged app directory, with regressions for both preference building and startup-time resolution.
+  - Note: portable library-root preferences now ignore paths that escape the packaged app directory and no longer fall back to out-of-root saved absolute preferences in portable mode, with regressions for both preference building and startup-time resolution.
 
 - `#85` make author and title sorting Unicode-aware for Cyrillic and other non-ASCII text.
   - Status: `Closed`
@@ -142,7 +142,7 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Milestone: `1.0`
-  - Note: read-side author sorting now uses a single aggregated join instead of a correlated subquery, and library statistics reuse cached cover-size totals until the database or `Covers` directory changes, with native regression coverage for cache invalidation.
+  - Note: read-side author sorting now uses a single aggregated join instead of a correlated subquery, and library statistics reuse cached cover-size totals until the database or observed cover snapshot changes, with native regression coverage for cache invalidation.
 
 - `#89` harden managed storage commit rollback so partial file moves are recoverable and diagnosable after restore failures.
   - Status: `Closed`

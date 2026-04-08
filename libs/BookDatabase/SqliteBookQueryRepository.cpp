@@ -1,5 +1,6 @@
 #include "BookDatabase/SqliteBookQueryRepository.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <format>
 #include <optional>
@@ -648,16 +649,26 @@ std::uint64_t GetFileSizeOrZero(const std::filesystem::path& path)
     return static_cast<std::uint64_t>(size);
 }
 
-std::uint64_t GetDirectoryFileSizeRecursiveOrZero(const std::filesystem::path& root)
+struct SCoverDirectorySnapshot
 {
-    std::error_code errorCode;
+    std::uint64_t FileCount = 0;
+    std::uint64_t TotalSizeBytes = 0;
+    std::filesystem::file_time_type LatestWriteTime = std::filesystem::file_time_type::min();
+};
 
+std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path);
+
+[[nodiscard]] SCoverDirectorySnapshot GetCoverDirectorySnapshotOrEmpty(const std::filesystem::path& root)
+{
+    SCoverDirectorySnapshot snapshot{};
+    snapshot.LatestWriteTime = GetLastWriteTimeOrMin(root);
+
+    std::error_code errorCode;
     if (!std::filesystem::exists(root, errorCode))
     {
-        return 0;
+        return snapshot;
     }
 
-    std::uint64_t totalSize = 0;
     std::filesystem::recursive_directory_iterator iterator(
         root,
         std::filesystem::directory_options::skip_permission_denied,
@@ -666,25 +677,23 @@ std::uint64_t GetDirectoryFileSizeRecursiveOrZero(const std::filesystem::path& r
 
     if (errorCode)
     {
-        return 0;
+        return snapshot;
     }
 
     while (iterator != end)
     {
         if (iterator->is_regular_file(errorCode))
         {
-            totalSize += GetFileSizeOrZero(iterator->path());
+            ++snapshot.FileCount;
+            snapshot.TotalSizeBytes += GetFileSizeOrZero(iterator->path());
+            snapshot.LatestWriteTime = std::max(snapshot.LatestWriteTime, GetLastWriteTimeOrMin(iterator->path()));
         }
 
         errorCode.clear();
         iterator.increment(errorCode);
-        if (errorCode)
-        {
-            break;
-        }
     }
 
-    return totalSize;
+    return snapshot;
 }
 
 std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path)
@@ -881,11 +890,13 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
     const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
     const std::filesystem::path coversRoot = libraryRoot / "Covers";
     const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
-    const auto coversLastWriteTime = GetLastWriteTimeOrMin(coversRoot);
+    const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(coversRoot);
 
     if (m_statisticsCache.has_value()
         && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
-        && m_statisticsCache->CoversLastWriteTime == coversLastWriteTime)
+        && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
+        && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
+        && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
     {
         return m_statisticsCache->Statistics;
     }
@@ -901,7 +912,7 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
     }
 
     const std::uint64_t totalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1));
-    const std::uint64_t totalCoverSizeBytes = GetDirectoryFileSizeRecursiveOrZero(libraryRoot / "Covers");
+    const std::uint64_t totalCoverSizeBytes = coverDirectorySnapshot.TotalSizeBytes;
     const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
 
     const Librova::Domain::IBookQueryRepository::SLibraryStatistics statistics{
@@ -912,7 +923,11 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
 
     m_statisticsCache = SStatisticsCache{
         .DatabaseLastWriteTime = databaseLastWriteTime,
-        .CoversLastWriteTime = coversLastWriteTime,
+        .CoverDirectorySnapshot = {
+            .FileCount = coverDirectorySnapshot.FileCount,
+            .TotalSizeBytes = coverDirectorySnapshot.TotalSizeBytes,
+            .LatestWriteTime = coverDirectorySnapshot.LatestWriteTime
+        },
         .Statistics = statistics
     };
 

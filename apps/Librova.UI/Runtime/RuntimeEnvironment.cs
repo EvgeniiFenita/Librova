@@ -73,19 +73,32 @@ internal static class RuntimeEnvironment
         string? baseDirectory = null,
         string? hostExecutableOverride = null)
     {
-        if (IsPortableMode(baseDirectory, hostExecutableOverride)
-            && !string.IsNullOrWhiteSpace(portablePreferredLibraryRoot))
+        if (IsPortableMode(baseDirectory, hostExecutableOverride))
         {
-            if (Path.IsPathFullyQualified(portablePreferredLibraryRoot))
+            var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
+
+            if (!string.IsNullOrWhiteSpace(portablePreferredLibraryRoot))
             {
-                return preferredLibraryRoot;
+                if (Path.IsPathFullyQualified(portablePreferredLibraryRoot))
+                {
+                    return null;
+                }
+
+                var resolvedPortableRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
+                return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPortableRoot)
+                    ? resolvedPortableRoot
+                    : null;
             }
 
-            var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
-            var resolvedPortableRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
-            return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPortableRoot)
-                ? resolvedPortableRoot
-                : preferredLibraryRoot;
+            if (string.IsNullOrWhiteSpace(preferredLibraryRoot) || !Path.IsPathFullyQualified(preferredLibraryRoot))
+            {
+                return null;
+            }
+
+            var resolvedPreferredRoot = Path.GetFullPath(preferredLibraryRoot);
+            return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPreferredRoot)
+                ? resolvedPreferredRoot
+                : null;
         }
 
         return preferredLibraryRoot;

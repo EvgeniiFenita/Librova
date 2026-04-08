@@ -20,10 +20,17 @@ public:
     [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override;
 
 private:
+    struct SCoverDirectorySnapshot
+    {
+        std::uint64_t FileCount = 0;
+        std::uint64_t TotalSizeBytes = 0;
+        std::filesystem::file_time_type LatestWriteTime = std::filesystem::file_time_type::min();
+    };
+
     struct SStatisticsCache
     {
         std::filesystem::file_time_type DatabaseLastWriteTime;
-        std::filesystem::file_time_type CoversLastWriteTime;
+        SCoverDirectorySnapshot CoverDirectorySnapshot;
         Librova::Domain::IBookQueryRepository::SLibraryStatistics Statistics;
     };
 

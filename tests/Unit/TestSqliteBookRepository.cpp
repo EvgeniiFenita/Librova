@@ -626,7 +626,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     std::filesystem::remove(databasePath);
 }
 
-TEST_CASE("Sqlite book query repository refreshes cached library statistics when covers change", "[book-database]")
+TEST_CASE("Sqlite book query repository refreshes cached library statistics when a cover file is overwritten in place", "[book-database]")
 {
     const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-book-query-statistics-cache";
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
@@ -659,18 +659,19 @@ TEST_CASE("Sqlite book query repository refreshes cached library statistics when
     const auto coverPath = libraryRoot / "Covers/0000000616.png";
     std::filesystem::create_directories(coverPath.parent_path());
     std::ofstream(coverPath, std::ios::binary) << "cover-bytes";
-    const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(coverPath));
-    const auto initialCoverDirectoryWriteTime = std::filesystem::last_write_time(coverPath.parent_path());
-    std::filesystem::last_write_time(coverPath.parent_path(), initialCoverDirectoryWriteTime + std::chrono::seconds(1));
+    const auto initialCoverWriteTime = std::filesystem::last_write_time(coverPath);
+    std::filesystem::last_write_time(coverPath, initialCoverWriteTime + std::chrono::seconds(1));
+    const auto firstCoverSize = static_cast<std::uint64_t>(std::filesystem::file_size(coverPath));
 
     const auto statisticsWithCover = queryRepository.GetLibraryStatistics();
-    REQUIRE(statisticsWithCover.TotalLibrarySizeBytes == 616 + coverSize + databaseSize);
+    REQUIRE(statisticsWithCover.TotalLibrarySizeBytes == 616 + firstCoverSize + databaseSize);
 
-    std::filesystem::remove(coverPath);
-    std::filesystem::last_write_time(coverPath.parent_path(), initialCoverDirectoryWriteTime + std::chrono::seconds(2));
+    std::ofstream(coverPath, std::ios::binary | std::ios::trunc) << "cover-bytes-overwritten";
+    std::filesystem::last_write_time(coverPath, initialCoverWriteTime + std::chrono::seconds(2));
+    const auto overwrittenCoverSize = static_cast<std::uint64_t>(std::filesystem::file_size(coverPath));
 
-    const auto statisticsWithoutCover = queryRepository.GetLibraryStatistics();
-    REQUIRE(statisticsWithoutCover.TotalLibrarySizeBytes == 616 + databaseSize);
+    const auto statisticsWithOverwrittenCover = queryRepository.GetLibraryStatistics();
+    REQUIRE(statisticsWithOverwrittenCover.TotalLibrarySizeBytes == 616 + overwrittenCoverSize + databaseSize);
 
     std::filesystem::remove_all(libraryRoot);
 }
