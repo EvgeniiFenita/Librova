@@ -29,9 +29,10 @@ public:
     [[nodiscard]] std::vector<std::byte> ReadMessage(std::chrono::milliseconds timeout) const;
 
 private:
-    explicit CNamedPipeConnection(void* nativeHandle) noexcept;
+    CNamedPipeConnection(void* nativeHandle, bool supportsOverlappedIo) noexcept;
 
     TPipeHandle m_handle;
+    bool m_supportsOverlappedIo = false;
 
     friend class CNamedPipeServer;
     friend CNamedPipeConnection ConnectToNamedPipe(

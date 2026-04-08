@@ -141,3 +141,42 @@ TEST_CASE("Named pipe channel rejects oversized framed payload before allocation
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
 }
+
+TEST_CASE("Named pipe channel timeout read cancels pending overlapped wait instead of waiting for a late response", "[pipe]")
+{
+    const auto pipePath = BuildTestPipePath();
+    std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
+
+    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
+        try
+        {
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
+            auto connection = server.WaitForClient();
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            connection.WriteMessage({std::byte{0x42}});
+        }
+        catch (...)
+        {
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
+        }
+    });
+
+    readySignal.Wait();
+
+    auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
+    const auto startTime = std::chrono::steady_clock::now();
+
+    REQUIRE_THROWS_WITH(
+        client.ReadMessage(std::chrono::milliseconds(50)),
+        Catch::Matchers::ContainsSubstring("Timed out waiting for named pipe data."));
+
+    const auto elapsed = std::chrono::steady_clock::now() - startTime;
+    REQUIRE(elapsed < std::chrono::milliseconds(200));
+
+    serverThread.join();
+    REQUIRE(serverFailure == nullptr);
+}

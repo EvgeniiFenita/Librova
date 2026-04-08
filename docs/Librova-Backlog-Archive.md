@@ -420,6 +420,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Low
 
+- `#97` replace named-pipe readable-byte busy polling with a more explicit wait strategy and cancellation-aware timeout handling.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: client-side timed named-pipe reads now use overlapped `ReadFile` with explicit event waits and `CancelIoEx` on timeout instead of `PeekNamedPipe` busy polling, with a native regression proving late responses do not keep timed-out calls hanging.
+
 - `#99` stop recreating default UI state and preferences stores on every file-path property read in `ShellViewModel`.
   - Status: `Closed`
   - Type: `Bug`

@@ -10,9 +10,9 @@
 #include <bit>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <thread>
 
 namespace Librova::PipeTransport {
 namespace {
@@ -102,6 +102,34 @@ void ClosePipeHandle(void* nativeHandle) noexcept
     }
 }
 
+class CEventHandle final
+{
+public:
+    explicit CEventHandle(HANDLE handle = nullptr) noexcept
+        : m_handle(handle)
+    {
+    }
+
+    ~CEventHandle()
+    {
+        if (m_handle != nullptr)
+        {
+            CloseHandle(m_handle);
+        }
+    }
+
+    CEventHandle(const CEventHandle&) = delete;
+    CEventHandle& operator=(const CEventHandle&) = delete;
+
+    [[nodiscard]] HANDLE Get() const noexcept
+    {
+        return m_handle;
+    }
+
+private:
+    HANDLE m_handle = nullptr;
+};
+
 [[nodiscard]] std::chrono::milliseconds GetRemainingTimeout(
     const std::chrono::steady_clock::time_point startTime,
     const std::chrono::milliseconds timeout)
@@ -117,36 +145,99 @@ void ClosePipeHandle(void* nativeHandle) noexcept
     return timeout - elapsed;
 }
 
-void WaitForReadableBytes(const HANDLE handle, const std::size_t requiredBytes, const std::chrono::milliseconds timeout)
+template <typename TOperation>
+void RunExactOverlapped(
+    const HANDLE handle,
+    std::byte* buffer,
+    const std::size_t byteCount,
+    const std::chrono::milliseconds timeout,
+    const bool zeroTransferClosesPipe,
+    const std::string_view timeoutMessage,
+    const std::string_view zeroTransferMessage,
+    const std::string_view failurePrefix,
+    TOperation&& operation)
 {
-    const auto startTime = std::chrono::steady_clock::now();
-
-    while (true)
+    const HANDLE eventHandle = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (eventHandle == nullptr)
     {
-        DWORD availableBytes = 0;
-        if (PeekNamedPipe(handle, nullptr, 0, nullptr, &availableBytes, nullptr) == FALSE)
+        throw std::runtime_error(BuildWindowsErrorMessage("Failed to create named pipe overlapped event"));
+    }
+
+    CEventHandle event(eventHandle);
+    const auto startTime = std::chrono::steady_clock::now();
+    std::size_t totalTransferred = 0;
+
+    while (totalTransferred < byteCount)
+    {
+        OVERLAPPED overlapped{};
+        overlapped.hEvent = event.Get();
+        ResetEvent(event.Get());
+
+        DWORD transferredBytes = 0;
+        const BOOL completedImmediately = operation(
+            buffer + totalTransferred,
+            static_cast<DWORD>(byteCount - totalTransferred),
+            &transferredBytes,
+            &overlapped);
+        if (completedImmediately != FALSE)
         {
-            throw std::runtime_error(BuildWindowsErrorMessage("Failed to inspect named pipe state"));
+            if (transferredBytes == 0 && zeroTransferClosesPipe)
+            {
+                throw std::runtime_error(std::string{zeroTransferMessage});
+            }
+
+            totalTransferred += transferredBytes;
+            continue;
         }
 
-        if (static_cast<std::size_t>(availableBytes) >= requiredBytes)
+        const DWORD errorCode = GetLastError();
+        if (errorCode != ERROR_IO_PENDING)
         {
-            return;
+            throw std::runtime_error(BuildWindowsErrorMessage(failurePrefix));
         }
 
-        if (GetRemainingTimeout(startTime, timeout) == std::chrono::milliseconds::zero())
+        const auto remainingTimeout = GetRemainingTimeout(startTime, timeout);
+        if (remainingTimeout == std::chrono::milliseconds::zero())
         {
-            throw std::runtime_error("Timed out waiting for named pipe data.");
+            CancelIoEx(handle, &overlapped);
+            WaitForSingleObject(event.Get(), INFINITE);
+            throw std::runtime_error(std::string{timeoutMessage});
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        const DWORD waitResult = WaitForSingleObject(
+            event.Get(),
+            static_cast<DWORD>(remainingTimeout.count()));
+        if (waitResult == WAIT_TIMEOUT)
+        {
+            CancelIoEx(handle, &overlapped);
+            WaitForSingleObject(event.Get(), INFINITE);
+            throw std::runtime_error(std::string{timeoutMessage});
+        }
+
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            throw std::runtime_error(BuildWindowsErrorMessage("Failed while waiting for named pipe overlapped I/O"));
+        }
+
+        if (GetOverlappedResult(handle, &overlapped, &transferredBytes, FALSE) == FALSE)
+        {
+            throw std::runtime_error(BuildWindowsErrorMessage(failurePrefix));
+        }
+
+        if (transferredBytes == 0 && zeroTransferClosesPipe)
+        {
+            throw std::runtime_error(std::string{zeroTransferMessage});
+        }
+
+        totalTransferred += transferredBytes;
     }
 }
 
 } // namespace
 
-CNamedPipeConnection::CNamedPipeConnection(void* nativeHandle) noexcept
+CNamedPipeConnection::CNamedPipeConnection(void* nativeHandle, const bool supportsOverlappedIo) noexcept
     : m_handle(nativeHandle, &ClosePipeHandle)
+    , m_supportsOverlappedIo(supportsOverlappedIo)
 {
 }
 
@@ -168,7 +259,43 @@ void CNamedPipeConnection::WriteMessage(const std::vector<std::byte>& bytes) con
     }
 
     const HANDLE handle = static_cast<HANDLE>(m_handle.get());
-    WriteLengthPrefix(handle, static_cast<std::uint32_t>(bytes.size()));
+    const std::uint32_t byteCount = static_cast<std::uint32_t>(bytes.size());
+    if (m_supportsOverlappedIo)
+    {
+        auto rawLength = std::bit_cast<std::array<std::byte, sizeof(byteCount)>>(byteCount);
+        RunExactOverlapped(
+            handle,
+            rawLength.data(),
+            rawLength.size(),
+            std::chrono::hours(24),
+            false,
+            "Timed out writing named pipe data.",
+            "",
+            "Failed to write to named pipe",
+            [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+                return WriteFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+            });
+
+        if (!bytes.empty())
+        {
+            RunExactOverlapped(
+                handle,
+                const_cast<std::byte*>(bytes.data()),
+                bytes.size(),
+                std::chrono::hours(24),
+                false,
+                "Timed out writing named pipe data.",
+                "",
+                "Failed to write to named pipe",
+                [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+                    return WriteFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+                });
+        }
+
+        return;
+    }
+
+    WriteLengthPrefix(handle, byteCount);
     if (!bytes.empty())
     {
         WriteExact(handle, bytes.data(), bytes.size());
@@ -183,6 +310,48 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage() const
     }
 
     const HANDLE handle = static_cast<HANDLE>(m_handle.get());
+    if (m_supportsOverlappedIo)
+    {
+        auto rawLength = std::array<std::byte, sizeof(std::uint32_t)>{};
+        RunExactOverlapped(
+            handle,
+            rawLength.data(),
+            rawLength.size(),
+            std::chrono::hours(24),
+            true,
+            "Timed out waiting for named pipe data.",
+            "Named pipe closed while reading a framed message.",
+            "Failed to read from named pipe",
+            [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+                return ReadFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+            });
+
+        const auto byteCount = static_cast<std::size_t>(std::bit_cast<std::uint32_t>(rawLength));
+        if (byteCount > MaxPipeFrameBytes)
+        {
+            throw std::runtime_error("Named pipe frame exceeds the configured maximum size.");
+        }
+
+        std::vector<std::byte> bytes(byteCount);
+        if (!bytes.empty())
+        {
+            RunExactOverlapped(
+                handle,
+                bytes.data(),
+                bytes.size(),
+                std::chrono::hours(24),
+                true,
+                "Timed out waiting for named pipe data.",
+                "Named pipe closed while reading a framed message.",
+                "Failed to read from named pipe",
+                [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+                    return ReadFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+                });
+        }
+
+        return bytes;
+    }
+
     const auto byteCount = static_cast<std::size_t>(ReadLengthPrefix(handle));
     if (byteCount > MaxPipeFrameBytes)
     {
@@ -204,12 +373,29 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage(const std::chrono::mill
     {
         throw std::runtime_error("Named pipe connection is not open.");
     }
+    if (!m_supportsOverlappedIo)
+    {
+        throw std::runtime_error("Timed named pipe reads require overlapped I/O support.");
+    }
 
     const HANDLE handle = static_cast<HANDLE>(m_handle.get());
     const auto startTime = std::chrono::steady_clock::now();
 
-    WaitForReadableBytes(handle, sizeof(std::uint32_t), timeout);
-    const auto byteCount = static_cast<std::size_t>(ReadLengthPrefix(handle));
+    std::array<std::byte, sizeof(std::uint32_t)> rawLength{};
+    RunExactOverlapped(
+        handle,
+        rawLength.data(),
+        rawLength.size(),
+        timeout,
+        true,
+        "Timed out waiting for named pipe data.",
+        "Named pipe closed while reading a framed message.",
+        "Failed to read from named pipe",
+        [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+            return ReadFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+        });
+
+    const auto byteCount = static_cast<std::size_t>(std::bit_cast<std::uint32_t>(rawLength));
     if (byteCount > MaxPipeFrameBytes)
     {
         throw std::runtime_error("Named pipe frame exceeds the configured maximum size.");
@@ -218,8 +404,18 @@ std::vector<std::byte> CNamedPipeConnection::ReadMessage(const std::chrono::mill
     std::vector<std::byte> bytes(byteCount);
     if (byteCount != 0)
     {
-        WaitForReadableBytes(handle, byteCount, GetRemainingTimeout(startTime, timeout));
-        ReadExact(handle, bytes.data(), bytes.size());
+        RunExactOverlapped(
+            handle,
+            bytes.data(),
+            bytes.size(),
+            GetRemainingTimeout(startTime, timeout),
+            true,
+            "Timed out waiting for named pipe data.",
+            "Named pipe closed while reading a framed message.",
+            "Failed to read from named pipe",
+            [handle](std::byte* chunk, const DWORD chunkSize, DWORD* bytesTransferred, OVERLAPPED* overlapped) {
+                return ReadFile(handle, chunk, chunkSize, bytesTransferred, overlapped);
+            });
     }
 
     return bytes;
@@ -264,7 +460,7 @@ CNamedPipeConnection CNamedPipeServer::WaitForClient()
         }
     }
 
-    return CNamedPipeConnection{m_handle.release()};
+    return CNamedPipeConnection{m_handle.release(), false};
 }
 
 CNamedPipeConnection ConnectToNamedPipe(
@@ -282,7 +478,7 @@ CNamedPipeConnection ConnectToNamedPipe(
         0,
         nullptr,
         OPEN_EXISTING,
-        0,
+        FILE_FLAG_OVERLAPPED,
         nullptr);
 
     if (handle == INVALID_HANDLE_VALUE)
@@ -290,7 +486,7 @@ CNamedPipeConnection ConnectToNamedPipe(
         throw std::runtime_error(BuildWindowsErrorMessage("Failed to connect to named pipe server"));
     }
 
-    return CNamedPipeConnection{handle};
+    return CNamedPipeConnection{handle, true};
 }
 
 } // namespace Librova::PipeTransport
