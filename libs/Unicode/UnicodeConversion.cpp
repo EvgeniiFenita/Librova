@@ -89,15 +89,20 @@ std::string WideToUtf8(const std::wstring_view value)
     }
 
     std::string utf8Value(static_cast<std::size_t>(length), '\0');
-    ::WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
+    if (::WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            value.data(),
+            static_cast<int>(value.size()),
         utf8Value.data(),
         length,
         nullptr,
-        nullptr);
+        nullptr)
+        <= 0)
+    {
+        throw std::runtime_error("Failed to convert UTF-16 text to UTF-8.");
+    }
+
     return utf8Value;
 }
 
@@ -121,13 +126,18 @@ std::wstring Utf8ToWide(const std::string_view value)
     }
 
     std::wstring wideValue(static_cast<std::size_t>(length), L'\0');
-    ::MultiByteToWideChar(
+    if (::MultiByteToWideChar(
         CP_UTF8,
         0,
         value.data(),
         static_cast<int>(value.size()),
         wideValue.data(),
-        length);
+        length)
+        <= 0)
+    {
+        throw std::runtime_error("Failed to convert UTF-8 text to UTF-16.");
+    }
+
     return wideValue;
 }
 #endif

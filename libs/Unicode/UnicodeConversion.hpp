@@ -4,6 +4,13 @@
 #include <string>
 #include <string_view>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#endif
+
 namespace Librova::Unicode {
 
 [[nodiscard]] std::string PathToUtf8(const std::filesystem::path& path);

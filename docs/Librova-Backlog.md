@@ -119,12 +119,6 @@ Last assigned id: `#99`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
 ### Low
-- `#96` validate the second-stage WinAPI string conversion calls in `UnicodeConversion` instead of assuming they cannot fail.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `WideToUtf8` and `Utf8ToWide` check the sizing call but not the actual conversion call, which weakens the shared Unicode boundary the project relies on for Cyrillic-safe storage, logging, and path handling.
-
 - `#97` replace named-pipe readable-byte busy polling with a more explicit wait strategy and cancellation-aware timeout handling.
   - Status: `Open`
   - Type: `Bug`

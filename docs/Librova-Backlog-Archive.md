@@ -420,6 +420,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Low
 
+- `#96` validate the second-stage WinAPI string conversion calls in `UnicodeConversion` instead of assuming they cannot fail.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `WideToUtf8` and `Utf8ToWide` now validate both WinAPI conversion calls instead of trusting the write stage after a successful sizing pass, keeping the shared Unicode boundary fail-fast for storage, logging, and path handling.
+
 - `#31` store managed `FB2` books in compressed form inside the library to reduce on-disk size, while preserving transparent browse, export, delete, duplicate-detection, and rollback behavior.
   - Status: `Closed`
   - Type: `Feature`
