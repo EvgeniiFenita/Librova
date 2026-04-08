@@ -318,6 +318,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Minor
 
+- `#95` add the missing safety and lifecycle regressions for transport drift, rollback residue, portable containment, Unicode sort, and startup cleanup.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: the 1.0 safety gaps are now covered by regressions for managed mapper contract drift, cancellation rollback residue, portable relative-path containment, Cyrillic sorting, startup `Temp` junction cleanup, and bounded converter shutdown behavior.
+
 - `#94` add missing regression coverage for damaged-library delete, duplicate-only batch import, forced conversion failure, and silent settings-state loss.
   - Status: `Closed`
   - Type: `Bug`

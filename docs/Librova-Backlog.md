@@ -82,12 +82,6 @@ Last assigned id: `#99`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
-- `#95` add the missing safety and lifecycle regressions for transport drift, rollback residue, portable containment, Unicode sort, and startup cleanup.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: cover the current blind spots around unknown proto enum rejection in the managed mappers, rollback residue surfacing after cancellation, portable-mode `..` containment, Cyrillic sort order, startup `Temp` symlink or junction escape, and converter shutdown timeout behavior.
-
 - `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
   - Status: `Open`
   - Type: `Feature`
