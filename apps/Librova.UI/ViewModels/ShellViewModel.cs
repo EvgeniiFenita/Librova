@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Librova.UI.ViewModels;
 
-internal sealed class ShellViewModel : ObservableObject
+internal sealed class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly ShellSession _session;
     private readonly IPathSelectionService _pathSelectionService;
@@ -385,5 +385,18 @@ internal sealed class ShellViewModel : ObservableObject
             PreferredSortKey = snapshot.PreferredSortKey,
             PreferredSortDescending = snapshot.PreferredSortDescending
         };
+    }
+
+    public void Dispose()
+    {
+        ImportJobs.ImportCompletedSuccessfully -= HandleImportCompletedSuccessfullyAsync;
+        ImportJobs.PropertyChanged -= OnImportJobsPropertyChanged;
+        LibraryBrowser.PropertyChanged -= OnLibraryBrowserPropertyChanged;
+        _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;
+        _converterValidationCoordinator.Dispose();
+        _converterProbeTask = Task.CompletedTask;
+        _isConverterProbeInProgress = false;
+        ConverterValidationMessage = string.Empty;
+        RaiseProbeProperties();
     }
 }

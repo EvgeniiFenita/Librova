@@ -731,6 +731,36 @@ public sealed class ShellApplicationTests
         Assert.Equal("Import", application.Shell.CurrentSectionTitle);
     }
 
+    [Fact]
+    public async Task DisposeAsync_CancelsPendingConverterProbe()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService());
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore(),
+            converterProbe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
+
+        application.Shell.Fb2CngExecutablePath = @"C:\Tools\fbc.exe";
+        var probeTask = application.Shell._converterProbeTask;
+
+        Assert.True(application.Shell.IsConverterProbeInProgress);
+
+        await application.DisposeAsync();
+        await probeTask;
+
+        Assert.True(probeTask.IsCompleted);
+        Assert.False(application.Shell.IsConverterProbeInProgress);
+    }
+
     private static ShellStateStore CreateIsolatedStateStore() =>
         new(Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json"));
 

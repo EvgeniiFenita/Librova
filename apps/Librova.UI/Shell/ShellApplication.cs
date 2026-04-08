@@ -73,6 +73,7 @@ internal sealed class ShellApplication : IAsyncDisposable
             UiLogging.Error(error, "Failed to persist UI shell state during shutdown.");
         }
 
+        Shell.Dispose();
         await _session.DisposeAsync();
     }
 }

@@ -66,6 +66,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#77` fix the remaining April 8 review findings across rollback, delete status messaging, converter-probe lifecycle, and cover helper safety.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: import cancellation rollback now survives repository lookup failures, delete status text no longer falsely claims library Trash moves, pending converter probes are canceled on shell disposal, and cover placeholder palette selection is safe for all hash values.
+
 - `#75` audit silent cleanup and rollback catch-all handlers and replace the actionable ones with structured diagnostics.
   - Status: `Closed`
   - Type: `Bug`

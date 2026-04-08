@@ -1437,8 +1437,32 @@ public sealed class ViewModelsTests
 
         await viewModel.MoveSelectedBookToTrashAsync();
 
-        Assert.Contains("left on disk", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("on disk", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Recycle Bin", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_DoesNotClaimManagedTrashWhenDeleteLeavesOnlyOrphanedFiles()
+    {
+        var service = new ManagedTrashOrphanedDeleteLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.Contains("on disk", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("Removed", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("library Trash", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LibraryCoverPresentationService_SelectPaletteIndex_HandlesIntMinValue()
+    {
+        var index = LibraryCoverPresentationService.SelectPaletteIndex(int.MinValue, 5);
+
+        Assert.InRange(index, 0, 4);
     }
 
     [Fact]
@@ -2893,6 +2917,54 @@ public sealed class ViewModelsTests
             {
                 BookId = bookId,
                 Destination = DeleteDestinationModel.RecycleBin,
+                HasOrphanedFiles = true
+            });
+        }
+    }
+
+    private sealed class ManagedTrashOrphanedDeleteLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly List<BookListItemModel> _books =
+        [
+            new BookListItemModel
+            {
+                BookId = 1,
+                Title = "Orphaned Trash Book",
+                Authors = ["Author"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/orphan.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)_books.Count,
+                AvailableLanguages = ["en"],
+                Items = _books.ToArray()
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = (ulong)_books.Count
+            });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _books.RemoveAll(book => book.BookId == bookId);
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.ManagedTrash,
                 HasOrphanedFiles = true
             });
         }

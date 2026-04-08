@@ -175,7 +175,7 @@ internal sealed class LibraryCoverPresentationService
         };
 
         var hash = HashCode.Combine(bookId, title, authorsText);
-        var index = Math.Abs(hash) % palettes.Length;
+        var index = SelectPaletteIndex(hash, palettes.Length);
         var palette = palettes[index];
         return new LinearGradientBrush
         {
@@ -187,6 +187,16 @@ internal sealed class LibraryCoverPresentationService
                 new GradientStop(palette.End, 1)
             ]
         };
+    }
+
+    internal static int SelectPaletteIndex(int hash, int paletteCount)
+    {
+        if (paletteCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(paletteCount));
+        }
+
+        return (int)((uint)hash % (uint)paletteCount);
     }
 }
 

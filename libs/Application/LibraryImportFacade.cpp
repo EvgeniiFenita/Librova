@@ -272,7 +272,23 @@ CLibraryImportFacade::SRollbackResult CLibraryImportFacade::RollbackImportedBook
 
     for (auto iterator = importedBookIds.rbegin(); iterator != importedBookIds.rend(); ++iterator)
     {
-        const auto book = m_bookRepository->GetById(*iterator);
+        std::optional<Librova::Domain::SBook> book;
+        try
+        {
+            book = m_bookRepository->GetById(*iterator);
+        }
+        catch (const std::exception& error)
+        {
+            rollbackResult.RemainingBookIds.push_back(*iterator);
+            rollbackResult.Warnings.push_back(
+                "Cancellation rollback left book "
+                + std::to_string(iterator->Value)
+                + " in the library because catalog lookup failed: "
+                + error.what());
+            LogRollbackFailureIfInitialized(*iterator, error);
+            continue;
+        }
+
         try
         {
             m_bookRepository->Remove(*iterator);

@@ -540,8 +540,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         if (deleteResult.HasOrphanedFiles)
         {
             return deleteResult.Destination == DeleteDestinationModel.RecycleBin
-                ? $"Moved '{deletedTitle}' to Recycle Bin, but some managed files could not be moved and were left on disk."
-                : $"Moved '{deletedTitle}' to library Trash, but some managed files could not be moved and were left on disk.";
+                ? $"Removed '{deletedTitle}' from the library, moved the available managed files to Recycle Bin, and left some managed files on disk."
+                : $"Removed '{deletedTitle}' from the library, but some managed files could not be moved and were left on disk.";
         }
 
         return deleteResult.Destination == DeleteDestinationModel.RecycleBin

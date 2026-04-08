@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 
 namespace Librova.UI.Shell;
 
-internal sealed class ConverterValidationCoordinator
+internal sealed class ConverterValidationCoordinator : IDisposable
 {
     private readonly Func<string, CancellationToken, Task<Fb2ProbeResult>> _converterProbe;
     private CancellationTokenSource? _converterProbeCts;
+    private bool _isDisposed;
 
     public ConverterValidationCoordinator(Func<string, CancellationToken, Task<Fb2ProbeResult>>? converterProbe = null)
     {
@@ -24,6 +25,7 @@ internal sealed class ConverterValidationCoordinator
 
     public void Initialize(string executablePath)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         CancelCurrentProbe();
         ValidationMessage = BuildValidationMessage(executablePath);
         IsProbeInProgress = false;
@@ -33,6 +35,7 @@ internal sealed class ConverterValidationCoordinator
 
     public void ScheduleValidation(string executablePath)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         CancelCurrentProbe();
 
         var syncMessage = BuildValidationMessage(executablePath);
@@ -51,6 +54,19 @@ internal sealed class ConverterValidationCoordinator
         IsProbeInProgress = true;
         CurrentProbeTask = RunProbeAsync(executablePath, cts.Token);
         StateChanged?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        CancelCurrentProbe();
+        IsProbeInProgress = false;
+        CurrentProbeTask = Task.CompletedTask;
+        _isDisposed = true;
     }
 
     private async Task RunProbeAsync(string executablePath, CancellationToken cancellationToken)

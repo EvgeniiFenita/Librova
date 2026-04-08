@@ -221,6 +221,11 @@ public:
 
     std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId id) const override
     {
+        if (ThrowOnGetById.has_value() && ThrowOnGetById->Value == id.Value)
+        {
+            throw std::runtime_error("Injected repository lookup failure.");
+        }
+
         const auto iterator = m_books.find(id.Value);
         if (iterator == m_books.end())
         {
@@ -242,6 +247,7 @@ public:
     }
 
     std::optional<Librova::Domain::SBookId> ThrowOnRemoveId;
+    std::optional<Librova::Domain::SBookId> ThrowOnGetById;
     std::vector<Librova::Domain::SBookId> RemovedIds;
 
 private:
@@ -589,6 +595,53 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
     REQUIRE(std::ranges::any_of(result.Summary.Warnings, [](const auto& warning) {
         return warning.find("catalog removal failed") != std::string::npos;
     }));
+    REQUIRE(repository.GetById({11}).has_value());
+    REQUIRE(std::filesystem::exists(sandbox / "Books" / "0000000011" / "book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Covers" / "0000000011" / "cover.jpg"));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade keeps a cancelled import book intact when rollback repository lookup fails", "[application][import][rollback]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-lookup-failure";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Books" / "0000000011");
+    std::filesystem::create_directories(sandbox / "Covers" / "0000000011");
+    std::ofstream(sandbox / "first.fb2").put('a');
+    std::ofstream(sandbox / "second.fb2").put('b');
+    std::ofstream(sandbox / "Books" / "0000000011" / "book.epub").put('x');
+    std::ofstream(sandbox / "Covers" / "0000000011" / "cover.jpg").put('y');
+
+    CImporterThatCancelsAfterFirstSuccess importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CRollbackAwareBookRepository repository;
+    repository.ForceAdd({
+        .Id = {11},
+        .Metadata = {.TitleUtf8 = "Rollback Lookup Book"},
+        .File = {
+            .Format = Librova::Domain::EBookFormat::Epub,
+            .ManagedPath = std::filesystem::path{"Books"} / "0000000011" / "book.epub"
+        },
+        .CoverPath = std::filesystem::path{"Covers"} / "0000000011" / "cover.jpg"
+    });
+    repository.ThrowOnGetById = Librova::Domain::SBookId{11};
+    CTestProgressSink progressSink;
+
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox);
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "first.fb2", sandbox / "second.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.WasCancelled);
+    REQUIRE(result.ImportedBookIds.size() == 1);
+    REQUIRE(result.ImportedBookIds.front().Value == 11);
+    REQUIRE(result.Summary.ImportedEntries == 1);
+    REQUIRE(std::ranges::any_of(result.Summary.Warnings, [](const auto& warning) {
+        return warning.find("catalog lookup failed") != std::string::npos;
+    }));
+    repository.ThrowOnGetById.reset();
     REQUIRE(repository.GetById({11}).has_value());
     REQUIRE(std::filesystem::exists(sandbox / "Books" / "0000000011" / "book.epub"));
     REQUIRE(std::filesystem::exists(sandbox / "Covers" / "0000000011" / "cover.jpg"));
