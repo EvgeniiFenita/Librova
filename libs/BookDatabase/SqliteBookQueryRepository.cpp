@@ -358,25 +358,25 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
     switch (query.SortBy.value_or(Librova::Domain::EBookSort::Title))
     {
     case Librova::Domain::EBookSort::Title:
-        sql += "ORDER BY b.title COLLATE NOCASE ";
+        sql += "ORDER BY b.normalized_title ";
         sql += dir;
-        sql += " ";
+        sql += ", b.title ASC, b.id ASC ";
         break;
     case Librova::Domain::EBookSort::Author:
         sql +=
             "ORDER BY ("
-            "SELECT MIN(a_sort.display_name) "
+            "SELECT MIN(a_sort.normalized_name) "
             "FROM book_authors ba_sort "
             "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
             "WHERE ba_sort.book_id = b.id"
-            ") COLLATE NOCASE ";
+            ") ";
         sql += dir;
-        sql += ", b.title COLLATE NOCASE ASC ";
+        sql += ", b.normalized_title ASC, b.title ASC, b.id ASC ";
         break;
     case Librova::Domain::EBookSort::DateAdded:
         sql += "ORDER BY b.added_at_utc ";
         sql += dir;
-        sql += ", b.title COLLATE NOCASE ASC ";
+        sql += ", b.normalized_title ASC, b.title ASC, b.id ASC ";
         break;
     }
 

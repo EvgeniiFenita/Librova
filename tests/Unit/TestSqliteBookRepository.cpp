@@ -516,6 +516,116 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     std::filesystem::remove(databasePath);
 }
 
+TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized title instead of ASCII-only collation", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic-sort.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Якорь";
+    firstBook.Metadata.AuthorsUtf8 = {"Автор 1"};
+    firstBook.Metadata.Language = "ru";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000610/anchor.epub";
+    firstBook.File.SizeBytes = 610;
+    firstBook.File.Sha256Hex = "hash-cyr-sort-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "ёж";
+    secondBook.Metadata.AuthorsUtf8 = {"Автор 2"};
+    secondBook.Metadata.Language = "ru";
+    secondBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    secondBook.File.ManagedPath = "Books/0000000611/hedgehog.epub";
+    secondBook.File.SizeBytes = 611;
+    secondBook.File.Sha256Hex = "hash-cyr-sort-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    Librova::Domain::SBook thirdBook;
+    thirdBook.Metadata.TitleUtf8 = "Арфа";
+    thirdBook.Metadata.AuthorsUtf8 = {"Автор 3"};
+    thirdBook.Metadata.Language = "ru";
+    thirdBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    thirdBook.File.ManagedPath = "Books/0000000612/harp.epub";
+    thirdBook.File.SizeBytes = 612;
+    thirdBook.File.Sha256Hex = "hash-cyr-sort-3";
+    thirdBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
+    static_cast<void>(writeRepository.Add(thirdBook));
+
+    const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
+        .Language = std::string{"ru"},
+        .SortBy = Librova::Domain::EBookSort::Title
+    });
+
+    REQUIRE(books.size() == 3);
+    REQUIRE(books[0].Metadata.TitleUtf8 == "Арфа");
+    REQUIRE(books[1].Metadata.TitleUtf8 == "ёж");
+    REQUIRE(books[2].Metadata.TitleUtf8 == "Якорь");
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author names", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic-author-sort.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Первая";
+    firstBook.Metadata.AuthorsUtf8 = {"Яков Автор"};
+    firstBook.Metadata.Language = "ru";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000613/first.epub";
+    firstBook.File.SizeBytes = 613;
+    firstBook.File.Sha256Hex = "hash-cyr-author-sort-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Вторая";
+    secondBook.Metadata.AuthorsUtf8 = {"ёж автор"};
+    secondBook.Metadata.Language = "ru";
+    secondBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    secondBook.File.ManagedPath = "Books/0000000614/second.epub";
+    secondBook.File.SizeBytes = 614;
+    secondBook.File.Sha256Hex = "hash-cyr-author-sort-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    Librova::Domain::SBook thirdBook;
+    thirdBook.Metadata.TitleUtf8 = "Третья";
+    thirdBook.Metadata.AuthorsUtf8 = {"Аркадий Автор"};
+    thirdBook.Metadata.Language = "ru";
+    thirdBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    thirdBook.File.ManagedPath = "Books/0000000615/third.epub";
+    thirdBook.File.SizeBytes = 615;
+    thirdBook.File.Sha256Hex = "hash-cyr-author-sort-3";
+    thirdBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
+    static_cast<void>(writeRepository.Add(thirdBook));
+
+    const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
+        .Language = std::string{"ru"},
+        .SortBy = Librova::Domain::EBookSort::Author
+    });
+
+    REQUIRE(books.size() == 3);
+    REQUIRE(books[0].Metadata.AuthorsUtf8 == std::vector<std::string>({"Аркадий Автор"}));
+    REQUIRE(books[1].Metadata.AuthorsUtf8 == std::vector<std::string>({"ёж автор"}));
+    REQUIRE(books[2].Metadata.AuthorsUtf8 == std::vector<std::string>({"Яков Автор"}));
+
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-duplicates.db";

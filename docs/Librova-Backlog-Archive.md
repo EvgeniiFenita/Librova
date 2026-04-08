@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#85` make author and title sorting Unicode-aware for Cyrillic and other non-ASCII text.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: browse sorting now uses normalized title and author fields instead of SQLite `COLLATE NOCASE`, with regression coverage for Cyrillic title and author ordering.
+
 - `#84` enforce forced FB2-to-EPUB conversion as a hard requirement instead of silently storing the original FB2 on converter failure.
   - Status: `Closed`
   - Type: `Bug`

@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#85` make author and title sorting Unicode-aware for Cyrillic and other non-ASCII text.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: browse queries rely on SQLite `COLLATE NOCASE`, which is ASCII-only; sorting must respect Cyrillic case-insensitivity and stable alphabetical order for the Windows-first Russian-language target audience.
-
 - `#86` block portable-mode library-root preferences from escaping outside the portable application directory.
   - Status: `Open`
   - Type: `Bug`
