@@ -131,12 +131,6 @@ Last assigned id: `#99`
   - Milestone: `1.0`
   - Note: `BuildCollisionSafePath` checks whether a candidate exists and then later renames into it, which leaves a small race window if another actor creates the same path between those operations.
 
-- `#99` stop recreating default UI state and preferences stores on every file-path property read in `ShellViewModel`.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the current `UiStateFilePath` and `UiPreferencesFilePath` accessors allocate new default stores on every read, which is low-risk but unnecessary churn in a shell diagnostics surface that should stay straightforward and deterministic.
-
 ## 4. Done Criteria
 
 A task can be considered closed only when:

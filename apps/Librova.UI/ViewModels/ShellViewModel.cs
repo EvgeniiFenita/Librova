@@ -23,6 +23,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private readonly Func<string, UiLibraryOpenMode, Task>? _switchLibraryAsync;
     private readonly Func<Task>? _reloadShellAsync;
     private readonly ConverterValidationCoordinator _converterValidationCoordinator;
+    private readonly string _uiStateFilePath;
+    private readonly string _uiPreferencesFilePath;
     private string _fb2CngExecutablePath = string.Empty;
     private string _converterValidationMessage = string.Empty;
     private ShellSection _currentSection = ShellSection.Library;
@@ -46,6 +48,10 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         _switchLibraryAsync = switchLibraryAsync;
         _reloadShellAsync = reloadShellAsync;
         _converterValidationCoordinator = new ConverterValidationCoordinator(converterProbe);
+        _uiStateFilePath = ShellStateStore.CreateDefault().FilePath;
+        _uiPreferencesFilePath = _preferencesStore is UiPreferencesStore concretePreferencesStore
+            ? concretePreferencesStore.FilePath
+            : RuntimeEnvironment.GetDefaultUiPreferencesFilePath();
         _converterValidationCoordinator.StateChanged += OnConverterValidationStateChanged;
         var hasConfiguredConverter = HasConfiguredBuiltInConverter(session.HostOptions);
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
@@ -165,8 +171,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         _ => string.Empty
     };
     public string UiLogFilePath => RuntimeEnvironment.GetUiLogFilePathForLibrary(LibraryRoot);
-    public string UiStateFilePath => ShellStateStore.CreateDefault().FilePath;
-    public string UiPreferencesFilePath => UiPreferencesStore.CreateDefault().FilePath;
+    public string UiStateFilePath => _uiStateFilePath;
+    public string UiPreferencesFilePath => _uiPreferencesFilePath;
     public string HostExecutablePath => _session.HostOptions.ExecutablePath;
     public string HostLogFilePath => Path.Combine(LibraryRoot, "Logs", "host.log");
     public string ApplicationVersionText => $"Version {ApplicationVersion.Value}";

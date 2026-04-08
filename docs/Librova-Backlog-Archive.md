@@ -420,6 +420,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Low
 
+- `#99` stop recreating default UI state and preferences stores on every file-path property read in `ShellViewModel`.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `ShellViewModel` now captures UI state and preferences file paths once during construction instead of rebuilding default stores on every diagnostics-property read, with a managed regression that proves the paths stay stable after creation.
+
 - `#96` validate the second-stage WinAPI string conversion calls in `UnicodeConversion` instead of assuming they cannot fail.
   - Status: `Closed`
   - Type: `Bug`

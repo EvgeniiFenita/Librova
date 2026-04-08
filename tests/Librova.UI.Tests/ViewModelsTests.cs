@@ -5,6 +5,7 @@ using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Logging;
+using Librova.UI.Runtime;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using System.Diagnostics;
@@ -3343,6 +3344,48 @@ public sealed class ViewModelsTests
         await Task.Delay(400);
 
         Assert.Null(catalogService.LastRequest);
+    }
+
+    [Fact]
+    public void ShellViewModel_DiagnosticsPathsRemainStableAfterConstruction()
+    {
+        var originalStatePath = Environment.GetEnvironmentVariable(RuntimeEnvironment.UiStateFileEnvVar);
+        var originalPreferencesPath = Environment.GetEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar);
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var initialStatePath = Path.Combine(sandboxRoot, "initial-state.json");
+            var initialPreferencesPath = Path.Combine(sandboxRoot, "initial-preferences.json");
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiStateFileEnvVar, initialStatePath);
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, initialPreferencesPath);
+
+            using var viewModel = MakeTestShellViewModel();
+            Assert.Equal(initialStatePath, viewModel.UiStateFilePath);
+            Assert.Equal(initialPreferencesPath, viewModel.UiPreferencesFilePath);
+
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiStateFileEnvVar, Path.Combine(sandboxRoot, "changed-state.json"));
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, Path.Combine(sandboxRoot, "changed-preferences.json"));
+
+            Assert.Equal(initialStatePath, viewModel.UiStateFilePath);
+            Assert.Equal(initialPreferencesPath, viewModel.UiPreferencesFilePath);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiStateFileEnvVar, originalStatePath);
+            Environment.SetEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, originalPreferencesPath);
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     private static ShellViewModel MakeTestShellViewModel(
