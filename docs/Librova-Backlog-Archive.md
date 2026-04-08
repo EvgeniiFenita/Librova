@@ -60,6 +60,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#75` audit silent cleanup and rollback catch-all handlers and replace the actionable ones with structured diagnostics.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: actionable cleanup failures in import rollback, managed-storage restore, and trash diagnostics now emit structured warnings, with native regression coverage for rollback cleanup logging.
+
 - `#74` fix `ImportJobsViewModel` success-notification flow so async subscribers are invoked deterministically and covered by tests.
   - Status: `Closed`
   - Type: `Bug`

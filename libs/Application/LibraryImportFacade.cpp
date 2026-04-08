@@ -158,6 +158,27 @@ void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::fi
     }
 }
 
+void LogRollbackCleanupIssueIfInitialized(
+    const std::filesystem::path& managedPath,
+    std::string_view reason) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    try
+    {
+        Librova::Logging::Warn(
+            "Import cancellation rollback could not clean up managed path '{}'. Reason='{}'.",
+            Librova::Unicode::PathToUtf8(managedPath),
+            reason);
+    }
+    catch (...)
+    {
+    }
+}
+
 void RemoveManagedPathNoThrow(
     const std::filesystem::path& root,
     const std::filesystem::path& managedPath) noexcept
@@ -167,18 +188,38 @@ void RemoveManagedPathNoThrow(
         const auto resolvedPath = TryResolveManagedPathWithinRoot(root, managedPath);
         if (!resolvedPath.has_value())
         {
+            LogRollbackCleanupIssueIfInitialized(
+                managedPath,
+                "Path could not be resolved within the library root or no longer exists.");
             return;
         }
 
         std::error_code errorCode;
         std::filesystem::remove(*resolvedPath, errorCode);
+        if (errorCode)
+        {
+            LogRollbackCleanupIssueIfInitialized(
+                *resolvedPath,
+                std::string{"Filesystem remove failed: "} + errorCode.message());
+            return;
+        }
+
         if (!errorCode)
         {
             CleanupEmptyParentsNoThrow(*resolvedPath, root);
         }
     }
+    catch (const std::exception& error)
+    {
+        LogRollbackCleanupIssueIfInitialized(
+            managedPath,
+            std::string{"Cleanup threw an exception: "} + error.what());
+    }
     catch (...)
     {
+        LogRollbackCleanupIssueIfInitialized(
+            managedPath,
+            "Cleanup threw a non-standard exception.");
     }
 }
 

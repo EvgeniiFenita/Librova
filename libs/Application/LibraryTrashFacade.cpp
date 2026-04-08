@@ -25,6 +25,20 @@ void LogOrphanedFile(const std::string_view label, const std::filesystem::path& 
             Librova::Unicode::PathToUtf8(sourcePath),
             error.what());
     }
+    catch (const std::exception& loggingError)
+    {
+        try
+        {
+            Librova::Logging::Warn(
+                "Failed to write orphaned-file diagnostics. Label='{}' Error='{}' LoggingError='{}'.",
+                label,
+                error.what(),
+                loggingError.what());
+        }
+        catch (...)
+        {
+        }
+    }
     catch (...)
     {
     }
@@ -59,6 +73,20 @@ void LogRecycleBinFallback(
             bookId.Value,
             stagedPathList,
             error.what());
+    }
+    catch (const std::exception& loggingError)
+    {
+        try
+        {
+            Librova::Logging::Warn(
+                "Failed to write recycle-bin fallback diagnostics for deleted book {}. Error='{}' LoggingError='{}'.",
+                bookId.Value,
+                error.what(),
+                loggingError.what());
+        }
+        catch (...)
+        {
+        }
     }
     catch (...)
     {

@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "Logging/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -32,6 +33,44 @@ void RemovePathNoThrow(const std::filesystem::path& path) noexcept
 
     std::error_code errorCode;
     std::filesystem::remove_all(path, errorCode);
+    if (errorCode && Librova::Logging::CLogging::IsInitialized())
+    {
+        try
+        {
+            Librova::Logging::Warn(
+                "Best-effort managed-storage cleanup failed. Path='{}' Error='{}'.",
+                Librova::Unicode::PathToUtf8(path),
+                errorCode.message());
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
+void LogRestoreFailureIfInitialized(
+    std::string_view label,
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& destinationPath,
+    const std::exception& error) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    try
+    {
+        Librova::Logging::Warn(
+            "Managed-storage rollback could not restore {} from '{}' to '{}'. Error='{}'.",
+            label,
+            Librova::Unicode::PathToUtf8(sourcePath),
+            Librova::Unicode::PathToUtf8(destinationPath),
+            error.what());
+    }
+    catch (...)
+    {
+    }
 }
 
 void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
@@ -198,6 +237,14 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
                 EnsureDirectory(preparedStorage.StagedCoverPath->parent_path());
                 MoveFile(*preparedStorage.FinalCoverPath, *preparedStorage.StagedCoverPath);
             }
+            catch (const std::exception& error)
+            {
+                LogRestoreFailureIfInitialized(
+                    "cover",
+                    *preparedStorage.FinalCoverPath,
+                    *preparedStorage.StagedCoverPath,
+                    error);
+            }
             catch (...)
             {
             }
@@ -209,6 +256,14 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             {
                 EnsureDirectory(preparedStorage.StagedBookPath.parent_path());
                 MoveFile(preparedStorage.FinalBookPath, preparedStorage.StagedBookPath);
+            }
+            catch (const std::exception& error)
+            {
+                LogRestoreFailureIfInitialized(
+                    "book",
+                    preparedStorage.FinalBookPath,
+                    preparedStorage.StagedBookPath,
+                    error);
             }
             catch (...)
             {

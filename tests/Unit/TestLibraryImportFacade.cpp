@@ -595,3 +595,50 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
 
     std::filesystem::remove_all(sandbox);
 }
+
+TEST_CASE("Library import facade logs rollback cleanup issues for unsafe managed paths", "[application][import][logging]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-cleanup-log";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Logs");
+    std::ofstream(sandbox / "first.fb2").put('a');
+    std::ofstream(sandbox / "second.fb2").put('b');
+    const auto outsidePath = sandbox.parent_path() / "librova-import-facade-rollback-cleanup-outside.epub";
+    std::ofstream(outsidePath).put('z');
+    const auto logPath = sandbox / "Logs" / "host.log";
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+    {
+        CImporterThatCancelsAfterFirstSuccess importer;
+        Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+        CRollbackAwareBookRepository repository;
+        repository.ForceAdd({
+            .Id = {11},
+            .Metadata = {.TitleUtf8 = "Unsafe Rollback Book"},
+            .File = {
+                .Format = Librova::Domain::EBookFormat::Epub,
+                .ManagedPath = outsidePath
+            }
+        });
+        CTestProgressSink progressSink;
+
+        const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox);
+        const auto result = facade.Run({
+            .SourcePaths = {sandbox / "first.fb2", sandbox / "second.fb2"},
+            .WorkingDirectory = sandbox / "work"
+        }, progressSink, {});
+
+        REQUIRE(result.WasCancelled);
+    }
+
+    Librova::Logging::CLogging::Shutdown();
+
+    REQUIRE(std::filesystem::exists(logPath));
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(logText.find("rollback could not clean up managed path") != std::string::npos);
+    REQUIRE(logText.find("outside.epub") != std::string::npos);
+
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::remove(outsidePath);
+}

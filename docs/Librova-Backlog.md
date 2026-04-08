@@ -33,12 +33,6 @@ Last assigned id: `#75`
 
 ### Critical
 ### Major
-- `#75` audit silent cleanup and rollback catch-all handlers and replace the actionable ones with structured diagnostics.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: several rollback and cleanup paths in managed storage, import, and trash silently swallow `catch (...)` / broad exceptions; keep no-throw cleanup behavior where required, but log recoverable cleanup failures so release diagnostics stay actionable and tests can lock down the intended boundaries.
-
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Open`
   - Type: `Feature`
