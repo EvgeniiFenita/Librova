@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#79` stop classifying duplicate-only batch and ZIP imports as `UnsupportedFormat`.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: when every entry is skipped because of strict or probable duplicates, the terminal result must preserve duplicate semantics (`DuplicateRejected` / `DuplicateDecisionRequired`) instead of collapsing into a misleading unsupported-format failure.
-
 - `#81` surface rollback cleanup residue when import cancellation leaves managed files or covers on disk.
   - Status: `Open`
   - Type: `Bug`

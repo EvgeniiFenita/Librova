@@ -20,6 +20,14 @@ enum class EImportMode
     Batch
 };
 
+enum class ENoSuccessfulImportReason
+{
+    None,
+    UnsupportedFormat,
+    DuplicateRejected,
+    DuplicateDecisionRequired
+};
+
 struct SImportRequest
 {
     std::vector<std::filesystem::path> SourcePaths;
@@ -50,6 +58,7 @@ struct SImportResult
     std::optional<Librova::Importing::SSingleFileImportResult> SingleFileResult;
     std::optional<Librova::ZipImporting::SZipImportResult> ZipResult;
     std::vector<Librova::Domain::SBookId> ImportedBookIds;
+    ENoSuccessfulImportReason NoSuccessfulImportReason = ENoSuccessfulImportReason::None;
     bool WasCancelled = false;
 
     [[nodiscard]] bool IsSuccess() const noexcept

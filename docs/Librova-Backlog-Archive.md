@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#79` stop classifying duplicate-only batch and ZIP imports as `UnsupportedFormat`.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: batch and ZIP imports now preserve duplicate-only terminal semantics through an explicit no-success reason, so all-duplicate workloads fail as `DuplicateRejected` or `DuplicateDecisionRequired` instead of misleading `UnsupportedFormat`.
+
 - `#78` make delete/trash resilient when managed book files or covers are already missing from the library.
   - Status: `Closed`
   - Type: `Bug`

@@ -73,6 +73,84 @@ namespace {
         result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
 }
 
+[[nodiscard]] Librova::Application::ENoSuccessfulImportReason CombineNoSuccessfulImportReason(
+    const Librova::Application::ENoSuccessfulImportReason currentReason,
+    const Librova::Application::ENoSuccessfulImportReason nextReason) noexcept
+{
+    using Librova::Application::ENoSuccessfulImportReason;
+
+    if (nextReason == ENoSuccessfulImportReason::None)
+    {
+        return currentReason;
+    }
+
+    if (currentReason == ENoSuccessfulImportReason::None)
+    {
+        return nextReason;
+    }
+
+    if (currentReason == ENoSuccessfulImportReason::UnsupportedFormat
+        || nextReason == ENoSuccessfulImportReason::UnsupportedFormat)
+    {
+        return ENoSuccessfulImportReason::UnsupportedFormat;
+    }
+
+    if (currentReason == ENoSuccessfulImportReason::DuplicateDecisionRequired
+        || nextReason == ENoSuccessfulImportReason::DuplicateDecisionRequired)
+    {
+        return ENoSuccessfulImportReason::DuplicateDecisionRequired;
+    }
+
+    return ENoSuccessfulImportReason::DuplicateRejected;
+}
+
+[[nodiscard]] Librova::Application::ENoSuccessfulImportReason ClassifySingleFileSkipReason(
+    const Librova::Importing::ESingleFileImportStatus status) noexcept
+{
+    using Librova::Application::ENoSuccessfulImportReason;
+
+    switch (status)
+    {
+    case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
+        return ENoSuccessfulImportReason::DuplicateRejected;
+    case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
+        return ENoSuccessfulImportReason::DuplicateDecisionRequired;
+    case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
+        return ENoSuccessfulImportReason::UnsupportedFormat;
+    case Librova::Importing::ESingleFileImportStatus::Imported:
+    case Librova::Importing::ESingleFileImportStatus::Cancelled:
+    case Librova::Importing::ESingleFileImportStatus::Failed:
+        return ENoSuccessfulImportReason::None;
+    }
+
+    return ENoSuccessfulImportReason::UnsupportedFormat;
+}
+
+[[nodiscard]] Librova::Application::ENoSuccessfulImportReason ClassifyZipEntrySkipReason(
+    const Librova::ZipImporting::SZipEntryImportResult& entry) noexcept
+{
+    using Librova::Application::ENoSuccessfulImportReason;
+
+    if (entry.SingleFileResult.has_value())
+    {
+        return ClassifySingleFileSkipReason(entry.SingleFileResult->Status);
+    }
+
+    switch (entry.Status)
+    {
+    case Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry:
+    case Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped:
+    case Librova::ZipImporting::EZipEntryImportStatus::Skipped:
+        return ENoSuccessfulImportReason::UnsupportedFormat;
+    case Librova::ZipImporting::EZipEntryImportStatus::Imported:
+    case Librova::ZipImporting::EZipEntryImportStatus::Failed:
+    case Librova::ZipImporting::EZipEntryImportStatus::Cancelled:
+        return ENoSuccessfulImportReason::None;
+    }
+
+    return ENoSuccessfulImportReason::UnsupportedFormat;
+}
+
 void LogImportSourceIssueIfInitialized(
     const std::filesystem::path& sourcePath,
     std::string_view stage,
@@ -629,6 +707,9 @@ SImportResult CLibraryImportFacade::Run(
     result.Summary.Warnings = expandedSources.Warnings;
     MergeWarnings(result.Summary.Warnings, preparedWorkload.Warnings);
     result.Summary.TotalEntries = preparedWorkload.TotalEntries;
+    result.NoSuccessfulImportReason = expandedSources.Candidates.empty()
+        ? ENoSuccessfulImportReason::UnsupportedFormat
+        : ENoSuccessfulImportReason::None;
     std::size_t processedEntries = 0;
 
     if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
@@ -692,6 +773,9 @@ SImportResult CLibraryImportFacade::Run(
                     case Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry:
                     case Librova::ZipImporting::EZipEntryImportStatus::NestedArchiveSkipped:
                         ++result.Summary.SkippedEntries;
+                        result.NoSuccessfulImportReason = CombineNoSuccessfulImportReason(
+                            result.NoSuccessfulImportReason,
+                            ClassifyZipEntrySkipReason(entry));
                         if (entry.SingleFileResult.has_value())
                         {
                             MergeWarnings(result.Summary.Warnings, entry.SingleFileResult->Warnings);
@@ -830,6 +914,9 @@ SImportResult CLibraryImportFacade::Run(
         case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
         case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
             ++result.Summary.SkippedEntries;
+            result.NoSuccessfulImportReason = CombineNoSuccessfulImportReason(
+                result.NoSuccessfulImportReason,
+                ClassifySingleFileSkipReason(singleFileResult.Status));
             break;
         case Librova::Importing::ESingleFileImportStatus::Cancelled:
             result.WasCancelled = true;

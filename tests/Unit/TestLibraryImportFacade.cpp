@@ -200,6 +200,30 @@ public:
     }
 };
 
+class CDuplicateOnlySingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const auto fileName = request.SourcePath.filename().string();
+        if (fileName == "strict.fb2")
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
+                .Warnings = {"Strict duplicate."}
+            };
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
+            .Warnings = {"Probable duplicate."}
+        };
+    }
+};
+
 class CRollbackAwareBookRepository final : public Librova::Domain::IBookRepository
 {
 public:
@@ -552,6 +576,33 @@ TEST_CASE("Library import facade logs skipped and failed batch sources into host
     REQUIRE(logText.find("Import source failed") != std::string::npos);
     REQUIRE(logText.find("broken.fb2") != std::string::npos);
     REQUIRE(logText.find("Parser exploded.") != std::string::npos);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade preserves duplicate-only batch semantics when every source is skipped as a duplicate", "[application][import]")
+{
+    CDuplicateOnlySingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-duplicate-only-batch";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "strict.fb2").put('a');
+    std::ofstream(sandbox / "probable.fb2").put('b');
+
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "strict.fb2", sandbox / "probable.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.Summary.ImportedEntries == 0);
+    REQUIRE(result.Summary.FailedEntries == 0);
+    REQUIRE(result.Summary.SkippedEntries == 2);
+    REQUIRE(result.NoSuccessfulImportReason == Librova::Application::ENoSuccessfulImportReason::DuplicateDecisionRequired);
 
     std::filesystem::remove_all(sandbox);
 }

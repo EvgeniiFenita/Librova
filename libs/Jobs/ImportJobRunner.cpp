@@ -178,7 +178,7 @@ bool CImportJobRunner::HasNoSuccessfulImports(const Librova::Application::SImpor
 {
     return importResult.Summary.ImportedEntries == 0
         && importResult.Summary.FailedEntries == 0
-        && importResult.Summary.SkippedEntries > 0;
+        && importResult.NoSuccessfulImportReason != Librova::Application::ENoSuccessfulImportReason::None;
 }
 
 SImportJobResult CImportJobRunner::Run(
@@ -222,14 +222,35 @@ SImportJobResult CImportJobRunner::Run(
 
         if (HasNoSuccessfulImports(importResult))
         {
-            progressSink.Fail("Import completed without importing any supported books.");
+            Librova::Domain::SDomainError error;
+            switch (importResult.NoSuccessfulImportReason)
+            {
+            case Librova::Application::ENoSuccessfulImportReason::DuplicateRejected:
+                error = {
+                    .Code = Librova::Domain::EDomainErrorCode::DuplicateRejected,
+                    .Message = "Import rejected because strict duplicates already exist for all selected sources."
+                };
+                break;
+            case Librova::Application::ENoSuccessfulImportReason::DuplicateDecisionRequired:
+                error = {
+                    .Code = Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired,
+                    .Message = "Import requires user confirmation because all selected sources are probable duplicates."
+                };
+                break;
+            case Librova::Application::ENoSuccessfulImportReason::UnsupportedFormat:
+            case Librova::Application::ENoSuccessfulImportReason::None:
+                error = {
+                    .Code = Librova::Domain::EDomainErrorCode::UnsupportedFormat,
+                    .Message = "Import completed without importing any supported books."
+                };
+                break;
+            }
+
+            progressSink.Fail(error.Message);
             return {
                 .Snapshot = progressSink.GetSnapshot(),
                 .ImportResult = importResult,
-                .Error = Librova::Domain::SDomainError{
-                    .Code = Librova::Domain::EDomainErrorCode::UnsupportedFormat,
-                    .Message = "Import completed without importing any supported books."
-                }
+                .Error = error
             };
         }
 

@@ -85,6 +85,31 @@ public:
     mutable std::vector<std::string> Calls;
 };
 
+class CDuplicateOnlyZipSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink& progressSink,
+        std::stop_token) const override
+    {
+        progressSink.ReportValue(60, "Importing ZIP entry");
+
+        if (request.SourcePath.filename() == "first.fb2")
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
+                .Warnings = {"Strict duplicate."}
+            };
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
+            .Warnings = {"Probable duplicate."}
+        };
+    }
+};
+
 class CCallbackThrowingSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
@@ -160,6 +185,27 @@ std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
     AddZipEntry(archive, "first.fb2", "<fb2/>");
     AddZipEntry(archive, "second.fb2", "<fb2/>");
     AddZipEntry(archive, "notes.txt", "ignored");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
+std::filesystem::path CreateDuplicateOnlyZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    zip_t* archive = zip_open(outputPath.string().c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "first.fb2", "<fb2/>");
+    AddZipEntry(archive, "second.fb2", "<fb2/>");
 
     if (zip_close(archive) != 0)
     {
@@ -313,6 +359,29 @@ TEST_CASE("Import job runner fails when ZIP import produces no imported books", 
     REQUIRE(result.Snapshot.Message == "Import completed without importing any supported books.");
     REQUIRE(result.Error.has_value());
     REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::UnsupportedFormat);
+}
+
+TEST_CASE("Import job runner keeps duplicate semantics when ZIP import skips every supported entry as a duplicate", "[jobs][import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-duplicate-only-zip");
+    const std::filesystem::path zipPath = CreateDuplicateOnlyZipFixture(sandbox.GetPath() / "archive.zip");
+    CDuplicateOnlyZipSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Jobs::CImportJobRunner runner(facade);
+
+    const auto result = runner.Run({
+        .SourcePaths = {zipPath},
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, {});
+
+    REQUIRE(result.ImportResult.has_value());
+    REQUIRE(result.ImportResult->Summary.ImportedEntries == 0);
+    REQUIRE(result.ImportResult->Summary.FailedEntries == 0);
+    REQUIRE(result.ImportResult->Summary.SkippedEntries == 2);
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
+    REQUIRE(result.Error.has_value());
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired);
 }
 
 TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][import]")
