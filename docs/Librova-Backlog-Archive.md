@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#89` harden managed storage commit rollback so partial file moves are recoverable and diagnosable after restore failures.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: managed-storage rollback now cleans up partially committed final paths and propagates restore-failure diagnostics through import failure results, with native regressions for both cleanup and error surfacing.
+
 - `#88` add explicit disposal and lifetime cancellation to `LibraryBrowserViewModel` background refresh work.
   - Status: `Closed`
   - Type: `Bug`

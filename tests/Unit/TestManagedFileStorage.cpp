@@ -195,6 +195,40 @@ TEST_CASE("Managed file storage restores staging state when commit fails after m
     REQUIRE(ReadTextFile(*prepared.StagedCoverPath) == "cover-content");
 }
 
+TEST_CASE("Managed file storage rollback removes final paths left by a partial commit", "[managed-storage]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-partial-rollback");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+    const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
+
+    WriteTextFile(sourceBookPath, "book-content");
+    WriteTextFile(sourceCoverPath, "cover-content");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {56},
+        .Format = Librova::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath,
+        .CoverSourcePath = sourceCoverPath
+    });
+
+    REQUIRE(prepared.StagedCoverPath.has_value());
+    REQUIRE(prepared.FinalCoverPath.has_value());
+
+    std::filesystem::create_directories(prepared.FinalBookPath.parent_path());
+    std::filesystem::create_directories(prepared.FinalCoverPath->parent_path());
+    std::filesystem::rename(prepared.StagedBookPath, prepared.FinalBookPath);
+    std::filesystem::rename(*prepared.StagedCoverPath, *prepared.FinalCoverPath);
+
+    storage.RollbackImport(prepared);
+
+    REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath));
+    REQUIRE_FALSE(std::filesystem::exists(*prepared.StagedCoverPath));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
+    REQUIRE_FALSE(std::filesystem::exists(*prepared.FinalCoverPath));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath.parent_path()));
+}
+
 TEST_CASE("Managed file storage PrepareImport produces forward-slash relative paths with Cyrillic library root", "[managed-storage]")
 {
     // Regression guard for C23. std::filesystem::relative() on Windows returns

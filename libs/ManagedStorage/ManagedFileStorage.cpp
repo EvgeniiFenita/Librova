@@ -1,8 +1,10 @@
 #include "ManagedStorage/ManagedFileStorage.hpp"
 
 #include <filesystem>
+#include <exception>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "Logging/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
@@ -71,6 +73,47 @@ void LogRestoreFailureIfInitialized(
     catch (...)
     {
     }
+}
+
+[[nodiscard]] std::string DescribeException(const std::exception_ptr& error)
+{
+    if (error == nullptr)
+    {
+        return "Unknown managed-storage commit failure.";
+    }
+
+    try
+    {
+        std::rethrow_exception(error);
+    }
+    catch (const std::exception& ex)
+    {
+        return ex.what();
+    }
+    catch (...)
+    {
+        return "Unknown managed-storage commit failure.";
+    }
+}
+
+[[nodiscard]] std::string BuildRollbackFailureMessage(
+    const std::string& originalError,
+    const std::vector<std::string>& rollbackDiagnostics)
+{
+    std::string message = "Managed storage commit failed: " + originalError;
+
+    for (const auto& diagnostic : rollbackDiagnostics)
+    {
+        if (diagnostic.empty())
+        {
+            continue;
+        }
+
+        message += " ";
+        message += diagnostic;
+    }
+
+    return message;
 }
 
 void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
@@ -230,6 +273,9 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
     }
     catch (...)
     {
+        const auto originalError = std::current_exception();
+        std::vector<std::string> rollbackDiagnostics;
+
         if (movedCover && preparedStorage.StagedCoverPath.has_value() && preparedStorage.FinalCoverPath.has_value())
         {
             try
@@ -239,6 +285,12 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             }
             catch (const std::exception& error)
             {
+                rollbackDiagnostics.push_back(
+                    "Rollback could not restore the managed cover from '"
+                    + Librova::Unicode::PathToUtf8(*preparedStorage.FinalCoverPath)
+                    + "' back to staging path '"
+                    + Librova::Unicode::PathToUtf8(*preparedStorage.StagedCoverPath)
+                    + "'.");
                 LogRestoreFailureIfInitialized(
                     "cover",
                     *preparedStorage.FinalCoverPath,
@@ -259,6 +311,12 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             }
             catch (const std::exception& error)
             {
+                rollbackDiagnostics.push_back(
+                    "Rollback could not restore the managed book from '"
+                    + Librova::Unicode::PathToUtf8(preparedStorage.FinalBookPath)
+                    + "' back to staging path '"
+                    + Librova::Unicode::PathToUtf8(preparedStorage.StagedBookPath)
+                    + "'.");
                 LogRestoreFailureIfInitialized(
                     "book",
                     preparedStorage.FinalBookPath,
@@ -270,20 +328,45 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             }
         }
 
-        throw;
+        if (!rollbackDiagnostics.empty())
+        {
+            throw std::runtime_error(
+                BuildRollbackFailureMessage(
+                    DescribeException(originalError),
+                    rollbackDiagnostics));
+        }
+
+        std::rethrow_exception(originalError);
     }
 }
 
 void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept
 {
     RemovePathNoThrow(preparedStorage.StagedBookPath);
+    RemovePathNoThrow(preparedStorage.FinalBookPath);
 
     if (preparedStorage.StagedCoverPath.has_value())
     {
         RemovePathNoThrow(*preparedStorage.StagedCoverPath);
     }
 
+    if (preparedStorage.FinalCoverPath.has_value())
+    {
+        RemovePathNoThrow(*preparedStorage.FinalCoverPath);
+    }
+
     CleanupEmptyParentDirectory(preparedStorage.StagedBookPath);
+    CleanupEmptyParentDirectory(preparedStorage.FinalBookPath);
+
+    if (preparedStorage.StagedCoverPath.has_value())
+    {
+        CleanupEmptyParentDirectory(*preparedStorage.StagedCoverPath);
+    }
+
+    if (preparedStorage.FinalCoverPath.has_value())
+    {
+        CleanupEmptyParentDirectory(*preparedStorage.FinalCoverPath);
+    }
 }
 
 } // namespace Librova::ManagedStorage

@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#89` harden managed storage commit rollback so partial file moves are recoverable and diagnosable after restore failures.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: if `CommitImport` moves the book file and then fails to restore it during rollback, the managed library is left with an orphaned file and only a warning log; this path needs stronger recovery semantics and explicit follow-up visibility.
-
 - `#90` reduce browse and statistics query degradation on large libraries before the 1.0 release cut.
   - Status: `Open`
   - Type: `Bug`

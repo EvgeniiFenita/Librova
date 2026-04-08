@@ -266,7 +266,7 @@ public:
     {
         if (ThrowOnCommit)
         {
-            throw std::runtime_error("Storage commit failed.");
+            throw std::runtime_error(CommitFailureMessage);
         }
 
         LastPreparedStorage = preparedStorage;
@@ -310,6 +310,7 @@ public:
     bool CommitCalled = false;
     bool RollbackCalled = false;
     bool ThrowOnCommit = false;
+    std::string CommitFailureMessage = "Storage commit failed.";
 };
 
 class CStubBookConverter final : public Librova::Domain::IBookConverter
@@ -950,6 +951,42 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
     REQUIRE_FALSE(std::filesystem::exists(managedStorage.LastPreparedStorage->StagedBookPath));
     REQUIRE(bookRepository.RemovedIds.size() == 1);
     REQUIRE(bookRepository.RemovedIds.front().Value == 1);
+}
+
+TEST_CASE("Single file import surfaces managed-storage rollback restore diagnostics when commit fails", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-rollback-diagnostics");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    managedStorage.ThrowOnCommit = true;
+    managedStorage.CommitFailureMessage =
+        "Managed storage commit failed: Failed to move file from staged to final. "
+        "Rollback could not restore the managed book from 'C:/Library/Books/0000000001/book.fb2' back to staging path "
+        "'C:/Library/Temp/0000000001/book.fb2'.";
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error.find("Managed storage commit failed") != std::string::npos);
+    REQUIRE(result.Error.find("Rollback could not restore the managed book") != std::string::npos);
+    REQUIRE(result.DiagnosticError == managedStorage.CommitFailureMessage);
+    REQUIRE(managedStorage.RollbackCalled);
+    REQUIRE(bookRepository.RemovedIds.size() == 1);
 }
 
 TEST_CASE("Single file import stores library-relative paths in book record", "[importing]")
