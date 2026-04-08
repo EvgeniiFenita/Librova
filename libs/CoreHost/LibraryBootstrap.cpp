@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <system_error>
 
+#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
 namespace Librova::CoreHost {
@@ -67,7 +68,17 @@ void PrepareNewLibraryRoot(const std::filesystem::path& libraryRoot)
 void ResetTransientTempState(const std::filesystem::path& libraryRoot)
 {
     const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
-    std::filesystem::remove_all(layout.TempDirectory);
+
+    for (const auto& entry : std::filesystem::directory_iterator(layout.TempDirectory))
+    {
+        Librova::ManagedPaths::RemovePathRecursivelyWithinRoot(
+            libraryRoot,
+            entry.path(),
+            "Managed library Temp path does not exist.",
+            "Managed library Temp path is unsafe.",
+            "Managed library Temp path could not be canonicalized.");
+    }
+
     std::filesystem::create_directories(layout.TempDirectory);
 }
 

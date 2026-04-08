@@ -103,3 +103,30 @@ TEST_CASE("Managed path safety rejects symlinked path escaping library root", "[
             "canonicalize"),
         Catch::Matchers::ContainsSubstring("unsafe"));
 }
+
+TEST_CASE("Managed path safety removes a symlink under the library root without touching its target", "[managed-paths]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-remove-symlink");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto outsideRoot = sandbox.GetPath() / "Outside";
+    const auto linkPath = libraryRoot / "Temp" / "linked";
+
+    std::filesystem::create_directories(outsideRoot);
+    std::filesystem::create_directories(linkPath.parent_path());
+    std::ofstream(outsideRoot / "outside.tmp", std::ios::binary) << "outside";
+
+    if (!TryCreateDirectorySymlink(outsideRoot, linkPath))
+    {
+        SKIP("Directory symlinks are not available in this environment.");
+    }
+
+    Librova::ManagedPaths::RemovePathRecursivelyWithinRoot(
+        libraryRoot,
+        linkPath,
+        "missing",
+        "unsafe",
+        "canonicalize");
+
+    REQUIRE_FALSE(std::filesystem::exists(linkPath));
+    REQUIRE(std::filesystem::exists(outsideRoot / "outside.tmp"));
+}

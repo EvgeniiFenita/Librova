@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#91` make startup temp cleanup apply the same root-containment and reparse-point safety rules as managed file operations.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: library bootstrap recursively deletes `Temp` without the managed-path safety checks used elsewhere; verify the cleanup cannot follow a symlink or junction outside the library root and add a regression test for that startup path.
-
 - `#92` decide and implement the real role of the `formats` table instead of keeping it as unused dual-write state.
   - Status: `Open`
   - Type: `Bug`

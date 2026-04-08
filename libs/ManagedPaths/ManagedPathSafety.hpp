@@ -22,4 +22,11 @@ namespace Librova::ManagedPaths {
     std::string_view unsafePathMessage,
     std::string_view canonicalizationErrorMessage);
 
+void RemovePathRecursivelyWithinRoot(
+    const std::filesystem::path& root,
+    const std::filesystem::path& managedPath,
+    std::string_view missingPathMessage,
+    std::string_view unsafePathMessage,
+    std::string_view canonicalizationErrorMessage);
+
 } // namespace Librova::ManagedPaths

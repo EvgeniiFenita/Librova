@@ -13,6 +13,7 @@ target_include_directories(LibrovaCoreHost
 target_link_libraries(LibrovaCoreHost
     PUBLIC
         LibrovaConverterConfiguration
+        LibrovaManagedPaths
         LibrovaStoragePlanning
         LibrovaUnicode
 )

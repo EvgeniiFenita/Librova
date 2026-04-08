@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#91` make startup temp cleanup apply the same root-containment and reparse-point safety rules as managed file operations.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: startup `Temp` cleanup now uses shared managed-path deletion guards that remove in-root reparse points without traversing outside the library, with native regressions for both helper semantics and bootstrap junction cleanup.
+
 - `#90` reduce browse and statistics query degradation on large libraries before the 1.0 release cut.
   - Status: `Closed`
   - Type: `Bug`

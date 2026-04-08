@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <Windows.h>
 
 #include "CoreHost/LibraryBootstrap.hpp"
@@ -58,6 +59,44 @@ void PrepareExistingLibraryRoot(const std::filesystem::path& libraryRoot)
     WriteTextFile(libraryRoot / "Database" / "librova.db", "sqlite-placeholder");
 }
 
+void CreateDirectoryJunction(const std::filesystem::path& junctionPath, const std::filesystem::path& targetPath)
+{
+    const std::wstring commandLine =
+        L"cmd.exe /c mklink /J \"" + junctionPath.wstring() + L"\" \"" + targetPath.wstring() + L"\"";
+
+    STARTUPINFOW startupInfo{};
+    startupInfo.cb = sizeof(startupInfo);
+    PROCESS_INFORMATION processInfo{};
+    std::wstring mutableCommandLine = commandLine;
+
+    if (!CreateProcessW(
+            nullptr,
+            mutableCommandLine.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            CREATE_NO_WINDOW,
+            nullptr,
+            nullptr,
+            &startupInfo,
+            &processInfo))
+    {
+        throw std::runtime_error("Failed to create junction helper process.");
+    }
+
+    WaitForSingleObject(processInfo.hProcess, INFINITE);
+
+    DWORD exitCode = 0;
+    GetExitCodeProcess(processInfo.hProcess, &exitCode);
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
+
+    if (exitCode != 0)
+    {
+        throw std::runtime_error("Failed to create directory junction.");
+    }
+}
+
 } // namespace
 
 TEST_CASE("Library bootstrap creates library layout for a new library root", "[core-host]")
@@ -91,6 +130,27 @@ TEST_CASE("Library bootstrap clears stale temp state for an existing managed lib
     REQUIRE(std::filesystem::exists(libraryRoot / "Database" / "librova.db"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Temp"));
     REQUIRE_FALSE(std::filesystem::exists(libraryRoot / "Temp" / "stale" / "file.tmp"));
+}
+
+TEST_CASE("Library bootstrap removes Temp junctions without deleting targets outside the library root", "[core-host]")
+{
+    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-library-bootstrap-temp-junction"));
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto outsideRoot = sandbox.GetPath() / "Outside";
+    PrepareExistingLibraryRoot(libraryRoot);
+    std::filesystem::create_directories(outsideRoot);
+    WriteTextFile(outsideRoot / "outside.tmp", "outside");
+
+    const auto junctionPath = libraryRoot / "Temp" / "outside-link";
+    CreateDirectoryJunction(junctionPath, outsideRoot);
+
+    Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
+        libraryRoot,
+        Librova::CoreHost::ELibraryOpenMode::OpenExisting);
+
+    REQUIRE(std::filesystem::exists(libraryRoot / "Temp"));
+    REQUIRE_FALSE(std::filesystem::exists(junctionPath));
+    REQUIRE(std::filesystem::exists(outsideRoot / "outside.tmp"));
 }
 
 TEST_CASE("Library bootstrap rejects opening a missing managed library", "[core-host]")
