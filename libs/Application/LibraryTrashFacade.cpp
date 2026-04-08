@@ -163,10 +163,12 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
         throw std::runtime_error("Book does not have a managed file path.");
     }
 
-    const auto sourceBookPath = ResolveManagedSourcePath(book->File.ManagedPath);
+    const auto sourceBookPath = ResolveManagedSourcePathIfPresent(book->File.ManagedPath);
     const auto sourceCoverPath = book->CoverPath.has_value()
-        ? std::make_optional(ResolveManagedSourcePath(*book->CoverPath))
+        ? ResolveManagedSourcePathIfPresent(*book->CoverPath)
         : std::nullopt;
+    const bool hasMissingManagedArtifacts = !sourceBookPath.has_value()
+        || (book->CoverPath.has_value() && !sourceCoverPath.has_value());
 
     // Catalog removal is the commit point. Once this returns, the book is logically
     // deleted regardless of what happens to the files. If this throws, no files have
@@ -177,13 +179,16 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     // left as an orphan in the managed library; the catalog remains consistent.
     std::vector<std::filesystem::path> stagedPaths;
 
-    try
+    if (sourceBookPath.has_value())
     {
-        stagedPaths.push_back(m_trashService.MoveToTrash(sourceBookPath));
-    }
-    catch (const std::exception& error)
-    {
-        LogOrphanedFile("book", sourceBookPath, error);
+        try
+        {
+            stagedPaths.push_back(m_trashService.MoveToTrash(*sourceBookPath));
+        }
+        catch (const std::exception& error)
+        {
+            LogOrphanedFile("book", *sourceBookPath, error);
+        }
     }
 
     if (sourceCoverPath.has_value())
@@ -199,7 +204,7 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     }
 
     const size_t expectedMoveCount = 1 + (sourceCoverPath.has_value() ? 1 : 0);
-    const bool hasOrphanedFiles = stagedPaths.size() < expectedMoveCount;
+    const bool hasOrphanedFiles = hasMissingManagedArtifacts || stagedPaths.size() < expectedMoveCount;
     if (m_recycleBinService == nullptr || stagedPaths.empty())
     {
         return STrashedBookResult{
@@ -235,12 +240,12 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     }
 }
 
-std::filesystem::path CLibraryTrashFacade::ResolveManagedSourcePath(const std::filesystem::path& managedPath) const
+std::optional<std::filesystem::path> CLibraryTrashFacade::ResolveManagedSourcePathIfPresent(
+    const std::filesystem::path& managedPath) const
 {
-    return Librova::ManagedPaths::ResolveExistingPathWithinRoot(
+    return Librova::ManagedPaths::TryResolvePathWithinRoot(
         m_libraryRoot,
         managedPath,
-        "Managed source file does not exist.",
         "Managed source path is unsafe.",
         "Managed source path could not be canonicalized.");
 }

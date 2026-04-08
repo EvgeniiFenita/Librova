@@ -62,6 +62,22 @@ TEST_CASE("Managed path safety resolves managed file under library root", "[mana
     REQUIRE(resolvedPath == std::filesystem::weakly_canonical(sourcePath));
 }
 
+TEST_CASE("Managed path safety returns empty for a missing managed file under library root", "[managed-paths]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-missing");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+
+    std::filesystem::create_directories(libraryRoot / "Books/0000000003");
+
+    const auto resolvedPath = Librova::ManagedPaths::TryResolvePathWithinRoot(
+        libraryRoot,
+        "Books/0000000003/book.epub",
+        "unsafe",
+        "canonicalize");
+
+    REQUIRE_FALSE(resolvedPath.has_value());
+}
+
 TEST_CASE("Managed path safety rejects symlinked path escaping library root", "[managed-paths]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-symlink");

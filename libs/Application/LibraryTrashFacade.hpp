@@ -33,7 +33,8 @@ public:
     [[nodiscard]] std::optional<STrashedBookResult> MoveBookToTrash(Librova::Domain::SBookId id) const;
 
 private:
-    [[nodiscard]] std::filesystem::path ResolveManagedSourcePath(const std::filesystem::path& managedPath) const;
+    [[nodiscard]] std::optional<std::filesystem::path> ResolveManagedSourcePathIfPresent(
+        const std::filesystem::path& managedPath) const;
 
     Librova::Domain::IBookRepository& m_bookRepository;
     Librova::Domain::ITrashService& m_trashService;

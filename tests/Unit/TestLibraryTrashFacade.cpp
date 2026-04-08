@@ -514,6 +514,72 @@ TEST_CASE("Library trash facade logs orphaned file warning when book move fails 
     std::filesystem::remove_all(sandbox);
 }
 
+TEST_CASE("Library trash facade removes a damaged catalog entry when the managed book file is already missing", "[application][trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-missing-book";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Covers");
+
+    const auto coverPath = sandbox / "Library/Covers/0000000011.jpg";
+    std::ofstream(coverPath, std::ios::binary) << "cover";
+
+    Librova::Domain::SBook book;
+    book.Id = {11};
+    book.Metadata.TitleUtf8 = "Missing Book";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000011/book.epub";
+    book.File.SizeBytes = 12;
+    book.CoverPath = std::filesystem::path{"Covers/0000000011.jpg"};
+
+    CFakeBookRepository repository(book);
+    CFakeTrashService trashService(sandbox / "Trash");
+
+    const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
+    const auto result = facade.MoveBookToTrash(book.Id);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE(result->HasOrphanedFiles);
+    REQUIRE_FALSE(repository.GetById(book.Id).has_value());
+    REQUIRE_FALSE(std::filesystem::exists(coverPath));
+    REQUIRE(std::filesystem::exists(sandbox / "Trash/0000000011.jpg"));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library trash facade removes a damaged catalog entry when the managed cover file is already missing", "[application][trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-missing-cover";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000012");
+
+    const auto bookPath = sandbox / "Library/Books/0000000012/book.epub";
+    std::ofstream(bookPath, std::ios::binary) << "epub";
+
+    Librova::Domain::SBook book;
+    book.Id = {12};
+    book.Metadata.TitleUtf8 = "Missing Cover";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000012/book.epub";
+    book.File.SizeBytes = 12;
+    book.CoverPath = std::filesystem::path{"Covers/0000000012.jpg"};
+
+    CFakeBookRepository repository(book);
+    CFakeTrashService trashService(sandbox / "Trash");
+
+    const Librova::Application::CLibraryTrashFacade facade(repository, trashService, sandbox / "Library");
+    const auto result = facade.MoveBookToTrash(book.Id);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE(result->HasOrphanedFiles);
+    REQUIRE_FALSE(repository.GetById(book.Id).has_value());
+    REQUIRE_FALSE(std::filesystem::exists(bookPath));
+    REQUIRE(std::filesystem::exists(sandbox / "Trash/book.epub"));
+
+    std::filesystem::remove_all(sandbox);
+}
+
 TEST_CASE("Library trash facade removes catalog entry before moving files so crash leaves catalog consistent", "[application][trash]")
 {
     // Regression test for crash-safe delete ordering (#46).

@@ -68,10 +68,9 @@ namespace {
 
 } // namespace
 
-std::filesystem::path ResolveExistingPathWithinRoot(
+std::optional<std::filesystem::path> TryResolvePathWithinRoot(
     const std::filesystem::path& root,
     const std::filesystem::path& managedPath,
-    const std::string_view missingPathMessage,
     const std::string_view unsafePathMessage,
     const std::string_view canonicalizationErrorMessage)
 {
@@ -92,11 +91,6 @@ std::filesystem::path ResolveExistingPathWithinRoot(
         candidatePath = (root / normalizedManagedPath).lexically_normal();
     }
 
-    if (!std::filesystem::exists(candidatePath))
-    {
-        throw std::runtime_error(std::string{missingPathMessage});
-    }
-
     const auto canonicalRoot = CanonicalizeExistingPath(root, canonicalizationErrorMessage);
     const auto canonicalCandidate = CanonicalizeExistingPath(candidatePath, canonicalizationErrorMessage);
     if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
@@ -104,7 +98,32 @@ std::filesystem::path ResolveExistingPathWithinRoot(
         throw std::runtime_error(std::string{unsafePathMessage});
     }
 
+    if (!std::filesystem::exists(candidatePath))
+    {
+        return std::nullopt;
+    }
+
     return canonicalCandidate;
+}
+
+std::filesystem::path ResolveExistingPathWithinRoot(
+    const std::filesystem::path& root,
+    const std::filesystem::path& managedPath,
+    const std::string_view missingPathMessage,
+    const std::string_view unsafePathMessage,
+    const std::string_view canonicalizationErrorMessage)
+{
+    const auto resolvedPath = TryResolvePathWithinRoot(
+        root,
+        managedPath,
+        unsafePathMessage,
+        canonicalizationErrorMessage);
+    if (!resolvedPath.has_value())
+    {
+        throw std::runtime_error(std::string{missingPathMessage});
+    }
+
+    return *resolvedPath;
 }
 
 } // namespace Librova::ManagedPaths

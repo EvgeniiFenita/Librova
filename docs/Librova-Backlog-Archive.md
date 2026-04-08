@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#78` make delete/trash resilient when managed book files or covers are already missing from the library.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: damaged-library deletes now treat missing managed book or cover files as best-effort cleanup residue, still remove the catalog row, and report `HasOrphanedFiles` with regression coverage for both missing-file cases.
+
 - `#80` remove silent enum fallbacks from the C# IPC mappers and fail fast on contract drift.
   - Status: `Closed`
   - Type: `Bug`

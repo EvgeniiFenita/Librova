@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#78` make delete/trash resilient when managed book files or covers are already missing from the library.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `MoveBookToTrash` currently resolves book and cover paths before the catalog commit, so a damaged library entry with a missing managed file or cover becomes undeletable; deletion must still remove the catalog record and return `HasOrphanedFiles` when the file layer is already inconsistent.
-
 - `#79` stop classifying duplicate-only batch and ZIP imports as `UnsupportedFormat`.
   - Status: `Open`
   - Type: `Bug`
