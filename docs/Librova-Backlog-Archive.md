@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#90` reduce browse and statistics query degradation on large libraries before the 1.0 release cut.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: read-side author sorting now uses a single aggregated join instead of a correlated subquery, and library statistics reuse cached cover-size totals until the database or `Covers` directory changes, with native regression coverage for cache invalidation.
+
 - `#89` harden managed storage commit rollback so partial file moves are recoverable and diagnosable after restore failures.
   - Status: `Closed`
   - Type: `Bug`

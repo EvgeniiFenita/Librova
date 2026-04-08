@@ -33,12 +33,6 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
-- `#90` reduce browse and statistics query degradation on large libraries before the 1.0 release cut.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the current read-side still uses `LIMIT/OFFSET`, correlated author-sort subqueries, and full cover-directory scans for statistics refresh; ship at least the minimal hardening needed so large libraries do not become sluggish in ordinary browse and refresh flows.
-
 - `#91` make startup temp cleanup apply the same root-containment and reparse-point safety rules as managed file operations.
   - Status: `Open`
   - Type: `Bug`

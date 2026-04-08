@@ -315,6 +315,17 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
             "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
     }
 
+    if (query.SortBy.value_or(Librova::Domain::EBookSort::Title) == Librova::Domain::EBookSort::Author)
+    {
+        sql +=
+            "LEFT JOIN ("
+            "SELECT ba_sort.book_id, MIN(a_sort.normalized_name) AS first_author_normalized "
+            "FROM book_authors ba_sort "
+            "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
+            "GROUP BY ba_sort.book_id"
+            ") author_sort ON author_sort.book_id = b.id ";
+    }
+
     sql += "WHERE 1 = 1 ";
 
     if (query.HasText())
@@ -363,13 +374,7 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
         sql += ", b.title ASC, b.id ASC ";
         break;
     case Librova::Domain::EBookSort::Author:
-        sql +=
-            "ORDER BY ("
-            "SELECT MIN(a_sort.normalized_name) "
-            "FROM book_authors ba_sort "
-            "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
-            "WHERE ba_sort.book_id = b.id"
-            ") ";
+        sql += "ORDER BY author_sort.first_author_normalized ";
         sql += dir;
         sql += ", b.normalized_title ASC, b.title ASC, b.id ASC ";
         break;
@@ -682,6 +687,19 @@ std::uint64_t GetDirectoryFileSizeRecursiveOrZero(const std::filesystem::path& r
     return totalSize;
 }
 
+std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const auto lastWriteTime = std::filesystem::last_write_time(path, errorCode);
+
+    if (errorCode)
+    {
+        return std::filesystem::file_time_type::min();
+    }
+
+    return lastWriteTime;
+}
+
 std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
     const Librova::Sqlite::CSqliteConnection& connection,
     const Librova::Domain::SCandidateBook& candidate)
@@ -860,6 +878,18 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
 Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryRepository::GetLibraryStatistics() const
 {
+    const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
+    const std::filesystem::path coversRoot = libraryRoot / "Covers";
+    const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
+    const auto coversLastWriteTime = GetLastWriteTimeOrMin(coversRoot);
+
+    if (m_statisticsCache.has_value()
+        && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+        && m_statisticsCache->CoversLastWriteTime == coversLastWriteTime)
+    {
+        return m_statisticsCache->Statistics;
+    }
+
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
@@ -871,15 +901,22 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
     }
 
     const std::uint64_t totalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1));
-    const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
     const std::uint64_t totalCoverSizeBytes = GetDirectoryFileSizeRecursiveOrZero(libraryRoot / "Covers");
     const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
 
-    return {
+    const Librova::Domain::IBookQueryRepository::SLibraryStatistics statistics{
         .BookCount = static_cast<std::uint64_t>(statement.GetColumnInt64(0)),
         .TotalManagedBookSizeBytes = totalManagedBookSizeBytes,
         .TotalLibrarySizeBytes = totalManagedBookSizeBytes + totalCoverSizeBytes + databaseSizeBytes
     };
+
+    m_statisticsCache = SStatisticsCache{
+        .DatabaseLastWriteTime = databaseLastWriteTime,
+        .CoversLastWriteTime = coversLastWriteTime,
+        .Statistics = statistics
+    };
+
+    return statistics;
 }
 
 } // namespace Librova::BookDatabase

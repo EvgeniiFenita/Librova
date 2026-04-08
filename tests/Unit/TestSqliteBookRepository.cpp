@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 #include <unordered_set>
 
@@ -624,6 +625,55 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     REQUIRE(books[2].Metadata.AuthorsUtf8 == std::vector<std::string>({"Яков Автор"}));
 
     std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book query repository refreshes cached library statistics when covers change", "[book-database]")
+{
+    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-book-query-statistics-cache";
+    const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
+    std::filesystem::remove_all(libraryRoot);
+    std::filesystem::create_directories(databasePath.parent_path());
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Cached Statistics";
+    book.Metadata.AuthorsUtf8 = {"Author"};
+    book.Metadata.Language = "en";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000616/book.epub";
+    book.File.SizeBytes = 616;
+    book.File.Sha256Hex = "hash-stats-cache";
+    book.CoverPath = std::filesystem::path("Covers/0000000616.png");
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{3};
+    static_cast<void>(writeRepository.Add(book));
+
+    const auto initialStatistics = queryRepository.GetLibraryStatistics();
+    const auto databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
+
+    REQUIRE(initialStatistics.BookCount == 1);
+    REQUIRE(initialStatistics.TotalManagedBookSizeBytes == 616);
+    REQUIRE(initialStatistics.TotalLibrarySizeBytes == 616 + databaseSize);
+
+    const auto coverPath = libraryRoot / "Covers/0000000616.png";
+    std::filesystem::create_directories(coverPath.parent_path());
+    std::ofstream(coverPath, std::ios::binary) << "cover-bytes";
+    const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(coverPath));
+    const auto initialCoverDirectoryWriteTime = std::filesystem::last_write_time(coverPath.parent_path());
+    std::filesystem::last_write_time(coverPath.parent_path(), initialCoverDirectoryWriteTime + std::chrono::seconds(1));
+
+    const auto statisticsWithCover = queryRepository.GetLibraryStatistics();
+    REQUIRE(statisticsWithCover.TotalLibrarySizeBytes == 616 + coverSize + databaseSize);
+
+    std::filesystem::remove(coverPath);
+    std::filesystem::last_write_time(coverPath.parent_path(), initialCoverDirectoryWriteTime + std::chrono::seconds(2));
+
+    const auto statisticsWithoutCover = queryRepository.GetLibraryStatistics();
+    REQUIRE(statisticsWithoutCover.TotalLibrarySizeBytes == 616 + databaseSize);
+
+    std::filesystem::remove_all(libraryRoot);
 }
 
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
