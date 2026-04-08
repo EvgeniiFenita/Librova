@@ -44,12 +44,6 @@ Last assigned id: `#99`
   - Milestone: `1.0`
   - Note: when every entry is skipped because of strict or probable duplicates, the terminal result must preserve duplicate semantics (`DuplicateRejected` / `DuplicateDecisionRequired`) instead of collapsing into a misleading unsupported-format failure.
 
-- `#80` remove silent enum fallbacks from the C# IPC mappers and fail fast on contract drift.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: unknown proto enum values are currently normalized to ordinary UI states for delete destination, book format, import mode, and import job status; align the managed mappers with the native fail-fast transport invariant and add explicit logging or exceptions for unexpected values.
-
 - `#81` surface rollback cleanup residue when import cancellation leaves managed files or covers on disk.
   - Status: `Open`
   - Type: `Bug`

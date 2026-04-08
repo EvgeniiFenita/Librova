@@ -6,6 +6,10 @@ namespace Librova.UI.LibraryCatalog;
 
 internal static class LibraryCatalogMapper
 {
+    private static InvalidOperationException CreateUnexpectedEnumValueException<TEnum>(TEnum value, string context)
+        where TEnum : struct, Enum =>
+        new($"Received unexpected {typeof(TEnum).Name} value '{value}' while mapping {context}.");
+
     public static BookListRequest ToProto(BookListRequestModel model)
     {
         var request = new BookListRequest
@@ -87,8 +91,9 @@ internal static class LibraryCatalogMapper
                 BookId = response.TrashedBookId,
                 Destination = response.Destination switch
                 {
+                    DeleteDestination.RecycleBin => DeleteDestinationModel.RecycleBin,
                     DeleteDestination.ManagedTrash => DeleteDestinationModel.ManagedTrash,
-                    _ => DeleteDestinationModel.RecycleBin
+                    _ => throw CreateUnexpectedEnumValueException(response.Destination, "delete result destination")
                 },
                 HasOrphanedFiles = response.HasOrphanedFiles
             };
@@ -106,8 +111,9 @@ internal static class LibraryCatalogMapper
             Tags = item.Tags.ToArray(),
             Format = item.Format switch
             {
+                BookFormat.Epub => BookFormatModel.Epub,
                 BookFormat.Fb2 => BookFormatModel.Fb2,
-                _ => BookFormatModel.Epub
+                _ => throw CreateUnexpectedEnumValueException(item.Format, "book list item format")
             },
             ManagedPath = item.ManagedPath,
             CoverPath = item.HasCoverPath ? item.CoverPath : null,
@@ -132,8 +138,9 @@ internal static class LibraryCatalogMapper
             Identifier = item.HasIdentifier ? item.Identifier : null,
             Format = item.Format switch
             {
+                BookFormat.Epub => BookFormatModel.Epub,
                 BookFormat.Fb2 => BookFormatModel.Fb2,
-                _ => BookFormatModel.Epub
+                _ => throw CreateUnexpectedEnumValueException(item.Format, "book details format")
             },
             ManagedPath = item.ManagedPath,
             CoverPath = item.HasCoverPath ? item.CoverPath : null,

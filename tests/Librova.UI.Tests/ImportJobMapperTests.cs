@@ -1,5 +1,6 @@
 using Librova.V1;
 using Librova.UI.ImportJobs;
+using System;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -65,5 +66,41 @@ public sealed class ImportJobMapperTests
         Assert.Equal(1UL, model.Snapshot.SkippedEntries);
         Assert.Equal(ImportModeModel.ZipArchive, model.Summary!.Mode);
         Assert.Equal(ImportErrorCodeModel.DatabaseFailure, model.Error!.Code);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownImportJobStatus()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ImportJobMapper.FromProto(new ImportJobSnapshot
+            {
+                JobId = 5,
+                Status = (ImportJobStatus)999,
+                Message = "Drift"
+            }));
+
+        Assert.Contains("ImportJobStatus", error.Message, StringComparison.Ordinal);
+        Assert.Contains("snapshot status", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownImportMode()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ImportJobMapper.FromProto(new ImportJobResult
+            {
+                Snapshot = new ImportJobSnapshot
+                {
+                    JobId = 5,
+                    Status = ImportJobStatus.Completed
+                },
+                Summary = new ImportSummary
+                {
+                    Mode = (ImportMode)999
+                }
+            }));
+
+        Assert.Contains("ImportMode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("summary mode", error.Message, StringComparison.Ordinal);
     }
 }

@@ -1,10 +1,15 @@
 using Librova.V1;
+using System;
 using System.Linq;
 
 namespace Librova.UI.ImportJobs;
 
 internal static class ImportJobMapper
 {
+    private static InvalidOperationException CreateUnexpectedEnumValueException<TEnum>(TEnum value, string context)
+        where TEnum : struct, Enum =>
+        new($"Received unexpected {typeof(TEnum).Name} value '{value}' while mapping {context}.");
+
     public static ImportRequest ToProto(StartImportRequestModel model)
     {
         var request = new ImportRequest
@@ -40,7 +45,7 @@ internal static class ImportJobMapper
                 ImportJobStatus.Completed => ImportJobStatusModel.Completed,
                 ImportJobStatus.Failed => ImportJobStatusModel.Failed,
                 ImportJobStatus.Cancelled => ImportJobStatusModel.Cancelled,
-                _ => ImportJobStatusModel.Failed
+                _ => throw CreateUnexpectedEnumValueException(snapshot.Status, "import job snapshot status")
             },
             Percent = snapshot.Percent,
             Message = snapshot.Message,
@@ -63,7 +68,7 @@ internal static class ImportJobMapper
                     ImportMode.SingleFile => ImportModeModel.SingleFile,
                     ImportMode.ZipArchive => ImportModeModel.ZipArchive,
                     ImportMode.Batch => ImportModeModel.Batch,
-                    _ => ImportModeModel.SingleFile
+                    _ => throw CreateUnexpectedEnumValueException(result.Summary.Mode, "import summary mode")
                 },
                 TotalEntries = result.Summary.TotalEntries,
                 ImportedEntries = result.Summary.ImportedEntries,

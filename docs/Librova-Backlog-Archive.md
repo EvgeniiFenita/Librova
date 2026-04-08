@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#80` remove silent enum fallbacks from the C# IPC mappers and fail fast on contract drift.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: managed IPC mappers now throw explicit `InvalidOperationException` values for unexpected delete-destination, book-format, import-mode, and import-status enums, with regression tests covering the contract-drift cases.
+
 - `#76` make portable installs reopen moved libraries and let first-run open an existing managed library.
   - Status: `Closed`
   - Type: `Bug`
