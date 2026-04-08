@@ -304,6 +304,7 @@ librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse
             result->Destination == Librova::Application::ETrashDestination::RecycleBin
                 ? librova::v1::DELETE_DESTINATION_RECYCLE_BIN
                 : librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
+        response.set_has_orphaned_files(result->HasOrphanedFiles);
     }
 
     return response;

@@ -198,6 +198,7 @@ enum DeleteDestination {
 message MoveBookToTrashResponse {
   optional int64 trashed_book_id = 1;
   DeleteDestination destination = 2;
+  bool has_orphaned_files = 3;
 }
 
 message StartImportRequest {

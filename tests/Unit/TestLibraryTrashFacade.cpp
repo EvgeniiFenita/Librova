@@ -239,6 +239,7 @@ TEST_CASE("Library trash facade finalizes staged delete into recycle bin when Wi
 
     REQUIRE(result.has_value());
     REQUIRE(result->Destination == Librova::Application::ETrashDestination::RecycleBin);
+    REQUIRE_FALSE(result->HasOrphanedFiles);
     REQUIRE(recycleBinService.MoveCalls == 1);
     REQUIRE(recycleBinService.LastMovedPaths.size() == 2);
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000006/book.epub"));
@@ -285,9 +286,55 @@ TEST_CASE("Library trash facade falls back to managed trash when recycle-bin han
 
     REQUIRE(result.has_value());
     REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE_FALSE(result->HasOrphanedFiles);
     REQUIRE(recycleBinService.MoveCalls == 1);
     REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000007/book.epub"));
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff succeeds after partial staging", "[application][trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-recycle-partial";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000010");
+    std::filesystem::create_directories(sandbox / "Library/Covers");
+
+    const auto bookPath = sandbox / "Library/Books/0000000010/book.epub";
+    const auto coverPath = sandbox / "Library/Covers/0000000010.jpg";
+    std::ofstream(bookPath, std::ios::binary) << "epub";
+    std::ofstream(coverPath, std::ios::binary) << "cover";
+
+    Librova::Domain::SBook book;
+    book.Id = {10};
+    book.Metadata.TitleUtf8 = "Recycle Partial";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000010/book.epub";
+    book.File.SizeBytes = 12;
+    book.CoverPath = std::filesystem::path{"Covers/0000000010.jpg"};
+
+    CFakeBookRepository repository(book);
+    CFakeTrashService trashService(sandbox / "Trash");
+    trashService.FailOnMoveCall = 2;
+    CFakeRecycleBinService recycleBinService(sandbox / "RecycleBin");
+
+    const Librova::Application::CLibraryTrashFacade facade(
+        repository,
+        trashService,
+        sandbox / "Library",
+        &recycleBinService);
+    const auto result = facade.MoveBookToTrash(book.Id);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::RecycleBin);
+    REQUIRE(result->HasOrphanedFiles);
+    REQUIRE(recycleBinService.MoveCalls == 1);
+    REQUIRE(recycleBinService.LastMovedPaths.size() == 1);
+    REQUIRE_FALSE(repository.GetById(book.Id).has_value());
+    REQUIRE_FALSE(std::filesystem::exists(bookPath));
+    REQUIRE(std::filesystem::exists(coverPath));
+    REQUIRE(std::filesystem::exists(sandbox / "RecycleBin/book.epub"));
 
     std::filesystem::remove_all(sandbox);
 }

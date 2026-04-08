@@ -171,12 +171,13 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     }
 
     const size_t expectedMoveCount = 1 + (sourceCoverPath.has_value() ? 1 : 0);
+    const bool hasOrphanedFiles = stagedPaths.size() < expectedMoveCount;
     if (m_recycleBinService == nullptr || stagedPaths.empty())
     {
         return STrashedBookResult{
             .BookId = id,
             .Destination = ETrashDestination::ManagedTrash,
-            .HasOrphanedFiles = stagedPaths.size() < expectedMoveCount
+            .HasOrphanedFiles = hasOrphanedFiles
         };
     }
 
@@ -191,7 +192,8 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
 
         return STrashedBookResult{
             .BookId = id,
-            .Destination = ETrashDestination::RecycleBin
+            .Destination = ETrashDestination::RecycleBin,
+            .HasOrphanedFiles = hasOrphanedFiles
         };
     }
     catch (const std::exception& error)
@@ -199,7 +201,8 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
         LogRecycleBinFallback(id, stagedPaths, error);
         return STrashedBookResult{
             .BookId = id,
-            .Destination = ETrashDestination::ManagedTrash
+            .Destination = ETrashDestination::ManagedTrash,
+            .HasOrphanedFiles = hasOrphanedFiles
         };
     }
 }

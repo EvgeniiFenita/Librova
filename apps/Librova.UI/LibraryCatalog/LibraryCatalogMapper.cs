@@ -89,7 +89,8 @@ internal static class LibraryCatalogMapper
                 {
                     DeleteDestination.ManagedTrash => DeleteDestinationModel.ManagedTrash,
                     _ => DeleteDestinationModel.RecycleBin
-                }
+                },
+                HasOrphanedFiles = response.HasOrphanedFiles
             };
 
     public static BookListItemModel FromProto(BookListItem item) =>

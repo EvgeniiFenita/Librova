@@ -522,6 +522,7 @@ TEST_CASE("Library job service adapter moves managed book to trash over protobuf
     REQUIRE(response.has_trashed_book_id());
     REQUIRE(response.trashed_book_id() == bookId.Value);
     REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
+    REQUIRE_FALSE(response.has_orphaned_files());
     REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
     REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000203/book.epub"));
 

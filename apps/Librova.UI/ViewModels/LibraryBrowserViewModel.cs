@@ -540,14 +540,26 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
             await RefreshLoadedRangeAsync(loadedPageCount);
 
-            StatusText = deleteResult.Destination == DeleteDestinationModel.RecycleBin
-                ? $"Moved '{deletedTitle}' to Recycle Bin."
-                : $"Moved '{deletedTitle}' to library Trash because Windows Recycle Bin was unavailable.";
+            StatusText = GetDeleteStatusText(deletedTitle, deleteResult);
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    private static string GetDeleteStatusText(string deletedTitle, DeleteBookResultModel deleteResult)
+    {
+        if (deleteResult.HasOrphanedFiles)
+        {
+            return deleteResult.Destination == DeleteDestinationModel.RecycleBin
+                ? $"Moved '{deletedTitle}' to Recycle Bin, but some managed files could not be moved and were left on disk."
+                : $"Moved '{deletedTitle}' to library Trash, but some managed files could not be moved and were left on disk.";
+        }
+
+        return deleteResult.Destination == DeleteDestinationModel.RecycleBin
+            ? $"Moved '{deletedTitle}' to Recycle Bin."
+            : $"Moved '{deletedTitle}' to library Trash because Windows Recycle Bin was unavailable.";
     }
 
     private void ScheduleRefresh()

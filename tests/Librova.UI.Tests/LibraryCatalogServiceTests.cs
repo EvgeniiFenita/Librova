@@ -539,6 +539,7 @@ public sealed class LibraryCatalogServiceTests
 
             Assert.NotNull(deleteResult);
             Assert.Equal(DeleteDestinationModel.RecycleBin, deleteResult!.Destination);
+            Assert.False(deleteResult.HasOrphanedFiles);
 
             var afterDelete = await service.ListBooksAsync(
                 new BookListRequestModel

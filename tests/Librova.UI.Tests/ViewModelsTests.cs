@@ -1346,6 +1346,21 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_WarnsWhenDeleteLeavesOrphanedFiles()
+    {
+        var service = new OrphanedDeleteLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.Contains("left on disk", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recycle Bin", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_ClampsInvalidPageSize()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
@@ -2691,6 +2706,54 @@ public sealed class ViewModelsTests
         }
     }
 
+    private sealed class OrphanedDeleteLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly List<BookListItemModel> _books =
+        [
+            new()
+            {
+                BookId = 1,
+                Title = "Orphan",
+                Authors = ["Author"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/orphan.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)_books.Count,
+                AvailableLanguages = ["en"],
+                Items = _books.ToArray()
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel
+            {
+                BookCount = (ulong)_books.Count
+            });
+
+        public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _books.RemoveAll(book => book.BookId == bookId);
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin,
+                HasOrphanedFiles = true
+            });
+        }
+    }
+
     private sealed class GatedExportLibraryCatalogService : ILibraryCatalogService
     {
         private readonly Task _gate;
@@ -2911,4 +2974,3 @@ public sealed class ViewModelsTests
         Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
     }
 }
-

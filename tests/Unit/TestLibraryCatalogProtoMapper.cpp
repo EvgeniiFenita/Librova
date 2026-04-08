@@ -185,7 +185,8 @@ TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-
 {
     const Librova::Application::STrashedBookResult result{
         .BookId = Librova::Domain::SBookId{17},
-        .Destination = Librova::Application::ETrashDestination::RecycleBin
+        .Destination = Librova::Application::ETrashDestination::RecycleBin,
+        .HasOrphanedFiles = true
     };
 
     const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(&result);
@@ -193,4 +194,5 @@ TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-
     REQUIRE(response.has_trashed_book_id());
     REQUIRE(response.trashed_book_id() == 17);
     REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_RECYCLE_BIN);
+    REQUIRE(response.has_orphaned_files());
 }

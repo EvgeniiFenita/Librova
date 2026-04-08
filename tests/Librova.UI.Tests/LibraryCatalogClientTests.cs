@@ -625,6 +625,7 @@ public sealed class LibraryCatalogClientTests
             Assert.True(trashResponse.HasTrashedBookId);
             Assert.Equal(listResponse.Items[0].BookId, trashResponse.TrashedBookId);
             Assert.Equal(DeleteDestination.RecycleBin, trashResponse.Destination);
+            Assert.False(trashResponse.HasOrphanedFiles);
         }
         finally
         {

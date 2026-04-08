@@ -233,4 +233,5 @@ internal sealed class DeleteBookResultModel
 {
     public long BookId { get; init; }
     public DeleteDestinationModel Destination { get; init; }
+    public bool HasOrphanedFiles { get; init; }
 }
