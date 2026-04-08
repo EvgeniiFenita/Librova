@@ -264,6 +264,25 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 .Warnings = std::move(warnings)
             };
         };
+    const auto buildFailedResult =
+        [&](std::string error,
+            std::vector<std::string> warnings,
+            std::string diagnosticError = {}) {
+            if (preparedStorage.has_value())
+            {
+                m_managedStorage.RollbackImport(*preparedStorage);
+            }
+
+            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+
+            return SSingleFileImportResult{
+                .Status = ESingleFileImportStatus::Failed,
+                .Warnings = std::move(warnings),
+                .Error = std::move(error),
+                .DiagnosticError = std::move(diagnosticError)
+            };
+        };
 
     try
     {
@@ -381,6 +400,19 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 conversionOutcome.Warnings.end());
 
             return buildCancelledResult(parsedBook.SourceFormat, duplicates, std::move(importWarnings));
+        }
+
+        if (conversionOutcome.Decision == Librova::ImportConversion::EImportConversionDecision::FailImport)
+        {
+            importWarnings.insert(
+                importWarnings.end(),
+                conversionOutcome.Warnings.begin(),
+                conversionOutcome.Warnings.end());
+
+            return buildFailedResult(
+                conversionOutcome.Error,
+                std::move(importWarnings),
+                conversionOutcome.Error);
         }
 
         if (parsedBook.HasCover())

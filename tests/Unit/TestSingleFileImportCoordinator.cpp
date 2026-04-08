@@ -440,6 +440,77 @@ TEST_CASE("Single file import keeps plain storage when forced EPUB conversion is
     REQUIRE(bookRepository.AddedBook->File.StorageEncoding == Librova::Domain::EStorageEncoding::Plain);
 }
 
+TEST_CASE("Single file import fails when forced EPUB conversion is enabled but converter is unavailable", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-unavailable");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ForceEpubConversion = true
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error == "Forced FB2 to EPUB conversion requires a configured converter.");
+    REQUIRE(result.DiagnosticError == "Forced FB2 to EPUB conversion requires a configured converter.");
+    REQUIRE_FALSE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(managedStorage.LastPlan.has_value());
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+}
+
+TEST_CASE("Single file import fails when forced EPUB conversion returns an error", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-failed");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubBookConverter converter;
+    converter.Enabled = true;
+    converter.Result = {
+        .Status = Librova::Domain::EConversionStatus::Failed,
+        .Warnings = {"External converter returned exit code 1."}
+    };
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        &converter);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ForceEpubConversion = true
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Warnings == std::vector<std::string>({ "External converter returned exit code 1." }));
+    REQUIRE(result.Error == "Forced FB2 to EPUB conversion failed.");
+    REQUIRE(result.DiagnosticError == "Forced FB2 to EPUB conversion failed.");
+    REQUIRE_FALSE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(managedStorage.LastPlan.has_value());
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+}
+
 TEST_CASE("Single file import stores compressed managed file size for fallback FB2", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback-compressed-size");

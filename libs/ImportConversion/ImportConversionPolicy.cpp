@@ -4,9 +4,9 @@
 
 namespace {
 
-constexpr auto GConverterUnavailableWarning = "FB2 converter unavailable. Original FB2 will be stored.";
-constexpr auto GConversionFailedWarning = "FB2 conversion failed. Original FB2 will be stored.";
-constexpr auto GMissingConversionResultWarning = "FB2 conversion result is missing. Original FB2 will be stored.";
+constexpr auto GRequiredConverterUnavailableError = "Forced FB2 to EPUB conversion requires a configured converter.";
+constexpr auto GRequiredConversionFailedError = "Forced FB2 to EPUB conversion failed.";
+constexpr auto GMissingConversionResultError = "Forced FB2 to EPUB conversion did not return a result.";
 
 void AppendWarnings(
     std::vector<std::string>& target,
@@ -36,12 +36,13 @@ SImportConversionPlan PlanImportConversion(
         return plan;
     }
 
+    plan.RequiresSuccessfulConversion = true;
+
     if (converter == nullptr
         || !converter->CanConvert(
             Librova::Domain::EBookFormat::Fb2,
             Librova::Domain::EBookFormat::Epub))
     {
-        plan.Warnings.emplace_back(GConverterUnavailableWarning);
         return plan;
     }
 
@@ -68,12 +69,21 @@ SImportConversionOutcome ResolveImportConversion(
 
     if (!plan.WillAttemptConversion())
     {
+        if (plan.RequiresSuccessfulConversion)
+        {
+            outcome.Decision = EImportConversionDecision::FailImport;
+            outcome.SourcePath.clear();
+            outcome.Error = GRequiredConverterUnavailableError;
+        }
+
         return outcome;
     }
 
     if (!conversionResult.has_value())
     {
-        outcome.Warnings.emplace_back(GMissingConversionResultWarning);
+        outcome.Decision = EImportConversionDecision::FailImport;
+        outcome.SourcePath.clear();
+        outcome.Error = GMissingConversionResultError;
         return outcome;
     }
 
@@ -94,7 +104,9 @@ SImportConversionOutcome ResolveImportConversion(
         return outcome;
     }
 
-    outcome.Warnings.emplace_back(GConversionFailedWarning);
+    outcome.Decision = EImportConversionDecision::FailImport;
+    outcome.SourcePath.clear();
+    outcome.Error = GRequiredConversionFailedError;
     return outcome;
 }
 

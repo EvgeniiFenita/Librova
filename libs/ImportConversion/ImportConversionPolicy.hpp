@@ -13,7 +13,8 @@ enum class EImportConversionDecision
 {
     StoreSource,
     StoreConverted,
-    CancelImport
+    CancelImport,
+    FailImport
 };
 
 struct SImportConversionPlan
@@ -21,6 +22,7 @@ struct SImportConversionPlan
     std::optional<Librova::Domain::SConversionRequest> Request;
     std::filesystem::path FallbackSourcePath;
     Librova::Domain::EBookFormat FallbackFormat = Librova::Domain::EBookFormat::Epub;
+    bool RequiresSuccessfulConversion = false;
     std::vector<std::string> Warnings;
 
     [[nodiscard]] bool WillAttemptConversion() const noexcept
@@ -35,10 +37,13 @@ struct SImportConversionOutcome
     std::filesystem::path SourcePath;
     Librova::Domain::EBookFormat Format = Librova::Domain::EBookFormat::Epub;
     std::vector<std::string> Warnings;
+    std::string Error;
 
     [[nodiscard]] bool IsStorable() const noexcept
     {
-        return Decision != EImportConversionDecision::CancelImport && !SourcePath.empty();
+        return Decision != EImportConversionDecision::CancelImport
+            && Decision != EImportConversionDecision::FailImport
+            && !SourcePath.empty();
     }
 };
 

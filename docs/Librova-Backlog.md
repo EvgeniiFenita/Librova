@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#84` enforce forced FB2-to-EPUB conversion as a hard requirement instead of silently storing the original FB2 on converter failure.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: when `ForceEpubConversionOnImport` is enabled, converter failure or unavailability must fail the import entry rather than falling back to storing the source FB2 with only a warning.
-
 - `#85` make author and title sorting Unicode-aware for Cyrillic and other non-ASCII text.
   - Status: `Open`
   - Type: `Bug`

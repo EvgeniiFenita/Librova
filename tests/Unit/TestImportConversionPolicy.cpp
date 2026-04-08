@@ -67,7 +67,7 @@ TEST_CASE("Import conversion keeps original FB2 when forced conversion is disabl
     REQUIRE(plan.Warnings.empty());
 }
 
-TEST_CASE("Import conversion falls back to original FB2 when forced conversion is enabled but converter is unavailable", "[import-conversion]")
+TEST_CASE("Import conversion fails when forced conversion is enabled but converter is unavailable", "[import-conversion]")
 {
     const auto plan = Librova::ImportConversion::PlanImportConversion(
         "C:/books/source.fb2",
@@ -77,10 +77,14 @@ TEST_CASE("Import conversion falls back to original FB2 when forced conversion i
         true);
 
     REQUIRE_FALSE(plan.WillAttemptConversion());
-    REQUIRE(plan.FallbackFormat == Librova::Domain::EBookFormat::Fb2);
-    REQUIRE(plan.Warnings == std::vector<std::string>({
-        "FB2 converter unavailable. Original FB2 will be stored."
-    }));
+    REQUIRE(plan.RequiresSuccessfulConversion);
+
+    const auto outcome = Librova::ImportConversion::ResolveImportConversion(plan, std::nullopt);
+
+    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::FailImport);
+    REQUIRE_FALSE(outcome.IsStorable());
+    REQUIRE(outcome.SourcePath.empty());
+    REQUIRE(outcome.Error == "Forced FB2 to EPUB conversion requires a configured converter.");
 }
 
 TEST_CASE("Import conversion creates FB2 to EPUB request when converter is available and forced conversion is enabled", "[import-conversion]")
@@ -125,7 +129,7 @@ TEST_CASE("Import conversion stores converted output on successful conversion", 
     REQUIRE(outcome.Format == Librova::Domain::EBookFormat::Epub);
 }
 
-TEST_CASE("Import conversion falls back to original FB2 after failed conversion", "[import-conversion]")
+TEST_CASE("Import conversion fails after unsuccessful forced conversion", "[import-conversion]")
 {
     const CTestConverter converter(true);
     const auto plan = Librova::ImportConversion::PlanImportConversion(
@@ -142,14 +146,11 @@ TEST_CASE("Import conversion falls back to original FB2 after failed conversion"
             .Warnings = {"External converter returned exit code 1."}
         });
 
-    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::StoreSource);
-    REQUIRE(outcome.IsStorable());
-    REQUIRE(outcome.SourcePath == std::filesystem::path("C:/books/source.fb2"));
-    REQUIRE(outcome.Format == Librova::Domain::EBookFormat::Fb2);
-    REQUIRE(outcome.Warnings == std::vector<std::string>({
-        "External converter returned exit code 1.",
-        "FB2 conversion failed. Original FB2 will be stored."
-    }));
+    REQUIRE(outcome.Decision == Librova::ImportConversion::EImportConversionDecision::FailImport);
+    REQUIRE_FALSE(outcome.IsStorable());
+    REQUIRE(outcome.SourcePath.empty());
+    REQUIRE(outcome.Warnings == std::vector<std::string>({ "External converter returned exit code 1." }));
+    REQUIRE(outcome.Error == "Forced FB2 to EPUB conversion failed.");
 }
 
 TEST_CASE("Import conversion preserves cancellation instead of silently falling back", "[import-conversion]")

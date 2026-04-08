@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#84` enforce forced FB2-to-EPUB conversion as a hard requirement instead of silently storing the original FB2 on converter failure.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: forced FB2-to-EPUB conversion now fails the import entry when the converter is unavailable or returns an error, with regression coverage at both conversion-policy and single-file importer levels.
+
 - `#83` replace infinite waits in external converter termination and cancellation paths with bounded shutdown logic.
   - Status: `Closed`
   - Type: `Bug`
