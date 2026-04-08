@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#69`
+Last assigned id: `#75`
 
 ## 2. Priority Meanings
 
@@ -32,7 +32,42 @@ Last assigned id: `#69`
 ## 3. Open Backlog
 
 ### Critical
+- `#70` harden import cancellation rollback so partial rollback failures cannot leave the library in a half-removed state.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `LibraryImportFacade` currently removes managed files first and then deletes catalog rows during cancellation rollback; make rollback exception-safe so secondary repository failures cannot leave books partially removed after cancel, and add regression coverage for repository failure during rollback.
 ### Major
+- `#71` reject cover-image paths that escape the active library root through symlinks or junctions before the UI attempts to load them.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `LibraryBrowserViewModel` currently guards cover paths with string-based root prefix checks that block `..` traversal but do not resolve symlink or junction escapes; switch to canonical path validation aligned with managed-path safety rules and add regression tests for escaped cover paths.
+
+- `#72` replace raw Win32 handle management in `CoreHostProcess` with `SafeHandle`-backed lifetime management and failure-path verification.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: the UI host launcher currently owns shutdown-event and job-object handles through raw `IntPtr` fields with manual `CloseHandle` cleanup; move this slice to `SafeHandle`-style ownership so startup and shutdown failure paths cannot leak or double-close native resources, and add tests for the cleanup paths.
+
+- `#73` reduce orchestration sprawl in the shell and library browser view-models by extracting non-UI responsibilities into focused helpers without changing behavior.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: `ShellViewModel` and `LibraryBrowserViewModel` currently mix UI state with filesystem safety, cover loading, preference persistence, converter probing, and refresh orchestration; extract the most coupled non-UI responsibilities into narrower collaborators so the release branch does not keep growing around two god-viewmodels.
+
+- `#74` fix `ImportJobsViewModel` success-notification flow so async subscribers are invoked deterministically and covered by tests.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: the current `Func<Task>` success event is awaited as a multicast delegate, which only deterministically awaits the last subscriber and makes future extension fragile; replace it with an explicit notification contract and add multi-subscriber regression coverage.
+
+- `#75` audit silent cleanup and rollback catch-all handlers and replace the actionable ones with structured diagnostics.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: several rollback and cleanup paths in managed storage, import, and trash silently swallow `catch (...)` / broad exceptions; keep no-throw cleanup behavior where required, but log recoverable cleanup failures so release diagnostics stay actionable and tests can lock down the intended boundaries.
+
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Open`
   - Type: `Feature`
