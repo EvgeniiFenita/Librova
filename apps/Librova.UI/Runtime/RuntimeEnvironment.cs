@@ -55,7 +55,13 @@ internal static class RuntimeEnvironment
         }
 
         var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
-        var relativePath = Path.GetRelativePath(effectiveBaseDirectory, Path.GetFullPath(libraryRoot));
+        var fullLibraryRoot = Path.GetFullPath(libraryRoot);
+        if (!IsContainedWithinBaseDirectory(effectiveBaseDirectory, fullLibraryRoot))
+        {
+            return null;
+        }
+
+        var relativePath = Path.GetRelativePath(effectiveBaseDirectory, fullLibraryRoot);
         return Path.IsPathFullyQualified(relativePath)
             ? null
             : relativePath;
@@ -76,7 +82,10 @@ internal static class RuntimeEnvironment
             }
 
             var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
-            return Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
+            var resolvedPortableRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
+            return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPortableRoot)
+                ? resolvedPortableRoot
+                : preferredLibraryRoot;
         }
 
         return preferredLibraryRoot;
@@ -150,4 +159,17 @@ internal static class RuntimeEnvironment
         var value = Environment.GetEnvironmentVariable(variableName);
         return string.IsNullOrWhiteSpace(value) ? null : value;
     }
+
+    private static bool IsContainedWithinBaseDirectory(string baseDirectory, string candidatePath)
+    {
+        var normalizedBaseDirectory = EnsureTrailingDirectorySeparator(Path.GetFullPath(baseDirectory));
+        var normalizedCandidatePath = EnsureTrailingDirectorySeparator(Path.GetFullPath(candidatePath));
+        return normalizedCandidatePath.StartsWith(normalizedBaseDirectory, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string EnsureTrailingDirectorySeparator(string path) =>
+        path.EndsWith(Path.DirectorySeparatorChar)
+            || path.EndsWith(Path.AltDirectorySeparatorChar)
+                ? path
+                : path + Path.DirectorySeparatorChar;
 }

@@ -175,13 +175,32 @@ public sealed class RuntimeEnvironmentTests
                 sandboxRoot,
                 null);
 
-            Assert.Equal(
-                Path.GetFullPath(Path.Combine(sandboxRoot, "..", "PortableLibrary")),
-                resolved);
+            Assert.Equal(@"D:\Stale\Librova", resolved);
         }
         finally
         {
             TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_BuildPortableLibraryRootPreference_RejectsPathsOutsidePortableBaseDirectory()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var outsideLibraryRoot = Path.GetFullPath(Path.Combine(sandboxRoot, "..", "PortableLibrary"));
+        Directory.CreateDirectory(sandboxRoot);
+        Directory.CreateDirectory(outsideLibraryRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            var relativePath = RuntimeEnvironment.BuildPortableLibraryRootPreference(outsideLibraryRoot, sandboxRoot, null);
+            Assert.Null(relativePath);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+            TryDeleteDirectory(outsideLibraryRoot);
         }
     }
 

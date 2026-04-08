@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#86` block portable-mode library-root preferences from escaping outside the portable application directory.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: portable library-root preferences now ignore relative paths that escape the packaged app directory, with regressions for both preference building and startup-time resolution.
+
 - `#85` make author and title sorting Unicode-aware for Cyrillic and other non-ASCII text.
   - Status: `Closed`
   - Type: `Bug`

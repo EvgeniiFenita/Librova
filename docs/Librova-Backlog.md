@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#86` block portable-mode library-root preferences from escaping outside the portable application directory.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `PortablePreferredLibraryRoot` currently accepts relative paths like `..\\PortableLibrary`, which breaks the boundary between portable app root and portable library root and makes portable installs non-self-contained.
-
 ### Major
 - `#87` clean up extracted ZIP import payloads after each import job instead of keeping them for the whole host session.
   - Status: `Open`
