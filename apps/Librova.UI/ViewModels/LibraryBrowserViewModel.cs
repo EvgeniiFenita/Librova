@@ -2,14 +2,12 @@ using Avalonia;
 using Avalonia.Media;
 using Librova.UI.Desktop;
 using Librova.UI.LibraryCatalog;
-using Librova.UI.Logging;
 using Librova.UI.Mvvm;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,23 +17,13 @@ namespace Librova.UI.ViewModels;
 internal sealed class LibraryBrowserViewModel : ObservableObject
 {
     private const double BytesPerMegabyte = 1024d * 1024d;
-    // Book card brush palette — must stay in sync with the warm sepia tokens in Colors.axaml.
-    // Avalonia IBrush cannot be looked up via DynamicResource from a ViewModel directly,
-    // so these are declared here as static fields mirroring the design token values.
-    //   DefaultCardBackground  ≈ Color.SurfaceMuted  (#1C160C)
-    //   DefaultCardBorder      ≈ Color.Border        (#2A200E)
-    //   SelectedCardBackground ≈ Color.SurfaceAlt    (#221A0E)
-    //   SelectedCardBorder     ≈ Color.Accent        (#F5A623)
-    //   RealCoverBackground    ≈ Color.Matte         (#0A0700)
     private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#1C160C"));
     private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#2A200E"));
     private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#221A0E"));
     private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#F5A623"));
-    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#0A0700"));
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
-    private readonly ICoverImageLoader _coverImageLoader;
-    private readonly string _libraryRoot;
+    private readonly LibraryCoverPresentationService _coverPresentationService;
     private readonly bool _hasConfiguredConverter;
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _loadMoreCancellation;
@@ -68,8 +56,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
-        _coverImageLoader = coverImageLoader ?? new FileCoverImageLoader();
-        _libraryRoot = libraryRoot ?? string.Empty;
+        _coverPresentationService = new LibraryCoverPresentationService(libraryRoot, coverImageLoader);
         _hasConfiguredConverter = hasConfiguredConverter;
         _selectedSortKey = SortKeyOption.For(initialSortKey ?? BookSortModel.Title);
         _sortDescending = initialSortDescending;
@@ -811,9 +798,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookListItemModel Prepare(BookListItemModel item)
     {
-        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(item.ResolvedCoverImage, item.BookId, item.Title, item.AuthorsText);
-        item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
+        _coverPresentationService.Prepare(item);
         item.IsSelected = false;
         ApplySelectionStyle(item, isSelected: false);
         return item;
@@ -821,121 +806,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
     private BookDetailsModel Prepare(BookDetailsModel item)
     {
-        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(
-            item.ResolvedCoverImage,
-            item.BookId,
-            item.Title,
-            BuildAuthorsText(item.Authors));
-        item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
-        return item;
-    }
-
-    private IImage? LoadCoverImage(string? coverPath)
-    {
-        if (string.IsNullOrWhiteSpace(coverPath))
-        {
-            return null;
-        }
-
-        try
-        {
-            var resolvedPath = ResolveExistingCoverPathWithinLibraryRoot(coverPath, _libraryRoot);
-            if (string.IsNullOrWhiteSpace(resolvedPath))
-            {
-                return null;
-            }
-
-            return _coverImageLoader.Load(resolvedPath);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    private static string? ResolveExistingCoverPathWithinLibraryRoot(string coverPath, string libraryRoot)
-    {
-        if (string.IsNullOrWhiteSpace(libraryRoot))
-        {
-            return null;
-        }
-
-        var candidatePath = Path.IsPathFullyQualified(coverPath)
-            ? Path.GetFullPath(coverPath)
-            : Path.GetFullPath(Path.Combine(libraryRoot, coverPath));
-        if (!File.Exists(candidatePath))
-        {
-            return null;
-        }
-
-        var canonicalRoot = CanonicalizeExistingPath(libraryRoot);
-        var canonicalCandidate = CanonicalizeExistingPath(candidatePath);
-        if (!IsPathWithinRoot(canonicalRoot, canonicalCandidate))
-        {
-            UiLogging.Warning(
-                "Rejected cover path that does not resolve within the library root. Path={Path} LibraryRoot={LibraryRoot}",
-                canonicalCandidate,
-                canonicalRoot);
-            return null;
-        }
-
-        return canonicalCandidate;
-    }
-
-    private static string CanonicalizeExistingPath(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        var root = Path.GetPathRoot(fullPath);
-        if (string.IsNullOrWhiteSpace(root))
-        {
-            throw new IOException("Path does not contain a root.");
-        }
-
-        var relativePath = Path.GetRelativePath(root, fullPath);
-        var current = root;
-
-        if (string.Equals(relativePath, ".", StringComparison.Ordinal))
-        {
-            return Path.GetFullPath(current);
-        }
-
-        foreach (var segment in relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var candidate = Path.Combine(current, segment);
-            current = ResolveExistingPathSegment(candidate);
-        }
-
-        return Path.GetFullPath(current);
-    }
-
-    private static string ResolveExistingPathSegment(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            var directory = new DirectoryInfo(path);
-            var resolved = directory.ResolveLinkTarget(returnFinalTarget: true);
-            return Path.GetFullPath(resolved?.FullName ?? directory.FullName);
-        }
-
-        if (File.Exists(path))
-        {
-            var file = new FileInfo(path);
-            var resolved = file.ResolveLinkTarget(returnFinalTarget: true);
-            return Path.GetFullPath(resolved?.FullName ?? file.FullName);
-        }
-
-        throw new IOException("Path segment does not exist.");
-    }
-
-    private static bool IsPathWithinRoot(string rootPath, string candidatePath)
-    {
-        var relativePath = Path.GetRelativePath(rootPath, candidatePath);
-        return string.Equals(relativePath, ".", StringComparison.Ordinal)
-            || (!relativePath.Equals("..", StringComparison.Ordinal)
-                && !relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                && !relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal)
-                && !Path.IsPathRooted(relativePath));
+        return _coverPresentationService.Prepare(item);
     }
 
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
@@ -1048,17 +919,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
 
         pairs.Add(new("Size", FormatSizeInMegabytes(SelectedBook.SizeBytes)));
         return pairs;
-    }
-
-    private static string BuildCoverPlaceholderText(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return "BOOK";
-        }
-
-        var letter = title.Trim().FirstOrDefault(character => char.IsLetterOrDigit(character));
-        return letter == default ? "BOOK" : char.ToUpperInvariant(letter).ToString();
     }
 
     private static string BuildAuthorsText(IReadOnlyList<string> authors) =>
@@ -1181,50 +1041,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject
         item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
     }
 
-    private static IBrush CreateCoverBackgroundBrush(IImage? resolvedCoverImage, long bookId, string title, string authorsText) =>
-        resolvedCoverImage is null
-            ? CreateGradientBrush(bookId, title, authorsText)
-            : RealCoverBackground;
-
-    private static IBrush CreateGradientBrush(long bookId, string title, string authorsText)
-    {
-        var palettes = new[]
-        {
-            (Start: Color.Parse("#6C4B3A"), End: Color.Parse("#D9A066")),
-            (Start: Color.Parse("#5C3A28"), End: Color.Parse("#C4855A")),
-            (Start: Color.Parse("#5A2F3D"), End: Color.Parse("#C18E78")),
-            (Start: Color.Parse("#40523B"), End: Color.Parse("#B6C58E")),
-            (Start: Color.Parse("#6B4C1E"), End: Color.Parse("#D2B87A"))
-        };
-
-        var hash = HashCode.Combine(bookId, title, authorsText);
-        var index = Math.Abs(hash) % palettes.Length;
-        var palette = palettes[index];
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops =
-            [
-                new GradientStop(palette.Start, 0),
-                new GradientStop(palette.End, 1)
-            ]
-        };
-    }
 }
 
 internal sealed record MetadataPair(string Label, string Value);
-
-internal interface ICoverImageLoader
-{
-    IImage? Load(string absolutePath);
-}
-
-internal sealed class FileCoverImageLoader : ICoverImageLoader
-{
-    public IImage? Load(string absolutePath)
-    {
-        using var stream = File.OpenRead(absolutePath);
-        return new Avalonia.Media.Imaging.Bitmap(stream);
-    }
-}

@@ -33,12 +33,6 @@ Last assigned id: `#75`
 
 ### Critical
 ### Major
-- `#73` reduce orchestration sprawl in the shell and library browser view-models by extracting non-UI responsibilities into focused helpers without changing behavior.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.0`
-  - Note: `ShellViewModel` and `LibraryBrowserViewModel` currently mix UI state with filesystem safety, cover loading, preference persistence, converter probing, and refresh orchestration; extract the most coupled non-UI responsibilities into narrower collaborators so the release branch does not keep growing around two god-viewmodels.
-
 - `#74` fix `ImportJobsViewModel` success-notification flow so async subscribers are invoked deterministically and covered by tests.
   - Status: `Open`
   - Type: `Bug`

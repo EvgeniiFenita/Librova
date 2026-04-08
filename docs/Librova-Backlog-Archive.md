@@ -60,6 +60,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#73` reduce orchestration sprawl in the shell and library browser view-models by extracting non-UI responsibilities into focused helpers without changing behavior.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: extracted converter-probe lifecycle and cover/path-resolution into dedicated UI collaborators, keeping shell and library browser behavior unchanged while adding startup regression coverage for saved converter settings.
+
 - `#72` replace raw Win32 handle management in `CoreHostProcess` with `SafeHandle`-backed lifetime management and failure-path verification.
   - Status: `Closed`
   - Type: `Bug`

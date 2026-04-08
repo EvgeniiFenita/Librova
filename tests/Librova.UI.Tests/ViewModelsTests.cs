@@ -2935,6 +2935,38 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public void ShellViewModel_DoesNotProbeSavedConverterPathOnConstruction()
+    {
+        var probeCallCount = 0;
+        var session = new ShellSession(
+            hostLifetime: NullLifetime.Instance,
+            hostOptions: new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\fake\host.exe",
+                PipePath = @"\\.\pipe\test",
+                LibraryRoot = @"C:\fake\lib"
+            },
+            importJobs: new FakeImportJobsService());
+
+        var viewModel = new ShellViewModel(
+            session,
+            savedPreferences: new UiPreferencesSnapshot
+            {
+                Fb2CngExecutablePath = @"C:\fake\fb2cng.exe"
+            },
+            converterProbe: (_, _) =>
+            {
+                probeCallCount++;
+                return Task.FromResult(Fb2ProbeResult.Success);
+            });
+
+        Assert.Equal(0, probeCallCount);
+        Assert.False(viewModel.IsConverterProbeInProgress);
+        Assert.False(viewModel.HasConverterValidationError);
+        Assert.True(viewModel.SavePreferencesCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void ShellViewModel_EmptyPathSkipsProbeAndEnablesSave()
     {
         var probeCallCount = 0;
