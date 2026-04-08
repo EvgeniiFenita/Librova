@@ -33,12 +33,6 @@ Last assigned id: `#75`
 
 ### Critical
 ### Major
-- `#74` fix `ImportJobsViewModel` success-notification flow so async subscribers are invoked deterministically and covered by tests.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: the current `Func<Task>` success event is awaited as a multicast delegate, which only deterministically awaits the last subscriber and makes future extension fragile; replace it with an explicit notification contract and add multi-subscriber regression coverage.
-
 - `#75` audit silent cleanup and rollback catch-all handlers and replace the actionable ones with structured diagnostics.
   - Status: `Open`
   - Type: `Bug`

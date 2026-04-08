@@ -302,7 +302,7 @@ internal sealed class ShellViewModel : ObservableObject
         RaiseProbeProperties();
     }
 
-    private async Task HandleImportCompletedSuccessfullyAsync()
+    private async Task HandleImportCompletedSuccessfullyAsync(ImportJobResultModel result)
     {
         await LibraryBrowser.RefreshAsync();
     }

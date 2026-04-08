@@ -1497,7 +1497,7 @@ public sealed class ViewModelsTests
             };
 
             var invoked = 0;
-            viewModel.ImportCompletedSuccessfully += () =>
+            viewModel.ImportCompletedSuccessfully += _ =>
             {
                 invoked++;
                 return Task.CompletedTask;
@@ -1506,6 +1506,65 @@ public sealed class ViewModelsTests
             await viewModel.StartImportAsync();
 
             Assert.Equal(1, invoked);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_AwaitsAllSuccessSubscribersSequentially()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var firstSubscriberEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseFirstSubscriber = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var callOrder = new List<string>();
+
+            viewModel.ImportCompletedSuccessfully += async result =>
+            {
+                Assert.Equal(ImportJobStatusModel.Completed, result.Snapshot.Status);
+                callOrder.Add("first-start");
+                firstSubscriberEntered.TrySetResult();
+                await releaseFirstSubscriber.Task;
+                callOrder.Add("first-end");
+            };
+            viewModel.ImportCompletedSuccessfully += result =>
+            {
+                Assert.Equal(ImportJobStatusModel.Completed, result.Snapshot.Status);
+                callOrder.Add("second");
+                return Task.CompletedTask;
+            };
+
+            var importTask = viewModel.StartImportAsync();
+            await firstSubscriberEntered.Task;
+
+            Assert.Equal(["first-start"], callOrder);
+
+            releaseFirstSubscriber.SetResult();
+            await importTask;
+
+            Assert.Equal(["first-start", "first-end", "second"], callOrder);
         }
         finally
         {

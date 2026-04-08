@@ -14,6 +14,8 @@ namespace Librova.UI.ViewModels;
 
 internal sealed class ImportJobsViewModel : ObservableObject
 {
+    internal delegate Task ImportCompletedSuccessfullyHandler(ImportJobResultModel result);
+
     private readonly IImportJobsService _importJobsService;
     private readonly IPathSelectionService _pathSelectionService;
     private IReadOnlyList<string> _sourcePaths = [];
@@ -33,7 +35,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
 
-    public event Func<Task>? ImportCompletedSuccessfully;
+    public event ImportCompletedSuccessfullyHandler? ImportCompletedSuccessfully;
     public event Action<bool>? ImportActivityChanged;
 
     public ImportJobsViewModel(IImportJobsService importJobsService, IPathSelectionService? pathSelectionService = null)
@@ -622,7 +624,15 @@ internal sealed class ImportJobsViewModel : ObservableObject
             return;
         }
 
-        await ImportCompletedSuccessfully.Invoke();
+        var handlers = ImportCompletedSuccessfully
+            .GetInvocationList()
+            .Cast<ImportCompletedSuccessfullyHandler>()
+            .ToArray();
+
+        foreach (var handler in handlers)
+        {
+            await handler(result);
+        }
     }
 
     private bool CanStartImport() =>

@@ -60,6 +60,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#74` fix `ImportJobsViewModel` success-notification flow so async subscribers are invoked deterministically and covered by tests.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: import success notifications now use an explicit result-carrying async handler contract, await every subscriber sequentially, and include multi-subscriber regression coverage.
+
 - `#73` reduce orchestration sprawl in the shell and library browser view-models by extracting non-UI responsibilities into focused helpers without changing behavior.
   - Status: `Closed`
   - Type: `Feature`
