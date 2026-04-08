@@ -12,6 +12,9 @@ internal static class FirstRunSetupPolicy
         }
 
         var snapshot = (preferencesStore ?? UiPreferencesStore.CreateDefault()).TryLoad();
-        return string.IsNullOrWhiteSpace(snapshot?.PreferredLibraryRoot);
+        var preferredLibraryRoot = RuntimeEnvironment.ResolvePreferredLibraryRoot(
+            snapshot?.PreferredLibraryRoot,
+            snapshot?.PortablePreferredLibraryRoot);
+        return string.IsNullOrWhiteSpace(preferredLibraryRoot);
     }
 }

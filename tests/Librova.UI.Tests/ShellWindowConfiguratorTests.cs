@@ -66,7 +66,7 @@ public sealed class ShellWindowConfiguratorTests
             @"C:\Libraries\Librova",
             null,
             null,
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         var state = ShellWindowConfigurator.CreateStartupErrorState("pipe startup failed", setup);
 
@@ -84,7 +84,7 @@ public sealed class ShellWindowConfiguratorTests
             libraryRoot,
             null,
             null,
-            _ => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
             requireDifferentLibraryRoot: true);
 
         var state = ShellWindowConfigurator.CreateStartupErrorState("database is corrupted", setup);
@@ -102,7 +102,7 @@ public sealed class ShellWindowConfiguratorTests
             @"C:\Libraries\Librova",
             null,
             null,
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         var state = ShellWindowConfigurator.CreateFirstRunSetupState(setup);
 

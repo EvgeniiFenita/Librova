@@ -1,4 +1,5 @@
 using Librova.UI.CoreHost;
+using Librova.UI.Runtime;
 
 namespace Librova.UI.Shell;
 
@@ -20,6 +21,7 @@ internal static class UiPreferencesSnapshotBuilder
         return new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = libraryRoot,
+            PortablePreferredLibraryRoot = RuntimeEnvironment.BuildPortableLibraryRootPreference(libraryRoot),
             ConverterMode = executablePath is null ? UiConverterMode.Disabled : UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = executablePath,
             Fb2CngConfigPath = executablePath is null ? null : existing?.Fb2CngConfigPath,

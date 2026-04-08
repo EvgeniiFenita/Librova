@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#76` make portable installs reopen moved libraries and let first-run open an existing managed library.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: portable preferences now save a relocatable library-root hint for packaged runs, startup reopens the moved library from that relative path, and first-run setup can explicitly either create a new library or open an existing managed one.
+
 - `#70` harden import cancellation rollback so partial rollback failures cannot leave the library in a half-removed state.
   - Status: `Closed`
   - Type: `Bug`

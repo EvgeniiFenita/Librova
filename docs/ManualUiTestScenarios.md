@@ -25,7 +25,7 @@
 
 | Файл | # | Сценарий | RG |
 |------|---|----------|----|
-| [startup.md](manual-tests/startup.md) | 1 | First Run Setup | ✓ |
+| [startup.md](manual-tests/startup.md) | 1 | First Run Setup And Portable Library Open | ✓ |
 | [startup.md](manual-tests/startup.md) | 2 | Startup Error Recovery | ✓ |
 | [startup.md](manual-tests/startup.md) | 3 | Startup Error Recovery: Corrupted Library | |
 | [startup.md](manual-tests/startup.md) | 4 | Shell Navigation | ✓ |
@@ -48,4 +48,3 @@
 | [settings.md](manual-tests/settings.md) | 4 | Settings: About Card | |
 | [regression.md](manual-tests/regression.md) | 1 | Relaunch State Persistence | |
 | [regression.md](manual-tests/regression.md) | 2 | Smoke Pass After Release Build | ✓ |
-

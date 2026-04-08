@@ -70,7 +70,7 @@ internal sealed partial class App : Application
                 launchOptions,
                 CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
                 cancellationToken,
-                explicitOpenMode: UiLibraryOpenMode.CreateNew);
+                allowModeSelection: true);
             ShellWindowConfigurator.ConfigureFirstRunSetup(mainWindow, setup);
             return;
         }
@@ -196,15 +196,18 @@ internal sealed partial class App : Application
         ShellLaunchOptions launchOptions,
         string suggestedLibraryRoot,
         CancellationToken cancellationToken,
+        bool allowModeSelection = false,
         UiLibraryOpenMode? explicitOpenMode = null,
         bool requireDifferentLibraryRoot = false) =>
         new(
             suggestedLibraryRoot,
             pathSelectionService,
             preferencesStore,
-            libraryRoot =>
+            (libraryRoot, selectedMode) =>
             {
-                var resolvedMode = explicitOpenMode ?? LibraryRootInspection.ResolveModeForRecovery(libraryRoot);
+                var resolvedMode = allowModeSelection
+                    ? selectedMode
+                    : explicitOpenMode ?? LibraryRootInspection.ResolveModeForRecovery(libraryRoot);
                 return StartShellWithLibraryRootAsync(
                     mainWindow,
                     pathSelectionService,
@@ -215,9 +218,8 @@ internal sealed partial class App : Application
                     resolvedMode);
             },
             requireDifferentLibraryRoot,
-            explicitOpenMode is null
-                ? null
-                : libraryRoot => LibraryRootInspection.BuildModeValidationMessage(libraryRoot, explicitOpenMode.Value));
+            allowModeSelection,
+            explicitOpenMode);
 
     private async Task SwitchLibraryRootAsync(
         MainWindow mainWindow,

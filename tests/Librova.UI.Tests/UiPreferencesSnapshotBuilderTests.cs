@@ -13,6 +13,7 @@ public sealed class UiPreferencesSnapshotBuilderTests
         var existing = new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = @"C:\Libraries\Old",
+            PortablePreferredLibraryRoot = @"..\Library",
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
             Fb2CngConfigPath = @"C:\Tools\fbc.yaml",
@@ -23,6 +24,7 @@ public sealed class UiPreferencesSnapshotBuilderTests
         var updated = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(existing, @"D:\Librova\New");
 
         Assert.Equal(@"D:\Librova\New", updated.PreferredLibraryRoot);
+        Assert.Null(updated.PortablePreferredLibraryRoot);
         Assert.Equal(UiConverterMode.BuiltInFb2Cng, updated.ConverterMode);
         Assert.Equal(@"C:\Tools\fbc.exe", updated.Fb2CngExecutablePath);
         Assert.Equal(@"C:\Tools\fbc.yaml", updated.Fb2CngConfigPath);
@@ -36,6 +38,7 @@ public sealed class UiPreferencesSnapshotBuilderTests
         var existing = new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = @"C:\Libraries\Old",
+            PortablePreferredLibraryRoot = @"..\Library",
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             ForceEpubConversionOnImport = true
         };
@@ -43,6 +46,7 @@ public sealed class UiPreferencesSnapshotBuilderTests
         var updated = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(existing, @"D:\Librova\New");
 
         Assert.Equal(@"D:\Librova\New", updated.PreferredLibraryRoot);
+        Assert.Null(updated.PortablePreferredLibraryRoot);
         Assert.Equal(UiConverterMode.Disabled, updated.ConverterMode);
         Assert.Null(updated.Fb2CngExecutablePath);
         Assert.Null(updated.Fb2CngConfigPath);

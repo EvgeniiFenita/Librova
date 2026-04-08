@@ -265,7 +265,7 @@ internal sealed class ShellViewModel : ObservableObject
     private Task SavePreferencesAsync()
     {
         var hasConfiguredConverter = !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
-        _preferencesStore.Save(new UiPreferencesSnapshot
+        _preferencesStore.Save(BuildPreferencesSnapshot(new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
             ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
@@ -273,7 +273,7 @@ internal sealed class ShellViewModel : ObservableObject
             ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport,
             PreferredSortKey = LibraryBrowser.SelectedSortKey?.Key,
             PreferredSortDescending = LibraryBrowser.SortDescending
-        });
+        }));
         UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
         return _reloadShellAsync is null ? Task.CompletedTask : _reloadShellAsync();
     }
@@ -353,20 +353,37 @@ internal sealed class ShellViewModel : ObservableObject
         try
         {
             var current = _preferencesStore.TryLoad();
-            _preferencesStore.Save(new UiPreferencesSnapshot
+            _preferencesStore.Save(BuildPreferencesSnapshot(new UiPreferencesSnapshot
             {
-                PreferredLibraryRoot = current?.PreferredLibraryRoot ?? _session.HostOptions.LibraryRoot,
+                PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
                 ConverterMode = current?.ConverterMode ?? UiConverterMode.Disabled,
+                PortablePreferredLibraryRoot = current?.PortablePreferredLibraryRoot,
                 Fb2CngExecutablePath = current?.Fb2CngExecutablePath,
                 Fb2CngConfigPath = current?.Fb2CngConfigPath,
                 ForceEpubConversionOnImport = current?.ForceEpubConversionOnImport ?? false,
                 PreferredSortKey = sortKey,
                 PreferredSortDescending = sortDescending
-            });
+            }));
         }
         catch (Exception error)
         {
             UiLogging.Warning("Failed to persist sort preference. {Error}", error.Message);
         }
+    }
+
+    private UiPreferencesSnapshot BuildPreferencesSnapshot(UiPreferencesSnapshot snapshot)
+    {
+        var libraryRoot = snapshot.PreferredLibraryRoot ?? _session.HostOptions.LibraryRoot;
+        return new UiPreferencesSnapshot
+        {
+            PreferredLibraryRoot = libraryRoot,
+            PortablePreferredLibraryRoot = RuntimeEnvironment.BuildPortableLibraryRootPreference(libraryRoot),
+            ConverterMode = snapshot.ConverterMode,
+            Fb2CngExecutablePath = snapshot.Fb2CngExecutablePath,
+            Fb2CngConfigPath = snapshot.Fb2CngConfigPath,
+            ForceEpubConversionOnImport = snapshot.ForceEpubConversionOnImport,
+            PreferredSortKey = snapshot.PreferredSortKey,
+            PreferredSortDescending = snapshot.PreferredSortDescending
+        };
     }
 }

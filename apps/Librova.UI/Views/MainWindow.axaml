@@ -108,6 +108,24 @@
               <StackPanel Spacing="14">
                 <TextBlock Classes="SectionTitle"
                            Text="Library Root Folder" />
+                <StackPanel Spacing="10"
+                            IsVisible="{Binding Setup.ShowLibraryOpenModeSelector}">
+                  <TextBlock Classes="BodyMuted"
+                             Text="Choose whether to create a new managed library or open an existing one."
+                             TextWrapping="Wrap" />
+                  <Grid ColumnDefinitions="*,*"
+                        ColumnSpacing="10">
+                    <Button Classes="NavItem"
+                            Classes.Active="{Binding Setup.IsCreateLibraryModeSelected}"
+                            Command="{Binding Setup.SelectCreateLibraryModeCommand}"
+                            Content="Create Library" />
+                    <Button Grid.Column="1"
+                            Classes="NavItem"
+                            Classes.Active="{Binding Setup.IsOpenLibraryModeSelected}"
+                            Command="{Binding Setup.SelectOpenLibraryModeCommand}"
+                            Content="Open Library" />
+                  </Grid>
+                </StackPanel>
                 <TextBlock Classes="BodyMuted"
                            Text="Librova will store the database, managed books, covers, logs, temporary import files, and trash under this root."
                            TextWrapping="Wrap" />
@@ -135,7 +153,7 @@
                         Width="180"
                         HorizontalAlignment="Left"
                         Command="{Binding Setup.ContinueCommand}"
-                        Content="Continue" />
+                        Content="{Binding Setup.ContinueButtonText}" />
               </StackPanel>
             </Border>
           </StackPanel>

@@ -10,15 +10,20 @@ internal static class CoreHostDevelopmentDefaults
     public static CoreHostLaunchOptions Create(string? baseDirectory = null, IUiPreferencesStore? preferencesStore = null)
     {
         var effectivePreferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
+        var preferences = effectivePreferencesStore.TryLoad();
         var libraryRoot = RuntimeEnvironment.GetLibraryRootOverride();
         if (string.IsNullOrWhiteSpace(libraryRoot))
         {
-            libraryRoot = effectivePreferencesStore.TryLoad()?.PreferredLibraryRoot;
+            libraryRoot = RuntimeEnvironment.ResolvePreferredLibraryRoot(
+                preferences?.PreferredLibraryRoot,
+                preferences?.PortablePreferredLibraryRoot,
+                baseDirectory,
+                RuntimeEnvironment.GetCoreHostExecutableOverride());
         }
 
         return CreateForLibraryRoot(
             string.IsNullOrWhiteSpace(libraryRoot) ? GetFallbackLibraryRoot() : libraryRoot,
-            effectivePreferencesStore.TryLoad(),
+            preferences,
             baseDirectory,
             UiLibraryOpenMode.OpenExisting);
     }

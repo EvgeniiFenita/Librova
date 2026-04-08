@@ -141,6 +141,51 @@ public sealed class RuntimeEnvironmentTests
     }
 
     [Fact]
+    public void RuntimeEnvironment_BuildPortableLibraryRootPreference_UsesRelativePathInPortableMode()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(sandboxRoot);
+        Directory.CreateDirectory(libraryRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            var relativePath = RuntimeEnvironment.BuildPortableLibraryRootPreference(libraryRoot, sandboxRoot, null);
+            Assert.Equal("Library", relativePath);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_ResolvePreferredLibraryRoot_PrefersPortableRelativePathInPortableMode()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            var resolved = RuntimeEnvironment.ResolvePreferredLibraryRoot(
+                @"D:\Stale\Librova",
+                Path.Combine("..", "PortableLibrary"),
+                sandboxRoot,
+                null);
+
+            Assert.Equal(
+                Path.GetFullPath(Path.Combine(sandboxRoot, "..", "PortableLibrary")),
+                resolved);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
     public void CoreHostDevelopmentDefaults_Create_UsesEnvironmentOverrides()
     {
         var expectedLibraryRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "library");
@@ -206,6 +251,45 @@ public sealed class RuntimeEnvironmentTests
                 });
             });
         });
+    }
+
+    [Fact]
+    public void CoreHostDevelopmentDefaults_Create_PrefersPortableRelativeLibraryRootWhenPortableModeMoves()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var preferencesFile = Path.Combine(sandboxRoot, "PortableData", "ui-preferences.json");
+        var portableLibraryRoot = Path.Combine(sandboxRoot, "Library");
+        var staleAbsoluteLibraryRoot = @"D:\Librova\PreferredLibrary";
+        var packagedHostPath = Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(preferencesFile)!);
+        Directory.CreateDirectory(portableLibraryRoot);
+        File.WriteAllText(packagedHostPath, string.Empty);
+        new UiPreferencesStore(preferencesFile).Save(new UiPreferencesSnapshot
+        {
+            PreferredLibraryRoot = staleAbsoluteLibraryRoot,
+            PortablePreferredLibraryRoot = "Library"
+        });
+
+        try
+        {
+            WithEnvironmentVariable(RuntimeEnvironment.CoreHostExecutableEnvVar, null, () =>
+            {
+                WithEnvironmentVariable(RuntimeEnvironment.UiPreferencesFileEnvVar, preferencesFile, () =>
+                {
+                    WithEnvironmentVariable(RuntimeEnvironment.LibraryRootEnvVar, null, () =>
+                    {
+                        var options = CoreHostDevelopmentDefaults.Create(baseDirectory: sandboxRoot);
+                        Assert.Equal(portableLibraryRoot, options.LibraryRoot);
+                        Assert.Equal(packagedHostPath, options.ExecutablePath);
+                    });
+                });
+            });
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
     }
 
     [Fact]
@@ -301,6 +385,23 @@ public sealed class RuntimeEnvironmentTests
         finally
         {
             Environment.SetEnvironmentVariable(variableName, previousValue);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 }

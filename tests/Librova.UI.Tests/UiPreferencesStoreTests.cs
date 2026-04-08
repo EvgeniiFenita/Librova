@@ -13,7 +13,8 @@ public sealed class UiPreferencesStoreTests
         var store = new UiPreferencesStore(filePath);
         var expected = new UiPreferencesSnapshot
         {
-            PreferredLibraryRoot = @"D:\Librova\Library"
+            PreferredLibraryRoot = @"D:\Librova\Library",
+            PortablePreferredLibraryRoot = @"..\Library"
         };
 
         store.Save(expected);
@@ -21,6 +22,7 @@ public sealed class UiPreferencesStoreTests
 
         Assert.NotNull(actual);
         Assert.Equal(expected.PreferredLibraryRoot, actual!.PreferredLibraryRoot);
+        Assert.Equal(expected.PortablePreferredLibraryRoot, actual.PortablePreferredLibraryRoot);
     }
 
     [Fact]

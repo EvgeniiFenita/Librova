@@ -1,4 +1,5 @@
 using Librova.UI.Desktop;
+using Librova.UI.CoreHost;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using Xunit;
@@ -14,7 +15,7 @@ public sealed class FirstRunSetupViewModelTests
             "relative\\library",
             new FakePathSelectionService(),
             new FakePreferencesStore(),
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         Assert.False(viewModel.ContinueCommand.CanExecute(null));
         Assert.True(viewModel.HasValidationError);
@@ -29,7 +30,7 @@ public sealed class FirstRunSetupViewModelTests
             unavailableRoot,
             new FakePathSelectionService(),
             new FakePreferencesStore(),
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         Assert.False(viewModel.ContinueCommand.CanExecute(null));
         Assert.True(viewModel.HasValidationError);
@@ -47,7 +48,7 @@ public sealed class FirstRunSetupViewModelTests
                 SelectedWorkingDirectory = selectedPath
             },
             new FakePreferencesStore(),
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         await viewModel.BrowseLibraryRootCommand.ExecuteAsyncForTests();
 
@@ -65,9 +66,10 @@ public sealed class FirstRunSetupViewModelTests
             libraryRoot,
             new FakePathSelectionService(),
             preferences,
-            libraryRoot =>
+            (selectedLibraryRoot, selectedMode) =>
             {
-                continuedWith = libraryRoot;
+                continuedWith = selectedLibraryRoot;
+                Assert.Equal(UiLibraryOpenMode.CreateNew, selectedMode);
                 return Task.CompletedTask;
             });
 
@@ -95,7 +97,7 @@ public sealed class FirstRunSetupViewModelTests
             libraryRoot,
             new FakePathSelectionService(),
             preferences,
-            _ => Task.CompletedTask);
+            (_, _) => Task.CompletedTask);
 
         await viewModel.ContinueCommand.ExecuteAsyncForTests();
 
@@ -113,7 +115,7 @@ public sealed class FirstRunSetupViewModelTests
             libraryRoot,
             new FakePathSelectionService(),
             preferences,
-            _ => throw new InvalidOperationException("startup failed"));
+            (_, _) => throw new InvalidOperationException("startup failed"));
 
         await viewModel.ContinueCommand.ExecuteAsyncForTests();
 
@@ -134,8 +136,8 @@ public sealed class FirstRunSetupViewModelTests
                 libraryRoot,
                 new FakePathSelectionService(),
                 new FakePreferencesStore(),
-                _ => Task.CompletedTask,
-                additionalValidation: LibraryRootInspection.BuildCreateNewValidationMessage);
+                (_, _) => Task.CompletedTask,
+                lockedLibraryOpenMode: UiLibraryOpenMode.CreateNew);
 
             Assert.False(viewModel.ContinueCommand.CanExecute(null));
             Assert.Contains("empty target directory", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
@@ -154,7 +156,7 @@ public sealed class FirstRunSetupViewModelTests
             libraryRoot,
             new FakePathSelectionService(),
             new FakePreferencesStore(),
-            _ => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
             requireDifferentLibraryRoot: true);
 
         Assert.False(viewModel.ContinueCommand.CanExecute(null));
@@ -171,7 +173,7 @@ public sealed class FirstRunSetupViewModelTests
             initialLibraryRoot,
             new FakePathSelectionService(),
             new FakePreferencesStore(),
-            _ => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
             requireDifferentLibraryRoot: true);
 
         viewModel.LibraryRoot = otherLibraryRoot;
@@ -179,6 +181,78 @@ public sealed class FirstRunSetupViewModelTests
         Assert.True(viewModel.ContinueCommand.CanExecute(null));
         Assert.False(viewModel.HasValidationError);
         Assert.Contains("different library root", viewModel.HelperText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ContinueCommand_CanOpenExistingLibraryFromFirstRunSetup()
+    {
+        var libraryRoot = BuildAvailableLibraryRoot("open-existing");
+        CreateManagedLibraryRoot(libraryRoot);
+        var preferences = new FakePreferencesStore();
+        string? continuedWith = null;
+        UiLibraryOpenMode? continuedMode = null;
+
+        try
+        {
+            var viewModel = new FirstRunSetupViewModel(
+                libraryRoot,
+                new FakePathSelectionService(),
+                preferences,
+                (selectedLibraryRoot, selectedMode) =>
+                {
+                    continuedWith = selectedLibraryRoot;
+                    continuedMode = selectedMode;
+                    return Task.CompletedTask;
+                },
+                allowModeSelection: true);
+
+            await viewModel.SelectOpenLibraryModeCommand.ExecuteAsyncForTests();
+            await viewModel.ContinueCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(libraryRoot, continuedWith);
+            Assert.Equal(UiLibraryOpenMode.OpenExisting, continuedMode);
+            Assert.Equal("Open Library", viewModel.ContinueButtonText);
+            Assert.False(viewModel.HasValidationError);
+            Assert.Equal(libraryRoot, preferences.LastSavedSnapshot?.PreferredLibraryRoot);
+        }
+        finally
+        {
+            TryDeleteDirectory(libraryRoot);
+        }
+    }
+
+    [Fact]
+    public async Task OpenLibraryMode_RejectsEmptyDirectoryUntilAnExistingManagedLibraryIsChosen()
+    {
+        var emptyDirectory = BuildAvailableLibraryRoot("first-run-empty-open");
+        Directory.CreateDirectory(emptyDirectory);
+        var managedLibraryRoot = BuildAvailableLibraryRoot("first-run-managed-open");
+        CreateManagedLibraryRoot(managedLibraryRoot);
+
+        try
+        {
+            var viewModel = new FirstRunSetupViewModel(
+                emptyDirectory,
+                new FakePathSelectionService(),
+                new FakePreferencesStore(),
+                (_, _) => Task.CompletedTask,
+                allowModeSelection: true);
+
+            await viewModel.SelectOpenLibraryModeCommand.ExecuteAsyncForTests();
+
+            Assert.False(viewModel.ContinueCommand.CanExecute(null));
+            Assert.Contains("existing Librova library", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+
+            viewModel.LibraryRoot = managedLibraryRoot;
+
+            Assert.True(viewModel.ContinueCommand.CanExecute(null));
+            Assert.False(viewModel.HasValidationError);
+        }
+        finally
+        {
+            TryDeleteDirectory(emptyDirectory);
+            TryDeleteDirectory(managedLibraryRoot);
+        }
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService
@@ -235,6 +309,17 @@ public sealed class FirstRunSetupViewModelTests
 
     private static string BuildAvailableLibraryRoot(string scenario) =>
         Path.Combine(Path.GetTempPath(), "librova-ui-tests", scenario, Guid.NewGuid().ToString("N"));
+
+    private static void CreateManagedLibraryRoot(string libraryRoot)
+    {
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Database"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Books"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Covers"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Logs"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Temp"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Trash"));
+        File.WriteAllText(Path.Combine(libraryRoot, "Database", "librova.db"), string.Empty);
+    }
 
     private static void TryDeleteDirectory(string path)
     {

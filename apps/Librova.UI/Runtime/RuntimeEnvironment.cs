@@ -39,6 +39,49 @@ internal static class RuntimeEnvironment
 
     public static string? GetCoreHostExecutableOverride() => GetPathFromEnvironment(CoreHostExecutableEnvVar);
 
+    internal static string? BuildPortableLibraryRootPreference(
+        string libraryRoot,
+        string? baseDirectory = null,
+        string? hostExecutableOverride = null)
+    {
+        if (string.IsNullOrWhiteSpace(libraryRoot) || !Path.IsPathFullyQualified(libraryRoot))
+        {
+            return null;
+        }
+
+        if (!IsPortableMode(baseDirectory, hostExecutableOverride))
+        {
+            return null;
+        }
+
+        var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
+        var relativePath = Path.GetRelativePath(effectiveBaseDirectory, Path.GetFullPath(libraryRoot));
+        return Path.IsPathFullyQualified(relativePath)
+            ? null
+            : relativePath;
+    }
+
+    internal static string? ResolvePreferredLibraryRoot(
+        string? preferredLibraryRoot,
+        string? portablePreferredLibraryRoot,
+        string? baseDirectory = null,
+        string? hostExecutableOverride = null)
+    {
+        if (IsPortableMode(baseDirectory, hostExecutableOverride)
+            && !string.IsNullOrWhiteSpace(portablePreferredLibraryRoot))
+        {
+            if (Path.IsPathFullyQualified(portablePreferredLibraryRoot))
+            {
+                return preferredLibraryRoot;
+            }
+
+            var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
+            return Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
+        }
+
+        return preferredLibraryRoot;
+    }
+
     internal static bool IsPortableMode(string? baseDirectory = null, string? hostExecutableOverride = null)
     {
         if (!string.IsNullOrWhiteSpace(hostExecutableOverride))

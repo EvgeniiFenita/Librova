@@ -28,7 +28,7 @@ The current product direction is built for:
 
 ### 3.1 First Launch
 
-On first launch, the user chooses a library root. Under that root Librova stores:
+On first launch, the user chooses whether to create a new managed library or open an existing Librova library root. Under the active library root Librova stores:
 
 - database;
 - managed books;
@@ -40,6 +40,8 @@ On first launch, the user chooses a library root. Under that root Librova stores
 Once a library is active, both UI and native host logs are kept under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders.
 
 For the portable packaged distribution, bootstrap-only UI files that exist before any library is opened stay beside the application under `PortableData/`, including the pre-library UI log, saved UI preferences, and UI shell state. Once a library is active, the running session still moves to `LibraryRoot/Logs` for both UI and native host logs.
+
+When that portable packaged distribution and its managed library are moved together to another machine or drive letter, Librova should still reopen the same library on the next launch by resolving the saved library location relative to the application directory rather than depending only on the previous absolute drive path.
 
 For multi-file, directory, and ZIP imports, the native host log must also record per-source and per-entry skipped/failed diagnostics with concrete file names, so large import investigations do not depend only on the UI warning summary.
 

@@ -73,12 +73,12 @@ internal sealed class ShellWindowViewModel : ObservableObject
             "Librova Setup",
             null,
             setup,
-            "Choose the managed library location before the first launch.",
+            "Choose whether to create a new Librova library or open an existing one before the first launch.",
             null,
             UiLogging.CurrentLogFilePath ?? RuntimeEnvironment.GetDefaultUiLogFilePath(),
             RuntimeEnvironment.GetDefaultUiStateFilePath(),
             RuntimeEnvironment.GetDefaultUiPreferencesFilePath(),
-            "Librova stores the managed library, database, covers, logs, temporary import files, and trash under the selected root. You can change this again later in the running shell settings.");
+            "Librova stores the managed library, database, covers, logs, temporary import files, and trash under the selected root. You can create a new library here, or point Librova at an existing managed library and continue with that catalog.");
 
     public static ShellWindowViewModel CreateStartupError(string message, FirstRunSetupViewModel? recoverySetup = null) =>
         new(
