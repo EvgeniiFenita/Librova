@@ -11,6 +11,15 @@
 namespace Librova::ManagedTrash {
 namespace {
 
+[[nodiscard]] std::error_code DefaultMoveOperation(
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& destinationPath)
+{
+    std::error_code errorCode;
+    std::filesystem::rename(sourcePath, destinationPath, errorCode);
+    return errorCode;
+}
+
 void EnsureDirectory(const std::filesystem::path& path)
 {
     std::error_code errorCode;
@@ -23,10 +32,12 @@ void EnsureDirectory(const std::filesystem::path& path)
     }
 }
 
-void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
+void MoveFile(
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& destinationPath,
+    const CManagedTrashService::TMoveOperation& moveOperation)
 {
-    std::error_code errorCode;
-    std::filesystem::rename(sourcePath, destinationPath, errorCode);
+    const auto errorCode = moveOperation(sourcePath, destinationPath);
 
     if (errorCode)
     {
@@ -59,9 +70,9 @@ void CleanupEmptyParentDirectory(
     std::filesystem::remove(parentPath, errorCode);
 }
 
-[[nodiscard]] std::filesystem::path BuildCollisionSafePath(const std::filesystem::path& path)
+[[nodiscard]] std::filesystem::path BuildCollisionCandidatePath(const std::filesystem::path& path, const int index)
 {
-    if (!std::filesystem::exists(path))
+    if (index == 0)
     {
         return path;
     }
@@ -69,14 +80,34 @@ void CleanupEmptyParentDirectory(
     const auto parentPath = path.parent_path();
     const auto stem = path.stem().string();
     const auto extension = path.extension().string();
+    return parentPath / (stem + ".trashed-" + std::to_string(index) + extension);
+}
 
+[[nodiscard]] std::filesystem::path MoveFileToCollisionSafeDestination(
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& destinationTemplate,
+    const CManagedTrashService::TMoveOperation& moveOperation)
+{
     for (int index = 1; index < 1000; ++index)
     {
-        const auto candidate = parentPath / (stem + ".trashed-" + std::to_string(index) + extension);
-        if (!std::filesystem::exists(candidate))
+        const auto candidate = BuildCollisionCandidatePath(destinationTemplate, index - 1);
+        const auto errorCode = moveOperation(sourcePath, candidate);
+        if (!errorCode)
         {
             return candidate;
         }
+
+        std::error_code existsError;
+        if (std::filesystem::exists(candidate, existsError) && !existsError)
+        {
+            continue;
+        }
+
+        throw std::runtime_error(
+            std::string{"Failed to move file from "}
+            + Librova::Unicode::PathToUtf8(sourcePath)
+            + " to "
+            + Librova::Unicode::PathToUtf8(candidate));
     }
 
     throw std::runtime_error("Failed to find a collision-safe trash path.");
@@ -84,8 +115,11 @@ void CleanupEmptyParentDirectory(
 
 } // namespace
 
-CManagedTrashService::CManagedTrashService(std::filesystem::path libraryRoot)
+CManagedTrashService::CManagedTrashService(
+    std::filesystem::path libraryRoot,
+    TMoveOperation moveOperation)
     : m_libraryRoot(std::move(libraryRoot))
+    , m_moveOperation(moveOperation ? std::move(moveOperation) : &DefaultMoveOperation)
 {
     std::error_code errorCode;
     const auto canonical = std::filesystem::weakly_canonical(m_libraryRoot, errorCode);
@@ -104,9 +138,9 @@ std::filesystem::path CManagedTrashService::MoveToTrash(const std::filesystem::p
 
     const auto destinationPath = BuildTrashDestination(sourcePath);
     EnsureDirectory(destinationPath.parent_path());
-    MoveFile(sourcePath, destinationPath);
+    const auto movedPath = MoveFileToCollisionSafeDestination(sourcePath, destinationPath, m_moveOperation);
     CleanupEmptyParentDirectory(sourcePath, m_canonicalLibraryRoot);
-    return destinationPath;
+    return movedPath;
 }
 
 void CManagedTrashService::RestoreFromTrash(
@@ -119,7 +153,7 @@ void CManagedTrashService::RestoreFromTrash(
     }
 
     EnsureDirectory(destinationPath.parent_path());
-    MoveFile(trashedPath, destinationPath);
+    MoveFile(trashedPath, destinationPath, m_moveOperation);
     CleanupEmptyParentDirectory(trashedPath, m_canonicalLibraryRoot);
 }
 
@@ -150,7 +184,7 @@ std::filesystem::path CManagedTrashService::BuildTrashDestination(const std::fil
     }
 
     const auto trashRoot = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot).TrashDirectory;
-    return BuildCollisionSafePath((trashRoot / relativePath).lexically_normal());
+    return (trashRoot / relativePath).lexically_normal();
 }
 
 } // namespace Librova::ManagedTrash

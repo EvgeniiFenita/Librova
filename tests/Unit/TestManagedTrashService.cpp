@@ -158,3 +158,40 @@ TEST_CASE("Managed trash service rejects symlinked managed path escaping library
 
     std::filesystem::remove_all(sandbox);
 }
+
+TEST_CASE("Managed trash service retries with a suffixed trash path when a collision appears during rename", "[managed-trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-race";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Books/0000000003");
+
+    const auto sourcePath = sandbox / "Library/Books/0000000003/book.epub";
+    const auto initialTrashPath = sandbox / "Library/Trash/Books/0000000003/book.epub";
+    std::ofstream(sourcePath, std::ios::binary) << "epub";
+
+    auto firstAttempt = true;
+    Librova::ManagedTrash::CManagedTrashService service(
+        sandbox / "Library",
+        [&firstAttempt, &initialTrashPath](const std::filesystem::path& source, const std::filesystem::path& destination) {
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                std::filesystem::create_directories(initialTrashPath.parent_path());
+                std::ofstream(initialTrashPath, std::ios::binary) << "collision";
+                return std::make_error_code(std::errc::file_exists);
+            }
+
+            std::error_code errorCode;
+            std::filesystem::rename(source, destination, errorCode);
+            return errorCode;
+        });
+
+    const auto trashedPath = service.MoveToTrash(sourcePath);
+
+    REQUIRE(trashedPath == sandbox / "Library/Trash/Books/0000000003/book.trashed-1.epub");
+    REQUIRE(std::filesystem::exists(initialTrashPath));
+    REQUIRE(std::filesystem::exists(trashedPath));
+    REQUIRE_FALSE(std::filesystem::exists(sourcePath));
+
+    std::filesystem::remove_all(sandbox);
+}

@@ -420,6 +420,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Low
 
+- `#98` remove the collision-path TOCTOU window in managed trash destination selection.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: managed trash destination selection now retries collisions around the actual move operation instead of pre-checking candidate paths, with a regression that simulates a competing file appearing during rename.
+
 - `#97` replace named-pipe readable-byte busy polling with a more explicit wait strategy and cancellation-aware timeout handling.
   - Status: `Closed`
   - Type: `Bug`
