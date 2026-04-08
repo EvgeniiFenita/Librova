@@ -318,6 +318,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Minor
 
+- `#94` add missing regression coverage for damaged-library delete, duplicate-only batch import, forced conversion failure, and silent settings-state loss.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: the listed 1.0 blind spots are now covered by regressions for damaged-library delete with missing managed artifacts, duplicate-only batch and ZIP imports, forced EPUB conversion failures, and `SavePreferencesAsync` preserving `Fb2CngConfigPath`.
+
 - `#57` disable the import options panel (Allow duplicate import, Force conversion to EPUB) during active import.
   - Status: `Closed`
   - Type: `Feature`
