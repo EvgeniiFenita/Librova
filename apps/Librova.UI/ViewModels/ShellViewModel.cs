@@ -265,11 +265,13 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private Task SavePreferencesAsync()
     {
         var hasConfiguredConverter = !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
+        var current = _preferencesStore.TryLoad();
         _preferencesStore.Save(BuildPreferencesSnapshot(new UiPreferencesSnapshot
         {
             PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
             ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
             Fb2CngExecutablePath = hasConfiguredConverter ? Fb2CngExecutablePath : null,
+            Fb2CngConfigPath = hasConfiguredConverter ? current?.Fb2CngConfigPath : null,
             ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport,
             PreferredSortKey = LibraryBrowser.SelectedSortKey?.Key,
             PreferredSortDescending = LibraryBrowser.SortDescending

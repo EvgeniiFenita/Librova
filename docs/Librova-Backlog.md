@@ -32,12 +32,6 @@ Last assigned id: `#99`
 ## 3. Open Backlog
 
 ### Critical
-- `#82` preserve `Fb2CngConfigPath` when saving Settings preferences.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: `SavePreferencesAsync` rebuilds the preferences snapshot without carrying over the existing converter config path, so a normal Settings save silently wipes the stored fb2cng config file path.
-
 - `#83` replace infinite waits in external converter termination and cancellation paths with bounded shutdown logic.
   - Status: `Open`
   - Type: `Bug`

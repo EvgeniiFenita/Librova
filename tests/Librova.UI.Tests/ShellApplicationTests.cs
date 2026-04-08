@@ -394,6 +394,46 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task ShellSettings_SavePreferencesPreservesExistingConverterConfigPath()
+    {
+        var preferencesStore = new FakePreferencesStore
+        {
+            Snapshot = new UiPreferencesSnapshot
+            {
+                PreferredLibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.BuiltInFb2Cng,
+                Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
+                Fb2CngConfigPath = @"C:\Tools\fbc.yaml"
+            }
+        };
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: preferencesStore,
+            converterProbe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
+        application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
+
+        await application.Shell._converterProbeTask;
+        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
+
+        Assert.NotNull(preferencesStore.LastSavedSnapshot);
+        Assert.Equal(@"D:\Tools\fbc.exe", preferencesStore.LastSavedSnapshot!.Fb2CngExecutablePath);
+        Assert.Equal(@"C:\Tools\fbc.yaml", preferencesStore.LastSavedSnapshot.Fb2CngConfigPath);
+    }
+
+    [Fact]
     public async Task ShellSettings_ClearsForcedImportConversionWhenConverterPathIsEmpty()
     {
         var preferencesStore = new FakePreferencesStore();

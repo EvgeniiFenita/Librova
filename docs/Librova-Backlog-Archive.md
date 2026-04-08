@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#82` preserve `Fb2CngConfigPath` when saving Settings preferences.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: Settings saves now preserve the stored fb2cng config path alongside the executable path, with a regression test covering the normal save flow.
+
 - `#81` surface rollback cleanup residue when import cancellation leaves managed files or covers on disk.
   - Status: `Closed`
   - Type: `Bug`
