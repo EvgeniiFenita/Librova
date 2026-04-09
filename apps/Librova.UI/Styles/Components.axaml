@@ -11,6 +11,17 @@
     <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI, sans-serif" />
   </Style>
 
+  <!-- Global tooltip — warm palette surface with cream text -->
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
   <!-- Unified shell card (sidebar + content as one surface) -->
   <Style Selector="Border.AppShell">
     <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />

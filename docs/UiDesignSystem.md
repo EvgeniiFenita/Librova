@@ -220,6 +220,20 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `ComboBox` | `AppComboBox` | Popup styled via `Border#PopupBorder` override |
 | `CheckBox` | *(none)* | Foreground override to Primary |
 
+### ToolTip
+
+Global style applied in `Components.axaml`. No custom class needed — all `ToolTip.Tip` attributes pick it up automatically.
+
+| Token | Value |
+|---|---|
+| Background | `AppSurfaceAltBrush` |
+| Foreground | `AppTextPrimaryBrush` (cream) |
+| BorderBrush | `AppBorderStrongBrush` |
+| BorderThickness | 1 |
+| CornerRadius | `Radius.Small` |
+| Padding | `8,5` |
+| FontSize | 12 |
+
 ### ScrollBar
 Styled entirely via FluentTheme resource key overrides in `Colors.axaml` (no `/template/` selectors except CornerRadius=4 on Thumb). Key states:
 - Collapsed: `ScrollBarPanningThumbBackground` = `BorderStrong`  

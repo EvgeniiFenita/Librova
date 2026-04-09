@@ -39,12 +39,6 @@ Last assigned id: `#102`
   - Milestone: `1.1`
   - Note: extend source selection, recursive directory discovery, and archive import handling so `.rar` files are accepted anywhere `.zip` is currently supported, with the same per-entry diagnostics, partial-success behavior, cancellation semantics, and duplicate handling as ZIP imports.
 
-- `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: the current Settings section requires the user to manually erase the converter path text field to disable conversion; add an explicit Remove button that clears the converter path and immediately reloads the session so that Export As EPUB and import conversion are hidden as they would be after a clean start with no converter configured.
-
 - `#68` add a Batch Convert to EPUB workflow that re-converts all managed FB2 books to EPUB using the active converter, with aggregate progress and summary.
   - Status: `Open`
   - Type: `Feature`

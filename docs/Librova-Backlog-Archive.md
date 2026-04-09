@@ -336,6 +336,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Minor
 
+- `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: replaced the manual Save button with auto-save on successful probe completion or path clear; added an inline × (IconActionSm) button that clears the converter path; settings now apply automatically after validation without requiring an explicit save action.
+
 - `#95` add the missing safety and lifecycle regressions for transport drift, rollback residue, portable containment, Unicode sort, and startup cleanup.
   - Status: `Closed`
   - Type: `Bug`

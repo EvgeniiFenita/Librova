@@ -44,18 +44,29 @@
                        Text="Converter Executable" />
           </StackPanel>
           <TextBlock Classes="BodyMuted"
-                     Text="Saving reloads the shell immediately with the new converter settings. Disable conversion to keep imported FB2 files as FB2 when fallback rules allow it."
+                     Text="Settings are applied automatically after validation. Use × to remove the configured converter and disable FB2 conversion."
                      TextWrapping="Wrap" />
           <Grid ColumnDefinitions="*,Auto"
-                ColumnSpacing="10">
+                ColumnSpacing="8">
             <TextBox Classes="AppTextInput"
                      PlaceholderText="C:\Tools\fbc.exe"
                      Text="{Binding Fb2CngExecutablePath}" />
-            <Button Grid.Column="1"
-                    Classes="SecondaryAction"
-                    MinWidth="110"
-                    Command="{Binding BrowseFb2CngExecutablePathCommand}"
-                    Content="Browse..." />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8">
+              <Button Classes="IconActionSm"
+                      IsVisible="{Binding HasConfiguredConverter}"
+                      Command="{Binding ClearConverterPathCommand}"
+                      ToolTip.Tip="Remove converter">
+                <PathIcon Data="{StaticResource IconClose}"
+                          Width="14"
+                          Height="14" />
+              </Button>
+              <Button Classes="SecondaryAction"
+                      MinWidth="110"
+                      Command="{Binding BrowseFb2CngExecutablePathCommand}"
+                      Content="Browse..." />
+            </StackPanel>
           </Grid>
           <TextBlock FontSize="12"
                      Foreground="{DynamicResource AppWarningBrush}"
@@ -70,11 +81,6 @@
                      IsVisible="{Binding ShowConverterHelperText}"
                      Text="{Binding ConverterHintText}"
                      TextWrapping="Wrap" />
-          <Button Classes="PrimaryAction"
-                  Width="120"
-                  HorizontalAlignment="Left"
-                  Command="{Binding SavePreferencesCommand}"
-                  Content="Save" />
         </StackPanel>
       </Border>
 

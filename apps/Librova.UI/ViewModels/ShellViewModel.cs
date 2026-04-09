@@ -29,6 +29,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private string _converterValidationMessage = string.Empty;
     private ShellSection _currentSection = ShellSection.Library;
     private bool _isConverterProbeInProgress;
+    private bool _settingsReady;
     internal Task _converterProbeTask = Task.CompletedTask;
 
     public ShellViewModel(
@@ -76,6 +77,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
         BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync);
+        ClearConverterPathCommand = new AsyncCommand(ClearConverterPathAsync);
         OpenLibraryCommand = new AsyncCommand(OpenLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         CreateLibraryCommand = new AsyncCommand(CreateLibraryAsync, () => !IsImportInProgress && _switchLibraryAsync is not null);
         ShowLibrarySectionCommand = new AsyncCommand(ShowLibrarySectionAsync, () => !IsImportInProgress);
@@ -83,6 +85,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress);
 
         _converterValidationCoordinator.Initialize(_fb2CngExecutablePath);
+        _settingsReady = true;
 
         if (session.HostOptions.LibraryOpenMode == UiLibraryOpenMode.CreateNew)
         {
@@ -106,6 +109,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public LibraryBrowserViewModel LibraryBrowser { get; }
     public AsyncCommand SavePreferencesCommand { get; }
     public AsyncCommand BrowseFb2CngExecutablePathCommand { get; }
+    public AsyncCommand ClearConverterPathCommand { get; }
     public AsyncCommand OpenLibraryCommand { get; }
     public AsyncCommand CreateLibraryCommand { get; }
     public AsyncCommand ShowLibrarySectionCommand { get; }
@@ -120,6 +124,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _fb2CngExecutablePath, value))
             {
                 _converterValidationCoordinator.ScheduleValidation(_fb2CngExecutablePath);
+                RaisePropertyChanged(nameof(HasConfiguredConverter));
             }
         }
     }
@@ -181,7 +186,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public string DiagnosticsHintText =>
         "If startup or import flow looks suspicious, inspect the UI log first, then the host log.";
     public string ConverterHintText =>
-        "Librova uses the built-in fb2cng / fbc.exe converter profile. Leave the path empty to keep EPUB conversion disabled.";
+        "Settings are applied automatically after validation. Use × to remove the configured converter.";
 
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
@@ -214,6 +219,24 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private Task ShowSettingsSectionAsync()
     {
         CurrentSection = ShellSection.Settings;
+        return Task.CompletedTask;
+    }
+
+    private async Task AutoSavePreferencesAsync()
+    {
+        try
+        {
+            await SavePreferencesAsync();
+        }
+        catch (Exception ex)
+        {
+            UiLogging.Error(ex, "Failed to auto-save converter preferences.");
+        }
+    }
+
+    private Task ClearConverterPathAsync()
+    {
+        Fb2CngExecutablePath = string.Empty;
         return Task.CompletedTask;
     }
 
@@ -308,6 +331,10 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         _isConverterProbeInProgress = _converterValidationCoordinator.IsProbeInProgress;
         ConverterValidationMessage = _converterValidationCoordinator.ValidationMessage;
         RaiseProbeProperties();
+        if (_settingsReady && !_isConverterProbeInProgress && !HasConverterValidationError)
+        {
+            _ = AutoSavePreferencesAsync();
+        }
     }
 
     private async Task HandleImportCompletedSuccessfullyAsync(ImportJobResultModel result)

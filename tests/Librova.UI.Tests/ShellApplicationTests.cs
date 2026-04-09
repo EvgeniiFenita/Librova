@@ -383,7 +383,6 @@ public sealed class ShellApplicationTests
         application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
 
         await application.Shell._converterProbeTask;
-        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
         Assert.NotNull(preferencesStore.LastSavedSnapshot);
         Assert.Equal(UiConverterMode.BuiltInFb2Cng, preferencesStore.LastSavedSnapshot.ConverterMode);
@@ -426,7 +425,6 @@ public sealed class ShellApplicationTests
         application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
 
         await application.Shell._converterProbeTask;
-        await application.Shell.SavePreferencesCommand.ExecuteAsyncForTests();
 
         Assert.NotNull(preferencesStore.LastSavedSnapshot);
         Assert.Equal(@"D:\Tools\fbc.exe", preferencesStore.LastSavedSnapshot!.Fb2CngExecutablePath);
@@ -462,6 +460,44 @@ public sealed class ShellApplicationTests
         Assert.Null(preferencesStore.LastSavedSnapshot.Fb2CngExecutablePath);
         Assert.False(preferencesStore.LastSavedSnapshot.ForceEpubConversionOnImport);
     }
+
+    [Fact]
+    public async Task ShellSettings_ClearConverterPathCommandSavesDisabledConverter()
+    {
+        var preferencesStore = new FakePreferencesStore();
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova",
+                ConverterMode = UiConverterMode.Disabled
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService());
+
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: preferencesStore,
+            savedPreferencesOverride: new UiPreferencesSnapshot
+            {
+                Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
+                ConverterMode = UiConverterMode.BuiltInFb2Cng
+            });
+
+        Assert.True(application.Shell.HasConfiguredConverter);
+
+         await application.Shell.ClearConverterPathCommand.ExecuteAsyncForTests();
+
+        Assert.True(string.IsNullOrWhiteSpace(application.Shell.Fb2CngExecutablePath));
+        Assert.False(application.Shell.HasConfiguredConverter);
+        Assert.NotNull(preferencesStore.LastSavedSnapshot);
+        Assert.Equal(UiConverterMode.Disabled, preferencesStore.LastSavedSnapshot!.ConverterMode);
+        Assert.Null(preferencesStore.LastSavedSnapshot.Fb2CngExecutablePath);
+    }
+
 
     [Fact]
     public void Create_DoesNotRestoreForcedImportConversionWithoutConfiguredConverter()
