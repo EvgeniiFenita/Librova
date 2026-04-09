@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#100`
+Last assigned id: `#101`
 
 ## 2. Priority Meanings
 
@@ -33,6 +33,12 @@ Last assigned id: `#100`
 
 ### Critical
 ### Major
+- `#101` migrate the UI stack from Avalonia 11 to Avalonia 12 and validate the application against the Avalonia 12 breaking changes.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: upgrade all Avalonia package references together as one migration, resolve Avalonia 12 binding and API breaking changes, confirm that the `Tmds.DBus.Protocol` security warning is no longer present after the upgrade path, and rerun the full managed and manual UI verification pass for startup, library browsing, import flows, and shell navigation.
+
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`
