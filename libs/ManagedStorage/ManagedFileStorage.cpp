@@ -195,7 +195,7 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
     const std::filesystem::path stagingDirectory = Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(m_libraryRoot, plan.BookId);
     const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
     const std::filesystem::path finalBookPath =
-        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format);
+        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format, plan.StorageEncoding);
 
     EnsureDirectory(layout.BooksDirectory);
     EnsureDirectory(layout.CoversDirectory);

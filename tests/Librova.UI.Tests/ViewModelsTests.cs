@@ -1400,6 +1400,25 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_SuggestedExportFileNameUsesFormatNotManagedPathExtension()
+    {
+        // Regression: managed FB2 files are stored as .fb2.gz on disk; the suggested export
+        // filename must use the book's logical format (.fb2), not the on-disk storage extension (.gz).
+        var service = new CompressedFb2LibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\book.fb2"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        await viewModel.ExportSelectedBookAsync();
+
+        Assert.Equal("Roadside Picnic - Arkady Strugatsky.fb2", selectionService.LastSuggestedExportFileName);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_ShowsExportAsEpubHintWhenConverterIsNotConfigured()
     {
         var viewModel = new LibraryBrowserViewModel(new InvalidMetadataLibraryCatalogService());
@@ -2430,6 +2449,50 @@ public sealed class ViewModelsTests
                 BookCount = 1,
                 TotalLibrarySizeBytes = 1024
             });
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
+    }
+
+    private sealed class CompressedFb2LibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Roadside Picnic",
+                        Authors = ["Arkady Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Books/0000000001/book.fb2.gz",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new LibraryStatisticsModel { BookCount = 1 });
 
         public Task<string?> ExportBookAsync(
             long bookId,

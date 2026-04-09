@@ -300,7 +300,7 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
     REQUIRE(result->ImportResult->Summary.ImportedEntries == 1);
     REQUIRE(client.Remove(jobId, std::chrono::seconds(5)));
     REQUIRE(std::filesystem::exists(libraryRoot / "Database" / "librova.db"));
-    REQUIRE(std::filesystem::exists(libraryRoot / "Books" / "0000000001" / "book.fb2"));
+    REQUIRE(std::filesystem::exists(libraryRoot / "Books" / "0000000001" / "book.fb2.gz"));
 
     process.Stop();
 }

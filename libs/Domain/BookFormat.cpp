@@ -28,6 +28,16 @@ std::string_view GetManagedFileName(const EBookFormat format) noexcept
     return "book.dat";
 }
 
+std::string_view GetManagedFileName(const EBookFormat format, const EStorageEncoding encoding) noexcept
+{
+    if (format == EBookFormat::Fb2 && encoding == EStorageEncoding::Compressed)
+    {
+        return "book.fb2.gz";
+    }
+
+    return GetManagedFileName(format);
+}
+
 std::optional<EBookFormat> TryParseBookFormat(const std::string_view value) noexcept
 {
     if (value == "epub" || value == ".epub" || value == "EPUB")

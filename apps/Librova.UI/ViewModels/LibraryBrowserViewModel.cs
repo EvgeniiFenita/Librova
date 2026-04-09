@@ -1133,15 +1133,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         {
             BookFormatModel.Fb2 => ".fb2",
             BookFormatModel.Epub => ".epub",
-            _ => Path.GetExtension(SelectedBook?.ManagedPath)
+            _ => (SelectedBookDetails?.Format ?? SelectedBook?.Format) switch
+            {
+                BookFormatModel.Fb2 => ".fb2",
+                BookFormatModel.Epub => ".epub",
+                _ => null
+            }
         };
         if (string.IsNullOrWhiteSpace(extension))
         {
-            extension = (SelectedBookDetails?.Format ?? SelectedBook?.Format ?? BookFormatModel.Epub) switch
-            {
-                BookFormatModel.Fb2 => ".fb2",
-                _ => ".epub"
-            };
+            extension = ".epub";
         }
 
         return baseName + extension.ToLowerInvariant();

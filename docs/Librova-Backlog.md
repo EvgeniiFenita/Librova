@@ -76,12 +76,6 @@ Last assigned id: `#102`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
-- `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: fallback-managed compressed `FB2` files currently keep the original `.fb2` extension even though their on-disk bytes are no longer plain `FB2`, which makes manual inspection of the managed library misleading; define and implement a clearer internal naming/layout rule for that storage representation.
-
 - `#63` normalize FB2 genre codes to human-readable English names at import time so the database stores display-ready strings rather than raw format-specific codes.
   - Status: `Open`
   - Type: `Feature`

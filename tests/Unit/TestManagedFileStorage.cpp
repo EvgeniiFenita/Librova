@@ -133,6 +133,8 @@ TEST_CASE("Managed file storage compresses FB2 files for managed storage when re
     REQUIRE(std::filesystem::exists(prepared.StagedBookPath));
     REQUIRE(std::filesystem::file_size(prepared.StagedBookPath) < std::filesystem::file_size(sourceBookPath));
     REQUIRE(ReadTextFile(prepared.StagedBookPath) != ReadTextFile(sourceBookPath));
+    REQUIRE(prepared.FinalBookPath == std::filesystem::path{sandbox.GetPath() / "Library/Books/0000000078/book.fb2.gz"});
+    REQUIRE(prepared.RelativeBookPath == std::filesystem::path{"Books/0000000078/book.fb2.gz"});
 
     const auto decodedPath = sandbox.GetPath() / "decoded.fb2";
     Librova::ManagedFileEncoding::DecodeFileToPath(

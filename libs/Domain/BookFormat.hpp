@@ -3,6 +3,8 @@
 #include <optional>
 #include <string_view>
 
+#include "Domain/StorageEncoding.hpp"
+
 namespace Librova::Domain {
 
 enum class EBookFormat
@@ -13,6 +15,7 @@ enum class EBookFormat
 
 [[nodiscard]] std::string_view ToString(EBookFormat format) noexcept;
 [[nodiscard]] std::string_view GetManagedFileName(EBookFormat format) noexcept;
+[[nodiscard]] std::string_view GetManagedFileName(EBookFormat format, EStorageEncoding encoding) noexcept;
 [[nodiscard]] std::optional<EBookFormat> TryParseBookFormat(std::string_view value) noexcept;
 
 } // namespace Librova::Domain

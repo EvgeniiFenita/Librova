@@ -8,6 +8,18 @@ TEST_CASE("Book format converts to stable storage strings", "[domain][book-forma
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EBookFormat::Fb2) == "fb2");
     REQUIRE(Librova::Domain::GetManagedFileName(Librova::Domain::EBookFormat::Epub) == "book.epub");
     REQUIRE(Librova::Domain::GetManagedFileName(Librova::Domain::EBookFormat::Fb2) == "book.fb2");
+    REQUIRE(
+        Librova::Domain::GetManagedFileName(
+            Librova::Domain::EBookFormat::Fb2,
+            Librova::Domain::EStorageEncoding::Compressed) == "book.fb2.gz");
+    REQUIRE(
+        Librova::Domain::GetManagedFileName(
+            Librova::Domain::EBookFormat::Fb2,
+            Librova::Domain::EStorageEncoding::Plain) == "book.fb2");
+    REQUIRE(
+        Librova::Domain::GetManagedFileName(
+            Librova::Domain::EBookFormat::Epub,
+            Librova::Domain::EStorageEncoding::Compressed) == "book.epub");
 }
 
 TEST_CASE("Book format parsing accepts canonical MVP values", "[domain][book-format]")

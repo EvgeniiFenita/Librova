@@ -45,6 +45,15 @@ std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
     return GetBookDirectory(libraryRoot, bookId) / Librova::Domain::GetManagedFileName(format);
 }
 
+std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
+    const std::filesystem::path& libraryRoot,
+    const Librova::Domain::SBookId bookId,
+    const Librova::Domain::EBookFormat format,
+    const Librova::Domain::EStorageEncoding storageEncoding)
+{
+    return GetBookDirectory(libraryRoot, bookId) / Librova::Domain::GetManagedFileName(format, storageEncoding);
+}
+
 std::filesystem::path CManagedLibraryLayout::GetCoverPath(
     const std::filesystem::path& libraryRoot,
     const Librova::Domain::SBookId bookId,

@@ -5,6 +5,7 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/BookId.hpp"
+#include "Domain/StorageEncoding.hpp"
 
 namespace Librova::StoragePlanning {
 
@@ -31,6 +32,11 @@ public:
         const std::filesystem::path& libraryRoot,
         Librova::Domain::SBookId bookId,
         Librova::Domain::EBookFormat format);
+    [[nodiscard]] static std::filesystem::path GetManagedBookPath(
+        const std::filesystem::path& libraryRoot,
+        Librova::Domain::SBookId bookId,
+        Librova::Domain::EBookFormat format,
+        Librova::Domain::EStorageEncoding storageEncoding);
     [[nodiscard]] static std::filesystem::path GetCoverPath(
         const std::filesystem::path& libraryRoot,
         Librova::Domain::SBookId bookId,

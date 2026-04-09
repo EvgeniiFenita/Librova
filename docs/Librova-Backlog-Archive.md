@@ -336,6 +336,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Minor
 
+- `#42` make compressed managed `FB2` storage visibly distinct from plain `.fb2` files inside the library.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: compressed managed FB2 files now use the `.fb2.gz` extension instead of `.fb2`; implemented via an encoding-aware overload of `GetManagedFileName` and `GetManagedBookPath`; export and decompression are unaffected since they use the `storage_encoding` database column, not the file extension.
+
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Closed`
   - Type: `Feature`

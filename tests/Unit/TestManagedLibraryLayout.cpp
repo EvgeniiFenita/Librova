@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "Domain/StorageEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
 TEST_CASE("Managed library layout builds stable root directories", "[storage-planning]")
@@ -32,6 +33,22 @@ TEST_CASE("Managed library layout builds managed book, cover, and staging paths"
             {7},
             Librova::Domain::EBookFormat::Epub) ==
         std::filesystem::path{"D:/Library/Books/0000000007/book.epub"});
+
+    REQUIRE(
+        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
+            "D:/Library",
+            {7},
+            Librova::Domain::EBookFormat::Fb2,
+            Librova::Domain::EStorageEncoding::Compressed) ==
+        std::filesystem::path{"D:/Library/Books/0000000007/book.fb2.gz"});
+
+    REQUIRE(
+        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
+            "D:/Library",
+            {7},
+            Librova::Domain::EBookFormat::Fb2,
+            Librova::Domain::EStorageEncoding::Plain) ==
+        std::filesystem::path{"D:/Library/Books/0000000007/book.fb2"});
 
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath("D:/Library", {7}, ".jpg") ==

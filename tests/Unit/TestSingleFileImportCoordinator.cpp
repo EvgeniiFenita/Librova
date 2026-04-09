@@ -231,7 +231,7 @@ public:
         Librova::ManagedFileEncoding::EncodeFileToPath(plan.SourcePath, plan.StorageEncoding, stagedBookPath);
 
         const std::filesystem::path finalBookPath =
-            Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format);
+            Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(Root, plan.BookId, plan.Format, plan.StorageEncoding);
 
         std::optional<std::filesystem::path> stagedCoverPath;
         std::optional<std::filesystem::path> finalCoverPath;
@@ -1015,7 +1015,7 @@ TEST_CASE("Single file import stores library-relative paths in book record", "[i
     REQUIRE(result.IsSuccess());
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE_FALSE(bookRepository.AddedBook->File.ManagedPath.is_absolute());
-    REQUIRE(bookRepository.AddedBook->File.ManagedPath == std::filesystem::path{"Books/0000000001/book.fb2"});
+    REQUIRE(bookRepository.AddedBook->File.ManagedPath == std::filesystem::path{"Books/0000000001/book.fb2.gz"});
     REQUIRE(bookRepository.AddedBook->CoverPath.has_value());
     REQUIRE_FALSE(bookRepository.AddedBook->CoverPath->is_absolute());
     REQUIRE(bookRepository.AddedBook->CoverPath == std::filesystem::path{"Covers/0000000001.jpg"});
