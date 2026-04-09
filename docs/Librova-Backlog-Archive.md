@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: completed the 1.0 stabilization pass with the remaining startup, import, cleanup, and diagnostics hardening fixes, and the release-candidate UI flow is now covered by confirmed manual testing.
+
 - `#93` improve diagnostics for converter launch failures and managed cover-loading failures.
   - Status: `Closed`
   - Type: `Bug`
