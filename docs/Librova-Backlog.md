@@ -33,12 +33,6 @@ Last assigned id: `#102`
 
 ### Critical
 ### Major
-- `#102` rework import source selection so the picker can accept mixed files and folders in one action, matching drag-and-drop behavior.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: the current import UI forces the user to choose either files or a single folder even though drag-and-drop already accepts mixed combinations of files and folders; redesign the source-selection workflow so one import action can collect multiple folders, multiple files, or any mixture of both while preserving duplicate handling, progress reporting, and cancellation semantics.
-
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`

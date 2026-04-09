@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#102` rework import source selection so the picker can accept mixed files and folders in one action, matching drag-and-drop behavior.
+  - Status: `Won't Do`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: decided not to implement; current two-button UX (Select Files... / Select Folder...) is considered sufficient.
+
 - `#101` migrate the UI stack from Avalonia 11 to Avalonia 12 and validate the application against the Avalonia 12 breaking changes.
   - Status: `Closed`
   - Type: `Feature`
