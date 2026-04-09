@@ -8,7 +8,7 @@
 ## 1. Visual Language
 
 **Style:** Deep warm sepia + amber/gold accent. Dark, cosy, library-like.  
-**Framework:** Avalonia 11 + FluentTheme (dark variant).  
+**Framework:** Avalonia 12 + FluentTheme (dark variant).  
 **Font:** `Segoe UI Variable, Segoe UI, sans-serif` — set globally on `Window`.  
 **Target OS:** Windows 11. DWM title-bar colour is set via P/Invoke (`DWMWA_CAPTION_COLOR`).
 

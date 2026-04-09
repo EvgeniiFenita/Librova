@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Librova.UI.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -58,9 +59,9 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        eventArgs.DragEffects = TryGetDroppedSourcePaths(eventArgs).Count == 0
-            ? DragDropEffects.None
-            : DragDropEffects.Copy;
+        eventArgs.DragEffects = eventArgs.DataTransfer?.Contains(DataFormat.File) == true
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
         eventArgs.Handled = true;
     }
 
@@ -85,7 +86,13 @@ internal sealed partial class MainWindow : Window
 
     private static IReadOnlyList<string> TryGetDroppedSourcePaths(DragEventArgs eventArgs)
     {
-        var files = eventArgs.Data.GetFiles();
+        var transfer = eventArgs.DataTransfer;
+        if (transfer is null || !transfer.Contains(DataFormat.File))
+        {
+            return [];
+        }
+
+        var files = transfer.TryGetFiles();
         if (files is null)
         {
             return [];

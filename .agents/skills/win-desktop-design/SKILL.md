@@ -31,9 +31,9 @@ Five Fluent principles:
 
 ```xml
 <!-- .csproj — minimum set for a modern look -->
-<PackageReference Include="Avalonia" Version="11.*" />
-<PackageReference Include="Avalonia.Desktop" Version="11.*" />
-<PackageReference Include="Avalonia.Themes.Fluent" Version="11.*" />
+<PackageReference Include="Avalonia" Version="12.*" />
+<PackageReference Include="Avalonia.Desktop" Version="12.*" />
+<PackageReference Include="Avalonia.Themes.Fluent" Version="12.*" />
 
 <!-- Icons (pick one) -->
 <PackageReference Include="FluentIcons.Avalonia" Version="1.*" />

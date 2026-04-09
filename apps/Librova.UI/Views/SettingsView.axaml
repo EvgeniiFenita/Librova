@@ -49,7 +49,7 @@
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="10">
             <TextBox Classes="AppTextInput"
-                     Watermark="C:\Tools\fbc.exe"
+                     PlaceholderText="C:\Tools\fbc.exe"
                      Text="{Binding Fb2CngExecutablePath}" />
             <Button Grid.Column="1"
                     Classes="SecondaryAction"

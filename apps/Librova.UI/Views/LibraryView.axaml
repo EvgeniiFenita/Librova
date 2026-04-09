@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="using:Librova.UI.ViewModels"
+             xmlns:models="using:Librova.UI.LibraryCatalog"
              x:Class="Librova.UI.Views.LibraryView"
              x:Name="LibraryRootView"
              x:DataType="viewModels:ShellViewModel"
@@ -98,7 +99,7 @@
                     Data="{StaticResource IconSearch}" />
           <TextBox Grid.Column="1"
                    Classes="AppTextInput"
-                   Watermark="Search titles, authors, tags..."
+                   PlaceholderText="Search titles, authors, tags..."
                    Text="{Binding LibraryBrowser.SearchText, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 
@@ -127,7 +128,7 @@
                         ItemsSource="{Binding LibraryBrowser.AvailableSortKeys}"
                         SelectedItem="{Binding LibraryBrowser.SelectedSortKey}">
                 <ComboBox.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="models:SortKeyOption">
                     <TextBlock Text="{Binding Label}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
@@ -223,7 +224,7 @@
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="models:BookListItemModel">
                     <Button Classes="BookCardButton"
                             Width="172"
                             Height="300"
@@ -386,7 +387,7 @@
                          Text="Loading details..." />
               <ItemsControl ItemsSource="{Binding LibraryBrowser.SelectedBookMetadataPairs}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="viewModels:MetadataPair">
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="8"
                           Margin="0,0,0,5">

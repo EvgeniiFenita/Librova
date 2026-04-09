@@ -120,6 +120,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#101` migrate the UI stack from Avalonia 11 to Avalonia 12 and validate the application against the Avalonia 12 breaking changes.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: bumped Avalonia packages to 12.0.0, added `x:DataType` to all DataTemplates for compiled bindings, migrated drag-and-drop handlers to `DragEventArgs.DataTransfer` + `TryGetFiles()`, replaced deprecated `TextBox.Watermark` with `PlaceholderText`, and pinned `Tmds.DBus.Protocol` to 0.92.0 (patched, CVE-2026-39959); build is clean with 0 warnings and 234 managed tests pass.
+
 - `#27` complete release-candidate stabilization, diagnostics hardening, and manual verification.
   - Status: `Closed`
   - Type: `Feature`

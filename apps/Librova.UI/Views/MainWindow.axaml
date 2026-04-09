@@ -147,7 +147,7 @@
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="10">
                   <TextBox Classes="AppTextInput"
-                           Watermark="C:\Libraries\Librova"
+                           PlaceholderText="C:\Libraries\Librova"
                            Text="{Binding Setup.LibraryRoot}" />
                   <Button Grid.Column="1"
                           Classes="SecondaryAction"
@@ -245,7 +245,7 @@
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="10">
                 <TextBox Classes="AppTextInput"
-                         Watermark="C:\Libraries\Librova"
+                         PlaceholderText="C:\Libraries\Librova"
                          Text="{Binding Setup.LibraryRoot}" />
                 <Button Grid.Column="1"
                         Classes="SecondaryAction"
