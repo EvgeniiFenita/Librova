@@ -105,8 +105,9 @@ Duplicate detection operates at two layers:
 ## 4. Import And Conversion Rules
 
 - `EPUB` is stored as `EPUB`.
-- `FB2` tries to convert to `EPUB`.
-- If conversion fails or is unavailable, original `FB2` may be stored with warnings.
+- `FB2` is stored as managed `FB2` by default.
+- If the current session has a configured converter and the user explicitly enables `Force conversion to EPUB during import`, `FB2` is converted and stored as `EPUB`.
+- If forced `FB2 -> EPUB` conversion is requested but the converter is unavailable or fails, the import entry fails rather than silently storing the original `FB2`.
 - If original `FB2` is stored as managed fallback, the managed file may be compressed as an internal storage detail; forced `FB2 -> EPUB` import does not apply that compression because the stored format is already `EPUB`.
 - Conversion cancellation is not treated as ordinary converter failure.
 - `FB2` metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real personal libraries, including Windows-1251 content on Windows.

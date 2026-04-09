@@ -40,8 +40,8 @@ optional conversion (FB2→EPUB) → staging → commit → database write → m
 ## Conversion
 
 - [ ] Cancellation is a **distinct outcome** — never silently fall back to storing the original FB2
-- [ ] Converter integration stays user-configurable (disabled / built-in fb2cng / custom external)
-- [ ] `fb2cng` is the first built-in profile, not a hard-wired exclusive dependency
+- [ ] Converter integration stays user-configurable through the built-in `fb2cng` / `fbc.exe` executable path in `Settings`, and empty path cleanly disables conversion
+- [ ] Import behavior matches the current product rule: plain `FB2` storage by default, forced `FB2 -> EPUB` only when the current session has a configured converter and the user explicitly enables it
 - [ ] Conversion failure path is logged through the repository logging facade
 
 ---

@@ -42,7 +42,7 @@
 | [library.md](manual-tests/library.md) | 2.2 | Placeholder Covers Stay Fully Visible | |
 | [library.md](manual-tests/library.md) | 3 | Library Sort Controls | ✓ |
 | [export.md](manual-tests/export.md) | 1 | Export Book | ✓ |
-| [export.md](manual-tests/export.md) | 2 | Export As EPUB Progress Feedback | ✓ |
+| [export.md](manual-tests/export.md) | 2 | Export as EPUB Progress Feedback | ✓ |
 | [delete.md](manual-tests/delete.md) | 1 | Move To Recycle Bin | ✓ |
 | [settings.md](manual-tests/settings.md) | 1 | Open Or Create Library | ✓ |
 | [settings.md](manual-tests/settings.md) | 1.1 | Open Or Create Library Rejects Nested Current-Library Folders | |

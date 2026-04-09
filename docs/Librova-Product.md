@@ -51,11 +51,11 @@ If the configured library root is invalid or unavailable on a later launch, Libr
 
 If the library root itself is valid but the managed library is damaged, Librova does not silently recreate the library in place. Instead, it shows startup recovery guidance and requires the user to choose a different library root or repair the damaged library manually.
 
-After startup, switching to another library is an application-level action rather than a hidden launch preference. The shell exposes `Open Library...` and `Create Library...` so the active library can be changed explicitly.
+After startup, switching to another library is an application-level action rather than a hidden launch preference. The shell exposes `Open` and `New` actions in the `Current Library` panel so the active library can be changed explicitly.
 
-`Open Library...` accepts only an existing Librova-managed library root that already contains the expected directory layout and `Database/librova.db`.
+`Open` accepts only an existing Librova-managed library root that already contains the expected directory layout and `Database/librova.db`.
 
-`Create Library...` accepts only a new or empty target directory and must not repurpose an unrelated non-empty folder as a managed library.
+`New` accepts only a new or empty target directory and must not repurpose an unrelated non-empty folder as a managed library.
 
 ### 3.2 Book Import
 

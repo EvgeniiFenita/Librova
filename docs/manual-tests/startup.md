@@ -6,28 +6,28 @@
 
 1. Удали `out\runtime\ui-preferences.json` и `out\runtime\ui-shell-state.json`.
 2. Запусти `.\Run-Librova.ps1 -FirstRun`.
-3. Убедись, что в стартовом окне показан экран `Set up your library`, а в setup-карточке есть выбор `Create Library` и `Open Library`.
-4. Оставь выбранным `Create Library`, нажми `Continue`, указав невалидный относительный путь.
+3. Убедись, что в стартовом окне показан экран `Set up your library`, а в setup-карточке есть выбор `Create New` и `Open Existing`.
+4. Оставь выбранным `Create New`, нажми `Continue`, указав невалидный относительный путь.
 Ожидаемое поведение:
 - `Continue` неактивна или показывается validation error.
 - host не стартует.
-5. Оставь выбранным `Create Library`, нажми `Browse...` и выбери валидную пустую папку.
+5. Оставь выбранным `Create New`, нажми `Browse...` и выбери валидную пустую папку.
 6. Нажми `Continue`.
 Ожидаемое поведение:
 - startup screen переходит в loading state, затем открывается основной shell приложения.
 - создается [out\runtime\ui-preferences.json](out/runtime/ui-preferences.json).
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
 - UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
-7. Повтори `-FirstRun`, но в setup переключись на `Open Library` и выбери уже созданную существующую библиотеку Librova.
+7. Повтори `-FirstRun`, но в setup переключись на `Open Existing` и выбери уже созданную существующую библиотеку Librova.
 Ожидаемое поведение:
-- кнопка меняет текст на `Open Library`;
+- кнопка действия меняет текст на `Open Library`;
 - existing managed library проходит validation;
 - после нажатия `Open Library` приложение открывает существующую библиотеку без пересоздания структуры.
-8. Повтори `-FirstRun`, но оставь `Create Library` и выбери уже непустую папку, которая не является существующей библиотекой Librova.
+8. Повтори `-FirstRun`, но оставь `Create New` и выбери уже непустую папку, которая не является существующей библиотекой Librova.
 Ожидаемое поведение:
 - `Continue` не запускает host.
 - validation error явно требует пустую папку для создания новой библиотеки.
-9. Повтори `-FirstRun`, оставь `Open Library` и выбери пустую или обычную не-Librova папку.
+9. Повтори `-FirstRun`, оставь `Open Existing` и выбери пустую или обычную не-Librova папку.
 Ожидаемое поведение:
 - `Open Library` не запускает host;
 - validation error явно требует существующую managed library Librova.
@@ -63,7 +63,7 @@
 2. Оставь валидный `PreferredLibraryRoot`, но повреди библиотеку внутри него, например испорть файл базы данных.
 3. Запусти `.\Run-Librova.ps1 -SecondRun`.
 Ожидаемое поведение:
-- показывается `Startup Error Recovery`.
+- показывается startup error screen с заголовком `Startup failed`.
 - startup error объясняет проблему открытия библиотеки заметно лучше, чем просто голый timeout.
 - в поле `Choose Another Library Root` показан текущий library root.
 - `Retry With This Library` неактивна, пока выбран тот же самый путь.
@@ -74,7 +74,7 @@
 5. Введи путь к существующей, но не-Librova папке, и нажми `Retry With This Library`.
 Ожидаемое поведение:
 - recovery validation отклоняет путь как несуществующую managed library Librova;
-- приложение не подменяет `Open Library` логикой неявного `Create Library`.
+- приложение не подменяет `Open Library` логикой неявного `Continue`.
 
 ## 3.1 Startup Error Recovery: Portable Saved Path Cannot Be Reopened
 
@@ -83,7 +83,7 @@
 3. Сделай сохраненный путь недоступным: отключи флешку, переименуй каталог библиотеки или оставь в `ui-preferences.json` старый абсолютный путь, который больше не существует.
 4. Снова запусти portable приложение.
 Ожидаемое поведение:
-- показывается `Startup Error Recovery`, а не экран первого запуска `Set up your library`;
+- показывается startup error screen с заголовком `Startup failed`, а не экран первого запуска `Set up your library`;
 - recovery screen объясняет, что сохраненную библиотеку не удалось открыть;
 - в блоке выбора пути показан сохраненный library root или его последний известный hint;
 - приложение не пытается молча открыть fallback library и не сбрасывает пользователя в режим создания новой библиотеки.
