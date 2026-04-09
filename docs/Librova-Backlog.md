@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#101`
+Last assigned id: `#102`
 
 ## 2. Priority Meanings
 
@@ -33,6 +33,12 @@ Last assigned id: `#101`
 
 ### Critical
 ### Major
+- `#102` rework import source selection so the picker can accept mixed files and folders in one action, matching drag-and-drop behavior.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: the current import UI forces the user to choose either files or a single folder even though drag-and-drop already accepts mixed combinations of files and folders; redesign the source-selection workflow so one import action can collect multiple folders, multiple files, or any mixture of both while preserving duplicate handling, progress reporting, and cancellation semantics.
+
 - `#101` migrate the UI stack from Avalonia 11 to Avalonia 12 and validate the application against the Avalonia 12 breaking changes.
   - Status: `Open`
   - Type: `Feature`
@@ -66,7 +72,7 @@ Last assigned id: `#101`
 - `#59` add Favorites and Read as built-in user collections with per-book membership, sidebar navigation, filtered browse, card-level toggle controls, and details-panel membership display.
   - Status: `Open`
   - Type: `Feature`
-  - Milestone: `unscheduled`
+  - Milestone: `1.1`
   - Note: each collection is a named list stored in the database; a book can independently belong to zero or more collections; the sidebar must surface Favorites and Read as first-class navigation destinations alongside Library; when a collection is selected the main grid shows only its books and all existing search, sort, and filter controls operate within that scope; book cards must carry icon toggles (star for Favorites, checkmark for Read) with tooltips and distinct visual states for added and not-added books; the details panel must list which collections the selected book belongs to; the change spans database schema, domain model, proto contracts, browse-request plumbing, and UI shell.
 
 - `#60` introduce concurrent file processing in the import pipeline to reduce wall-clock import time for large batch, directory, and ZIP imports.
@@ -84,7 +90,7 @@ Last assigned id: `#101`
 - `#62` introduce platform service interfaces for all Windows-specific operations so non-Windows paths throw explicitly and future ports have a clear, discoverable integration surface.
   - Status: `Open`
   - Type: `Feature`
-  - Milestone: `unscheduled`
+  - Milestone: `1.1`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
@@ -103,13 +109,13 @@ Last assigned id: `#101`
 - `#64` allow the user to assign or replace a cover image for any managed book by selecting an image file from the filesystem, without modifying the source book file.
   - Status: `Open`
   - Type: `Feature`
-  - Milestone: `unscheduled`
+  - Milestone: `1.1`
   - Note: the assigned image must pass through the existing cover processing pipeline (resize to the standard maximum dimensions and apply compression) before being stored in the managed library under the Covers directory; the UI affordance should appear in the details panel and open a native file picker filtered to common image formats; the operation must update the cover reference in the database and immediately refresh the card and details panel; it must also be possible to clear an assigned cover so the book reverts to its generated placeholder.
 
 - `#65` convert all managed covers to JPEG at import time regardless of source format and replace the Windows-only WIC image-processing backend with a cross-platform library.
   - Status: `Open`
   - Type: `Feature`
-  - Milestone: `unscheduled`
+  - Milestone: `1.1`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
 ### Low
