@@ -747,6 +747,49 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task Shell_CreateLibrary_RejectsNestedFolderInsideCurrentLibrary()
+    {
+        var currentLibraryRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "nested-current-library", Guid.NewGuid().ToString("N"));
+        var selectedPath = Path.Combine(currentLibraryRoot, "Trash");
+        Directory.CreateDirectory(selectedPath);
+
+        try
+        {
+            var switchCalls = 0;
+            var session = new ShellSession(
+                new CoreHostProcess(),
+                new CoreHostLaunchOptions
+                {
+                    ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                    PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                    LibraryRoot = currentLibraryRoot
+                },
+                new FakeImportJobsService());
+            var application = ShellApplication.Create(
+                session,
+                new FakePathSelectionService
+                {
+                    SelectedWorkingDirectory = selectedPath
+                },
+                stateStore: CreateIsolatedStateStore(),
+                preferencesStore: new FakePreferencesStore(),
+                switchLibraryAsync: (path, mode) =>
+                {
+                    switchCalls++;
+                    return Task.CompletedTask;
+                });
+
+            await application.Shell.CreateLibraryCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(0, switchCalls);
+        }
+        finally
+        {
+            TryDeleteDirectory(currentLibraryRoot);
+        }
+    }
+
+    [Fact]
     public void Create_WithCreateNewOpenMode_DefaultsToImportSection()
     {
         var session = new ShellSession(

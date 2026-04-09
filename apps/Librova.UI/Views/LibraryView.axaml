@@ -258,13 +258,23 @@
                                        Stretch="Uniform"
                                        HorizontalAlignment="Stretch"
                                        VerticalAlignment="Stretch" />
-                                <TextBlock IsVisible="{Binding ShowCoverPlaceholder}"
-                                           FontSize="44"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource AppCoverPlaceholderBrush}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Text="{Binding CoverPlaceholderText}" />
+                                <Viewbox IsVisible="{Binding ShowCoverPlaceholder}"
+                                         Width="104"
+                                         Height="104"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Stretch="Uniform">
+                                  <Border Padding="8,12,8,20">
+                                    <TextBlock FontSize="48"
+                                               FontWeight="Bold"
+                                               LineHeight="80"
+                                               Foreground="{DynamicResource AppCoverPlaceholderBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Center"
+                                               Text="{Binding CoverPlaceholderText}" />
+                                  </Border>
+                                </Viewbox>
                               </Grid>
                             </Border>
                             <TextBlock Grid.Row="1"
@@ -342,13 +352,23 @@
                        Stretch="Uniform"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch" />
-                <TextBlock IsVisible="{Binding LibraryBrowser.ShowSelectedBookCoverPlaceholder}"
-                           FontSize="60"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource AppCoverPlaceholderBrush}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Text="{Binding LibraryBrowser.SelectedBookCoverPlaceholderText}" />
+                <Viewbox IsVisible="{Binding LibraryBrowser.ShowSelectedBookCoverPlaceholder}"
+                         Width="112"
+                         Height="112"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Stretch="Uniform">
+                  <Border Padding="8,14,8,24">
+                    <TextBlock FontSize="58"
+                               FontWeight="Bold"
+                               LineHeight="96"
+                               Foreground="{DynamicResource AppCoverPlaceholderBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               TextAlignment="Center"
+                               Text="{Binding LibraryBrowser.SelectedBookCoverPlaceholderText}" />
+                  </Border>
+                </Viewbox>
               </Grid>
             </Border>
 

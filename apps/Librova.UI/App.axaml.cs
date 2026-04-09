@@ -60,6 +60,26 @@ internal sealed partial class App : Application
         var launchOptions = ShellLaunchOptions.FromArgs(desktop.Args);
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (FirstRunSetupPolicy.BuildStartupRecoveryLibraryRootHint(preferencesStore) is { Length: > 0 } recoveryLibraryRoot)
+        {
+            UiLogging.Warning(
+                "Saved library preferences could not be resolved at startup. RecoveryLibraryRoot={LibraryRoot}",
+                recoveryLibraryRoot);
+            var recoverySetup = CreateRecoverySetupViewModel(
+                mainWindow,
+                pathSelectionService,
+                preferencesStore,
+                launchOptions,
+                recoveryLibraryRoot,
+                cancellationToken,
+                explicitOpenMode: UiLibraryOpenMode.OpenExisting);
+            ShellWindowConfigurator.ConfigureStartupError(
+                mainWindow,
+                "Configured library root from saved preferences could not be resolved. Choose another existing Librova library.",
+                recoverySetup);
+            return;
+        }
+
         if (FirstRunSetupPolicy.RequiresSetup(preferencesStore))
         {
             UiLogging.Information("Showing first-run setup before host startup.");

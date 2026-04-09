@@ -76,6 +76,18 @@
 - recovery validation отклоняет путь как несуществующую managed library Librova;
 - приложение не подменяет `Open Library` логикой неявного `Create Library`.
 
+## 3.1 Startup Error Recovery: Portable Saved Path Cannot Be Reopened
+
+1. Собери portable package и один раз открой через него библиотеку так, чтобы `PortableData\ui-preferences.json` сохранил путь к библиотеке.
+2. Закрой приложение.
+3. Сделай сохраненный путь недоступным: отключи флешку, переименуй каталог библиотеки или оставь в `ui-preferences.json` старый абсолютный путь, который больше не существует.
+4. Снова запусти portable приложение.
+Ожидаемое поведение:
+- показывается `Startup Error Recovery`, а не экран первого запуска `Set up your library`;
+- recovery screen объясняет, что сохраненную библиотеку не удалось открыть;
+- в блоке выбора пути показан сохраненный library root или его последний известный hint;
+- приложение не пытается молча открыть fallback library и не сбрасывает пользователя в режим создания новой библиотеки.
+
 ## 4. Shell Navigation
 
 1. В левой навигации нажми `Library`.

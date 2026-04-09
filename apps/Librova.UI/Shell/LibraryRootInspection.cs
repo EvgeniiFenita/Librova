@@ -26,11 +26,16 @@ internal static class LibraryRootInspection
         };
     }
 
-    public static string BuildOpenExistingValidationMessage(string libraryRoot)
+    public static string BuildOpenExistingValidationMessage(string libraryRoot, string? currentLibraryRoot = null)
     {
         if (string.IsNullOrWhiteSpace(libraryRoot) || !Directory.Exists(libraryRoot))
         {
             return "Open Library requires an existing Librova library root.";
+        }
+
+        if (IsNestedWithinCurrentLibraryRoot(libraryRoot, currentLibraryRoot))
+        {
+            return "Choose a folder outside the current library. Librova cannot open a nested subfolder as a separate library.";
         }
 
         return LooksLikeManagedLibraryRoot(libraryRoot)
@@ -38,11 +43,16 @@ internal static class LibraryRootInspection
             : "Selected folder is not an existing Librova library.";
     }
 
-    public static string BuildCreateNewValidationMessage(string libraryRoot)
+    public static string BuildCreateNewValidationMessage(string libraryRoot, string? currentLibraryRoot = null)
     {
         if (string.IsNullOrWhiteSpace(libraryRoot) || !Directory.Exists(libraryRoot))
         {
             return string.Empty;
+        }
+
+        if (IsNestedWithinCurrentLibraryRoot(libraryRoot, currentLibraryRoot))
+        {
+            return "Choose a folder outside the current library. Librova cannot create a new library inside an existing managed library.";
         }
 
         try
@@ -76,5 +86,39 @@ internal static class LibraryRootInspection
         return RequiredManagedDirectories.All(directoryName =>
                    Directory.Exists(Path.Combine(libraryRoot, directoryName)))
             && File.Exists(Path.Combine(libraryRoot, "Database", "librova.db"));
+    }
+
+    private static bool IsNestedWithinCurrentLibraryRoot(string selectedPath, string? currentLibraryRoot)
+    {
+        if (string.IsNullOrWhiteSpace(selectedPath)
+            || string.IsNullOrWhiteSpace(currentLibraryRoot)
+            || !Directory.Exists(currentLibraryRoot))
+        {
+            return false;
+        }
+
+        try
+        {
+            var normalizedSelectedPath = Path.GetFullPath(selectedPath);
+            var normalizedCurrentLibraryRoot = Path.GetFullPath(currentLibraryRoot);
+            if (string.Equals(normalizedSelectedPath, normalizedCurrentLibraryRoot, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var relativePath = Path.GetRelativePath(normalizedCurrentLibraryRoot, normalizedSelectedPath);
+            return !relativePath.Equals("..", System.StringComparison.Ordinal)
+                && !relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", System.StringComparison.Ordinal)
+                && !relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", System.StringComparison.Ordinal)
+                && !Path.IsPathRooted(relativePath);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }

@@ -28,6 +28,7 @@
 | [startup.md](manual-tests/startup.md) | 1 | First Run Setup And Portable Library Open | ✓ |
 | [startup.md](manual-tests/startup.md) | 2 | Startup Error Recovery | ✓ |
 | [startup.md](manual-tests/startup.md) | 3 | Startup Error Recovery: Corrupted Library | |
+| [startup.md](manual-tests/startup.md) | 3.1 | Startup Error Recovery: Portable Saved Path Cannot Be Reopened | |
 | [startup.md](manual-tests/startup.md) | 4 | Shell Navigation | ✓ |
 | [startup.md](manual-tests/startup.md) | 4.1 | Host Lifetime | ✓ |
 | [import.md](manual-tests/import.md) | 1 | Import Validation | ✓ |
@@ -38,11 +39,13 @@
 | [library.md](manual-tests/library.md) | 1 | Library Browser Basics | ✓ |
 | [library.md](manual-tests/library.md) | 2 | Full Details Loading | ✓ |
 | [library.md](manual-tests/library.md) | 2.1 | Covers And Legacy FB2 Metadata | ✓ |
+| [library.md](manual-tests/library.md) | 2.2 | Placeholder Covers Stay Fully Visible | |
 | [library.md](manual-tests/library.md) | 3 | Library Sort Controls | ✓ |
 | [export.md](manual-tests/export.md) | 1 | Export Book | ✓ |
 | [export.md](manual-tests/export.md) | 2 | Export As EPUB Progress Feedback | ✓ |
 | [delete.md](manual-tests/delete.md) | 1 | Move To Recycle Bin | ✓ |
 | [settings.md](manual-tests/settings.md) | 1 | Open Or Create Library | ✓ |
+| [settings.md](manual-tests/settings.md) | 1.1 | Open Or Create Library Rejects Nested Current-Library Folders | |
 | [settings.md](manual-tests/settings.md) | 2 | Settings: Converter Configuration | ✓ |
 | [settings.md](manual-tests/settings.md) | 3 | Diagnostics And Logs | |
 | [settings.md](manual-tests/settings.md) | 4 | Settings: About Card | |

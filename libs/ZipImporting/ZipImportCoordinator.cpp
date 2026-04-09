@@ -277,7 +277,7 @@ void RemovePathNoThrow(const std::filesystem::path& path) noexcept
     }
 
     std::error_code errorCode;
-    std::filesystem::remove(path, errorCode);
+    std::filesystem::remove_all(path, errorCode);
 }
 
 void RemoveEmptyDirectoriesUpToRootNoThrow(
@@ -322,6 +322,21 @@ void CleanupExtractedEntryNoThrow(
     const std::filesystem::path extractedRoot = workingDirectory / "extracted";
     RemovePathNoThrow(extractedPath);
     RemoveEmptyDirectoriesUpToRootNoThrow(extractedRoot, extractedPath.parent_path());
+}
+
+void CleanupEntryWorkspaceNoThrow(
+    const std::filesystem::path& workingDirectory,
+    const std::filesystem::path& entryWorkingDirectory) noexcept
+{
+    if (entryWorkingDirectory.empty())
+    {
+        return;
+    }
+
+    const std::filesystem::path entriesRoot = workingDirectory / "entries";
+    RemovePathNoThrow(entryWorkingDirectory);
+    RemoveEmptyDirectoriesUpToRootNoThrow(entriesRoot, entryWorkingDirectory.parent_path());
+    RemovePathNoThrow(entriesRoot);
 }
 
 std::filesystem::path ExtractEntryToWorkspace(
@@ -600,12 +615,17 @@ SZipImportResult CZipImportCoordinator::Run(
         CScopedStructuredProgressSink entryProgressSink(progressSink, totalEntries, processedEntries, 1);
         entryProgressSink.ReportValue(5, "Importing ZIP entry");
 
+        const std::filesystem::path entryWorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem();
+        const auto cleanupEntryWorkspace = [&]() noexcept
+        {
+            CleanupEntryWorkspaceNoThrow(request.WorkingDirectory, entryWorkingDirectory);
+        };
         const auto singleFileResult = [&]() {
             try
             {
                 return m_singleFileImporter.Run({
                     .SourcePath = extractedPath,
-                    .WorkingDirectory = request.WorkingDirectory / "entries" / entryPath.stem(),
+                    .WorkingDirectory = entryWorkingDirectory,
                     .AllowProbableDuplicates = request.AllowProbableDuplicates,
                     .ForceEpubConversion = request.ForceEpubConversion
                 }, entryProgressSink, stopToken);
@@ -613,10 +633,12 @@ SZipImportResult CZipImportCoordinator::Run(
             catch (...)
             {
                 cleanupExtractedPath();
+                cleanupEntryWorkspace();
                 throw;
             }
         }();
         cleanupExtractedPath();
+        cleanupEntryWorkspace();
 
         result.Entries.push_back({
             .ArchivePath = entryPath,

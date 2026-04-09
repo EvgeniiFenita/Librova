@@ -15,7 +15,7 @@ Each task has four required fields in this order:
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#99`
+Last assigned id: `#100`
 
 ## 2. Priority Meanings
 
@@ -33,6 +33,12 @@ Last assigned id: `#99`
 
 ### Critical
 ### Major
+- `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: extend source selection, recursive directory discovery, and archive import handling so `.rar` files are accepted anywhere `.zip` is currently supported, with the same per-entry diagnostics, partial-success behavior, cancellation semantics, and duplicate handling as ZIP imports.
+
 - `#67` add a Remove Converter button to Settings so the user can clear the configured converter in one action.
   - Status: `Open`
   - Type: `Feature`

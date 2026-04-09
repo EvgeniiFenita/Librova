@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Librova.UI.Runtime;
 using Librova.UI.Shell;
 using Xunit;
@@ -32,11 +34,62 @@ public sealed class FirstRunSetupPolicyTests
     }
 
     [Fact]
+    public void RequiresSetup_FalseWhenOnlyPortablePreferenceExists()
+    {
+        WithLibraryRootOverride(null, () =>
+        {
+            Assert.False(FirstRunSetupPolicy.RequiresSetup(new FakePreferencesStore
+            {
+                Snapshot = new UiPreferencesSnapshot
+                {
+                    PortablePreferredLibraryRoot = "Library"
+                }
+            }));
+        });
+    }
+
+    [Fact]
     public void RequiresSetup_FalseWhenLibraryRootOverrideExists()
     {
         WithLibraryRootOverride(@"E:\Librova\Override", () =>
         {
             Assert.False(FirstRunSetupPolicy.RequiresSetup(new FakePreferencesStore()));
+        });
+    }
+
+    [Fact]
+    public void BuildStartupRecoveryLibraryRootHint_IsNullWhenAbsoluteFallbackResolves()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            Assert.Null(
+                FirstRunSetupPolicy.BuildStartupRecoveryLibraryRootHint(
+                    new FakePreferencesStore
+                    {
+                        Snapshot = new UiPreferencesSnapshot
+                        {
+                            PreferredLibraryRoot = @"E:\Detached\Librova"
+                        }
+                    },
+                    sandboxRoot,
+                    null));
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void BuildStartupRecoveryLibraryRootHint_IsNullWhenNoSavedPreferenceExists()
+    {
+        WithLibraryRootOverride(null, () =>
+        {
+            Assert.Null(FirstRunSetupPolicy.BuildStartupRecoveryLibraryRootHint(new FakePreferencesStore()));
         });
     }
 
@@ -69,6 +122,23 @@ public sealed class FirstRunSetupPolicyTests
         finally
         {
             Environment.SetEnvironmentVariable(RuntimeEnvironment.LibraryRootEnvVar, previous);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 

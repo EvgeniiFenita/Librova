@@ -161,21 +161,70 @@ public sealed class RuntimeEnvironmentTests
     }
 
     [Fact]
-    public void RuntimeEnvironment_ResolvePreferredLibraryRoot_RejectsPortableEscapesWithoutFallingBackToOutsideAbsolutePath()
+    public void RuntimeEnvironment_ResolvePreferredLibraryRoot_IgnoresPortableEscapeAndFallsBackToAbsolutePath()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+        var expectedLibraryRoot = @"D:\Stale\Librova";
+
+        try
+        {
+            var resolved = RuntimeEnvironment.ResolvePreferredLibraryRoot(
+                expectedLibraryRoot,
+                Path.Combine("..", "PortableLibrary"),
+                sandboxRoot,
+                null);
+
+            Assert.Equal(expectedLibraryRoot, resolved);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_ResolvePreferredLibraryRoot_FallsBackToAbsolutePathWhenPortableRelativeRootIsMissing()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var expectedLibraryRoot = @"D:\Librova\PortableLibrary";
         Directory.CreateDirectory(sandboxRoot);
         File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
 
         try
         {
             var resolved = RuntimeEnvironment.ResolvePreferredLibraryRoot(
-                @"D:\Stale\Librova",
-                Path.Combine("..", "PortableLibrary"),
+                expectedLibraryRoot,
+                "Library",
                 sandboxRoot,
                 null);
 
-            Assert.Null(resolved);
+            Assert.Equal(expectedLibraryRoot, resolved);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_ResolvePreferredLibraryRoot_IgnoresAbsolutePortableHintAndFallsBackToPreferredRoot()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var expectedLibraryRoot = @"D:\Librova\PreferredLibrary";
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            var resolved = RuntimeEnvironment.ResolvePreferredLibraryRoot(
+                expectedLibraryRoot,
+                @"D:\Librova\BadPortableHint",
+                sandboxRoot,
+                null);
+
+            Assert.Equal(expectedLibraryRoot, resolved);
         }
         finally
         {

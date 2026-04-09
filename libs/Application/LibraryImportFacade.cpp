@@ -219,6 +219,31 @@ void LogImportSourceIssueIfInitialized(
         "Managed rollback path could not be canonicalized.");
 }
 
+[[nodiscard]] bool IsContainedWithinRoot(
+    const std::filesystem::path& root,
+    const std::filesystem::path& candidate) noexcept
+{
+    if (root.empty() || candidate.empty())
+    {
+        return false;
+    }
+
+    const auto normalizedRoot = root.lexically_normal();
+    const auto normalizedCandidate = candidate.lexically_normal();
+
+    auto rootIt = normalizedRoot.begin();
+    auto candidateIt = normalizedCandidate.begin();
+    for (; rootIt != normalizedRoot.end(); ++rootIt, ++candidateIt)
+    {
+        if (candidateIt == normalizedCandidate.end() || *rootIt != *candidateIt)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::filesystem::path& stopRoot) noexcept
 {
     std::error_code errorCode;
@@ -234,6 +259,53 @@ void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::fi
 
         current = current.parent_path();
     }
+}
+
+void RemovePathNoThrow(const std::filesystem::path& path) noexcept
+{
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove_all(path, errorCode);
+}
+
+void CleanupEntryWorkspaceNoThrow(
+    const std::filesystem::path& workingDirectory,
+    const std::filesystem::path& entryWorkingDirectory) noexcept
+{
+    if (entryWorkingDirectory.empty())
+    {
+        return;
+    }
+
+    const auto entriesRoot = (workingDirectory / "entries").lexically_normal();
+    RemovePathNoThrow(entryWorkingDirectory);
+    CleanupEmptyParentsNoThrow(entryWorkingDirectory, entriesRoot);
+    RemovePathNoThrow(entriesRoot);
+}
+
+void CleanupWorkingDirectoryNoThrow(
+    const std::filesystem::path& libraryRoot,
+    const std::filesystem::path& workingDirectory) noexcept
+{
+    if (libraryRoot.empty() || workingDirectory.empty())
+    {
+        return;
+    }
+
+    const auto generatedWorkingDirectory = (libraryRoot / "Temp" / "UiImport").lexically_normal();
+    const auto normalizedWorkingDirectory = workingDirectory.lexically_normal();
+    if (normalizedWorkingDirectory != generatedWorkingDirectory)
+    {
+        return;
+    }
+
+    RemovePathNoThrow(normalizedWorkingDirectory / "entries");
+    RemovePathNoThrow(normalizedWorkingDirectory / "extracted");
+    RemovePathNoThrow(normalizedWorkingDirectory);
 }
 
 void LogRollbackCleanupIssueIfInitialized(
@@ -917,14 +989,36 @@ SImportResult CLibraryImportFacade::Run(
             continue;
         }
 
+        const bool usePerEntryWorkingDirectory = result.Summary.Mode == EImportMode::Batch;
+        const auto entryWorkingDirectory = usePerEntryWorkingDirectory
+            ? request.WorkingDirectory / "entries" / std::to_string(processedEntries + 1)
+            : request.WorkingDirectory;
         CScopedStructuredProgressSink singleProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, 1);
-        const auto singleFileResult = m_singleFileImporter.Run({
-            .SourcePath = sourcePath,
-            .WorkingDirectory = request.WorkingDirectory,
-            .Sha256Hex = expandedSources.Candidates.size() == 1 ? request.Sha256Hex : std::nullopt,
-            .AllowProbableDuplicates = request.AllowProbableDuplicates,
-            .ForceEpubConversion = request.ForceEpubConversion
-        }, singleProgressSink, stopToken);
+        const auto singleFileResult = [&]() {
+            try
+            {
+                return m_singleFileImporter.Run({
+                    .SourcePath = sourcePath,
+                    .WorkingDirectory = entryWorkingDirectory,
+                    .Sha256Hex = expandedSources.Candidates.size() == 1 ? request.Sha256Hex : std::nullopt,
+                    .AllowProbableDuplicates = request.AllowProbableDuplicates,
+                    .ForceEpubConversion = request.ForceEpubConversion
+                }, singleProgressSink, stopToken);
+            }
+            catch (...)
+            {
+                if (usePerEntryWorkingDirectory)
+                {
+                    CleanupEntryWorkspaceNoThrow(request.WorkingDirectory, entryWorkingDirectory);
+                }
+
+                throw;
+            }
+        }();
+        if (usePerEntryWorkingDirectory)
+        {
+            CleanupEntryWorkspaceNoThrow(request.WorkingDirectory, entryWorkingDirectory);
+        }
 
         ++processedEntries;
 
@@ -1063,6 +1157,8 @@ SImportResult CLibraryImportFacade::Run(
         result.Summary.ImportedEntries = result.ImportedBookIds.size();
         result.HasRollbackCleanupResidue = rollbackResult.HasCleanupResidue;
     }
+
+    CleanupWorkingDirectoryNoThrow(m_libraryRoot, request.WorkingDirectory);
 
     return result;
 }

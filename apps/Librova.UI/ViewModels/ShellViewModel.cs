@@ -234,7 +234,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var validationMessage = LibraryRootInspection.BuildOpenExistingValidationMessage(selectedPath);
+        var validationMessage = LibraryRootInspection.BuildOpenExistingValidationMessage(selectedPath, LibraryRoot);
         if (!string.IsNullOrWhiteSpace(validationMessage))
         {
             UiLogging.Warning(
@@ -255,7 +255,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var validationMessage = LibraryRootInspection.BuildCreateNewValidationMessage(selectedPath);
+        var validationMessage = LibraryRootInspection.BuildCreateNewValidationMessage(selectedPath, LibraryRoot);
         if (!string.IsNullOrWhiteSpace(validationMessage))
         {
             UiLogging.Warning(

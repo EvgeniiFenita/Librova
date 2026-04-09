@@ -77,28 +77,38 @@ internal static class RuntimeEnvironment
         {
             var effectiveBaseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
 
+            // In portable mode a relative preference is only a relocation aid for libraries
+            // that travel with the app bundle. It must never invalidate an explicit saved root.
             if (!string.IsNullOrWhiteSpace(portablePreferredLibraryRoot))
             {
-                if (Path.IsPathFullyQualified(portablePreferredLibraryRoot))
+                if (!Path.IsPathFullyQualified(portablePreferredLibraryRoot))
                 {
-                    return null;
+                    var resolvedPortableRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
+                    if (IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPortableRoot)
+                        && Directory.Exists(resolvedPortableRoot))
+                    {
+                        return resolvedPortableRoot;
+                    }
                 }
-
-                var resolvedPortableRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, portablePreferredLibraryRoot));
-                return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPortableRoot)
-                    ? resolvedPortableRoot
-                    : null;
             }
 
-            if (string.IsNullOrWhiteSpace(preferredLibraryRoot) || !Path.IsPathFullyQualified(preferredLibraryRoot))
+            if (string.IsNullOrWhiteSpace(preferredLibraryRoot))
             {
                 return null;
             }
 
-            var resolvedPreferredRoot = Path.GetFullPath(preferredLibraryRoot);
-            return IsContainedWithinBaseDirectory(effectiveBaseDirectory, resolvedPreferredRoot)
-                ? resolvedPreferredRoot
-                : null;
+            if (Path.IsPathFullyQualified(preferredLibraryRoot))
+            {
+                return Path.GetFullPath(preferredLibraryRoot);
+            }
+
+            var combinedPreferredRoot = Path.GetFullPath(Path.Combine(effectiveBaseDirectory, preferredLibraryRoot));
+            if (IsContainedWithinBaseDirectory(effectiveBaseDirectory, combinedPreferredRoot))
+            {
+                return combinedPreferredRoot;
+            }
+
+            return null;
         }
 
         return preferredLibraryRoot;
