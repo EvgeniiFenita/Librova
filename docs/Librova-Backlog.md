@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#112`
+Last assigned id: `#113`
 
 ## 2. Priority Meanings
 
@@ -77,6 +77,12 @@ Last assigned id: `#112`
   - Type: `Feature`
   - Milestone: `1.1`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
+
+- `#113` redesign library filters into a single faceted panel with multi-select languages and genres.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: replace the current separate single-select language and genre controls with a store-style filters panel that groups both facets in one place and uses clickable checkboxes for multi-select; default state should represent all languages and all genres selected, and the browse request, counts, and result-refresh behavior must support choosing multiple values in each facet at the same time.
 
 ### Minor
 - `#111` add clearer visual confirmation in `Settings` when a converter is configured successfully.
