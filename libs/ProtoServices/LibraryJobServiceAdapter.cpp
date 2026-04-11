@@ -145,17 +145,6 @@ librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
     }
 }
 
-librova::v1::GetLibraryStatisticsResponse CLibraryJobServiceAdapter::GetLibraryStatistics(
-    const librova::v1::GetLibraryStatisticsRequest&) const
-{
-    const auto statistics = m_libraryCatalogFacade.GetLibraryStatistics();
-    LogInfoIfInitialized(
-        "GetLibraryStatistics returned BookCount={} TotalLibrarySizeBytes={}.",
-        statistics.BookCount,
-        statistics.TotalLibrarySizeBytes);
-    return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(statistics);
-}
-
 librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
     const librova::v1::ExportBookRequest& request) const
 {
@@ -250,6 +239,18 @@ librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJo
     const librova::v1::GetImportJobSnapshotRequest& request) const
 {
     const auto snapshot = m_importJobService.TryGetSnapshot(request.job_id());
+    if (snapshot.has_value())
+    {
+        LogInfoIfInitialized(
+            "GetImportJobSnapshot returned status {} for job {}.",
+            static_cast<int>(snapshot->Status),
+            request.job_id());
+    }
+    else
+    {
+        LogWarnIfInitialized("GetImportJobSnapshot requested unknown job {}.", request.job_id());
+    }
+
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoSnapshotResponse(
         snapshot.has_value() ? &*snapshot : nullptr);
 }
@@ -279,6 +280,11 @@ librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobR
                 result->ImportResult.has_value() ? result->ImportResult->Summary.SkippedEntries : 0);
         }
     }
+    else
+    {
+        LogWarnIfInitialized("GetImportJobResult requested unknown job {}.", request.job_id());
+    }
+
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoResultResponse(
         result.has_value() ? &*result : nullptr);
 }
@@ -288,6 +294,10 @@ librova::v1::WaitImportJobResponse CLibraryJobServiceAdapter::WaitImportJob(
 {
     librova::v1::WaitImportJobResponse response;
     response.set_completed(m_importJobService.Wait(request.job_id(), std::chrono::milliseconds(request.timeout_ms())));
+    LogInfoIfInitialized(
+        "WaitImportJob for job {} completed={}.",
+        request.job_id(),
+        response.completed());
     return response;
 }
 

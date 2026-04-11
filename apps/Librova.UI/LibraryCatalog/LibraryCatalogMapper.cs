@@ -153,13 +153,6 @@ internal static class LibraryCatalogMapper
             ? response.Details is null ? null : FromProto(response.Details)
             : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
 
-    public static LibraryStatisticsModel FromProto(GetLibraryStatisticsResponse response) =>
-        new()
-        {
-            BookCount = response.Statistics?.BookCount ?? 0,
-            TotalLibrarySizeBytes = response.Statistics?.TotalLibrarySizeBytes ?? 0
-        };
-
     public static LibraryStatisticsModel FromProto(LibraryStatistics statistics) =>
         new()
         {

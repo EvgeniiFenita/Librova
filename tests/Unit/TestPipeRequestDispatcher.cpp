@@ -448,7 +448,7 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
     CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }
 
-TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapter", "[pipe][catalog]")
+TEST_CASE("Pipe dispatcher returns catalog statistics inside ListBooks response", "[pipe][catalog]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-statistics.db";
     std::filesystem::remove(databasePath);
@@ -484,14 +484,15 @@ TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapte
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
-    librova::v1::GetLibraryStatisticsRequest typedRequest;
+    librova::v1::ListBooksRequest typedRequest;
+    typedRequest.mutable_query()->set_limit(10);
 
     std::string payload;
     REQUIRE(typedRequest.SerializeToString(&payload));
 
     const Librova::PipeTransport::SPipeRequestEnvelope request{
         .RequestId = 3005,
-        .Method = Librova::PipeTransport::EPipeMethod::GetLibraryStatistics,
+        .Method = Librova::PipeTransport::EPipeMethod::ListBooks,
         .Payload = payload
     };
 
@@ -499,8 +500,9 @@ TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapte
     REQUIRE(response.RequestId == request.RequestId);
     REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
 
-    librova::v1::GetLibraryStatisticsResponse typedResponse;
+    librova::v1::ListBooksResponse typedResponse;
     REQUIRE(typedResponse.ParseFromString(response.Payload));
+    REQUIRE(typedResponse.items_size() == 1);
     REQUIRE(typedResponse.statistics().book_count() == 1);
     REQUIRE(typedResponse.statistics().total_library_size_bytes() > 1536);
     REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 1536);

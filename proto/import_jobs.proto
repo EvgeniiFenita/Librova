@@ -177,13 +177,6 @@ message LibraryStatistics {
   uint64 total_library_size_bytes = 3;
 }
 
-message GetLibraryStatisticsRequest {
-}
-
-message GetLibraryStatisticsResponse {
-  LibraryStatistics statistics = 1;
-}
-
 message ExportBookRequest {
   int64 book_id = 1;
   string destination_path = 2;
@@ -282,6 +275,5 @@ service LibraryJobService {
   rpc WaitImportJob(WaitImportJobRequest) returns (WaitImportJobResponse);
   rpc CancelImportJob(CancelImportJobRequest) returns (CancelImportJobResponse);
   rpc RemoveImportJob(RemoveImportJobRequest) returns (RemoveImportJobResponse);
-  rpc GetLibraryStatistics(GetLibraryStatisticsRequest) returns (GetLibraryStatisticsResponse);
   rpc ValidateImportSources(ValidateImportSourcesRequest) returns (ValidateImportSourcesResponse);
 }

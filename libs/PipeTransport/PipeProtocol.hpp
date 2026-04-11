@@ -19,7 +19,6 @@ enum class EPipeMethod : std::uint32_t
     WaitImportJob = 8,
     CancelImportJob = 9,
     RemoveImportJob = 10,
-    GetLibraryStatistics = 11,
     ValidateImportSources = 12
 };
 
@@ -41,7 +40,6 @@ static_assert(static_cast<std::uint32_t>(EPipeMethod::GetImportJobResult) == 7);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::WaitImportJob) == 8);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::CancelImportJob) == 9);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::RemoveImportJob) == 10);
-static_assert(static_cast<std::uint32_t>(EPipeMethod::GetLibraryStatistics) == 11);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::ValidateImportSources) == 12);
 
 static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::Ok) == 0);

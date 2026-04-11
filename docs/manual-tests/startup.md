@@ -4,39 +4,41 @@
 
 ## 1. First Run Setup And Portable Library Open
 
-1. Удали `out\runtime\ui-preferences.json` и `out\runtime\ui-shell-state.json`.
-2. Запусти `.\Run-Librova.ps1 -FirstRun`.
-3. Убедись, что в стартовом окне показан экран `Set up your library`, а в setup-карточке есть выбор `Create New` и `Open Existing`.
-4. Оставь выбранным `Create New`, нажми `Continue`, указав невалидный относительный путь.
+1. Для обычного запуска удали `%LOCALAPPDATA%\Librova\ui-preferences.json` и `%LOCALAPPDATA%\Librova\ui-shell-state.json`.
+2. Для portable package удали `PortableData\ui-preferences.json` и `PortableData\ui-shell-state.json`.
+3. Запусти `.\Run-Librova.ps1 -FirstRun`.
+4. Убедись, что в стартовом окне показан экран `Set up your library`, а в setup-карточке есть выбор `Create New` и `Open Existing`.
+5. Оставь выбранным `Create New`, нажми `Continue`, указав невалидный относительный путь.
 Ожидаемое поведение:
 - `Continue` неактивна или показывается validation error.
 - host не стартует.
-5. Оставь выбранным `Create New`, нажми `Browse...` и выбери валидную пустую папку.
-6. Нажми `Continue`.
+6. Оставь выбранным `Create New`, нажми `Browse...` и выбери валидную пустую папку.
+7. Нажми `Continue`.
 Ожидаемое поведение:
 - startup screen переходит в loading state, затем открывается основной shell приложения.
-- создается [out\runtime\ui-preferences.json](out/runtime/ui-preferences.json).
+- для обычного запуска создается `%LOCALAPPDATA%\Librova\ui-preferences.json`.
+- для portable package создается `PortableData\ui-preferences.json`.
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
 - UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
-7. Повтори `-FirstRun`, но в setup переключись на `Open Existing` и выбери уже созданную существующую библиотеку Librova.
+8. Повтори `-FirstRun`, но в setup переключись на `Open Existing` и выбери уже созданную существующую библиотеку Librova.
 Ожидаемое поведение:
 - кнопка действия меняет текст на `Open Library`;
 - existing managed library проходит validation;
 - после нажатия `Open Library` приложение открывает существующую библиотеку без пересоздания структуры.
-8. Повтори `-FirstRun`, но оставь `Create New` и выбери уже непустую папку, которая не является существующей библиотекой Librova.
+9. Повтори `-FirstRun`, но оставь `Create New` и выбери уже непустую папку, которая не является существующей библиотекой Librova.
 Ожидаемое поведение:
 - `Continue` не запускает host.
 - validation error явно требует пустую папку для создания новой библиотеки.
-9. Повтори `-FirstRun`, оставь `Open Existing` и выбери пустую или обычную не-Librova папку.
+10. Повтори `-FirstRun`, оставь `Open Existing` и выбери пустую или обычную не-Librova папку.
 Ожидаемое поведение:
 - `Open Library` не запускает host;
 - validation error явно требует существующую managed library Librova.
-10. Повтори `-FirstRun`, но выбери пустую папку с кириллическим путем, например `C:\Books\Моя библиотека`.
+11. Повтори `-FirstRun`, но выбери пустую папку с кириллическим путем, например `C:\Books\Моя библиотека`.
 Ожидаемое поведение:
 - setup и дальнейший startup завершаются успешно;
 - в `Logs\host.log` и `Logs\ui.log` путь к библиотеке отображается без `????` и без mojibake.
-11. Для portable smoke: положи приложение и уже созданную managed library в один переносимый каталог, открой библиотеку, затем закрой приложение и перенеси весь каталог на другой путь или диск так, чтобы абсолютный путь к библиотеке изменился.
-12. Снова запусти приложение из нового пути.
+12. Для portable smoke: положи приложение и уже созданную managed library в один переносимый каталог, открой библиотеку, затем закрой приложение и перенеси весь каталог на другой путь или диск так, чтобы абсолютный путь к библиотеке изменился.
+13. Снова запусти приложение из нового пути.
 Ожидаемое поведение:
 - portable launch не требует ручной правки `ui-preferences.json`;
 - Librova автоматически открывает ту же библиотеку по новому пути;
@@ -45,14 +47,15 @@
 ## 2. Startup Error Recovery
 
 1. Закрой приложение.
-2. Отредактируй `out\runtime\ui-preferences.json`, чтобы `PreferredLibraryRoot` указывал на плохой или недоступный путь.
-3. Запусти `.\Run-Librova.ps1 -SecondRun`.
+2. Для обычного запуска отредактируй `%LOCALAPPDATA%\Librova\ui-preferences.json`, чтобы `PreferredLibraryRoot` указывал на плохой или недоступный путь.
+3. Для portable package отредактируй `PortableData\ui-preferences.json` таким же образом.
+4. Запусти `.\Run-Librova.ps1 -SecondRun`.
 Ожидаемое поведение:
 - показывается startup error screen.
 - на экране видны пути к UI log, UI state и preferences.
 - на экране также есть блок `Choose Another Library Root`.
-- пока библиотека еще не открыта, UI log path может указывать на bootstrap log в `out\runtime\bootstrap-ui.log`.
-4. Введи валидную папку и нажми `Retry With This Library`.
+- пока библиотека еще не открыта, UI log path может указывать на bootstrap log в `%LOCALAPPDATA%\Librova\Logs\ui.log` для обычного запуска или в `PortableData\Logs\ui.log` для portable package.
+5. Введи валидную папку и нажми `Retry With This Library`.
 Ожидаемое поведение:
 - приложение успешно стартует без ручной чистки файлов.
 - исправленный library root сохраняется для следующего запуска.

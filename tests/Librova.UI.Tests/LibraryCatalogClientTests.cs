@@ -218,7 +218,7 @@ public sealed class LibraryCatalogClientTests
     }
 
     [Fact]
-    public async Task LibraryCatalogClient_LoadsAggregateLibraryStatisticsThroughNativeHost()
+    public async Task LibraryCatalogClient_LoadsAggregateLibraryStatisticsFromListBooksThroughNativeHost()
     {
         var sandboxRoot = Path.Combine(
             Path.GetTempPath(),
@@ -290,7 +290,11 @@ public sealed class LibraryCatalogClientTests
             var coverPath = Path.Combine(coversRoot, "manual-cover.png");
             await File.WriteAllTextAsync(coverPath, "stub-cover-file");
             var coverSizeBytes = (ulong)new FileInfo(coverPath).Length;
-            var response = await client.GetLibraryStatisticsAsync(
+            var refreshedResponse = await client.ListBooksAsync(
+                LibraryCatalogMapper.ToProto(new BookListRequestModel
+                {
+                    Limit = 10
+                }),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
             var expectedManagedBookSizeBytes = listResponse.Items
@@ -299,13 +303,15 @@ public sealed class LibraryCatalogClientTests
             var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
             var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
 
-            Assert.NotNull(response.Statistics);
-            Assert.Equal(2UL, response.Statistics.BookCount);
+            Assert.NotNull(refreshedResponse.Statistics);
+            Assert.Equal(2UL, refreshedResponse.Statistics.BookCount);
             Assert.Equal(2, listResponse.Items.Count);
             Assert.NotNull(listResponse.Statistics);
             Assert.Equal(2UL, listResponse.Statistics.BookCount);
             Assert.True(databaseSizeBytes > 0);
-            Assert.Equal(expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes, response.Statistics.TotalLibrarySizeBytes);
+            Assert.Equal(
+                expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes,
+                refreshedResponse.Statistics.TotalLibrarySizeBytes);
         }
         finally
         {

@@ -10,14 +10,15 @@
 
 Перед началом держи открытыми:
 
-- [out\runtime\library\Logs\ui.log](out/runtime/library/Logs/ui.log)
-- [out\runtime\library\Logs\host.log](out/runtime/library/Logs/host.log)
+- `LibraryRoot\Logs\ui.log`
+- `LibraryRoot\Logs\host.log`
 
-Для `-FirstRun` и `-SecondRun` до выбора или открытия библиотеки UI временно пишет bootstrap log в:
+До выбора или открытия библиотеки UI пишет bootstrap log в runtime profile:
 
-- [out\runtime\bootstrap-ui.log](out/runtime/bootstrap-ui.log)
+- обычный запуск: `%LOCALAPPDATA%\Librova\Logs\ui.log`
+- portable package: `PortableData\Logs\ui.log`
 
-После успешного выбора или открытия библиотеки bootstrap log должен быть перенесен в `out\runtime\library\Logs\ui.log`.
+После успешного выбора или открытия библиотеки UI пишет уже в `LibraryRoot\Logs\ui.log`.
 
 ## Реестр сценариев
 

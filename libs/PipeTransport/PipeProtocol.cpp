@@ -111,7 +111,6 @@ template <typename TEnum>
     case TEnum::WaitImportJob:
     case TEnum::CancelImportJob:
     case TEnum::RemoveImportJob:
-    case TEnum::GetLibraryStatistics:
     case TEnum::ValidateImportSources:
         return true;
     default:

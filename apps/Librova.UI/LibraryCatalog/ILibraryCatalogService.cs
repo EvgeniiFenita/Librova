@@ -17,10 +17,6 @@ internal interface ILibraryCatalogService
         TimeSpan timeout,
         CancellationToken cancellationToken);
 
-    Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(
-        TimeSpan timeout,
-        CancellationToken cancellationToken);
-
     Task<string?> ExportBookAsync(
         long bookId,
         string destinationPath,

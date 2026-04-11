@@ -2794,9 +2794,6 @@ public sealed class ViewModelsTests
                 Message = $"Book {bookId} was not found."
             }));
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
-            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -2818,9 +2815,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
             _inner.GetBookDetailsAsync(bookId, timeout, cancellationToken);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
-            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -2847,9 +2841,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
             _inner.GetBookDetailsAsync(bookId, timeout, cancellationToken);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
-            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
 
         public Task<string?> ExportBookAsync(
             long bookId,

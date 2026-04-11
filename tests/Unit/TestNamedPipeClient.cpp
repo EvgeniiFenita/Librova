@@ -259,7 +259,7 @@ TEST_CASE("Named pipe client raises transport error on invalid pipe response", "
     REQUIRE(serverFailure == nullptr);
 }
 
-TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through host", "[pipe-client]")
+TEST_CASE("Named pipe client reads catalog statistics from ListBooks response through host", "[pipe-client]")
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -303,14 +303,16 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
     readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
-    librova::v1::GetLibraryStatisticsRequest request;
+    librova::v1::ListBooksRequest request;
+    request.mutable_query()->set_limit(10);
 
-    const auto response = client.Call<librova::v1::GetLibraryStatisticsRequest, librova::v1::GetLibraryStatisticsResponse>(
-        Librova::PipeTransport::EPipeMethod::GetLibraryStatistics,
+    const auto response = client.Call<librova::v1::ListBooksRequest, librova::v1::ListBooksResponse>(
+        Librova::PipeTransport::EPipeMethod::ListBooks,
         request,
         std::chrono::seconds(2));
 
     REQUIRE(response.has_statistics());
+    REQUIRE(response.items_size() == 0);
     REQUIRE(response.statistics().book_count() == 42);
     REQUIRE(response.statistics().total_library_size_bytes() == 5ULL * 1024ULL * 1024ULL);
     REQUIRE(response.statistics().total_managed_book_size_bytes() == 4ULL * 1024ULL * 1024ULL);

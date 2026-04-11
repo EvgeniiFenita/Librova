@@ -282,14 +282,6 @@ librova::v1::LibraryStatistics CLibraryCatalogProtoMapper::ToProto(
     return proto;
 }
 
-librova::v1::GetLibraryStatisticsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
-    const Librova::Application::SLibraryStatistics& statistics)
-{
-    librova::v1::GetLibraryStatisticsResponse response;
-    *response.mutable_statistics() = ToProto(statistics);
-    return response;
-}
-
 Librova::Application::SExportBookRequest CLibraryCatalogProtoMapper::FromProto(
     const librova::v1::ExportBookRequest& request)
 {

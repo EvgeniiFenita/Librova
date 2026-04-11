@@ -230,7 +230,7 @@ TEST_CASE("Named pipe host serves a protobuf StartImport request end-to-end", "[
     REQUIRE(serverFailure == nullptr);
 }
 
-TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to-end", "[pipe-host]")
+TEST_CASE("Named pipe host serves catalog statistics inside ListBooks response end-to-end", "[pipe-host]")
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -275,14 +275,15 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
 
-    librova::v1::GetLibraryStatisticsRequest typedRequest;
+    librova::v1::ListBooksRequest typedRequest;
+    typedRequest.mutable_query()->set_limit(10);
 
     std::string payload;
     REQUIRE(typedRequest.SerializeToString(&payload));
 
     const Librova::PipeTransport::SPipeRequestEnvelope request{
         .RequestId = 5002,
-        .Method = Librova::PipeTransport::EPipeMethod::GetLibraryStatistics,
+        .Method = Librova::PipeTransport::EPipeMethod::ListBooks,
         .Payload = std::move(payload)
     };
 
@@ -294,8 +295,9 @@ TEST_CASE("Named pipe host serves a protobuf GetLibraryStatistics request end-to
     REQUIRE(parsedResponse.Value->RequestId == request.RequestId);
     REQUIRE(parsedResponse.Value->Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
 
-    librova::v1::GetLibraryStatisticsResponse typedResponse;
+    librova::v1::ListBooksResponse typedResponse;
     REQUIRE(typedResponse.ParseFromString(parsedResponse.Value->Payload));
+    REQUIRE(typedResponse.items_size() == 0);
     REQUIRE(typedResponse.has_statistics());
     REQUIRE(typedResponse.statistics().book_count() == 7);
     REQUIRE(typedResponse.statistics().total_library_size_bytes() == 3ULL * 1024ULL * 1024ULL);

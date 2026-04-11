@@ -18,6 +18,7 @@
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
+#include "Logging/Logging.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -38,6 +39,12 @@ void CloseRepositoryAndRemoveAll(
 {
     repository.CloseSession();
     std::filesystem::remove_all(path);
+}
+
+[[nodiscard]] std::string ReadAllText(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
 }
 
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -562,7 +569,7 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }
 
-TEST_CASE("Library job service adapter exposes aggregate library statistics over protobuf", "[proto-service][catalog]")
+TEST_CASE("Library job service adapter returns aggregate statistics inside ListBooks response", "[proto-service][catalog]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-proto-service-statistics.db";
     std::filesystem::remove(databasePath);
@@ -606,8 +613,9 @@ TEST_CASE("Library job service adapter exposes aggregate library statistics over
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
 
-    librova::v1::GetLibraryStatisticsRequest request;
-    const auto response = adapter.GetLibraryStatistics(request);
+    librova::v1::ListBooksRequest request;
+    request.mutable_query()->set_limit(10);
+    const auto response = adapter.ListBooks(request);
 
     REQUIRE(response.has_statistics());
     REQUIRE(response.statistics().book_count() == 2);
@@ -615,6 +623,63 @@ TEST_CASE("Library job service adapter exposes aggregate library statistics over
     REQUIRE(response.statistics().total_library_size_bytes() > 3072);
 
     CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Library job service adapter logs import snapshot wait and missing result outcomes", "[proto-service][logging]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-logging";
+    std::filesystem::remove_all(sandbox);
+    const auto logPath = sandbox / "Logs" / "host.log";
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    const CEmptyQueryRepository queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+    try
+    {
+        librova::v1::GetImportJobSnapshotRequest snapshotRequest;
+        snapshotRequest.set_job_id(404);
+        static_cast<void>(adapter.GetImportJobSnapshot(snapshotRequest));
+
+        librova::v1::WaitImportJobRequest waitRequest;
+        waitRequest.set_job_id(404);
+        waitRequest.set_timeout_ms(1);
+        const auto waitResponse = adapter.WaitImportJob(waitRequest);
+        REQUIRE_FALSE(waitResponse.completed());
+
+        librova::v1::GetImportJobResultRequest resultRequest;
+        resultRequest.set_job_id(404);
+        static_cast<void>(adapter.GetImportJobResult(resultRequest));
+
+        Librova::Logging::CLogging::Shutdown();
+    }
+    catch (...)
+    {
+        Librova::Logging::CLogging::Shutdown();
+        throw;
+    }
+
+    const auto logText = ReadAllText(logPath);
+    REQUIRE(logText.find("GetImportJobSnapshot requested unknown job 404.") != std::string::npos);
+    REQUIRE(logText.find("WaitImportJob for job 404 completed=false.") != std::string::npos);
+    REQUIRE(logText.find("GetImportJobResult requested unknown job 404.") != std::string::npos);
+
+    std::filesystem::remove_all(sandbox);
 }
 
 TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when converter is configured", "[proto-service][catalog]")

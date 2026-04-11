@@ -33,9 +33,6 @@ public:
     [[nodiscard]] static librova::v1::LibraryStatistics ToProto(
         const Librova::Application::SLibraryStatistics& statistics);
 
-    [[nodiscard]] static librova::v1::GetLibraryStatisticsResponse ToProtoResponse(
-        const Librova::Application::SLibraryStatistics& statistics);
-
     [[nodiscard]] static Librova::Application::SExportBookRequest FromProto(
         const librova::v1::ExportBookRequest& request);
 

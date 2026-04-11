@@ -17,7 +17,6 @@ internal enum PipeMethod : uint
     WaitImportJob = 8,
     CancelImportJob = 9,
     RemoveImportJob = 10,
-    GetLibraryStatistics = 11,
     ValidateImportSources = 12
 }
 

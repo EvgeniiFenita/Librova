@@ -349,7 +349,7 @@ public sealed class LibraryCatalogServiceTests
     }
 
     [Fact]
-    public async Task LibraryCatalogService_LoadsAggregateLibraryStatisticsWithoutGeneratedProtoTypes()
+    public async Task LibraryCatalogService_LoadsAggregateLibraryStatisticsFromListBooksWithoutGeneratedProtoTypes()
     {
         var sandboxRoot = Path.Combine(
             Path.GetTempPath(),
@@ -426,7 +426,11 @@ public sealed class LibraryCatalogServiceTests
             var coverPath = Path.Combine(coversRoot, "manual-cover.png");
             await File.WriteAllTextAsync(coverPath, "stub-cover-file");
             var coverSizeBytes = (ulong)new FileInfo(coverPath).Length;
-            var statistics = await service.GetLibraryStatisticsAsync(
+            var refreshedPage = await service.ListBooksAsync(
+                new BookListRequestModel
+                {
+                    Limit = 10
+                },
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
             var expectedManagedBookSizeBytes = page.Items
@@ -435,13 +439,16 @@ public sealed class LibraryCatalogServiceTests
             var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
             var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
 
-            Assert.Equal(1UL, statistics.BookCount);
             Assert.Single(page.Items);
             Assert.Equal(1UL, page.TotalCount);
             Assert.NotNull(page.Statistics);
             Assert.Equal(1UL, page.Statistics!.BookCount);
+            Assert.NotNull(refreshedPage.Statistics);
+            Assert.Equal(1UL, refreshedPage.Statistics!.BookCount);
             Assert.True(databaseSizeBytes > 0);
-            Assert.Equal(expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes, statistics.TotalLibrarySizeBytes);
+            Assert.Equal(
+                expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes,
+                refreshedPage.Statistics.TotalLibrarySizeBytes);
         }
         finally
         {
