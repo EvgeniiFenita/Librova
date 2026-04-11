@@ -22,6 +22,22 @@
 
 namespace {
 
+void CloseRepositoryAndRemoveDatabase(
+    const std::filesystem::path& databasePath,
+    Librova::BookDatabase::CSqliteBookRepository& repository)
+{
+    repository.CloseSession();
+    std::filesystem::remove(databasePath);
+}
+
+void CloseRepositoryAndRemoveAll(
+    const std::filesystem::path& path,
+    Librova::BookDatabase::CSqliteBookRepository& repository)
+{
+    repository.CloseSession();
+    std::filesystem::remove_all(path);
+}
+
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
@@ -37,6 +53,22 @@ public:
         };
     }
 };
+
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override { return book.Id; }
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
+    void Remove(const Librova::Domain::SBookId) override {}
+};
+
+Librova::Domain::IBookRepository& GetEmptyBookRepository()
+{
+    static CEmptyBookRepository repository;
+    return repository;
+}
 
 } // namespace
 
@@ -58,7 +90,11 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
     {
     public:
@@ -87,7 +123,7 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
             return {};
         }
     } queryRepository;
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
     class CEmptyBookRepository final : public Librova::Domain::IBookRepository
     {
     public:
@@ -103,7 +139,7 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     const auto sourcePath = CreateImportSourcePath("start");
 
@@ -135,7 +171,11 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
     {
     public:
@@ -164,7 +204,7 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
             return {};
         }
     } queryRepository;
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
     class CEmptyBookRepository final : public Librova::Domain::IBookRepository
     {
     public:
@@ -180,7 +220,7 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     const Librova::PipeTransport::SPipeRequestEnvelope request{
@@ -193,6 +233,91 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
     REQUIRE(response.RequestId == request.RequestId);
     REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::InvalidRequest);
     REQUIRE_FALSE(response.ErrorMessage.empty());
+}
+
+TEST_CASE("Pipe dispatcher executes ValidateImportSources through protobuf adapter", "[pipe]")
+{
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    class CEmptyQueryRepository final : public Librova::Domain::IBookQueryRepository
+    {
+    public:
+        [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery&) const override
+        {
+            return 0;
+        }
+
+        [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override
+        {
+            return {};
+        }
+    } queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
+    class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+    {
+    public:
+        [[nodiscard]] Librova::Domain::SBookId ReserveId() override { return {1}; }
+        [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override { return book.Id; }
+        [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override { return std::nullopt; }
+        void Remove(const Librova::Domain::SBookId) override {}
+    } bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-validate";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto unsupportedPath = root / "notes.txt";
+    std::ofstream(unsupportedPath).put('x');
+
+    librova::v1::ValidateImportSourcesRequest typedRequest;
+    typedRequest.add_source_paths(unsupportedPath.string());
+
+    std::string payload;
+    REQUIRE(typedRequest.SerializeToString(&payload));
+
+    const Librova::PipeTransport::SPipeRequestEnvelope request{
+        .RequestId = 2003,
+        .Method = Librova::PipeTransport::EPipeMethod::ValidateImportSources,
+        .Payload = payload
+    };
+
+    const auto response = dispatcher.Dispatch(request);
+    REQUIRE(response.RequestId == request.RequestId);
+    REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
+
+    librova::v1::ValidateImportSourcesResponse typedResponse;
+    REQUIRE(typedResponse.ParseFromString(response.Payload));
+    REQUIRE(typedResponse.has_blocking_message());
+    REQUIRE(typedResponse.blocking_message() == "Supported source types are .fb2, .epub, and .zip, or a directory containing them.");
+
+    std::filesystem::remove_all(root);
 }
 
 TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe][catalog]")
@@ -216,15 +341,19 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        writeRepository,
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, writeRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
     Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::ListBooksRequest typedRequest;
@@ -249,7 +378,7 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
     REQUIRE(typedResponse.items_size() == 1);
     REQUIRE(typedResponse.items(0).title() == "Roadside Picnic");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "[pipe][catalog]")
@@ -277,15 +406,19 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        writeRepository,
+        {.LibraryRoot = sandbox / "Library"});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, writeRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox / "Library");
     Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
     Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, sandbox / "Library");
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::MoveBookToTrashRequest typedRequest;
@@ -312,7 +445,7 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
     REQUIRE_FALSE(typedResponse.has_orphaned_files());
     REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
 
-    std::filesystem::remove_all(sandbox);
+    CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }
 
 TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapter", "[pipe][catalog]")
@@ -336,15 +469,19 @@ TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapte
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &writeRepository);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        writeRepository,
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, writeRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
     Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
 
     librova::v1::GetLibraryStatisticsRequest typedRequest;
@@ -368,5 +505,5 @@ TEST_CASE("Pipe dispatcher executes GetLibraryStatistics through protobuf adapte
     REQUIRE(typedResponse.statistics().total_library_size_bytes() > 1536);
     REQUIRE(typedResponse.statistics().total_managed_book_size_bytes() == 1536);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
 }

@@ -166,6 +166,9 @@ public sealed class ShellWindowConfiguratorTests
         public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobResultModel?>(null);
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobSnapshotModel?>(null);
 
@@ -177,5 +180,21 @@ public sealed class ShellWindowConfiguratorTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+
+        public Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ImportJobResultModel
+            {
+                Snapshot = new ImportJobSnapshotModel
+                {
+                    JobId = jobId,
+                    Status = ImportJobStatusModel.Completed,
+                    Message = "Completed"
+                }
+            });
     }
 }

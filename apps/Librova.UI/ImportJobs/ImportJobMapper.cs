@@ -10,6 +10,31 @@ internal static class ImportJobMapper
         where TEnum : struct, Enum =>
         new($"Received unexpected {typeof(TEnum).Name} value '{value}' while mapping {context}.");
 
+    private static ImportErrorCodeModel MapErrorCode(ErrorCode code) =>
+        code switch
+        {
+            ErrorCode.Validation => ImportErrorCodeModel.Validation,
+            ErrorCode.UnsupportedFormat => ImportErrorCodeModel.UnsupportedFormat,
+            ErrorCode.DuplicateRejected => ImportErrorCodeModel.DuplicateRejected,
+            ErrorCode.DuplicateDecisionRequired => ImportErrorCodeModel.DuplicateDecisionRequired,
+            ErrorCode.ParserFailure => ImportErrorCodeModel.ParserFailure,
+            ErrorCode.ConverterUnavailable => ImportErrorCodeModel.ConverterUnavailable,
+            ErrorCode.ConverterFailed => ImportErrorCodeModel.ConverterFailed,
+            ErrorCode.StorageFailure => ImportErrorCodeModel.StorageFailure,
+            ErrorCode.DatabaseFailure => ImportErrorCodeModel.DatabaseFailure,
+            ErrorCode.Cancellation => ImportErrorCodeModel.Cancellation,
+            ErrorCode.IntegrityIssue => ImportErrorCodeModel.IntegrityIssue,
+            ErrorCode.NotFound => ImportErrorCodeModel.NotFound,
+            _ => throw CreateUnexpectedEnumValueException(code, "domain error code")
+        };
+
+    private static DomainErrorModel MapDomainError(DomainError error) =>
+        new()
+        {
+            Code = MapErrorCode(error.Code),
+            Message = error.Message
+        };
+
     public static ImportRequest ToProto(StartImportRequestModel model)
     {
         var request = new ImportRequest
@@ -33,6 +58,16 @@ internal static class ImportJobMapper
 
     public static ImportJobResultModel? FromProto(GetImportJobResultResponse response)
         => response.Result is null ? null : FromProto(response.Result);
+
+    public static bool FromProto(CancelImportJobResponse response) =>
+        response.Error is null
+            ? response.Accepted
+            : throw new ImportJobDomainException(MapDomainError(response.Error));
+
+    public static bool FromProto(RemoveImportJobResponse response) =>
+        response.Error is null
+            ? response.Removed
+            : throw new ImportJobDomainException(MapDomainError(response.Error));
 
     public static ImportJobSnapshotModel FromProto(ImportJobSnapshot snapshot) =>
         new()
@@ -76,24 +111,6 @@ internal static class ImportJobMapper
                 SkippedEntries = result.Summary.SkippedEntries,
                 Warnings = result.Summary.Warnings.ToArray()
             },
-            Error = result.Error is null ? null : new DomainErrorModel
-            {
-                Code = result.Error.Code switch
-                {
-                    ErrorCode.Validation => ImportErrorCodeModel.Validation,
-                    ErrorCode.UnsupportedFormat => ImportErrorCodeModel.UnsupportedFormat,
-                    ErrorCode.DuplicateRejected => ImportErrorCodeModel.DuplicateRejected,
-                    ErrorCode.DuplicateDecisionRequired => ImportErrorCodeModel.DuplicateDecisionRequired,
-                    ErrorCode.ParserFailure => ImportErrorCodeModel.ParserFailure,
-                    ErrorCode.ConverterUnavailable => ImportErrorCodeModel.ConverterUnavailable,
-                    ErrorCode.ConverterFailed => ImportErrorCodeModel.ConverterFailed,
-                    ErrorCode.StorageFailure => ImportErrorCodeModel.StorageFailure,
-                    ErrorCode.DatabaseFailure => ImportErrorCodeModel.DatabaseFailure,
-                    ErrorCode.Cancellation => ImportErrorCodeModel.Cancellation,
-                    ErrorCode.IntegrityIssue => ImportErrorCodeModel.IntegrityIssue,
-                    _ => ImportErrorCodeModel.Unknown
-                },
-                Message = result.Error.Message
-            }
+            Error = result.Error is null ? null : MapDomainError(result.Error)
         };
 }

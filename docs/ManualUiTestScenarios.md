@@ -32,6 +32,8 @@
 | [startup.md](manual-tests/startup.md) | 4 | Shell Navigation | ✓ |
 | [startup.md](manual-tests/startup.md) | 4.1 | Host Lifetime | ✓ |
 | [import.md](manual-tests/import.md) | 1 | Import Validation | ✓ |
+| [import.md](manual-tests/import.md) | 1.3 | Import Validation: Async Source Validation Clears Before Start | |
+| [import.md](manual-tests/import.md) | 1.4 | Import Validation: Empty Directory Produces Warning At Import Time | |
 | [import.md](manual-tests/import.md) | 2 | Import Workflow | ✓ |
 | [import.md](manual-tests/import.md) | 2.1 | Probable Duplicate Override | |
 | [import.md](manual-tests/import.md) | 3 | Drag And Drop Import Source | ✓ |

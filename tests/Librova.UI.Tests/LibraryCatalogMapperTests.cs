@@ -31,7 +31,7 @@ public sealed class LibraryCatalogMapperTests
                 Title = "Book",
                 Language = "en",
                 Format = (BookFormat)999,
-                ManagedPath = @"Books\12\book.fb2"
+                ManagedFileName = "book.fb2"
             }));
 
         Assert.Contains("BookFormat", error.Message, StringComparison.Ordinal);
@@ -48,11 +48,180 @@ public sealed class LibraryCatalogMapperTests
                 Title = "Book",
                 Language = "en",
                 Format = (BookFormat)999,
-                ManagedPath = @"Books\12\book.fb2",
-                Sha256Hex = "abc"
+                ManagedFileName = "book.fb2"
             }));
 
         Assert.Contains("BookFormat", error.Message, StringComparison.Ordinal);
         Assert.Contains("book details format", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_ThrowsStructuredDomainExceptionForDetailsError()
+    {
+        var error = Assert.Throws<LibraryCatalogDomainException>(() =>
+            LibraryCatalogMapper.FromProto(new GetBookDetailsResponse
+            {
+                Error = new DomainError
+                {
+                    Code = ErrorCode.NotFound,
+                    Message = "Book 42 was not found."
+                }
+            }));
+
+        Assert.Equal(LibraryCatalogErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Book 42 was not found.", error.Message);
+    }
+
+    [Fact]
+    public void Mapper_ThrowsStructuredDomainExceptionForExportError()
+    {
+        var error = Assert.Throws<LibraryCatalogDomainException>(() =>
+            LibraryCatalogMapper.FromProto(new ExportBookResponse
+            {
+                Error = new DomainError
+                {
+                    Code = ErrorCode.NotFound,
+                    Message = "Book 42 was not found for export."
+                }
+            }));
+
+        Assert.Equal(LibraryCatalogErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Book 42 was not found for export.", error.Message);
+    }
+
+    [Fact]
+    public void Mapper_ThrowsStructuredDomainExceptionForTrashError()
+    {
+        var error = Assert.Throws<LibraryCatalogDomainException>(() =>
+            LibraryCatalogMapper.FromProto(new MoveBookToTrashResponse
+            {
+                Error = new DomainError
+                {
+                    Code = ErrorCode.NotFound,
+                    Message = "Book 42 was not found for deletion."
+                }
+            }));
+
+        Assert.Equal(LibraryCatalogErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Book 42 was not found for deletion.", error.Message);
+    }
+
+    [Fact]
+    public void Mapper_MapsStorageFieldsIntoDedicatedStorageMetadata()
+    {
+        var listItem = LibraryCatalogMapper.FromProto(new BookListItem
+        {
+            BookId = 12,
+            Title = "Roadside Picnic",
+            Language = "en",
+            Format = BookFormat.Epub,
+            ManagedFileName = "safe-roadside.epub",
+            CoverResourceAvailable = true,
+            CoverFileExtension = "jpg"
+        });
+
+        var details = LibraryCatalogMapper.FromProto(new BookDetails
+        {
+            BookId = 12,
+            Title = "Roadside Picnic",
+            Language = "en",
+            Format = BookFormat.Epub,
+            ManagedFileName = "safe-roadside.epub",
+            CoverResourceAvailable = true,
+            ContentHashAvailable = true,
+            CoverFileExtension = "jpg"
+        });
+
+        Assert.Equal("safe-roadside.epub", listItem.Storage.ManagedRelativePath);
+        Assert.Equal("safe-roadside.epub", listItem.ManagedFileName);
+        Assert.True(listItem.HasCoverResource);
+
+        Assert.Equal("safe-roadside.epub", details.Storage.ManagedRelativePath);
+        Assert.Equal("Covers/0000000012.jpg", details.Storage.CoverRelativePath);
+        Assert.True(details.HasContentHash);
+        Assert.Equal("safe-roadside.epub", details.ManagedFileName);
+    }
+
+    [Fact]
+    public void Mapper_RejectsMissingManagedFileNameInListItems()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            LibraryCatalogMapper.FromProto(new BookListItem
+            {
+                BookId = 12,
+                Title = "Book",
+                Language = "en",
+                Format = BookFormat.Epub
+            }));
+
+        Assert.Contains("incomplete catalog transport payload", error.Message, StringComparison.Ordinal);
+        Assert.Contains("book list item managed file name", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsMissingManagedFileNameInDetails()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            LibraryCatalogMapper.FromProto(new BookDetails
+            {
+                BookId = 12,
+                Title = "Book",
+                Language = "en",
+                Format = BookFormat.Epub
+            }));
+
+        Assert.Contains("incomplete catalog transport payload", error.Message, StringComparison.Ordinal);
+        Assert.Contains("book details managed file name", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInDetailsResponse()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            LibraryCatalogMapper.FromProto(new GetBookDetailsResponse
+            {
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("catalog domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInExportResponse()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            LibraryCatalogMapper.FromProto(new ExportBookResponse
+            {
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("catalog domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInTrashResponse()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            LibraryCatalogMapper.FromProto(new MoveBookToTrashResponse
+            {
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("catalog domain error code", error.Message, StringComparison.Ordinal);
     }
 }

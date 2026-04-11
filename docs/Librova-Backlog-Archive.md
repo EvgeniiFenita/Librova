@@ -8,6 +8,18 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#109` close the remaining pre-merge review blockers before merging the refactoring branch.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: removed the reintroduced managed mapper drift fallbacks, finished the safe catalog transport cleanup, restored mandatory IPC success-path logging, and aligned the regression surface with the final contract.
+
+- `#108` restore immediate first-run folder selection interaction after the architecture refactor.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: first-run folder picking now applies cheap validation immediately, runs mode-specific filesystem checks in the background with stale-result guards, and re-validates authoritatively on Continue so Browse and Continue stay responsive without accepting invalid library roots.
+
 - `#86` block portable-mode library-root preferences from escaping outside the portable application directory.
   - Status: `Closed`
   - Type: `Bug`
@@ -120,8 +132,38 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#107` implement and prove the intended reusable SQLite write-session lifecycle for the repository layer.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: `CSqliteBookRepository` now keeps a reusable per-instance SQLite write session, and the native regression surface explicitly proves both the retained-session lifecycle and the required cleanup sequencing on Windows.
+
+- `#106` finish the remaining remediation decomposition of import and browse orchestration after the first helper extractions.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: import workload planning, rollback cleanup, and structured progress mapping now live in dedicated application helpers, while browse selection/details/export/delete flow moved behind a selection workflow controller so `LibraryImportFacade` and `LibraryBrowserViewModel` keep thinner composition-only boundaries without changing behavior.
+
+- `#105` finish the storage-safe catalog transport cleanup so browse/details no longer expose raw managed storage paths and content hashes as their primary UI contract.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: browse/details transport now carries safe storage metadata (`managed_file_name`, `cover_file_extension`, cover/hash availability) while the native mapper stops populating raw managed paths and content hashes; the UI resolves cover resources locally from the safe descriptor and no longer depends on raw storage leakage as its production mapping contract.
+
+- `#104` remove partial-construction semantics from `LibraryCatalogFacade` and `LibraryImportFacade` so every production-shaped instance is fully wired.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: removed the partial constructors and nullable repository/library-root state from both facades, updated the transport/job/catalog test surface to build only fully wired instances, and deleted the stale details-without-repository test that encoded the old semantics.
+
+- `#103` finish the architecture remediation plan and align the backlog state with the remaining incomplete waves.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: fixed the branch hardening regressions that remained after review, restored honest backlog state, and split the still-large unfinished remediation waves into dedicated follow-up tasks instead of archiving them implicitly.
+
 - `#102` rework import source selection so the picker can accept mixed files and folders in one action, matching drag-and-drop behavior.
-  - Status: `Won't Do`
+  - Status: `Closed`
   - Type: `Feature`
   - Milestone: `1.1`
   - Note: decided not to implement; current two-button UX (Select Files... / Select Folder...) is considered sufficient.

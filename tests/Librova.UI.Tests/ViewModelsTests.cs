@@ -16,7 +16,7 @@ namespace Librova.UI.Tests;
 public sealed class ViewModelsTests
 {
     [Fact]
-    public async Task ImportJobsViewModel_StartsImportAndPollsUntilTerminalResult()
+    public async Task ImportJobsViewModel_StartsImportAndWaitsForTerminalResultThroughService()
     {
         var service = new FakeImportJobsService();
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
@@ -40,6 +40,7 @@ public sealed class ViewModelsTests
             Assert.Equal("Processed 1 of 1 file (100%). Imported 1, failed 0, skipped 0.", viewModel.ProgressSummaryText);
             Assert.Equal("Watch for duplicates", viewModel.WarningsText);
             Assert.Equal("No error.", viewModel.ErrorText);
+            Assert.True(service.WaitCalls > 0);
             Assert.True(service.TryGetSnapshotCalls > 0);
             Assert.False(viewModel.IsBusy);
         }
@@ -59,7 +60,7 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public void ImportJobsViewModel_CommandRequiresPaths()
+    public async Task ImportJobsViewModel_CommandRequiresPaths()
     {
         var viewModel = new ImportJobsViewModel(new FakeImportJobsService());
 
@@ -73,6 +74,7 @@ public sealed class ViewModelsTests
             viewModel.SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2");
             viewModel.WorkingDirectory = Path.Combine(sandboxRoot, "work");
 
+            await WaitForConditionAsync(() => viewModel.StartImportCommand.CanExecute(null));
             Assert.True(viewModel.StartImportCommand.CanExecute(null));
         }
         finally
@@ -430,6 +432,7 @@ public sealed class ViewModelsTests
         {
             var sourceDirectory = Path.Combine(sandboxRoot, "incoming");
             Directory.CreateDirectory(sourceDirectory);
+            File.WriteAllText(Path.Combine(sourceDirectory, "book.fb2"), "content");
             var viewModel = new ImportJobsViewModel(
                 service,
                 new FakePathSelectionService
@@ -546,6 +549,45 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_ApplyDroppedSourcePathsAndStartAsync_DoesNotStartPreviousSelectionWhenDropIsIgnored()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var originalSourcePath = CreateSupportedSourceFile(sandboxRoot, "existing.fb2");
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = originalSourcePath,
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await WaitForConditionAsync(() => viewModel.StartImportCommand.CanExecute(null));
+            await viewModel.ApplyDroppedSourcePathsAndStartAsync([]);
+
+            Assert.Equal([originalSourcePath], viewModel.SourcePaths);
+            Assert.Null(service.LastStartRequest);
+            Assert.Null(viewModel.LastJobId);
+            Assert.False(viewModel.IsBusy);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_AllowsMixedValidAndUnsupportedSelectedSourcesWhenAtLeastOneSourceIsImportable()
     {
         var service = new FakeImportJobsService();
@@ -565,6 +607,7 @@ public sealed class ViewModelsTests
 
             viewModel.ApplyDroppedSourcePaths([validSourcePath, unsupportedSourcePath]);
 
+            await WaitForConditionAsync(() => viewModel.StartImportCommand.CanExecute(null));
             Assert.True(viewModel.StartImportCommand.CanExecute(null));
             Assert.Equal(string.Empty, viewModel.SourceValidationMessage);
 
@@ -710,6 +753,7 @@ public sealed class ViewModelsTests
                 WorkingDirectory = Path.Combine(sandboxRoot, "work")
             };
 
+            await WaitForConditionAsync(() => viewModel.StartImportCommand.CanExecute(null));
             Assert.True(viewModel.StartImportCommand.CanExecute(null));
             Assert.Equal(string.Empty, viewModel.SourceValidationMessage);
             Assert.Equal(string.Empty, viewModel.WorkingDirectoryValidationMessage);
@@ -730,7 +774,7 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public void ImportJobsViewModel_DisablesStartForUnsupportedSourceExtension()
+    public async Task ImportJobsViewModel_DisablesStartForUnsupportedSourceExtension()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
         Directory.CreateDirectory(sandboxRoot);
@@ -746,8 +790,44 @@ public sealed class ViewModelsTests
                 WorkingDirectory = Path.Combine(sandboxRoot, "work")
             };
 
+            await WaitForConditionAsync(() => !viewModel.StartImportCommand.CanExecute(null) && viewModel.SourceValidationMessage.Length > 0);
             Assert.False(viewModel.StartImportCommand.CanExecute(null));
             Assert.Equal("Supported source types are .fb2, .epub, and .zip, or a directory containing them.", viewModel.SourceValidationMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_StartImportAsync_ThrowsWhenCoreValidationRejectsSelectedSources()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var sourcePath = Path.Combine(sandboxRoot, "book.txt");
+            File.WriteAllText(sourcePath, "plain text");
+
+            var viewModel = new ImportJobsViewModel(new FakeImportJobsService())
+            {
+                SourcePath = sourcePath,
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => viewModel.StartImportAsync());
+            Assert.Equal("Supported source types are .fb2, .epub, and .zip, or a directory containing them.", error.Message);
         }
         finally
         {
@@ -884,6 +964,62 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public void BookListItemModel_KeepsCatalogDataSeparateFromPresentationState()
+    {
+        var model = new BookListItemModel
+        {
+            Data = new BookListItemDataModel
+            {
+                BookId = 7,
+                Title = "Roadside Picnic",
+                Authors = ["Arkady Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000007/book.epub"
+            }
+        };
+
+        model.CoverPlaceholderText = "R";
+        model.IsSelected = true;
+        model.CardPresentation.CardBorderThickness = new Thickness(2);
+
+        Assert.Equal(7, model.BookId);
+        Assert.Equal("Roadside Picnic", model.Data.Title);
+        Assert.True(model.IsSelected);
+        Assert.Equal("R", model.CoverPlaceholderText);
+        Assert.Equal(new Thickness(2), model.CardBorderThickness);
+    }
+
+    [Fact]
+    public void BookDetailsModel_KeepsCatalogDataSeparateFromPresentationState()
+    {
+        var model = new BookDetailsModel
+        {
+            Data = new BookDetailsDataModel
+            {
+                BookId = 11,
+                Title = "Definitely Maybe",
+                Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Fb2,
+                ManagedPath = "Books/0000000011/book.fb2",
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = "Books/0000000011/book.fb2",
+                    HasContentHash = true
+                }
+            }
+        };
+
+        model.CoverPlaceholderText = "D";
+
+        Assert.Equal(11, model.BookId);
+        Assert.True(model.HasContentHash);
+        Assert.Equal("D", model.CoverPlaceholderText);
+        Assert.Equal("D", model.CoverPresentation.CoverPlaceholderText);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_ReportsEmptySearchResult()
     {
         var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
@@ -925,13 +1061,13 @@ public sealed class ViewModelsTests
             await viewModel.RefreshAsync();
 
             Assert.False(viewModel.Books[0].ShowCoverPlaceholder);
-            var gridCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.Books[0].CoverBackgroundBrush);
+            var gridCoverBackground = Assert.IsAssignableFrom<ISolidColorBrush>(viewModel.Books[0].CoverBackgroundBrush);
             Assert.Equal(Color.Parse("#0A0700"), gridCoverBackground.Color);
 
             await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
 
             Assert.False(viewModel.ShowSelectedBookCoverPlaceholder);
-            var detailsCoverBackground = Assert.IsType<SolidColorBrush>(viewModel.SelectedBookCoverBackgroundBrush);
+            var detailsCoverBackground = Assert.IsAssignableFrom<ISolidColorBrush>(viewModel.SelectedBookCoverBackgroundBrush);
             Assert.Equal(Color.Parse("#0A0700"), detailsCoverBackground.Color);
         }
         finally
@@ -1281,6 +1417,40 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_LogsStatisticsFailuresWhenFallingBackToUnavailableSummary()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+        var logPath = Path.Combine(sandboxRoot, "ui.log");
+
+        try
+        {
+            UiLogging.ReinitializeForTests(logPath);
+            var viewModel = new LibraryBrowserViewModel(new StatisticsFailureLibraryCatalogService());
+
+            await viewModel.RefreshAsync();
+            UiLogging.Shutdown();
+
+            var logText = File.ReadAllText(logPath);
+            Assert.Contains("ListBooks response did not include library statistics", logText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_LoadsAdditionalPagesIntoExistingCollection()
     {
         var service = new PagingLibraryCatalogService();
@@ -1298,6 +1468,30 @@ public sealed class ViewModelsTests
         Assert.Equal(3, viewModel.Books.Count);
         Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.Books.Select(book => book.Title).ToArray());
         Assert.Null(viewModel.SelectedBook);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_RaisesHasMoreResultsOnlyWhenPagingStateChanges()
+    {
+        var service = new PagingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service)
+        {
+            PageSize = 2
+        };
+        var notifications = new List<bool>();
+        viewModel.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(LibraryBrowserViewModel.HasMoreResults))
+            {
+                notifications.Add(viewModel.HasMoreResults);
+            }
+        };
+
+        await viewModel.RefreshAsync();
+        await viewModel.RefreshAsync();
+        await viewModel.LoadMoreAsync();
+
+        Assert.Equal([true, false], notifications);
     }
 
     [Fact]
@@ -1352,6 +1546,7 @@ public sealed class ViewModelsTests
         Assert.Equal(viewModel.SelectedBook!.BookId, service.LastExportBookId);
         Assert.Equal(@"C:\Exports\alpha.epub", service.LastExportPath);
         Assert.Null(service.LastExportFormat);
+        Assert.Equal(TimeSpan.FromSeconds(10), service.LastExportTimeout);
         Assert.Equal("Roadside Picnic - Arkady Strugatsky.epub", selectionService.LastSuggestedExportFileName);
         Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
@@ -1395,6 +1590,7 @@ public sealed class ViewModelsTests
 
         Assert.Equal(BookFormatModel.Epub, service.LastExportFormat);
         Assert.Equal(@"C:\Exports\converted.epub", service.LastExportPath);
+        Assert.Equal(TimeSpan.FromMinutes(2), service.LastExportTimeout);
         Assert.Equal("Roadside Picnic Director's Cut - Arkady Boris Strugatsky.epub", selectionService.LastSuggestedExportFileName);
         Assert.Contains("as EPUB", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
     }
@@ -1629,6 +1825,66 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_RefreshPreservesSelectionWithoutReloadingDetails()
+    {
+        var service = new RefreshPreservingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.Equal(1, service.GetBookDetailsCalls);
+        Assert.NotNull(viewModel.SelectedBookDetails);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(1, service.GetBookDetailsCalls);
+        Assert.Equal(1L, viewModel.SelectedBook?.BookId);
+        Assert.Null(viewModel.SelectedBookDetails);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesLegacyStatusTextWhenDetailsRpcReturnsStructuredNotFound()
+    {
+        var viewModel = new LibraryBrowserViewModel(new NotFoundDetailsLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        await viewModel.LoadDetailsCommand.ExecuteAsyncForTests();
+
+        Assert.Null(viewModel.SelectedBookDetails);
+        Assert.Equal("Book details were not found.", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesLegacyStatusTextWhenExportRpcReturnsStructuredNotFound()
+    {
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\missing.fb2"
+        };
+        var viewModel = new LibraryBrowserViewModel(new NotFoundExportLibraryCatalogService(), selectionService);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        await viewModel.ExportSelectedBookAsync();
+
+        Assert.Equal("Selected book could not be exported.", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_UsesLegacyStatusTextWhenDeleteRpcReturnsStructuredNotFound()
+    {
+        var viewModel = new LibraryBrowserViewModel(new NotFoundDeleteLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+        await viewModel.MoveSelectedBookToTrashAsync();
+
+        Assert.Equal("Selected book could not be moved to Recycle Bin.", viewModel.StatusText);
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_EmitsSuccessEventForCompletedImport()
     {
         var service = new FakeImportJobsService();
@@ -1800,15 +2056,16 @@ public sealed class ViewModelsTests
     private sealed class FakeImportJobsService : IImportJobsService
     {
         public int TryGetSnapshotCalls { get; private set; }
+        public int WaitCalls { get; private set; }
         public ulong? LastRemovedJobId { get; private set; }
         public StartImportRequestModel? LastStartRequest { get; private set; }
-        private bool _resultReady;
+        private int _waitCalls;
 
         public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
 
         public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult<ImportJobResultModel?>(_resultReady
+            => Task.FromResult<ImportJobResultModel?>(_waitCalls > 1
                 ? new ImportJobResultModel
                 {
                     Snapshot = new ImportJobSnapshotModel
@@ -1835,10 +2092,12 @@ public sealed class ViewModelsTests
                 }
                 : null);
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(BuildSourceValidationMessage(sourcePaths));
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             TryGetSnapshotCalls++;
-            _resultReady = true;
             return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
             {
                 JobId = jobId,
@@ -1866,7 +2125,30 @@ public sealed class ViewModelsTests
         }
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        {
+            WaitCalls++;
+            _waitCalls++;
+            return Task.FromResult(_waitCalls > 1);
+        }
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            while (!await WaitAsync(jobId, timeout, waitTimeout, cancellationToken))
+            {
+                var snapshot = await TryGetSnapshotAsync(jobId, timeout, cancellationToken);
+                if (snapshot is not null)
+                {
+                    onProgress?.Invoke(snapshot);
+                }
+            }
+
+            return (await TryGetResultAsync(jobId, timeout, cancellationToken))!;
+        }
     }
 
     private sealed class FailingImportJobsService : IImportJobsService
@@ -1876,6 +2158,9 @@ public sealed class ViewModelsTests
 
         public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobResultModel?>(null);
+
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
 
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobSnapshotModel?>(null);
@@ -1888,6 +2173,18 @@ public sealed class ViewModelsTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            await WaitAsync(jobId, timeout, waitTimeout, cancellationToken);
+            var result = await TryGetResultAsync(jobId, timeout, cancellationToken);
+            throw new InvalidOperationException(result is null ? "No terminal result." : "WaitForCompletionAsync should not be called.");
+        }
     }
 
     private sealed class SnapshotOnlyImportJobsService : IImportJobsService
@@ -1917,6 +2214,9 @@ public sealed class ViewModelsTests
                 }
                 : null);
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             RefreshSnapshotCalls++;
@@ -1941,7 +2241,26 @@ public sealed class ViewModelsTests
             => Task.FromResult(64UL);
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
-            => Task.FromResult(false);
+            => Task.FromResult(RefreshSnapshotCalls > 0);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            while (!await WaitAsync(jobId, timeout, waitTimeout, cancellationToken))
+            {
+                var snapshot = await TryGetSnapshotAsync(jobId, timeout, cancellationToken);
+                if (snapshot is not null)
+                {
+                    onProgress?.Invoke(snapshot);
+                }
+            }
+
+            return (await TryGetResultAsync(jobId, timeout, cancellationToken))!;
+        }
     }
 
     private sealed class CancelAwareImportJobsService : IImportJobsService
@@ -1988,6 +2307,9 @@ public sealed class ViewModelsTests
             return Task.FromResult<ImportJobResultModel?>(null);
         }
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             _polling.TrySetResult();
@@ -2015,7 +2337,31 @@ public sealed class ViewModelsTests
         }
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+        {
+            _started.TrySetResult();
+            return Task.FromResult(_cancelled);
+        }
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            while (!await WaitAsync(jobId, timeout, waitTimeout, cancellationToken))
+            {
+                var snapshot = await TryGetSnapshotAsync(jobId, timeout, cancellationToken);
+                if (snapshot is not null)
+                {
+                    onProgress?.Invoke(snapshot);
+                }
+
+                await Task.Delay(20, cancellationToken);
+            }
+
+            return (await TryGetResultAsync(jobId, timeout, cancellationToken))!;
+        }
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService
@@ -2075,6 +2421,9 @@ public sealed class ViewModelsTests
                 }
             });
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
             {
@@ -2097,6 +2446,18 @@ public sealed class ViewModelsTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            await WaitAsync(jobId, timeout, waitTimeout, cancellationToken);
+            var result = await TryGetResultAsync(jobId, timeout, cancellationToken);
+            return result!;
+        }
     }
 
     private sealed class CancellationResidueImportJobsService : IImportJobsService
@@ -2138,6 +2499,9 @@ public sealed class ViewModelsTests
                 }
             });
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
             {
@@ -2160,6 +2524,18 @@ public sealed class ViewModelsTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            await WaitAsync(jobId, timeout, waitTimeout, cancellationToken);
+            var result = await TryGetResultAsync(jobId, timeout, cancellationToken);
+            return result!;
+        }
     }
 
     private static string CreateSupportedSourceFile(string sandboxRoot, string fileName)
@@ -2167,6 +2543,47 @@ public sealed class ViewModelsTests
         var sourcePath = Path.Combine(sandboxRoot, fileName);
         File.WriteAllText(sourcePath, "content");
         return sourcePath;
+    }
+
+    private static string BuildSourceValidationMessage(IReadOnlyList<string> sourcePaths)
+    {
+        var hasImportableSource = false;
+
+        foreach (var sourcePath in sourcePaths)
+        {
+            if (Directory.Exists(sourcePath))
+            {
+                if (Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories).Any(IsSupportedImportFile))
+                {
+                    hasImportableSource = true;
+                    continue;
+                }
+
+                return "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
+            }
+
+            if (!File.Exists(sourcePath))
+            {
+                return "A selected source does not exist.";
+            }
+
+            if (IsSupportedImportFile(sourcePath))
+            {
+                hasImportableSource = true;
+            }
+        }
+
+        return hasImportableSource
+            ? string.Empty
+            : "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
+    }
+
+    private static bool IsSupportedImportFile(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return extension.Equals(".fb2", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".zip", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMilliseconds = 3000)
@@ -2190,6 +2607,7 @@ public sealed class ViewModelsTests
         public long? LastExportBookId { get; private set; }
         public string? LastExportPath { get; private set; }
         public BookFormatModel? LastExportFormat { get; private set; }
+        public TimeSpan? LastExportTimeout { get; private set; }
         public long? LastTrashedBookId { get; private set; }
         public LibraryStatisticsModel Statistics { get; init; } = new()
         {
@@ -2201,6 +2619,7 @@ public sealed class ViewModelsTests
             {
                 TotalCount = 1,
                 AvailableLanguages = ["en"],
+                Statistics = Statistics,
                 Items =
                 [
                     new BookListItemModel
@@ -2234,7 +2653,11 @@ public sealed class ViewModelsTests
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Books/0000000001/book.epub",
                 SizeBytes = 4096,
-                Sha256Hex = "details-hash",
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = "Books/0000000001/book.epub",
+                    HasContentHash = true
+                },
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
@@ -2251,6 +2674,7 @@ public sealed class ViewModelsTests
             LastExportBookId = bookId;
             LastExportPath = destinationPath;
             LastExportFormat = exportFormat;
+            LastExportTimeout = timeout;
             return Task.FromResult<string?>(destinationPath);
         }
 
@@ -2286,6 +2710,161 @@ public sealed class ViewModelsTests
 
         public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
+    private sealed class RefreshPreservingLibraryCatalogService : ILibraryCatalogService
+    {
+        public int GetBookDetailsCalls { get; private set; }
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 1,
+                AvailableLanguages = ["en"],
+                Statistics = new LibraryStatisticsModel
+                {
+                    BookCount = 1
+                },
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Roadside Picnic",
+                        Authors = ["Arkady Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Books/0000000001/book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            GetBookDetailsCalls++;
+            return Task.FromResult<BookDetailsModel?>(new BookDetailsModel
+            {
+                BookId = bookId,
+                Title = "Roadside Picnic",
+                Authors = ["Arkady Strugatsky"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000000001/book.epub",
+                SizeBytes = 4096,
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = "Books/0000000001/book.epub",
+                    HasContentHash = true
+                },
+                AddedAtUtc = DateTimeOffset.UtcNow
+            });
+        }
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("legacy statistics RPC should not be used during refresh");
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
+    }
+
+    private sealed class NotFoundDetailsLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly FakeLibraryCatalogService _inner = new();
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.ListBooksAsync(request, timeout, cancellationToken);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            Task.FromException<BookDetailsModel?>(new LibraryCatalogDomainException(new LibraryCatalogDomainErrorModel
+            {
+                Code = LibraryCatalogErrorCodeModel.NotFound,
+                Message = $"Book {bookId} was not found."
+            }));
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken) =>
+            _inner.ExportBookAsync(bookId, destinationPath, exportFormat, timeout, cancellationToken);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.MoveBookToTrashAsync(bookId, timeout, cancellationToken);
+    }
+
+    private sealed class NotFoundExportLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly FakeLibraryCatalogService _inner = new();
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.ListBooksAsync(request, timeout, cancellationToken);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.GetBookDetailsAsync(bookId, timeout, cancellationToken);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken) =>
+            Task.FromException<string?>(new LibraryCatalogDomainException(new LibraryCatalogDomainErrorModel
+            {
+                Code = LibraryCatalogErrorCodeModel.NotFound,
+                Message = $"Book {bookId} was not found for export."
+            }));
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.MoveBookToTrashAsync(bookId, timeout, cancellationToken);
+    }
+
+    private sealed class NotFoundDeleteLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly FakeLibraryCatalogService _inner = new();
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.ListBooksAsync(request, timeout, cancellationToken);
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.GetBookDetailsAsync(bookId, timeout, cancellationToken);
+
+        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken) =>
+            _inner.GetLibraryStatisticsAsync(timeout, cancellationToken);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken) =>
+            _inner.ExportBookAsync(bookId, destinationPath, exportFormat, timeout, cancellationToken);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken) =>
+            Task.FromException<DeleteBookResultModel?>(new LibraryCatalogDomainException(new LibraryCatalogDomainErrorModel
+            {
+                Code = LibraryCatalogErrorCodeModel.NotFound,
+                Message = $"Book {bookId} was not found for deletion."
+            }));
     }
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
@@ -2351,6 +2930,10 @@ public sealed class ViewModelsTests
         ];
 
         public int ListCalls { get; private set; }
+        public LibraryStatisticsModel Statistics { get; init; } = new()
+        {
+            BookCount = (ulong)AllBooks.Count
+        };
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -2376,7 +2959,8 @@ public sealed class ViewModelsTests
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
                     .ToArray(),
-                Items = filteredItems
+                Items = filteredItems,
+                Statistics = Statistics
             });
         }
 
@@ -2412,6 +2996,7 @@ public sealed class ViewModelsTests
             {
                 TotalCount = 1,
                 AvailableLanguages = ["en"],
+                Statistics = null,
                 Items =
                 [
                     new BookListItemModel
@@ -2439,7 +3024,12 @@ public sealed class ViewModelsTests
                 ManagedPath = "Books/0000000001/book.epub",
                 CoverPath = "Covers/0000000001.png",
                 SizeBytes = 1024,
-                Sha256Hex = "hash",
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = "Books/0000000001/book.epub",
+                    CoverRelativePath = "Covers/0000000001.png",
+                    HasContentHash = true
+                },
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
@@ -2473,6 +3063,7 @@ public sealed class ViewModelsTests
             {
                 TotalCount = 1,
                 AvailableLanguages = ["en"],
+                Statistics = null,
                 Items =
                 [
                     new BookListItemModel
@@ -2514,12 +3105,14 @@ public sealed class ViewModelsTests
     {
         public string? LastExportPath { get; private set; }
         public BookFormatModel? LastExportFormat { get; private set; }
+        public TimeSpan? LastExportTimeout { get; private set; }
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
                 AvailableLanguages = ["en"],
+                Statistics = null,
                 Items =
                 [
                     new BookListItemModel
@@ -2545,7 +3138,11 @@ public sealed class ViewModelsTests
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Books/0000000041/book.fb2",
                 SizeBytes = 512,
-                Sha256Hex = "invalid-metadata",
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = "Books/0000000041/book.fb2",
+                    HasContentHash = true
+                },
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
@@ -2565,6 +3162,7 @@ public sealed class ViewModelsTests
         {
             LastExportPath = destinationPath;
             LastExportFormat = exportFormat;
+            LastExportTimeout = timeout;
             return Task.FromResult<string?>(destinationPath);
         }
 
@@ -2649,6 +3247,7 @@ public sealed class ViewModelsTests
             {
                 TotalCount = 1,
                 AvailableLanguages = ["en"],
+                Statistics = null,
                 Items =
                 [
                     new BookListItemModel
@@ -2668,7 +3267,7 @@ public sealed class ViewModelsTests
             => Task.FromResult<BookDetailsModel?>(null);
 
         public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => throw new InvalidOperationException("statistics transport failed");
+            => throw new InvalidOperationException("legacy statistics RPC should not be used during refresh");
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -3085,7 +3684,11 @@ public sealed class ViewModelsTests
             {
                 TotalCount = (ulong)_books.Count,
                 AvailableLanguages = ["en"],
-                Items = items
+                Items = items,
+                Statistics = new LibraryStatisticsModel
+                {
+                    BookCount = (ulong)_books.Count
+                }
             });
         }
 
@@ -3264,7 +3867,7 @@ public sealed class ViewModelsTests
         Assert.False(viewModel.SavePreferencesCommand.CanExecute(null));
 
         probeTcs.SetResult(Fb2ProbeResult.Success);
-        await viewModel._converterProbeTask;
+        await viewModel.WaitForConverterProbeAsync();
 
         Assert.False(viewModel.IsConverterProbeInProgress);
         Assert.True(viewModel.SavePreferencesCommand.CanExecute(null));
@@ -3277,7 +3880,7 @@ public sealed class ViewModelsTests
             probe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
 
         viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
-        await viewModel._converterProbeTask;
+        await viewModel.WaitForConverterProbeAsync();
 
         Assert.False(viewModel.IsConverterProbeInProgress);
         Assert.False(viewModel.HasConverterValidationError);
@@ -3292,7 +3895,7 @@ public sealed class ViewModelsTests
         var viewModel = MakeTestShellViewModel(probe: (_, _) => Task.FromResult(failResult));
 
         viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
-        await viewModel._converterProbeTask;
+        await viewModel.WaitForConverterProbeAsync();
 
         Assert.False(viewModel.IsConverterProbeInProgress);
         Assert.True(viewModel.HasConverterValidationError);
@@ -3374,7 +3977,7 @@ public sealed class ViewModelsTests
 
         viewModel.Fb2CngExecutablePath = @"C:\fake\fb2cng.exe";
         await firstProbeStarted.Task;
-        var firstTask = viewModel._converterProbeTask;
+        var firstTask = viewModel.WaitForConverterProbeAsync();
 
         // Change path — cancels the in-flight probe
         viewModel.Fb2CngExecutablePath = string.Empty;

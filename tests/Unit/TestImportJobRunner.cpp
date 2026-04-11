@@ -197,6 +197,40 @@ private:
     std::map<std::int64_t, Librova::Domain::SBook> m_books;
 };
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
+Librova::Domain::IBookRepository& GetEmptyBookRepository()
+{
+    static CEmptyBookRepository repository;
+    return repository;
+}
+
 struct SImportSandbox
 {
     std::filesystem::path Root;
@@ -317,7 +351,11 @@ TEST_CASE("Import job runner reports completed status for successful import", "[
         .ImportedBookId = Librova::Domain::SBookId{5}
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     const auto sandbox = CreateImportSandbox("success");
 
@@ -342,7 +380,11 @@ TEST_CASE("Import job runner maps duplicate decision required into structured fa
         .Warnings = {"Probable duplicate"}
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     const auto sandbox = CreateImportSandbox("decision-required");
 
@@ -366,7 +408,11 @@ TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs
         .Warnings = {"Conversion cancelled."}
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     const auto sandbox = CreateImportSandbox("cancelled");
 
@@ -401,7 +447,7 @@ TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled 
             .ManagedPath = outsidePath
         }
     });
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox.GetPath());
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository, {.LibraryRoot = sandbox.GetPath()});
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
@@ -428,7 +474,11 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
@@ -454,7 +504,11 @@ TEST_CASE("Import job runner fails when ZIP import produces no imported books", 
     const std::filesystem::path zipPath = CreateSkippedOnlyZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
@@ -478,7 +532,11 @@ TEST_CASE("Import job runner keeps duplicate semantics when ZIP import skips eve
     const std::filesystem::path zipPath = CreateDuplicateOnlyZipFixture(sandbox.GetPath() / "archive.zip");
     CDuplicateOnlyZipSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
 
     const auto result = runner.Run({
@@ -499,7 +557,11 @@ TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][impor
 {
     CCallbackThrowingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     const auto sandbox = CreateImportSandbox("observer-failure");
 
@@ -530,7 +592,11 @@ TEST_CASE("Import job runner publishes structured batch progress snapshots", "[j
         .ImportedBookId = Librova::Domain::SBookId{11}
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     std::vector<Librova::Jobs::SJobProgressSnapshot> snapshots;
 

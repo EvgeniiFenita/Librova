@@ -59,7 +59,7 @@ TEST_CASE("Library catalog proto mapper treats absent sort direction as ascendin
     REQUIRE_FALSE(restored.SortDirection.has_value());
 }
 
-TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "[proto-mapping][catalog]")
+TEST_CASE("Library catalog proto mapper builds list response with safe storage metadata", "[proto-mapping][catalog]")
 {
     Librova::Application::SBookListItem item;
     item.Id = Librova::Domain::SBookId{12};
@@ -79,7 +79,12 @@ TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "
     const Librova::Application::SBookListResult result{
         .Items = {item},
         .TotalCount = 12,
-        .AvailableLanguages = {"en", "ru"}
+        .AvailableLanguages = {"en", "ru"},
+        .Statistics = {
+            .BookCount = 12,
+            .TotalManagedBookSizeBytes = 4096,
+            .TotalLibrarySizeBytes = 16384
+        }
     };
     const auto response = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(result);
 
@@ -88,10 +93,14 @@ TEST_CASE("Library catalog proto mapper builds list response with utf8 paths", "
     REQUIRE(response.available_languages_size() == 2);
     REQUIRE(response.available_languages(0) == "en");
     REQUIRE(response.available_languages(1) == "ru");
+    REQUIRE(response.has_statistics());
+    REQUIRE(response.statistics().book_count() == 12);
+    REQUIRE(response.statistics().total_library_size_bytes() == 16384);
     REQUIRE(response.items(0).book_id() == 12);
     REQUIRE(response.items(0).title() == "Пикник на обочине");
-    REQUIRE(response.items(0).managed_path() == "Books/0000000012/Пикник.epub");
-    REQUIRE(response.items(0).cover_path() == "Covers/0000000012.jpg");
+    REQUIRE(response.items(0).managed_file_name() == "Пикник.epub");
+    REQUIRE(response.items(0).cover_resource_available());
+    REQUIRE(response.items(0).cover_file_extension() == "jpg");
     REQUIRE(response.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
 }
 
@@ -122,8 +131,37 @@ TEST_CASE("Library catalog proto mapper builds book details response", "[proto-m
     REQUIRE(response.details().publisher() == "Macmillan");
     REQUIRE(response.details().isbn() == "978-5-17-000000-1");
     REQUIRE(response.details().description() == "Aliens land only in one city.");
-    REQUIRE(response.details().sha256_hex() == "details-hash");
-    REQUIRE(response.details().managed_path() == "Books/0000000042/DefinitelyMaybe.fb2");
+    REQUIRE(response.details().managed_file_name() == "DefinitelyMaybe.fb2");
+    REQUIRE(response.details().cover_resource_available());
+    REQUIRE(response.details().content_hash_available());
+    REQUIRE(response.details().cover_file_extension() == "jpg");
+}
+
+TEST_CASE("Library catalog proto mapper carries structured not-found errors", "[proto-mapping][catalog]")
+{
+    const Librova::Domain::SDomainError error{
+        .Code = Librova::Domain::EDomainErrorCode::NotFound,
+        .Message = "Book 42 was not found."
+    };
+
+    const auto detailsResponse = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        static_cast<const Librova::Application::SBookDetails*>(nullptr),
+        &error);
+    REQUIRE(detailsResponse.has_error());
+    REQUIRE(detailsResponse.error().code() == librova::v1::ERROR_CODE_NOT_FOUND);
+    REQUIRE(detailsResponse.error().message() == "Book 42 was not found.");
+
+    const auto exportResponse = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        static_cast<const std::filesystem::path*>(nullptr),
+        &error);
+    REQUIRE(exportResponse.has_error());
+    REQUIRE(exportResponse.error().code() == librova::v1::ERROR_CODE_NOT_FOUND);
+
+    const auto trashResponse = Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
+        static_cast<const Librova::Application::STrashedBookResult*>(nullptr),
+        &error);
+    REQUIRE(trashResponse.has_error());
+    REQUIRE(trashResponse.error().code() == librova::v1::ERROR_CODE_NOT_FOUND);
 }
 
 TEST_CASE("Library catalog proto mapper builds export response", "[proto-mapping][catalog]")

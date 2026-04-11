@@ -9,6 +9,7 @@
 
 #include "Application/LibraryImportFacade.hpp"
 #include "ApplicationJobs/ImportJobService.hpp"
+#include "Domain/BookRepository.hpp"
 
 namespace {
 
@@ -70,6 +71,34 @@ private:
     mutable bool Started = false;
 };
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
 struct SImportSandbox
 {
     std::filesystem::path Root;
@@ -95,13 +124,18 @@ SImportSandbox CreateImportSandbox(const std::string_view scenario)
 
 TEST_CASE("Import job service starts and returns completed application-facing results", "[application-jobs]")
 {
+    const auto sandbox = CreateImportSandbox("completed");
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    const auto sandbox = CreateImportSandbox("completed");
 
     const auto jobId = service.Start({
         .SourcePaths = {sandbox.SourcePath},
@@ -127,13 +161,18 @@ TEST_CASE("Import job service starts and returns completed application-facing re
 
 TEST_CASE("Import job service exposes cancellation through application-facing status", "[application-jobs]")
 {
+    const auto sandbox = CreateImportSandbox("cancel");
     CBlockingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    const auto sandbox = CreateImportSandbox("cancel");
 
     const auto jobId = service.Start({
         .SourcePaths = {sandbox.SourcePath},
@@ -162,7 +201,12 @@ TEST_CASE("Import job service returns empty state for unknown jobs", "[applicati
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
@@ -175,13 +219,18 @@ TEST_CASE("Import job service returns empty state for unknown jobs", "[applicati
 
 TEST_CASE("Import job service removes completed jobs through application-facing API", "[application-jobs]")
 {
+    const auto sandbox = CreateImportSandbox("remove");
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    const auto sandbox = CreateImportSandbox("remove");
 
     const auto jobId = service.Start({
         .SourcePaths = {sandbox.SourcePath},

@@ -274,6 +274,8 @@ Librova::Domain::EDomainErrorCode CImportJobProtoMapper::FromProto(const librova
         return Librova::Domain::EDomainErrorCode::Cancellation;
     case librova::v1::ERROR_CODE_INTEGRITY_ISSUE:
         return Librova::Domain::EDomainErrorCode::IntegrityIssue;
+    case librova::v1::ERROR_CODE_NOT_FOUND:
+        return Librova::Domain::EDomainErrorCode::NotFound;
     case librova::v1::ERROR_CODE_UNSPECIFIED:
         break;
     }
@@ -342,6 +344,8 @@ librova::v1::ErrorCode CImportJobProtoMapper::ToProto(const Librova::Domain::EDo
         return librova::v1::ERROR_CODE_CANCELLATION;
     case Librova::Domain::EDomainErrorCode::IntegrityIssue:
         return librova::v1::ERROR_CODE_INTEGRITY_ISSUE;
+    case Librova::Domain::EDomainErrorCode::NotFound:
+        return librova::v1::ERROR_CODE_NOT_FOUND;
     }
 
     return librova::v1::ERROR_CODE_UNSPECIFIED;

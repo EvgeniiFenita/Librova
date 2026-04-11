@@ -6,9 +6,86 @@ namespace Librova.UI.LibraryCatalog;
 
 internal static class LibraryCatalogMapper
 {
+    private static InvalidOperationException CreateContractViolationException(string context) =>
+        new($"Received incomplete catalog transport payload while mapping {context}.");
+
+    private static string? BuildCoverResourcePath(long bookId, string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return null;
+        }
+
+        var normalizedExtension = extension.StartsWith('.')
+            ? extension[1..]
+            : extension;
+        return $"Covers/{bookId:0000000000}.{normalizedExtension}";
+    }
+
     private static InvalidOperationException CreateUnexpectedEnumValueException<TEnum>(TEnum value, string context)
         where TEnum : struct, Enum =>
         new($"Received unexpected {typeof(TEnum).Name} value '{value}' while mapping {context}.");
+
+    private static LibraryCatalogErrorCodeModel MapErrorCode(ErrorCode code) =>
+        code switch
+        {
+            ErrorCode.Validation => LibraryCatalogErrorCodeModel.Validation,
+            ErrorCode.UnsupportedFormat => LibraryCatalogErrorCodeModel.UnsupportedFormat,
+            ErrorCode.DuplicateRejected => LibraryCatalogErrorCodeModel.DuplicateRejected,
+            ErrorCode.DuplicateDecisionRequired => LibraryCatalogErrorCodeModel.DuplicateDecisionRequired,
+            ErrorCode.ParserFailure => LibraryCatalogErrorCodeModel.ParserFailure,
+            ErrorCode.ConverterUnavailable => LibraryCatalogErrorCodeModel.ConverterUnavailable,
+            ErrorCode.ConverterFailed => LibraryCatalogErrorCodeModel.ConverterFailed,
+            ErrorCode.StorageFailure => LibraryCatalogErrorCodeModel.StorageFailure,
+            ErrorCode.DatabaseFailure => LibraryCatalogErrorCodeModel.DatabaseFailure,
+            ErrorCode.Cancellation => LibraryCatalogErrorCodeModel.Cancellation,
+            ErrorCode.IntegrityIssue => LibraryCatalogErrorCodeModel.IntegrityIssue,
+            ErrorCode.NotFound => LibraryCatalogErrorCodeModel.NotFound,
+            _ => throw CreateUnexpectedEnumValueException(code, "catalog domain error code")
+        };
+
+    private static string GetManagedFileName(BookListItem item)
+    {
+        if (!item.HasManagedFileName || string.IsNullOrWhiteSpace(item.ManagedFileName))
+        {
+            throw CreateContractViolationException("book list item managed file name");
+        }
+
+        return item.ManagedFileName;
+    }
+
+    private static string GetManagedFileName(BookDetails item)
+    {
+        if (!item.HasManagedFileName || string.IsNullOrWhiteSpace(item.ManagedFileName))
+        {
+            throw CreateContractViolationException("book details managed file name");
+        }
+
+        return item.ManagedFileName;
+    }
+
+    private static string? GetCoverRelativePath(long bookId, bool hasCoverResource, string? extension, string context)
+    {
+        if (!hasCoverResource)
+        {
+            return null;
+        }
+
+        var coverRelativePath = BuildCoverResourcePath(bookId, extension);
+        if (coverRelativePath is null)
+        {
+            throw CreateContractViolationException(context);
+        }
+
+        return coverRelativePath;
+    }
+
+    private static LibraryCatalogDomainErrorModel MapDomainError(DomainError error) =>
+        new()
+        {
+            Code = MapErrorCode(error.Code),
+            Message = error.Message
+        };
 
     public static BookListRequest ToProto(BookListRequestModel model)
     {
@@ -67,36 +144,50 @@ internal static class LibraryCatalogMapper
         {
             Items = response.Items.Select(FromProto).ToArray(),
             TotalCount = response.TotalCount,
-            AvailableLanguages = response.AvailableLanguages.ToArray()
+            AvailableLanguages = response.AvailableLanguages.ToArray(),
+            Statistics = response.Statistics is null ? null : FromProto(response.Statistics)
         };
 
     public static BookDetailsModel? FromProto(GetBookDetailsResponse response) =>
-        response.Details is null ? null : FromProto(response.Details);
+        response.Error is null
+            ? response.Details is null ? null : FromProto(response.Details)
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
 
     public static LibraryStatisticsModel FromProto(GetLibraryStatisticsResponse response) =>
         new()
         {
             BookCount = response.Statistics?.BookCount ?? 0,
-            TotalLibrarySizeBytes = response.Statistics?.TotalLibrarySizeBytes ?? response.Statistics?.TotalManagedBookSizeBytes ?? 0
+            TotalLibrarySizeBytes = response.Statistics?.TotalLibrarySizeBytes ?? 0
+        };
+
+    public static LibraryStatisticsModel FromProto(LibraryStatistics statistics) =>
+        new()
+        {
+            BookCount = statistics.BookCount,
+            TotalLibrarySizeBytes = statistics.TotalLibrarySizeBytes
         };
 
     public static string? FromProto(ExportBookResponse response) =>
-        response.HasExportedPath ? response.ExportedPath : null;
+        response.Error is null
+            ? response.HasExportedPath ? response.ExportedPath : null
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
 
     public static DeleteBookResultModel? FromProto(MoveBookToTrashResponse response) =>
-        !response.HasTrashedBookId
-            ? null
-            : new DeleteBookResultModel
-            {
-                BookId = response.TrashedBookId,
-                Destination = response.Destination switch
+        response.Error is not null
+            ? throw new LibraryCatalogDomainException(MapDomainError(response.Error))
+            : !response.HasTrashedBookId
+                ? null
+                : new DeleteBookResultModel
                 {
-                    DeleteDestination.RecycleBin => DeleteDestinationModel.RecycleBin,
-                    DeleteDestination.ManagedTrash => DeleteDestinationModel.ManagedTrash,
-                    _ => throw CreateUnexpectedEnumValueException(response.Destination, "delete result destination")
-                },
-                HasOrphanedFiles = response.HasOrphanedFiles
-            };
+                    BookId = response.TrashedBookId,
+                    Destination = response.Destination switch
+                    {
+                        DeleteDestination.RecycleBin => DeleteDestinationModel.RecycleBin,
+                        DeleteDestination.ManagedTrash => DeleteDestinationModel.ManagedTrash,
+                        _ => throw CreateUnexpectedEnumValueException(response.Destination, "delete result destination")
+                    },
+                    HasOrphanedFiles = response.HasOrphanedFiles
+                };
 
     public static BookListItemModel FromProto(BookListItem item) =>
         new()
@@ -115,8 +206,15 @@ internal static class LibraryCatalogMapper
                 BookFormat.Fb2 => BookFormatModel.Fb2,
                 _ => throw CreateUnexpectedEnumValueException(item.Format, "book list item format")
             },
-            ManagedPath = item.ManagedPath,
-            CoverPath = item.HasCoverPath ? item.CoverPath : null,
+            Storage = new BookStorageInfoModel
+            {
+                ManagedRelativePath = GetManagedFileName(item),
+                CoverRelativePath = GetCoverRelativePath(
+                    item.BookId,
+                    item.HasCoverResourceAvailable && item.CoverResourceAvailable,
+                    item.HasCoverFileExtension ? item.CoverFileExtension : null,
+                    "book list item cover resource")
+            },
             SizeBytes = item.SizeBytes,
             AddedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(item.AddedAtUnixMs)
         };
@@ -142,10 +240,17 @@ internal static class LibraryCatalogMapper
                 BookFormat.Fb2 => BookFormatModel.Fb2,
                 _ => throw CreateUnexpectedEnumValueException(item.Format, "book details format")
             },
-            ManagedPath = item.ManagedPath,
-            CoverPath = item.HasCoverPath ? item.CoverPath : null,
+            Storage = new BookStorageInfoModel
+            {
+                ManagedRelativePath = GetManagedFileName(item),
+                CoverRelativePath = GetCoverRelativePath(
+                    item.BookId,
+                    item.HasCoverResourceAvailable && item.CoverResourceAvailable,
+                    item.HasCoverFileExtension ? item.CoverFileExtension : null,
+                    "book details cover resource"),
+                HasContentHash = item.HasContentHashAvailable && item.ContentHashAvailable
+            },
             SizeBytes = item.SizeBytes,
-            Sha256Hex = item.Sha256Hex,
             AddedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(item.AddedAtUnixMs)
         };
 }

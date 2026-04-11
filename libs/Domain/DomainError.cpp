@@ -28,6 +28,8 @@ std::string_view ToString(const EDomainErrorCode code) noexcept
         return "cancellation";
     case EDomainErrorCode::IntegrityIssue:
         return "integrity_issue";
+    case EDomainErrorCode::NotFound:
+        return "not_found";
     }
 
     return "unknown";

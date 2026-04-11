@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -17,7 +18,8 @@ enum class EDomainErrorCode
     StorageFailure,
     DatabaseFailure,
     Cancellation,
-    IntegrityIssue
+    IntegrityIssue,
+    NotFound
 };
 
 struct SDomainError
@@ -40,6 +42,24 @@ struct SDomainError
             || Code == EDomainErrorCode::DatabaseFailure
             || Code == EDomainErrorCode::IntegrityIssue;
     }
+};
+
+class CDomainException : public std::runtime_error
+{
+public:
+    CDomainException(EDomainErrorCode code, std::string message)
+        : std::runtime_error(message)
+        , m_code(code)
+    {
+    }
+
+    [[nodiscard]] EDomainErrorCode Code() const noexcept
+    {
+        return m_code;
+    }
+
+private:
+    EDomainErrorCode m_code;
 };
 
 [[nodiscard]] std::string_view ToString(EDomainErrorCode code) noexcept;

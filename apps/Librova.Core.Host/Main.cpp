@@ -318,9 +318,9 @@ int main(int argc, char** argv)
         const Librova::Application::CLibraryImportFacade importFacade(
             singleFileImporter,
             zipImportCoordinator,
-            &bookRepository,
-            options.LibraryRoot);
-        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, &bookRepository);
+            bookRepository,
+            {.LibraryRoot = options.LibraryRoot});
+        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, bookRepository);
         const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot, converterPtr);
         const Librova::Application::CLibraryTrashFacade trashFacade(
             bookRepository,
@@ -330,7 +330,12 @@ int main(int argc, char** argv)
         const Librova::Jobs::CImportJobRunner jobRunner(importFacade);
         Librova::Jobs::CImportJobManager jobManager(jobRunner);
         Librova::ApplicationJobs::CImportJobService jobService(jobManager);
-        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(jobService, catalogFacade, exportFacade, trashFacade);
+        Librova::ProtoServices::CLibraryJobServiceAdapter serviceAdapter(
+            jobService,
+            importFacade,
+            catalogFacade,
+            exportFacade,
+            trashFacade);
         Librova::PipeTransport::CPipeRequestDispatcher dispatcher(serviceAdapter);
         const Librova::PipeHost::CNamedPipeHost host(dispatcher);
 

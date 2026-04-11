@@ -59,6 +59,7 @@ enum ErrorCode {
   ERROR_CODE_DATABASE_FAILURE = 9;
   ERROR_CODE_CANCELLATION = 10;
   ERROR_CODE_INTEGRITY_ISSUE = 11;
+  ERROR_CODE_NOT_FOUND = 12;
 }
 
 message DomainError {
@@ -117,10 +118,13 @@ message BookListItem {
   optional int32 year = 7;
   repeated string tags = 8;
   BookFormat format = 9;
-  string managed_path = 10;
-  optional string cover_path = 11;
+  reserved 10, 11;
+  reserved "managed_path", "cover_path";
   uint64 size_bytes = 12;
   int64 added_at_unix_ms = 13;
+  optional string managed_file_name = 14;
+  optional bool cover_resource_available = 15;
+  optional string cover_file_extension = 16;
 }
 
 message BookDetails {
@@ -137,11 +141,14 @@ message BookDetails {
   optional string description = 11;
   optional string identifier = 12;
   BookFormat format = 13;
-  string managed_path = 14;
-  optional string cover_path = 15;
+  reserved 14, 15, 17;
+  reserved "managed_path", "cover_path", "sha256_hex";
   uint64 size_bytes = 16;
-  string sha256_hex = 17;
   int64 added_at_unix_ms = 18;
+  optional string managed_file_name = 19;
+  optional bool cover_resource_available = 20;
+  optional bool content_hash_available = 21;
+  optional string cover_file_extension = 22;
 }
 
 message ListBooksRequest {
@@ -152,6 +159,7 @@ message ListBooksResponse {
   repeated BookListItem items = 1;
   uint64 total_count = 2;
   repeated string available_languages = 3;
+  LibraryStatistics statistics = 4;
 }
 
 message GetBookDetailsRequest {
@@ -160,6 +168,7 @@ message GetBookDetailsRequest {
 
 message GetBookDetailsResponse {
   optional BookDetails details = 1;
+  optional DomainError error = 2;
 }
 
 message LibraryStatistics {
@@ -183,6 +192,7 @@ message ExportBookRequest {
 
 message ExportBookResponse {
   optional string exported_path = 1;
+  optional DomainError error = 2;
 }
 
 message MoveBookToTrashRequest {
@@ -199,6 +209,7 @@ message MoveBookToTrashResponse {
   optional int64 trashed_book_id = 1;
   DeleteDestination destination = 2;
   bool has_orphaned_files = 3;
+  optional DomainError error = 4;
 }
 
 message StartImportRequest {
@@ -234,12 +245,21 @@ message WaitImportJobResponse {
   bool completed = 1;
 }
 
+message ValidateImportSourcesRequest {
+  repeated string source_paths = 1;
+}
+
+message ValidateImportSourcesResponse {
+  optional string blocking_message = 1;
+}
+
 message CancelImportJobRequest {
   uint64 job_id = 1;
 }
 
 message CancelImportJobResponse {
   bool accepted = 1;
+  optional DomainError error = 2;
 }
 
 message RemoveImportJobRequest {
@@ -248,6 +268,7 @@ message RemoveImportJobRequest {
 
 message RemoveImportJobResponse {
   bool removed = 1;
+  optional DomainError error = 2;
 }
 
 service LibraryJobService {
@@ -262,4 +283,5 @@ service LibraryJobService {
   rpc CancelImportJob(CancelImportJobRequest) returns (CancelImportJobResponse);
   rpc RemoveImportJob(RemoveImportJobRequest) returns (RemoveImportJobResponse);
   rpc GetLibraryStatistics(GetLibraryStatisticsRequest) returns (GetLibraryStatisticsResponse);
+  rpc ValidateImportSources(ValidateImportSourcesRequest) returns (ValidateImportSourcesResponse);
 }

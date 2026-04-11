@@ -127,19 +127,24 @@ SImportSandbox CreateImportSandbox()
 
 TEST_CASE("Application import job client performs end-to-end start wait and result retrieval", "[application-client]")
 {
+    const auto sandbox = CreateImportSandbox();
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const CEmptyQueryRepository queryRepository;
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, bookRepository);
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
     Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
@@ -171,8 +176,6 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
     readySignal.Wait();
 
     Librova::ApplicationClient::CImportJobClient client(pipePath);
-    const auto sandbox = CreateImportSandbox();
-
     const auto jobId = client.Start({
         .SourcePaths = {sandbox.SourcePath},
         .WorkingDirectory = sandbox.WorkingDirectory

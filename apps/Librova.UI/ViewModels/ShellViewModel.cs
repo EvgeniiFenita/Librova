@@ -23,14 +23,17 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private readonly Func<string, UiLibraryOpenMode, Task>? _switchLibraryAsync;
     private readonly Func<Task>? _reloadShellAsync;
     private readonly ConverterValidationCoordinator _converterValidationCoordinator;
+    private readonly ShellConverterSettingsState _converterSettings = new();
+    private readonly ShellSectionState _sectionState = new();
+    private readonly ShellPreferencesPersistence _preferencesPersistence;
+    private readonly ShellLibrarySwitchController _librarySwitchController;
+    private readonly ShellImportWorkflowController _importWorkflowController;
+    private readonly ShellConverterValidationWorkflow _converterValidationWorkflow;
+    private readonly ShellStartupStateApplier _startupStateApplier;
+    private readonly ShellConverterPathController _converterPathController;
     private readonly string _uiStateFilePath;
     private readonly string _uiPreferencesFilePath;
-    private string _fb2CngExecutablePath = string.Empty;
-    private string _converterValidationMessage = string.Empty;
-    private ShellSection _currentSection = ShellSection.Library;
-    private bool _isConverterProbeInProgress;
-    private bool _settingsReady;
-    internal Task _converterProbeTask = Task.CompletedTask;
+    private Task _converterProbeTask = Task.CompletedTask;
 
     public ShellViewModel(
         ShellSession session,
@@ -48,14 +51,23 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         _preferencesStore = preferencesStore ?? UiPreferencesStore.CreateDefault();
         _switchLibraryAsync = switchLibraryAsync;
         _reloadShellAsync = reloadShellAsync;
+        _preferencesPersistence = new ShellPreferencesPersistence(_preferencesStore, session.HostOptions.LibraryRoot, _reloadShellAsync);
+        _librarySwitchController = new ShellLibrarySwitchController(_pathSelectionService, session.HostOptions.LibraryRoot, _switchLibraryAsync);
         _converterValidationCoordinator = new ConverterValidationCoordinator(converterProbe);
         _uiStateFilePath = ShellStateStore.CreateDefault().FilePath;
         _uiPreferencesFilePath = _preferencesStore is UiPreferencesStore concretePreferencesStore
             ? concretePreferencesStore.FilePath
             : RuntimeEnvironment.GetDefaultUiPreferencesFilePath();
-        _converterValidationCoordinator.StateChanged += OnConverterValidationStateChanged;
-        var hasConfiguredConverter = HasConfiguredBuiltInConverter(session.HostOptions);
         ImportJobs = new ImportJobsViewModel(session.ImportJobs, pathSelectionService);
+        _startupStateApplier = new ShellStartupStateApplier(
+            session.HostOptions,
+            launchOptions,
+            savedState,
+            savedPreferences,
+            ImportJobs,
+            _converterSettings,
+            section => _sectionState.CurrentSection = section);
+        var hasConfiguredConverter = _startupStateApplier.Apply();
         LibraryBrowser = new LibraryBrowserViewModel(
             session.LibraryCatalog,
             _pathSelectionService,
@@ -63,17 +75,26 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             hasConfiguredConverter: hasConfiguredConverter,
             initialSortKey: savedPreferences?.PreferredSortKey,
             initialSortDescending: savedPreferences?.PreferredSortDescending ?? false);
-        ImportJobs.ImportCompletedSuccessfully += HandleImportCompletedSuccessfullyAsync;
-        ImportJobs.PropertyChanged += OnImportJobsPropertyChanged;
-        LibraryBrowser.PropertyChanged += OnLibraryBrowserPropertyChanged;
-        ImportJobs.WorkingDirectory = string.IsNullOrWhiteSpace(savedState?.WorkingDirectory)
-            ? ImportJobsDefaults.BuildDefaultWorkingDirectory(session.HostOptions.LibraryRoot)
-            : savedState.WorkingDirectory!;
-        ImportJobs.AllowProbableDuplicates = savedState?.AllowProbableDuplicates ?? false;
-        ImportJobs.HasConfiguredConverter = hasConfiguredConverter;
-        ImportJobs.ForceEpubConversionOnImport = hasConfiguredConverter
-            && (savedPreferences?.ForceEpubConversionOnImport ?? false);
-        _fb2CngExecutablePath = savedPreferences?.Fb2CngExecutablePath ?? string.Empty;
+        _importWorkflowController = new ShellImportWorkflowController(
+            ImportJobs,
+            LibraryBrowser,
+            () => CurrentSection,
+            section => CurrentSection = section,
+            RaiseImportStateProperties,
+            RaiseNavigationCanExecuteChanged,
+            () => RaisePropertyChanged(nameof(CurrentLibraryStatisticsText)),
+            SaveSortPreference);
+        _converterValidationWorkflow = new ShellConverterValidationWorkflow(
+            _converterValidationCoordinator,
+            _converterSettings,
+            SavePreferencesAsync,
+            task => _converterProbeTask = task,
+            message => ConverterValidationMessage = message,
+            RaiseProbeProperties);
+        _converterPathController = new ShellConverterPathController(_pathSelectionService, value => Fb2CngExecutablePath = value);
+        ImportJobs.ImportCompletedSuccessfully += _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
+        ImportJobs.PropertyChanged += _importWorkflowController.HandleImportJobsPropertyChanged;
+        LibraryBrowser.PropertyChanged += _importWorkflowController.HandleLibraryBrowserPropertyChanged;
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
         BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync);
@@ -84,22 +105,9 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ShowImportSectionCommand = new AsyncCommand(ShowImportSectionAsync, () => !IsImportInProgress);
         ShowSettingsSectionCommand = new AsyncCommand(ShowSettingsSectionAsync, () => !IsImportInProgress);
 
-        _converterValidationCoordinator.Initialize(_fb2CngExecutablePath);
-        _settingsReady = true;
-
-        if (session.HostOptions.LibraryOpenMode == UiLibraryOpenMode.CreateNew)
-        {
-            _currentSection = ShellSection.Import;
-        }
-
-        if (launchOptions?.InitialSourcePaths is { Length: > 0 } launchSourcePaths)
-        {
-            ImportJobs.ApplyDroppedSourcePaths(launchSourcePaths);
-        }
-        else if (savedState?.SourcePaths is { Length: > 0 } savedSourcePaths)
-        {
-            ImportJobs.ApplyDroppedSourcePaths(savedSourcePaths);
-        }
+        _converterValidationCoordinator.Initialize(_converterSettings.Fb2CngExecutablePath);
+        _converterValidationWorkflow.ApplyState(allowAutoSave: false);
+        _converterValidationCoordinator.StateChanged += OnConverterValidationStateChanged;
     }
 
     public string LibraryRoot => _session.HostOptions.LibraryRoot;
@@ -118,12 +126,14 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
 
     public string Fb2CngExecutablePath
     {
-        get => _fb2CngExecutablePath;
+        get => _converterSettings.Fb2CngExecutablePath;
         set
         {
-            if (SetProperty(ref _fb2CngExecutablePath, value))
+            var previousValue = _converterSettings.Fb2CngExecutablePath;
+            _converterSettings.Fb2CngExecutablePath = value;
+            if (SetProperty(ref previousValue, _converterSettings.Fb2CngExecutablePath))
             {
-                _converterValidationCoordinator.ScheduleValidation(_fb2CngExecutablePath);
+                _converterValidationCoordinator.ScheduleValidation(_converterSettings.Fb2CngExecutablePath);
                 RaisePropertyChanged(nameof(HasConfiguredConverter));
             }
         }
@@ -131,10 +141,12 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
 
     public ShellSection CurrentSection
     {
-        get => _currentSection;
+        get => _sectionState.CurrentSection;
         private set
         {
-            if (SetProperty(ref _currentSection, value))
+            var previousValue = _sectionState.CurrentSection;
+            _sectionState.CurrentSection = value;
+            if (SetProperty(ref previousValue, _sectionState.CurrentSection))
             {
                 RaisePropertyChanged(nameof(IsLibrarySectionActive));
                 RaisePropertyChanged(nameof(IsImportSectionActive));
@@ -147,34 +159,27 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
 
     public string ConverterValidationMessage
     {
-        get => _converterValidationMessage;
-        private set => SetProperty(ref _converterValidationMessage, value);
+        get => _converterSettings.ConverterValidationMessage;
+        private set
+        {
+            var previousValue = _converterSettings.ConverterValidationMessage;
+            _converterSettings.ConverterValidationMessage = value;
+            SetProperty(ref previousValue, _converterSettings.ConverterValidationMessage);
+        }
     }
 
-    public bool HasConverterValidationError => !string.IsNullOrWhiteSpace(ConverterValidationMessage);
-    public bool ShowConverterHelperText => !HasConverterValidationError && !_isConverterProbeInProgress;
-    public bool IsConverterProbeInProgress => _isConverterProbeInProgress;
-    public string ConverterProbeStatusText => _isConverterProbeInProgress ? "Validating converter…" : string.Empty;
-    public bool IsLibrarySectionActive => CurrentSection is ShellSection.Library;
-    public bool IsImportSectionActive => CurrentSection is ShellSection.Import;
-    public bool IsSettingsSectionActive => CurrentSection is ShellSection.Settings;
+    public bool HasConverterValidationError => _converterSettings.HasConverterValidationError;
+    public bool ShowConverterHelperText => _converterSettings.ShowConverterHelperText;
+    public bool IsConverterProbeInProgress => _converterSettings.IsConverterProbeInProgress;
+    public string ConverterProbeStatusText => _converterSettings.ConverterProbeStatusText;
+    public bool IsLibrarySectionActive => _sectionState.IsLibrarySectionActive;
+    public bool IsImportSectionActive => _sectionState.IsImportSectionActive;
+    public bool IsSettingsSectionActive => _sectionState.IsSettingsSectionActive;
     public bool IsImportInProgress => ImportJobs.IsBusy;
     public bool CanSwitchLibrary => !IsImportInProgress && _switchLibraryAsync is not null;
-    public bool HasConfiguredConverter => !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
-    public string CurrentSectionTitle => CurrentSection switch
-    {
-        ShellSection.Library => "Library",
-        ShellSection.Import => "Import",
-        ShellSection.Settings => "Settings",
-        _ => "Librova"
-    };
-    public string CurrentSectionDescription => CurrentSection switch
-    {
-        ShellSection.Library => "Browse the managed library as a visual grid, inspect book metadata, export books, and move books to Recycle Bin.",
-        ShellSection.Import => "Bring EPUB, FB2, and ZIP sources into the managed library through the native import pipeline.",
-        ShellSection.Settings => "Adjust converter preferences and inspect runtime diagnostics.",
-        _ => string.Empty
-    };
+    public bool HasConfiguredConverter => _converterSettings.HasConfiguredConverter;
+    public string CurrentSectionTitle => _sectionState.CurrentSectionTitle;
+    public string CurrentSectionDescription => _sectionState.CurrentSectionDescription;
     public string UiLogFilePath => RuntimeEnvironment.GetUiLogFilePathForLibrary(LibraryRoot);
     public string UiStateFilePath => _uiStateFilePath;
     public string UiPreferencesFilePath => _uiPreferencesFilePath;
@@ -191,6 +196,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public ShellStateSnapshot CreateStateSnapshot() => ImportJobs.CreateStateSnapshot();
 
     public Task InitializeAsync() => LibraryBrowser.RefreshAsync();
+
+    public Task WaitForConverterProbeAsync() => _converterProbeTask;
 
     public Task ActivateImportSectionAsync()
     {
@@ -222,95 +229,22 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task AutoSavePreferencesAsync()
-    {
-        try
-        {
-            await SavePreferencesAsync();
-        }
-        catch (Exception ex)
-        {
-            UiLogging.Error(ex, "Failed to auto-save converter preferences.");
-        }
-    }
+    private Task ClearConverterPathAsync() => _converterPathController.ClearConverterPathAsync();
 
-    private Task ClearConverterPathAsync()
-    {
-        Fb2CngExecutablePath = string.Empty;
-        return Task.CompletedTask;
-    }
+    private Task BrowseFb2CngExecutablePathAsync() => _converterPathController.BrowseFb2CngExecutablePathAsync();
 
-    private async Task BrowseFb2CngExecutablePathAsync()
-    {
-        var selectedPath = await _pathSelectionService.PickExecutableFileAsync("Select fb2cng executable", default);
-        if (!string.IsNullOrWhiteSpace(selectedPath))
-        {
-            Fb2CngExecutablePath = selectedPath;
-        }
-    }
+    private Task OpenLibraryAsync() => _librarySwitchController.OpenLibraryAsync();
 
-    private async Task OpenLibraryAsync()
-    {
-        var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
-        if (string.IsNullOrWhiteSpace(selectedPath) || _switchLibraryAsync is null)
-        {
-            return;
-        }
-
-        var validationMessage = LibraryRootInspection.BuildOpenExistingValidationMessage(selectedPath, LibraryRoot);
-        if (!string.IsNullOrWhiteSpace(validationMessage))
-        {
-            UiLogging.Warning(
-                "Rejected Open Library request. LibraryRoot={LibraryRoot} Validation={Validation}",
-                selectedPath,
-                validationMessage);
-            throw new InvalidOperationException(validationMessage);
-        }
-
-        await _switchLibraryAsync(selectedPath, UiLibraryOpenMode.OpenExisting);
-    }
-
-    private async Task CreateLibraryAsync()
-    {
-        var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(default);
-        if (string.IsNullOrWhiteSpace(selectedPath) || _switchLibraryAsync is null)
-        {
-            return;
-        }
-
-        var validationMessage = LibraryRootInspection.BuildCreateNewValidationMessage(selectedPath, LibraryRoot);
-        if (!string.IsNullOrWhiteSpace(validationMessage))
-        {
-            UiLogging.Warning(
-                "Rejected Create Library request. LibraryRoot={LibraryRoot} Validation={Validation}",
-                selectedPath,
-                validationMessage);
-            throw new InvalidOperationException(validationMessage);
-        }
-
-        await _switchLibraryAsync(selectedPath, UiLibraryOpenMode.CreateNew);
-    }
+    private Task CreateLibraryAsync() => _librarySwitchController.CreateLibraryAsync();
 
     private Task SavePreferencesAsync()
-    {
-        var hasConfiguredConverter = !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
-        var current = _preferencesStore.TryLoad();
-        _preferencesStore.Save(BuildPreferencesSnapshot(new UiPreferencesSnapshot
-        {
-            PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
-            ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
-            Fb2CngExecutablePath = hasConfiguredConverter ? Fb2CngExecutablePath : null,
-            Fb2CngConfigPath = hasConfiguredConverter ? current?.Fb2CngConfigPath : null,
-            ForceEpubConversionOnImport = hasConfiguredConverter && ImportJobs.ForceEpubConversionOnImport,
-            PreferredSortKey = LibraryBrowser.SelectedSortKey?.Key,
-            PreferredSortDescending = LibraryBrowser.SortDescending
-        }));
-        UiLogging.Information("Saved converter preferences for current library. LibraryRoot={LibraryRoot}", LibraryRoot);
-        return _reloadShellAsync is null ? Task.CompletedTask : _reloadShellAsync();
-    }
+        => _preferencesPersistence.SaveConverterPreferencesAsync(
+            Fb2CngExecutablePath,
+            ImportJobs.ForceEpubConversionOnImport,
+            LibraryBrowser.SelectedSortKey?.Key,
+            LibraryBrowser.SortDescending);
 
-    private bool CanSavePreferences() =>
-        !HasConverterValidationError && !_isConverterProbeInProgress;
+    private bool CanSavePreferences() => _converterValidationWorkflow.CanSavePreferences();
 
     private void RaiseProbeProperties()
     {
@@ -321,41 +255,14 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         SavePreferencesCommand.RaiseCanExecuteChanged();
     }
 
-    private static bool HasConfiguredBuiltInConverter(CoreHostLaunchOptions hostOptions) =>
-        hostOptions.ConverterMode is UiConverterMode.BuiltInFb2Cng
-        && !string.IsNullOrWhiteSpace(hostOptions.Fb2CngExecutablePath);
-
-    private void OnConverterValidationStateChanged()
+    private void RaiseImportStateProperties()
     {
-        _converterProbeTask = _converterValidationCoordinator.CurrentProbeTask;
-        _isConverterProbeInProgress = _converterValidationCoordinator.IsProbeInProgress;
-        ConverterValidationMessage = _converterValidationCoordinator.ValidationMessage;
-        RaiseProbeProperties();
-        if (_settingsReady && !_isConverterProbeInProgress && !HasConverterValidationError)
-        {
-            _ = AutoSavePreferencesAsync();
-        }
-    }
-
-    private async Task HandleImportCompletedSuccessfullyAsync(ImportJobResultModel result)
-    {
-        await LibraryBrowser.RefreshAsync();
-    }
-
-    private void OnImportJobsPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
-    {
-        if (eventArgs.PropertyName is not nameof(ImportJobsViewModel.IsBusy))
-        {
-            return;
-        }
-
         RaisePropertyChanged(nameof(IsImportInProgress));
         RaisePropertyChanged(nameof(CanSwitchLibrary));
-        if (ImportJobs.IsBusy && CurrentSection is not ShellSection.Import)
-        {
-            CurrentSection = ShellSection.Import;
-        }
+    }
 
+    private void RaiseNavigationCanExecuteChanged()
+    {
         OpenLibraryCommand.RaiseCanExecuteChanged();
         CreateLibraryCommand.RaiseCanExecuteChanged();
         ShowLibrarySectionCommand.RaiseCanExecuteChanged();
@@ -363,76 +270,20 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ShowSettingsSectionCommand.RaiseCanExecuteChanged();
     }
 
-    private void OnLibraryBrowserPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
-    {
-        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.LibraryStatisticsText))
-        {
-            RaisePropertyChanged(nameof(CurrentLibraryStatisticsText));
-        }
-
-        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SelectedSortKey)
-            && LibraryBrowser.SelectedSortKey is not null)
-        {
-            SaveSortPreference(LibraryBrowser.SelectedSortKey.Key, LibraryBrowser.SortDescending);
-        }
-
-        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SortDescending)
-            && LibraryBrowser.SelectedSortKey is not null)
-        {
-            SaveSortPreference(LibraryBrowser.SelectedSortKey.Key, LibraryBrowser.SortDescending);
-        }
-    }
+    private void OnConverterValidationStateChanged()
+        => _converterValidationWorkflow.ApplyState(allowAutoSave: true);
 
     private void SaveSortPreference(BookSortModel sortKey, bool sortDescending)
-    {
-        try
-        {
-            var current = _preferencesStore.TryLoad();
-            _preferencesStore.Save(BuildPreferencesSnapshot(new UiPreferencesSnapshot
-            {
-                PreferredLibraryRoot = _session.HostOptions.LibraryRoot,
-                ConverterMode = current?.ConverterMode ?? UiConverterMode.Disabled,
-                PortablePreferredLibraryRoot = current?.PortablePreferredLibraryRoot,
-                Fb2CngExecutablePath = current?.Fb2CngExecutablePath,
-                Fb2CngConfigPath = current?.Fb2CngConfigPath,
-                ForceEpubConversionOnImport = current?.ForceEpubConversionOnImport ?? false,
-                PreferredSortKey = sortKey,
-                PreferredSortDescending = sortDescending
-            }));
-        }
-        catch (Exception error)
-        {
-            UiLogging.Warning("Failed to persist sort preference. {Error}", error.Message);
-        }
-    }
-
-    private UiPreferencesSnapshot BuildPreferencesSnapshot(UiPreferencesSnapshot snapshot)
-    {
-        var libraryRoot = snapshot.PreferredLibraryRoot ?? _session.HostOptions.LibraryRoot;
-        return new UiPreferencesSnapshot
-        {
-            PreferredLibraryRoot = libraryRoot,
-            PortablePreferredLibraryRoot = RuntimeEnvironment.BuildPortableLibraryRootPreference(libraryRoot),
-            ConverterMode = snapshot.ConverterMode,
-            Fb2CngExecutablePath = snapshot.Fb2CngExecutablePath,
-            Fb2CngConfigPath = snapshot.Fb2CngConfigPath,
-            ForceEpubConversionOnImport = snapshot.ForceEpubConversionOnImport,
-            PreferredSortKey = snapshot.PreferredSortKey,
-            PreferredSortDescending = snapshot.PreferredSortDescending
-        };
-    }
+        => _preferencesPersistence.TrySaveSortPreference(sortKey, sortDescending);
 
     public void Dispose()
     {
-        ImportJobs.ImportCompletedSuccessfully -= HandleImportCompletedSuccessfullyAsync;
-        ImportJobs.PropertyChanged -= OnImportJobsPropertyChanged;
-        LibraryBrowser.PropertyChanged -= OnLibraryBrowserPropertyChanged;
+        ImportJobs.ImportCompletedSuccessfully -= _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
+        ImportJobs.PropertyChanged -= _importWorkflowController.HandleImportJobsPropertyChanged;
+        LibraryBrowser.PropertyChanged -= _importWorkflowController.HandleLibraryBrowserPropertyChanged;
         LibraryBrowser.Dispose();
         _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;
         _converterValidationCoordinator.Dispose();
-        _converterProbeTask = Task.CompletedTask;
-        _isConverterProbeInProgress = false;
-        ConverterValidationMessage = string.Empty;
-        RaiseProbeProperties();
+        _converterValidationWorkflow.Reset();
     }
 }

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Librova.UI.Tests;
 
-public sealed class ImportJobsServiceTests
+public sealed partial class ImportJobsServiceTests
 {
     [Fact]
     public async Task Service_PerformsEndToEndImportFlowWithoutGeneratedProtoTypes()

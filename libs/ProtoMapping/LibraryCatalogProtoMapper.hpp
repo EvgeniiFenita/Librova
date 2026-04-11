@@ -3,6 +3,7 @@
 #include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryTrashFacade.hpp"
+#include "Domain/DomainError.hpp"
 #include "import_jobs.pb.h"
 
 namespace Librova::ProtoMapping {
@@ -26,7 +27,8 @@ public:
         const Librova::Application::SBookDetails& details);
 
     [[nodiscard]] static librova::v1::GetBookDetailsResponse ToProtoResponse(
-        const Librova::Application::SBookDetails* details);
+        const Librova::Application::SBookDetails* details,
+        const Librova::Domain::SDomainError* error = nullptr);
 
     [[nodiscard]] static librova::v1::LibraryStatistics ToProto(
         const Librova::Application::SLibraryStatistics& statistics);
@@ -38,10 +40,12 @@ public:
         const librova::v1::ExportBookRequest& request);
 
     [[nodiscard]] static librova::v1::ExportBookResponse ToProtoResponse(
-        const std::filesystem::path* exportedPath);
+        const std::filesystem::path* exportedPath,
+        const Librova::Domain::SDomainError* error = nullptr);
 
     [[nodiscard]] static librova::v1::MoveBookToTrashResponse ToProtoResponse(
-        const Librova::Application::STrashedBookResult* result);
+        const Librova::Application::STrashedBookResult* result,
+        const Librova::Domain::SDomainError* error = nullptr);
 
 private:
     [[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);

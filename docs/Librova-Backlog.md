@@ -4,18 +4,21 @@
 
 Use a single backlog for active work. For all backlog operations (adding, closing, validating tasks) follow the `$backlog-update` skill.
 
-Each task has four required fields in this order:
+Each task has four required fields plus one optional field in this order:
 
 ```
 - `#<id>` <summary>
   - Status: `Open | Needs Reproduction | Blocked | Closed`
   - Type: `Feature | Bug`
+  - Milestone: `<version>`
   - Note: <context or one-sentence completion summary>
 ```
 
 Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
-Last assigned id: `#102`
+`Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
+
+Last assigned id: `#109`
 
 ## 2. Priority Meanings
 
@@ -67,7 +70,7 @@ Last assigned id: `#102`
   - Status: `Open`
   - Type: `Feature`
   - Milestone: `1.1`
-  - Note: the current `LIMIT/OFFSET` infinite-scroll model requires full index scans up to the current offset and degrades at large page depths — replace with keyset (cursor-based) pagination anchored on the active sort key and BookId; the author-sort path uses an uncached per-row subquery — replace with a materialized or indexed first-author-per-book approach; review FTS5 query plans and tokenizer configuration for large corpora; add composite indexes where sort key and filter predicates are used together; identify and eliminate any remaining full-library in-memory scans in duplicate detection and statistics paths; establish and document response-time budgets for browse, search, and filter at 100k and 500k book scales.
+  - Note: remaining performance scope after remediation-wave hardening is keyset pagination for deep browse, scalable author-sort/index strategy, FTS5 query-plan/tokenizer review, composite indexes aligned with browse filters, and explicit response-time budgets for browse/search/filter at 100k and 500k book scales.
 
 - `#62` introduce platform service interfaces for all Windows-specific operations so non-Windows paths throw explicitly and future ports have a clear, discoverable integration surface.
   - Status: `Open`

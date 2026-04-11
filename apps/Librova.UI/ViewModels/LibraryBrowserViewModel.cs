@@ -2,13 +2,13 @@ using Avalonia;
 using Avalonia.Media;
 using Librova.UI.Desktop;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Logging;
 using Librova.UI.Mvvm;
+using Librova.UI.Styling;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,34 +17,28 @@ namespace Librova.UI.ViewModels;
 internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 {
     private const double BytesPerMegabyte = 1024d * 1024d;
-    private static readonly IBrush DefaultCardBackground = new SolidColorBrush(Color.Parse("#1C160C"));
-    private static readonly IBrush DefaultCardBorder = new SolidColorBrush(Color.Parse("#2A200E"));
-    private static readonly IBrush SelectedCardBackground = new SolidColorBrush(Color.Parse("#221A0E"));
-    private static readonly IBrush SelectedCardBorder = new SolidColorBrush(Color.Parse("#F5A623"));
+    private static readonly IBrush DefaultCardBackground = UiThemeResources.AppSurfaceMutedBrush;
+    private static readonly IBrush DefaultCardBorder = UiThemeResources.AppBorderBrush;
+    private static readonly IBrush SelectedCardBackground = UiThemeResources.AppSurfaceAltBrush;
+    private static readonly IBrush SelectedCardBorder = UiThemeResources.AppAccentBrush;
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
     private readonly LibraryCoverPresentationService _coverPresentationService;
     private readonly bool _hasConfiguredConverter;
+    private readonly LibraryBrowseQueryState _browseState;
+    private readonly LibraryBrowseRefreshController _refreshController;
+    private readonly LibrarySelectionWorkflowController _selectionWorkflowController;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _loadMoreCancellation;
     private bool _isDisposed;
     private bool _isLibraryStatisticsUnavailable;
-    private string _searchText = string.Empty;
-    private string _languageFilter = string.Empty;
-    private SortKeyOption _selectedSortKey = SortKeyOption.Default;
-    private bool _sortDescending;
     private string _statusText = "Library view is idle.";
     private bool _isBusy;
     private bool _isExportBusy;
     private bool _isLoadingMore;
     private bool _isLoadingSelectionDetails;
-    private int _pageSize = 120;
-    private int _loadedPageCount = 0;
-    private bool _hasMoreResults;
-    private ulong _totalBookCount;
-    private BookListItemModel? _selectedBook;
-    private BookDetailsModel? _selectedBookDetails;
+    private readonly LibrarySelectionState _selectionState = new(FormatSizeInMegabytes);
     private LibraryStatisticsModel _libraryStatistics = new();
 
     public LibraryBrowserViewModel(
@@ -60,8 +54,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _coverPresentationService = new LibraryCoverPresentationService(libraryRoot, coverImageLoader);
         _hasConfiguredConverter = hasConfiguredConverter;
-        _selectedSortKey = SortKeyOption.For(initialSortKey ?? BookSortModel.Title);
-        _sortDescending = initialSortDescending;
+        _browseState = new LibraryBrowseQueryState(
+            SortKeyOption.For(initialSortKey ?? BookSortModel.Title),
+            initialSortDescending);
+        _refreshController = new LibraryBrowseRefreshController(_libraryCatalogService, _browseState);
+        _selectionWorkflowController = new LibrarySelectionWorkflowController(_libraryCatalogService, _pathSelectionService);
         RefreshCommand = new AsyncCommand(RefreshAsync, () => !IsBusy, HandleCommandErrorAsync);
         LoadDetailsCommand = new AsyncCommand(LoadSelectedBookDetailsAsync, () => HasSelectedBook && !IsLoadingSelectionDetails, HandleCommandErrorAsync);
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
@@ -70,7 +67,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
-        AvailableLanguageFilters.Add("All languages");
+        foreach (var language in _browseState.AvailableLanguageFilters)
+        {
+            AvailableLanguageFilters.Add(language);
+        }
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
@@ -87,35 +87,41 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     public string SearchText
     {
-        get => _searchText;
+        get => _browseState.SearchText;
         set
         {
-            if (SetProperty(ref _searchText, value))
+            if (_browseState.SearchText == value)
             {
-                ScheduleRefresh();
+                return;
             }
+            _browseState.SearchText = value;
+            RaisePropertyChanged();
+            ScheduleRefresh();
         }
     }
 
     public string LanguageFilter
     {
-        get => _languageFilter;
+        get => _browseState.LanguageFilter;
         set
         {
-            if (SetProperty(ref _languageFilter, value))
+            if (_browseState.LanguageFilter == value)
             {
-                RaisePropertyChanged(nameof(SelectedLanguageFilter));
-                RaisePropertyChanged(nameof(BookCountText));
-                RaisePropertyChanged(nameof(EmptyStateTitle));
-                RaisePropertyChanged(nameof(EmptyStateDescription));
-                ScheduleRefresh();
+                return;
             }
+            _browseState.LanguageFilter = value;
+            RaisePropertyChanged();
+            RaisePropertyChanged(nameof(SelectedLanguageFilter));
+            RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(EmptyStateTitle));
+            RaisePropertyChanged(nameof(EmptyStateDescription));
+            ScheduleRefresh();
         }
     }
 
     public string SelectedLanguageFilter
     {
-        get => string.IsNullOrWhiteSpace(LanguageFilter) ? "All languages" : LanguageFilter;
+        get => _browseState.SelectedLanguageFilter;
         set
         {
             if (value is null)
@@ -124,16 +130,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            var effectiveValue = string.Equals(value, "All languages", StringComparison.OrdinalIgnoreCase)
-                ? string.Empty
-                : value;
-            LanguageFilter = effectiveValue;
+            LanguageFilter = _browseState.NormalizeSelectedLanguageFilter(value);
         }
     }
 
     public SortKeyOption? SelectedSortKey
     {
-        get => _selectedSortKey;
+        get => _browseState.SelectedSortKey;
         set
         {
             if (value is null)
@@ -142,12 +145,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            if (_selectedSortKey == value)
+            if (_browseState.SelectedSortKey == value)
             {
                 return;
             }
 
-            _selectedSortKey = value;
+            _browseState.SelectedSortKey = value;
             RaisePropertyChanged(nameof(SelectedSortKey));
             ScheduleRefresh();
         }
@@ -155,80 +158,66 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     public bool SortDescending
     {
-        get => _sortDescending;
+        get => _browseState.SortDescending;
         private set
         {
-            if (SetProperty(ref _sortDescending, value))
+            if (_browseState.SortDescending == value)
             {
-                ScheduleRefresh();
+                return;
             }
+            _browseState.SortDescending = value;
+            RaisePropertyChanged();
+            ScheduleRefresh();
         }
     }
 
     public int PageSize
     {
-        get => _pageSize;
+        get => _browseState.PageSize;
         set
         {
-            var effectiveValue = value < 1 ? 1 : value;
-            SetProperty(ref _pageSize, effectiveValue);
+            if (_browseState.PageSize == value)
+            {
+                return;
+            }
+            _browseState.PageSize = value;
+            RaisePropertyChanged();
         }
     }
 
     public bool HasMoreResults
     {
-        get => _hasMoreResults;
-        private set
-        {
-            if (SetProperty(ref _hasMoreResults, value))
-            {
-            }
-        }
+        get => _browseState.HasMoreResults;
     }
 
     public BookListItemModel? SelectedBook
     {
-        get => _selectedBook;
+        get => _selectionState.SelectedBook;
         private set
         {
-            if (ReferenceEquals(_selectedBook, value))
+            if (ReferenceEquals(_selectionState.SelectedBook, value))
             {
                 return;
             }
 
-            if (_selectedBook is not null)
+            if (_selectionState.SelectedBook is not null)
             {
-                _selectedBook.IsSelected = false;
-                ApplySelectionStyle(_selectedBook, isSelected: false);
+                _selectionState.SelectedBook.CardPresentation.IsSelected = false;
+                ApplySelectionStyle(_selectionState.SelectedBook, isSelected: false);
             }
 
-            if (SetProperty(ref _selectedBook, value))
+            var previousSelection = _selectionState.SelectedBook;
+            _selectionState.SetSelection(value);
+            if (SetProperty(ref previousSelection, value))
             {
-                if (_selectedBook is not null)
+                if (_selectionState.SelectedBook is not null)
                 {
-                    _selectedBook.IsSelected = true;
-                    ApplySelectionStyle(_selectedBook, isSelected: true);
+                    _selectionState.SelectedBook.CardPresentation.IsSelected = true;
+                    ApplySelectionStyle(_selectionState.SelectedBook, isSelected: true);
                 }
 
                 SelectedBookDetails = null;
-                RaisePropertyChanged(nameof(HasSelectedBook));
-                RaisePropertyChanged(nameof(ShowDetailsPanel));
-                RaisePropertyChanged(nameof(EmptyStateTitle));
-                RaisePropertyChanged(nameof(EmptyStateDescription));
-                RaisePropertyChanged(nameof(SelectedBookTitle));
-                RaisePropertyChanged(nameof(SelectedBookAuthorText));
-                RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
-                RaisePropertyChanged(nameof(SelectedBookAnnotationText));
-                RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverImage));
-                RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
-                RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
-                RaisePropertyChanged(nameof(HasSelectedBookCover));
-                RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
-                RaisePropertyChanged(nameof(ShowExportAsEpubAction));
-                RaisePropertyChanged(nameof(ShowExportAsEpubHint));
-                RaisePropertyChanged(nameof(ExportAsEpubHintText));
-                RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
+                RaiseSelectionPresentationProperties();
                 LoadDetailsCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
@@ -240,24 +229,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     public BookDetailsModel? SelectedBookDetails
     {
-        get => _selectedBookDetails;
+        get => _selectionState.SelectedBookDetails;
         private set
         {
-            if (SetProperty(ref _selectedBookDetails, value))
+            var previousDetails = _selectionState.SelectedBookDetails;
+            _selectionState.SetDetails(value);
+            if (SetProperty(ref previousDetails, value))
             {
-                RaisePropertyChanged(nameof(SelectedBookAuthorText));
-                RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
-                RaisePropertyChanged(nameof(SelectedBookAnnotationText));
-                RaisePropertyChanged(nameof(SelectedBookPathText));
-                RaisePropertyChanged(nameof(SelectedBookCoverImage));
-                RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
-                RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
-                RaisePropertyChanged(nameof(HasSelectedBookCover));
-                RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
-                RaisePropertyChanged(nameof(ShowExportAsEpubAction));
-                RaisePropertyChanged(nameof(ShowExportAsEpubHint));
-                RaisePropertyChanged(nameof(ExportAsEpubHintText));
-                RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
+                RaiseSelectionPresentationProperties();
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
             }
         }
@@ -322,13 +301,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
     public bool ShowDetailsPanelLoading => HasSelectedBook && IsLoadingSelectionDetails;
-    public bool ShowExportAsEpubAction => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2 && _hasConfiguredConverter;
-    public bool ShowExportAsEpubHint => HasSelectedBook && SelectedBookFormat is BookFormatModel.Fb2 && !_hasConfiguredConverter;
+    public bool ShowExportAsEpubAction => HasSelectedBook && _selectionState.SelectedBookFormat is BookFormatModel.Fb2 && _hasConfiguredConverter;
+    public bool ShowExportAsEpubHint => HasSelectedBook && _selectionState.SelectedBookFormat is BookFormatModel.Fb2 && !_hasConfiguredConverter;
     public string ExportAsEpubHintText => "Configure a converter in Settings to enable EPUB export.";
     public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction;
     public bool ShowEmptyState => !HasBooks;
     public bool ShowLoadMoreIndicator => HasBooks && IsLoadingMore;
-    public string BookCountText => FormatBookCount(_totalBookCount);
+    public string BookCountText => FormatBookCount(_browseState.TotalBookCount);
     public string LibraryStatisticsText =>
         _isLibraryStatisticsUnavailable
             ? "Library summary unavailable."
@@ -337,29 +316,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public string EmptyStateDescription => HasActiveFilters
         ? "Try a different search query or clear the current language filter."
         : "Import books to start building your library.";
-    public string SelectedBookTitle => SelectedBookDetails?.Title ?? SelectedBook?.Title ?? "No book selected";
-    public string SelectedBookAuthorText =>
-        SelectedBookDetails is not null
-            ? BuildAuthorsText(SelectedBookDetails.Authors)
-            : SelectedBook?.AuthorsText ?? "Choose a book to inspect metadata.";
-    public string SelectedBookAnnotationText =>
-        string.IsNullOrWhiteSpace(SelectedBookDetails?.Description)
-            ? "No annotation available."
-            : SelectedBookDetails!.Description!;
-    public string SelectedBookPathText =>
-        SelectedBookDetails?.ManagedPath
-        ?? SelectedBook?.ManagedPath
-        ?? "No managed file path available.";
-    public IImage? SelectedBookCoverImage => SelectedBookDetails?.ResolvedCoverImage ?? SelectedBook?.ResolvedCoverImage;
-    public IBrush? SelectedBookCoverBackgroundBrush => SelectedBookDetails?.CoverBackgroundBrush ?? SelectedBook?.CoverBackgroundBrush;
-    public string SelectedBookCoverPlaceholderText => SelectedBookDetails?.CoverPlaceholderText ?? SelectedBook?.CoverPlaceholderText ?? "BOOK";
-    public bool HasSelectedBookCover => SelectedBookCoverImage is not null;
-    public bool ShowSelectedBookCoverPlaceholder => !HasSelectedBookCover;
-    public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => BuildSelectedBookMetadataPairs();
+    public string SelectedBookTitle => _selectionState.SelectedBookTitle;
+    public string SelectedBookAuthorText => _selectionState.SelectedBookAuthorText;
+    public string SelectedBookAnnotationText => _selectionState.SelectedBookAnnotationText;
+    public string SelectedBookPathText => _selectionState.SelectedBookPathText;
+    public IImage? SelectedBookCoverImage => _selectionState.SelectedBookCoverImage;
+    public IBrush? SelectedBookCoverBackgroundBrush => _selectionState.SelectedBookCoverBackgroundBrush;
+    public string SelectedBookCoverPlaceholderText => _selectionState.SelectedBookCoverPlaceholderText;
+    public bool HasSelectedBookCover => _selectionState.HasSelectedBookCover;
+    public bool ShowSelectedBookCoverPlaceholder => _selectionState.ShowSelectedBookCoverPlaceholder;
+    public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => _selectionState.SelectedBookMetadataPairs;
 
-    private bool HasActiveFilters =>
-        !string.IsNullOrWhiteSpace(SearchText)
-        || !string.IsNullOrWhiteSpace(LanguageFilter);
+    private bool HasActiveFilters => _browseState.HasActiveFilters;
 
     public async Task RefreshAsync()
     {
@@ -404,16 +372,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (SelectedBook?.BookId == book.BookId)
+        var selectionResult = _selectionWorkflowController.ToggleSelection(SelectedBook, book);
+        SelectedBook = selectionResult.SelectedBook;
+        StatusText = selectionResult.StatusText;
+        if (selectionResult.ShouldLoadDetails)
         {
-            SelectedBook = null;
-            StatusText = "Closed book details.";
-            return;
+            await LoadSelectedBookDetailsAsync();
         }
-
-        SelectedBook = book;
-        StatusText = $"Selected '{book.Title}'.";
-        await LoadSelectedBookDetailsAsync();
     }
 
     public Task CloseSelectionAsync()
@@ -441,9 +406,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         try
         {
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
-            var details = await _libraryCatalogService.GetBookDetailsAsync(
-                SelectedBook.BookId,
-                TimeSpan.FromSeconds(5),
+            var detailsResult = await _selectionWorkflowController.LoadDetailsAsync(
+                SelectedBook,
+                Prepare,
                 cancellation.Token);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
@@ -451,10 +416,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            SelectedBookDetails = details is null ? null : Prepare(details);
-            StatusText = SelectedBookDetails is null
-                ? "Book details were not found."
-                : $"Loaded details for '{SelectedBookDetails.Title}'.";
+            SelectedBookDetails = detailsResult.Details;
+            StatusText = detailsResult.StatusText;
         }
         catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
         {
@@ -485,37 +448,30 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var suggestedFileName = BuildSuggestedExportFileName(exportFormat);
-        var destinationPath = await _pathSelectionService.PickExportDestinationAsync(suggestedFileName, default);
-        if (string.IsNullOrWhiteSpace(destinationPath))
+        var exportPlan = await _selectionWorkflowController.PrepareExportAsync(
+            SelectedBook,
+            SelectedBookDetails,
+            _selectionState.SelectedBookFormat,
+            exportFormat,
+            default);
+        if (!exportPlan.ShouldExport)
         {
-            StatusText = "Export was cancelled before a destination was chosen.";
+            StatusText = exportPlan.StatusText;
             return;
         }
 
         IsBusy = true;
         IsExportBusy = true;
-        StatusText = exportFormat is BookFormatModel.Epub
-            ? $"Exporting '{TruncateTitle(SelectedBook.Title)}' as EPUB..."
-            : $"Exporting '{TruncateTitle(SelectedBook.Title)}'...";
-
-        // EPUB export may require decompressing a managed FB2 and running an external converter,
-        // which can take tens of seconds. Use a generous timeout for that path.
-        var operationTimeout = exportFormat is BookFormatModel.Epub
-            ? TimeSpan.FromMinutes(3)
-            : TimeSpan.FromSeconds(30);
-        var transportTimeout = exportFormat is BookFormatModel.Epub
-            ? TimeSpan.FromMinutes(2)
-            : TimeSpan.FromSeconds(10);
+        StatusText = exportPlan.StatusText;
 
         try
         {
-            using var cancellation = CreateOperationCancellationSource(operationTimeout);
-            var exportedPath = await _libraryCatalogService.ExportBookAsync(
-                SelectedBook.BookId,
-                destinationPath,
+            using var cancellation = CreateOperationCancellationSource(exportPlan.OperationTimeout);
+            var statusText = await _selectionWorkflowController.ExportAsync(
+                SelectedBook,
+                exportPlan.DestinationPath!,
                 exportFormat,
-                transportTimeout,
+                exportPlan.TransportTimeout,
                 cancellation.Token);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
@@ -523,11 +479,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            StatusText = string.IsNullOrWhiteSpace(exportedPath)
-                ? "Selected book could not be exported."
-                : exportFormat is BookFormatModel.Epub
-                    ? $"Exported '{SelectedBook.Title}' as EPUB to '{exportedPath}'."
-                    : $"Exported '{SelectedBook.Title}' to '{exportedPath}'.";
+            StatusText = statusText;
         }
         catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
         {
@@ -554,12 +506,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
         try
         {
-            var deletedTitle = SelectedBook.Title;
-            var loadedPageCount = Math.Max(_loadedPageCount, 1);
+            var loadedPageCount = Math.Max(_browseState.LoadedPageCount, 1);
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
-            var deleteResult = await _libraryCatalogService.MoveBookToTrashAsync(
-                SelectedBook.BookId,
-                TimeSpan.FromSeconds(5),
+            var statusText = await _selectionWorkflowController.MoveSelectedBookToTrashAsync(
+                SelectedBook,
+                () => RefreshLoadedRangeAsync(loadedPageCount),
                 cancellation.Token);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
@@ -567,15 +518,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            if (deleteResult is null)
-            {
-                StatusText = "Selected book could not be moved to Recycle Bin.";
-                return;
-            }
-
-            await RefreshLoadedRangeAsync(loadedPageCount);
-
-            StatusText = GetDeleteStatusText(deletedTitle, deleteResult);
+            StatusText = statusText;
         }
         catch (OperationCanceledException) when (IsLifetimeCancellationRequested())
         {
@@ -587,20 +530,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 IsBusy = false;
             }
         }
-    }
-
-    private static string GetDeleteStatusText(string deletedTitle, DeleteBookResultModel deleteResult)
-    {
-        if (deleteResult.HasOrphanedFiles)
-        {
-            return deleteResult.Destination == DeleteDestinationModel.RecycleBin
-                ? $"Removed '{deletedTitle}' from the library, moved the available managed files to Recycle Bin, and left some managed files on disk."
-                : $"Removed '{deletedTitle}' from the library, but some managed files could not be moved and were left on disk.";
-        }
-
-        return deleteResult.Destination == DeleteDestinationModel.RecycleBin
-            ? $"Moved '{deletedTitle}' to Recycle Bin."
-            : $"Moved '{deletedTitle}' to library Trash because Windows Recycle Bin was unavailable.";
     }
 
     private void ScheduleRefresh()
@@ -643,75 +572,23 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         IsBusy = true;
         StatusText = "Refreshing library...";
         var previousSelectionId = SelectedBook?.BookId;
+        var previousHasMoreResults = HasMoreResults;
 
         try
         {
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
-            var page = await _libraryCatalogService.ListBooksAsync(
-                BuildRequest(batchNumber),
+            var refreshResult = await _refreshController.RefreshBatchAsync(
+                batchNumber,
                 TimeSpan.FromSeconds(5),
-                cancellation.Token);
+                cancellation.Token,
+                Prepare);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
             {
                 return;
             }
 
-            var libraryStatisticsUnavailable = false;
-
-            try
-            {
-                _libraryStatistics = await _libraryCatalogService.GetLibraryStatisticsAsync(
-                    TimeSpan.FromSeconds(5),
-                    cancellation.Token);
-            }
-            catch (OperationCanceledException) when (IsLifetimeCancellationRequested(cancellation.Token))
-            {
-                return;
-            }
-            catch (Exception)
-            {
-                libraryStatisticsUnavailable = true;
-            }
-
-            if (IsLifetimeCancellationRequested(cancellation.Token))
-            {
-                return;
-            }
-
-            var visibleItems = page.Items.Select(Prepare).ToArray();
-            Books.Clear();
-            foreach (var item in visibleItems)
-            {
-                Books.Add(item);
-            }
-
-            UpdateAvailableLanguages(page.AvailableLanguages);
-            _loadedPageCount = batchNumber;
-            _totalBookCount = page.TotalCount;
-
-            if (previousSelectionId is not null)
-            {
-                SelectedBook = visibleItems.FirstOrDefault(item => item.BookId == previousSelectionId);
-                if (SelectedBook is not null)
-                {
-                    await LoadSelectedBookDetailsAsync();
-                }
-            }
-            else
-            {
-                SelectedBook = null;
-            }
-
-            _isLibraryStatisticsUnavailable = libraryStatisticsUnavailable;
-            HasMoreResults = (ulong)Books.Count < _totalBookCount;
-            RaisePropertyChanged(nameof(HasBooks));
-            RaisePropertyChanged(nameof(ShowEmptyState));
-            RaisePropertyChanged(nameof(BookCountText));
-            RaisePropertyChanged(nameof(LibraryStatisticsText));
-            RaisePropertyChanged(nameof(EmptyStateTitle));
-            RaisePropertyChanged(nameof(EmptyStateDescription));
-            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
+            await ApplyRefreshResultAsync(refreshResult, previousSelectionId, previousHasMoreResults);
         }
         finally
         {
@@ -724,7 +601,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     private async Task RefreshLoadedRangeAsync(int loadedPageCount)
     {
-        await RefreshRangeAsync(Math.Max(1, loadedPageCount) * PageSize);
+        await RefreshRangeAsync(_browseState.BuildRangeItemLimit(loadedPageCount));
     }
 
     private async Task AppendNextBatchAsync()
@@ -734,7 +611,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (_loadedPageCount <= 0)
+        if (_browseState.LoadedPageCount <= 0)
         {
             await RefreshBatchAsync(1);
             return;
@@ -749,18 +626,19 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
         try
         {
-            var nextBatchNumber = _loadedPageCount + 1;
-            var page = await _libraryCatalogService.ListBooksAsync(
-                BuildRequest(nextBatchNumber),
+            var nextBatchNumber = _browseState.LoadedPageCount + 1;
+            var refreshResult = await _refreshController.LoadMoreAsync(
+                nextBatchNumber,
                 TimeSpan.FromSeconds(5),
-                _loadMoreCancellation.Token);
+                _loadMoreCancellation.Token,
+                Prepare);
 
             if (IsLifetimeCancellationRequested(_loadMoreCancellation.Token))
             {
                 return;
             }
 
-            foreach (var item in page.Items.Select(Prepare))
+            foreach (var item in refreshResult.VisibleItems)
             {
                 if (Books.Any(existing => existing.BookId == item.BookId))
                 {
@@ -770,16 +648,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 Books.Add(item);
             }
 
-            _totalBookCount = page.TotalCount;
-            _loadedPageCount = nextBatchNumber;
-            HasMoreResults = (ulong)Books.Count < _totalBookCount;
-            UpdateAvailableLanguages(page.AvailableLanguages);
+            var previousHasMoreResults = HasMoreResults;
+            _browseState.SetLoadedState(nextBatchNumber, refreshResult.TotalCount, Books.Count);
+            _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
+            SyncHasMoreResults(previousHasMoreResults);
+            UpdateAvailableLanguages(refreshResult.AvailableLanguages);
             RaisePropertyChanged(nameof(HasBooks));
             RaisePropertyChanged(nameof(ShowEmptyState));
             RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(LibraryStatisticsText));
             RaisePropertyChanged(nameof(EmptyStateTitle));
             RaisePropertyChanged(nameof(EmptyStateDescription));
-            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
+            StatusText = BuildRefreshStatusText(Books.Count, _browseState.TotalBookCount, _isLibraryStatisticsUnavailable);
         }
         finally
         {
@@ -796,6 +676,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         return Task.CompletedTask;
     }
 
+    private bool ApplyLibraryStatistics(LibraryStatisticsModel? statistics)
+    {
+        if (statistics is not null)
+        {
+            _libraryStatistics = statistics;
+            return false;
+        }
+
+        UiLogging.Warning("ListBooks response did not include library statistics; library summary will remain unavailable.");
+        return true;
+    }
+
     private async Task RefreshRangeAsync(int itemLimit)
     {
         if (_isDisposed)
@@ -806,75 +698,23 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         IsBusy = true;
         StatusText = "Refreshing library...";
         var previousSelectionId = SelectedBook?.BookId;
+        var previousHasMoreResults = HasMoreResults;
 
         try
         {
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
-            var page = await _libraryCatalogService.ListBooksAsync(
-                BuildInitialRangeRequest(itemLimit),
+            var refreshResult = await _refreshController.RefreshRangeAsync(
+                itemLimit,
                 TimeSpan.FromSeconds(5),
-                cancellation.Token);
+                cancellation.Token,
+                Prepare);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
             {
                 return;
             }
 
-            var libraryStatisticsUnavailable = false;
-
-            try
-            {
-                _libraryStatistics = await _libraryCatalogService.GetLibraryStatisticsAsync(
-                    TimeSpan.FromSeconds(5),
-                    cancellation.Token);
-            }
-            catch (OperationCanceledException) when (IsLifetimeCancellationRequested(cancellation.Token))
-            {
-                return;
-            }
-            catch (Exception)
-            {
-                libraryStatisticsUnavailable = true;
-            }
-
-            if (IsLifetimeCancellationRequested(cancellation.Token))
-            {
-                return;
-            }
-
-            var visibleItems = page.Items.Select(Prepare).ToArray();
-            Books.Clear();
-            foreach (var item in visibleItems)
-            {
-                Books.Add(item);
-            }
-
-            UpdateAvailableLanguages(page.AvailableLanguages);
-            _loadedPageCount = Math.Max(1, (visibleItems.Length + PageSize - 1) / PageSize);
-            _totalBookCount = page.TotalCount;
-
-            if (previousSelectionId is not null)
-            {
-                SelectedBook = visibleItems.FirstOrDefault(item => item.BookId == previousSelectionId);
-                if (SelectedBook is not null)
-                {
-                    await LoadSelectedBookDetailsAsync();
-                }
-            }
-            else
-            {
-                SelectedBook = null;
-            }
-
-            _isLibraryStatisticsUnavailable = libraryStatisticsUnavailable;
-            HasMoreResults = (ulong)Books.Count < _totalBookCount;
-            RaisePropertyChanged(nameof(HasBooks));
-            RaisePropertyChanged(nameof(ShowEmptyState));
-            RaisePropertyChanged(nameof(BookCountText));
-            RaisePropertyChanged(nameof(LibraryStatisticsText));
-            RaisePropertyChanged(nameof(EmptyStateTitle));
-            RaisePropertyChanged(nameof(EmptyStateDescription));
-            StatusText = BuildRefreshStatusText(Books.Count, _totalBookCount, _isLibraryStatisticsUnavailable);
+            await ApplyRefreshResultAsync(refreshResult, previousSelectionId, previousHasMoreResults);
         }
         finally
         {
@@ -882,6 +722,44 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             {
                 IsBusy = false;
             }
+        }
+    }
+
+    private Task ApplyRefreshResultAsync(
+        LibraryBrowseRefreshResult refreshResult,
+        long? previousSelectionId,
+        bool previousHasMoreResults)
+    {
+        ApplyVisibleItems(refreshResult.VisibleItems);
+        UpdateAvailableLanguages(refreshResult.AvailableLanguages);
+
+        if (previousSelectionId is not null)
+        {
+            SelectedBook = refreshResult.VisibleItems.FirstOrDefault(item => item.BookId == previousSelectionId);
+        }
+        else
+        {
+            SelectedBook = null;
+        }
+
+        _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
+        SyncHasMoreResults(previousHasMoreResults);
+        RaisePropertyChanged(nameof(HasBooks));
+        RaisePropertyChanged(nameof(ShowEmptyState));
+        RaisePropertyChanged(nameof(BookCountText));
+        RaisePropertyChanged(nameof(LibraryStatisticsText));
+        RaisePropertyChanged(nameof(EmptyStateTitle));
+        RaisePropertyChanged(nameof(EmptyStateDescription));
+        StatusText = BuildRefreshStatusText(Books.Count, _browseState.TotalBookCount, _isLibraryStatisticsUnavailable);
+        return Task.CompletedTask;
+    }
+
+    private void ApplyVisibleItems(IReadOnlyList<BookListItemModel> visibleItems)
+    {
+        Books.Clear();
+        foreach (var item in visibleItems)
+        {
+            Books.Add(item);
         }
     }
 
@@ -923,28 +801,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         cancellation = null;
     }
 
-    private BookListRequestModel BuildRequest(int batchNumber) =>
-        new()
-        {
-            Text = SearchText,
-            Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-            SortBy = _selectedSortKey.Key,
-            SortDirection = _sortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
-            Offset = checked((ulong)Math.Max(0, batchNumber - 1) * (ulong)PageSize),
-            Limit = (ulong)PageSize
-        };
-
-    private BookListRequestModel BuildInitialRangeRequest(int itemLimit) =>
-        new()
-        {
-            Text = SearchText,
-            Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-            SortBy = _selectedSortKey.Key,
-            SortDirection = _sortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
-            Offset = 0,
-            Limit = (ulong)Math.Max(1, itemLimit)
-        };
-
     private Task ToggleSortDirectionAsync()
     {
         SortDescending = !SortDescending;
@@ -954,7 +810,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private BookListItemModel Prepare(BookListItemModel item)
     {
         _coverPresentationService.Prepare(item);
-        item.IsSelected = false;
+        item.CardPresentation.IsSelected = false;
         ApplySelectionStyle(item, isSelected: false);
         return item;
     }
@@ -964,20 +820,32 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         return _coverPresentationService.Prepare(item);
     }
 
+    private void RaiseSelectionPresentationProperties()
+    {
+        RaisePropertyChanged(nameof(HasSelectedBook));
+        RaisePropertyChanged(nameof(ShowDetailsPanel));
+        RaisePropertyChanged(nameof(EmptyStateTitle));
+        RaisePropertyChanged(nameof(EmptyStateDescription));
+        RaisePropertyChanged(nameof(SelectedBookTitle));
+        RaisePropertyChanged(nameof(SelectedBookAuthorText));
+        RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
+        RaisePropertyChanged(nameof(SelectedBookAnnotationText));
+        RaisePropertyChanged(nameof(SelectedBookPathText));
+        RaisePropertyChanged(nameof(SelectedBookCoverImage));
+        RaisePropertyChanged(nameof(SelectedBookCoverBackgroundBrush));
+        RaisePropertyChanged(nameof(SelectedBookCoverPlaceholderText));
+        RaisePropertyChanged(nameof(HasSelectedBookCover));
+        RaisePropertyChanged(nameof(ShowSelectedBookCoverPlaceholder));
+        RaisePropertyChanged(nameof(ShowExportAsEpubAction));
+        RaisePropertyChanged(nameof(ShowExportAsEpubHint));
+        RaisePropertyChanged(nameof(ExportAsEpubHintText));
+        RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
+    }
+
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
     {
-        var items = new List<string> { "All languages" };
-        items.AddRange(availableLanguages
-            .Where(language => !string.IsNullOrWhiteSpace(language))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(language => language, StringComparer.OrdinalIgnoreCase));
-
-        if (!string.IsNullOrWhiteSpace(LanguageFilter) && !items.Contains(LanguageFilter, StringComparer.OrdinalIgnoreCase))
-        {
-            items.Add(LanguageFilter);
-        }
-
-        SynchronizeLanguageFilters(items.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+        _browseState.UpdateAvailableLanguages(availableLanguages);
+        SynchronizeLanguageFilters(_browseState.AvailableLanguageFilters);
 
         RaisePropertyChanged(nameof(SelectedLanguageFilter));
     }
@@ -1022,72 +890,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         return -1;
     }
 
-    private IReadOnlyList<MetadataPair> BuildSelectedBookMetadataPairs()
-    {
-        if (SelectedBook is null)
-        {
-            return [];
-        }
-
-        var source = SelectedBookDetails;
-        var pairs = new List<MetadataPair>();
-
-        if (!string.IsNullOrWhiteSpace(source?.Language ?? SelectedBook.Language))
-        {
-            pairs.Add(new("Language", source?.Language ?? SelectedBook.Language));
-        }
-
-        if (source?.Year is not null || SelectedBook.Year is not null)
-        {
-            pairs.Add(new("Year", (source?.Year ?? SelectedBook.Year)!.Value.ToString()));
-        }
-
-        if (!string.IsNullOrWhiteSpace(source?.Publisher))
-        {
-            pairs.Add(new("Publisher", source!.Publisher!));
-        }
-
-        if (!string.IsNullOrWhiteSpace(source?.Series))
-        {
-            pairs.Add(new("Series", source!.SeriesIndex is null
-                ? source.Series!
-                : $"{source.Series} #{source.SeriesIndex:0.##}"));
-        }
-        else if (!string.IsNullOrWhiteSpace(SelectedBook.Series))
-        {
-            pairs.Add(new("Series", SelectedBook.SeriesIndex is null
-                ? SelectedBook.Series!
-                : $"{SelectedBook.Series} #{SelectedBook.SeriesIndex:0.##}"));
-        }
-
-        pairs.Add(new("Format", source?.Format.ToString().ToUpperInvariant() ?? SelectedBook.FormatText));
-
-        var tags = source?.Tags.Count > 0
-            ? string.Join(", ", source.Tags)
-            : SelectedBook.Tags.Count > 0
-                ? SelectedBook.TagsText
-                : null;
-        if (!string.IsNullOrWhiteSpace(tags))
-        {
-            pairs.Add(new("Genres", tags));
-        }
-
-        pairs.Add(new("Size", FormatSizeInMegabytes(SelectedBook.SizeBytes)));
-        return pairs;
-    }
-
-    private static string BuildAuthorsText(IReadOnlyList<string> authors) =>
-        authors.Count == 0 ? "Unknown author" : string.Join(", ", authors);
-
     private static string FormatBookCount(ulong bookCount) =>
         bookCount == 1 ? "1 book" : $"{bookCount:N0} books";
-
-    private static string TruncateTitle(string? title, int maxLength = 40)
-    {
-        if (string.IsNullOrEmpty(title) || title.Length <= maxLength)
-            return title ?? string.Empty;
-        return string.Concat(title.AsSpan(0, maxLength), "…");
-    }
 
     private static string FormatSizeInMegabytes(ulong sizeBytes)
     {
@@ -1109,93 +913,20 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             : baseText;
     }
 
-    private BookFormatModel? SelectedBookFormat => SelectedBookDetails?.Format ?? SelectedBook?.Format;
-
-    private string BuildSuggestedExportFileName(BookFormatModel? exportFormat)
+    private void SyncHasMoreResults(bool previousValue)
     {
-        const string fallbackBaseName = "book";
-
-        var title = SanitizeFileNamePart(SelectedBookDetails?.Title ?? SelectedBook?.Title);
-        var authors = SanitizeFileNamePart(
-            SelectedBookDetails is not null
-                ? BuildAuthorsText(SelectedBookDetails.Authors)
-                : SelectedBook?.AuthorsText);
-
-        var baseName = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(authors)
-            ? $"{title} - {authors}"
-            : !string.IsNullOrWhiteSpace(title)
-                ? title
-                : !string.IsNullOrWhiteSpace(authors)
-                    ? authors
-                    : fallbackBaseName;
-
-        var extension = exportFormat switch
+        if (previousValue == _browseState.HasMoreResults)
         {
-            BookFormatModel.Fb2 => ".fb2",
-            BookFormatModel.Epub => ".epub",
-            _ => (SelectedBookDetails?.Format ?? SelectedBook?.Format) switch
-            {
-                BookFormatModel.Fb2 => ".fb2",
-                BookFormatModel.Epub => ".epub",
-                _ => null
-            }
-        };
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            extension = ".epub";
+            return;
         }
 
-        return baseName + extension.ToLowerInvariant();
-    }
-
-    private static string SanitizeFileNamePart(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        var builder = new StringBuilder(value.Length);
-        var invalidCharacters = Path.GetInvalidFileNameChars();
-        var previousWasWhitespace = false;
-
-        foreach (var character in value.Trim())
-        {
-            if (Array.IndexOf(invalidCharacters, character) >= 0 || char.IsControl(character))
-            {
-                if (!previousWasWhitespace && builder.Length > 0)
-                {
-                    builder.Append(' ');
-                    previousWasWhitespace = true;
-                }
-
-                continue;
-            }
-
-            if (char.IsWhiteSpace(character))
-            {
-                if (!previousWasWhitespace && builder.Length > 0)
-                {
-                    builder.Append(' ');
-                    previousWasWhitespace = true;
-                }
-
-                continue;
-            }
-
-            builder.Append(character);
-            previousWasWhitespace = false;
-        }
-
-        return builder.ToString().Trim(' ', '.');
+        RaisePropertyChanged(nameof(HasMoreResults));
     }
 
     private static void ApplySelectionStyle(BookListItemModel item, bool isSelected)
     {
-        item.CardBackgroundBrush = isSelected ? SelectedCardBackground : DefaultCardBackground;
-        item.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
-        item.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
+        item.CardPresentation.CardBackgroundBrush = isSelected ? SelectedCardBackground : DefaultCardBackground;
+        item.CardPresentation.CardBorderBrush = isSelected ? SelectedCardBorder : DefaultCardBorder;
+        item.CardPresentation.CardBorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
     }
 }
-
-internal sealed record MetadataPair(string Label, string Value);

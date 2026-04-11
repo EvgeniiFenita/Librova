@@ -37,7 +37,7 @@ internal sealed class ShellStateStore : IShellStateStore
         }
         catch (Exception error)
         {
-            UiLogging.Warning("Failed to load UI shell state from {FilePath}: {Error}", FilePath, error.Message);
+            UiLogging.Warning(error, "Failed to load UI shell state from {FilePath}", FilePath);
             return null;
         }
     }

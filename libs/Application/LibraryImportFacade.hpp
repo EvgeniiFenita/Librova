@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <stop_token>
 #include <string>
@@ -8,6 +9,9 @@
 
 #include "Domain/BookRepository.hpp"
 #include "Domain/ServiceContracts.hpp"
+#include "ImportRollbackService.hpp"
+#include "ImportWorkloadPlanner.hpp"
+#include "StructuredProgressMapper.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
@@ -73,35 +77,44 @@ struct SImportResult
     }
 };
 
+struct SImportSourceValidation
+{
+    std::optional<std::string> BlockingMessage;
+
+    [[nodiscard]] bool HasBlockingError() const noexcept
+    {
+        return BlockingMessage.has_value() && !BlockingMessage->empty();
+    }
+};
+
+struct SLibraryImportContext
+{
+    std::filesystem::path LibraryRoot;
+};
+
 class CLibraryImportFacade final
 {
 public:
     CLibraryImportFacade(
         const Librova::Importing::ISingleFileImporter& singleFileImporter,
         const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator,
-        Librova::Domain::IBookRepository* bookRepository = nullptr,
-        std::filesystem::path libraryRoot = {});
+        Librova::Domain::IBookRepository& bookRepository,
+        SLibraryImportContext libraryContext);
 
     [[nodiscard]] SImportResult Run(
         const SImportRequest& request,
         Librova::Domain::IProgressSink& progressSink,
         std::stop_token stopToken) const;
+    [[nodiscard]] SImportSourceValidation ValidateImportSources(
+        const std::vector<std::filesystem::path>& sourcePaths) const;
 
 private:
-    struct SRollbackResult
-    {
-        std::vector<Librova::Domain::SBookId> RemainingBookIds;
-        std::vector<std::string> Warnings;
-        bool HasCleanupResidue = false;
-    };
-
     [[nodiscard]] static bool IsZipPath(const std::filesystem::path& path);
-    [[nodiscard]] SRollbackResult RollbackImportedBooks(
-        const std::vector<Librova::Domain::SBookId>& importedBookIds) const;
 
     const Librova::Importing::ISingleFileImporter& m_singleFileImporter;
     const Librova::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
-    Librova::Domain::IBookRepository* m_bookRepository = nullptr;
+    CImportWorkloadPlanner m_workloadPlanner;
+    CImportRollbackService m_rollbackService;
     std::filesystem::path m_libraryRoot;
 };
 

@@ -67,6 +67,7 @@ public sealed class StrongIntegrationTests
                 "Strugatsky");
             application.Shell.ImportJobs.WorkingDirectory = Path.Combine(sandboxRoot, "UiWork");
 
+            await WaitForConditionAsync(() => application.Shell.ImportJobs.StartImportCommand.CanExecute(null));
             await application.Shell.ImportJobs.StartImportCommand.ExecuteAsyncForTests();
 
             Assert.Single(application.Shell.LibraryBrowser.Books);
@@ -123,7 +124,11 @@ public sealed class StrongIntegrationTests
             Assert.Equal(2, application.Shell.LibraryBrowser.Books.Count);
             Assert.All(application.Shell.LibraryBrowser.Books, book => Assert.Equal("Duplicated Book", book.Title));
             Assert.Equal(2, application.Shell.LibraryBrowser.Books.Select(book => book.BookId).Distinct().Count());
-            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Select(book => book.ManagedPath).Distinct().Count());
+            Assert.All(application.Shell.LibraryBrowser.Books, book =>
+            {
+                Assert.NotEmpty(book.ManagedFileName);
+                Assert.Equal(book.ManagedFileName, book.ManagedPath);
+            });
             Assert.Contains("Completed", application.Shell.ImportJobs.StatusText, StringComparison.OrdinalIgnoreCase);
         }
         finally
@@ -557,14 +562,16 @@ public sealed class StrongIntegrationTests
             preferencesStore: new UiPreferencesStore(Path.Combine(sandboxRoot, "ui-preferences.json")));
 
     [Fact]
-    public async Task LibraryBrowserViewModel_ImportedBook_HasForwardSlashManagedPathAndNonEmptySha256AgainstRealHost()
+    public async Task LibraryBrowserViewModel_ImportedBook_ExposesSafeStorageMetadataAgainstRealHost()
     {
-        // End-to-end regression guard for C23 (relative paths) and C26 (SHA-256).
+        // End-to-end regression guard for C26 (SHA-256 presence),
+        // and Wave 6.2 additive presentation-safe transport fields.
         // Verifies that:
-        //   1. The ManagedPath stored via IPC and returned in the catalog uses
-        //      forward slashes (PathToUtf8 + generic_u8string contract).
-        //   2. SHA-256 is computed during the import pipeline and stored non-empty
-        //      in the book record that is returned by GetBookDetails.
+        //   1. The UI-facing model exposes safe filename metadata instead of
+        //      the raw managed storage path.
+        //   2. SHA-256 presence is surfaced without returning the raw hash.
+        //   3. Cover availability remains resolvable without transporting the
+        //      managed cover path.
         var sandboxRoot = CreateSandboxRoot("browser-sha256-path-format");
         Directory.CreateDirectory(sandboxRoot);
 
@@ -588,19 +595,17 @@ public sealed class StrongIntegrationTests
 
             var book = Assert.Single(viewModel.Books);
 
-            // ManagedPath from BookListItem must use forward slashes
-            Assert.DoesNotContain('\\', book.ManagedPath);
-            Assert.Contains('/', book.ManagedPath);
+            Assert.NotEmpty(book.ManagedFileName);
+            Assert.Equal(book.ManagedFileName, book.ManagedPath);
+            Assert.False(book.HasCoverResource);
 
-            // Load full details to access Sha256Hex
             await viewModel.ToggleSelectedBookAsync(book);
             Assert.NotNull(viewModel.SelectedBookDetails);
 
-            // SHA-256 must be non-empty: computed by the import pipeline for all paths
-            Assert.NotEmpty(viewModel.SelectedBookDetails!.Sha256Hex);
-
-            // ManagedPath from BookDetails must also use forward slashes
-            Assert.DoesNotContain('\\', viewModel.SelectedBookDetails.ManagedPath);
+            Assert.True(viewModel.SelectedBookDetails.HasContentHash);
+            Assert.NotEmpty(viewModel.SelectedBookDetails.ManagedFileName);
+            Assert.Equal(viewModel.SelectedBookDetails.ManagedFileName, viewModel.SelectedBookDetails.ManagedPath);
+            Assert.False(viewModel.SelectedBookDetails.HasCoverResource);
         }
         finally
         {
@@ -840,6 +845,22 @@ public sealed class StrongIntegrationTests
             FileShare.ReadWrite | FileShare.Delete);
         using var reader = new StreamReader(stream);
         return await reader.ReadToEndAsync(cancellationToken);
+    }
+
+    private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMilliseconds = 3000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        Assert.True(condition(), "Timed out while waiting for condition.");
     }
 
     private static IReadOnlyList<string> EnumerateAllFiles(string root) =>

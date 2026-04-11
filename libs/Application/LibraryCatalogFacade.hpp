@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -46,11 +47,19 @@ struct SBookListItem
     std::chrono::system_clock::time_point AddedAtUtc{};
 };
 
+struct SLibraryStatistics
+{
+    std::uint64_t BookCount = 0;
+    std::uint64_t TotalManagedBookSizeBytes = 0;
+    std::uint64_t TotalLibrarySizeBytes = 0;
+};
+
 struct SBookListResult
 {
     std::vector<SBookListItem> Items;
     std::uint64_t TotalCount = 0;
     std::vector<std::string> AvailableLanguages;
+    SLibraryStatistics Statistics;
 
     [[nodiscard]] bool IsEmpty() const noexcept
     {
@@ -80,19 +89,12 @@ struct SBookDetails
     std::chrono::system_clock::time_point AddedAtUtc{};
 };
 
-struct SLibraryStatistics
-{
-    std::uint64_t BookCount = 0;
-    std::uint64_t TotalManagedBookSizeBytes = 0;
-    std::uint64_t TotalLibrarySizeBytes = 0;
-};
-
 class CLibraryCatalogFacade final
 {
 public:
     CLibraryCatalogFacade(
         const Librova::Domain::IBookQueryRepository& bookQueryRepository,
-        const Librova::Domain::IBookRepository* bookRepository = nullptr);
+        const Librova::Domain::IBookRepository& bookRepository);
 
     [[nodiscard]] SBookListResult ListBooks(const SBookListRequest& request) const;
     [[nodiscard]] std::optional<SBookDetails> GetBookDetails(Librova::Domain::SBookId id) const;
@@ -104,7 +106,7 @@ private:
     [[nodiscard]] static SBookDetails ToDetails(const Librova::Domain::SBook& book);
 
     const Librova::Domain::IBookQueryRepository& m_bookQueryRepository;
-    const Librova::Domain::IBookRepository* m_bookRepository;
+    const Librova::Domain::IBookRepository& m_bookRepository;
 };
 
 } // namespace Librova::Application

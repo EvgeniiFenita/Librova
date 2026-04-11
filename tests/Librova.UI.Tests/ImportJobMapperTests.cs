@@ -103,4 +103,96 @@ public sealed class ImportJobMapperTests
         Assert.Contains("ImportMode", error.Message, StringComparison.Ordinal);
         Assert.Contains("summary mode", error.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Mapper_ThrowsStructuredDomainExceptionForCancelError()
+    {
+        var error = Assert.Throws<ImportJobDomainException>(() =>
+            ImportJobMapper.FromProto(new CancelImportJobResponse
+            {
+                Accepted = false,
+                Error = new DomainError
+                {
+                    Code = ErrorCode.NotFound,
+                    Message = "Import job 42 was not found for cancellation."
+                }
+            }));
+
+        Assert.Equal(ImportErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Import job 42 was not found for cancellation.", error.Message);
+    }
+
+    [Fact]
+    public void Mapper_ThrowsStructuredDomainExceptionForRemoveError()
+    {
+        var error = Assert.Throws<ImportJobDomainException>(() =>
+            ImportJobMapper.FromProto(new RemoveImportJobResponse
+            {
+                Removed = false,
+                Error = new DomainError
+                {
+                    Code = ErrorCode.NotFound,
+                    Message = "Import job 42 was not found for removal."
+                }
+            }));
+
+        Assert.Equal(ImportErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Import job 42 was not found for removal.", error.Message);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInResult()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ImportJobMapper.FromProto(new ImportJobResult
+            {
+                Snapshot = new ImportJobSnapshot
+                {
+                    JobId = 5,
+                    Status = ImportJobStatus.Completed
+                },
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInCancelResponse()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ImportJobMapper.FromProto(new CancelImportJobResponse
+            {
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_RejectsUnknownDomainErrorCodeInRemoveResponse()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ImportJobMapper.FromProto(new RemoveImportJobResponse
+            {
+                Error = new DomainError
+                {
+                    Code = (ErrorCode)999,
+                    Message = "drift"
+                }
+            }));
+
+        Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
+        Assert.Contains("domain error code", error.Message, StringComparison.Ordinal);
+    }
 }

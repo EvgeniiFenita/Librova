@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 
+#include "Domain/DomainError.hpp"
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
@@ -160,7 +161,9 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
 
     if (!book->File.HasManagedPath())
     {
-        throw std::runtime_error("Book does not have a managed file path.");
+        throw Librova::Domain::CDomainException(
+            Librova::Domain::EDomainErrorCode::IntegrityIssue,
+            "Book does not have a managed file path.");
     }
 
     const auto sourceBookPath = ResolveManagedSourcePathIfPresent(book->File.ManagedPath);

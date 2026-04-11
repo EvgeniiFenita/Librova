@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application/LibraryImportFacade.hpp"
 #include "Application/LibraryCatalogFacade.hpp"
 #include "Application/LibraryExportFacade.hpp"
 #include "Application/LibraryTrashFacade.hpp"
@@ -13,6 +14,7 @@ class CLibraryJobServiceAdapter final
 public:
     CLibraryJobServiceAdapter(
         Librova::ApplicationJobs::CImportJobService& importJobService,
+        const Librova::Application::CLibraryImportFacade& libraryImportFacade,
         const Librova::Application::CLibraryCatalogFacade& libraryCatalogFacade,
         const Librova::Application::CLibraryExportFacade& libraryExportFacade,
         const Librova::Application::CLibraryTrashFacade& libraryTrashFacade);
@@ -44,6 +46,9 @@ public:
     [[nodiscard]] librova::v1::WaitImportJobResponse WaitImportJob(
         const librova::v1::WaitImportJobRequest& request) const;
 
+    [[nodiscard]] librova::v1::ValidateImportSourcesResponse ValidateImportSources(
+        const librova::v1::ValidateImportSourcesRequest& request) const;
+
     [[nodiscard]] librova::v1::CancelImportJobResponse CancelImportJob(
         const librova::v1::CancelImportJobRequest& request) const;
 
@@ -52,6 +57,7 @@ public:
 
 private:
     Librova::ApplicationJobs::CImportJobService& m_importJobService;
+    const Librova::Application::CLibraryImportFacade& m_libraryImportFacade;
     const Librova::Application::CLibraryCatalogFacade& m_libraryCatalogFacade;
     const Librova::Application::CLibraryExportFacade& m_libraryExportFacade;
     const Librova::Application::CLibraryTrashFacade& m_libraryTrashFacade;

@@ -1,4 +1,8 @@
 add_library(LibrovaApplication STATIC
+    ImportRollbackService.cpp
+    ImportRollbackService.hpp
+    ImportWorkloadPlanner.cpp
+    ImportWorkloadPlanner.hpp
     LibraryCatalogFacade.cpp
     LibraryCatalogFacade.hpp
     LibraryExportFacade.cpp
@@ -7,6 +11,8 @@ add_library(LibrovaApplication STATIC
     LibraryImportFacade.hpp
     LibraryTrashFacade.cpp
     LibraryTrashFacade.hpp
+    StructuredProgressMapper.cpp
+    StructuredProgressMapper.hpp
 )
 
 target_include_directories(LibrovaApplication
@@ -18,6 +24,7 @@ target_link_libraries(LibrovaApplication
     PUBLIC
         LibrovaDomain
         LibrovaImporting
+        LibrovaImportSourceExpander
         LibrovaManagedTrash
         LibrovaZipImporting
     PRIVATE

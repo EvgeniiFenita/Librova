@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "Logging/Logging.hpp"
+#include "ProtoMapping/ImportJobProtoMapper.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {
@@ -12,6 +13,22 @@ namespace {
 std::int64_t ToUnixMilliseconds(const std::chrono::system_clock::time_point timePoint)
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()).count();
+}
+
+std::string ToFileNameUtf8(const std::filesystem::path& path)
+{
+    return Librova::Unicode::PathToUtf8(path.filename());
+}
+
+std::string ToExtensionUtf8(const std::filesystem::path& path)
+{
+    const std::string extension = Librova::Unicode::PathToUtf8(path.extension());
+    if (!extension.empty() && extension.front() == '.')
+    {
+        return extension.substr(1);
+    }
+
+    return extension;
 }
 
 } // namespace
@@ -114,9 +131,10 @@ librova::v1::BookListItem CLibraryCatalogProtoMapper::ToProto(
     proto.set_title(item.TitleUtf8);
     proto.set_language(item.Language);
     proto.set_format(ToProto(item.Format));
-    proto.set_managed_path(PathToUtf8(item.ManagedPath));
     proto.set_size_bytes(item.SizeBytes);
     proto.set_added_at_unix_ms(ToUnixMilliseconds(item.AddedAtUtc));
+    proto.set_managed_file_name(ToFileNameUtf8(item.ManagedPath));
+    proto.set_cover_resource_available(item.CoverPath.has_value());
 
     for (const std::string& author : item.AuthorsUtf8)
     {
@@ -145,7 +163,7 @@ librova::v1::BookListItem CLibraryCatalogProtoMapper::ToProto(
 
     if (item.CoverPath.has_value())
     {
-        proto.set_cover_path(PathToUtf8(*item.CoverPath));
+        proto.set_cover_file_extension(ToExtensionUtf8(*item.CoverPath));
     }
 
     return proto;
@@ -156,6 +174,7 @@ librova::v1::ListBooksResponse CLibraryCatalogProtoMapper::ToProtoResponse(
 {
     librova::v1::ListBooksResponse response;
     response.set_total_count(result.TotalCount);
+    *response.mutable_statistics() = ToProto(result.Statistics);
     for (const std::string& language : result.AvailableLanguages)
     {
         response.add_available_languages(language);
@@ -177,10 +196,11 @@ librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
     proto.set_title(details.TitleUtf8);
     proto.set_language(details.Language);
     proto.set_format(ToProto(details.Format));
-    proto.set_managed_path(PathToUtf8(details.ManagedPath));
     proto.set_size_bytes(details.SizeBytes);
-    proto.set_sha256_hex(details.Sha256Hex);
     proto.set_added_at_unix_ms(ToUnixMilliseconds(details.AddedAtUtc));
+    proto.set_managed_file_name(ToFileNameUtf8(details.ManagedPath));
+    proto.set_cover_resource_available(details.CoverPath.has_value());
+    proto.set_content_hash_available(!details.Sha256Hex.empty());
 
     for (const std::string& author : details.AuthorsUtf8)
     {
@@ -229,19 +249,24 @@ librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
 
     if (details.CoverPath.has_value())
     {
-        proto.set_cover_path(PathToUtf8(*details.CoverPath));
+        proto.set_cover_file_extension(ToExtensionUtf8(*details.CoverPath));
     }
 
     return proto;
 }
 
 librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
-    const Librova::Application::SBookDetails* details)
+    const Librova::Application::SBookDetails* details,
+    const Librova::Domain::SDomainError* error)
 {
     librova::v1::GetBookDetailsResponse response;
     if (details != nullptr)
     {
         *response.mutable_details() = ToProto(*details);
+    }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
     }
 
     return response;
@@ -282,19 +307,25 @@ Librova::Application::SExportBookRequest CLibraryCatalogProtoMapper::FromProto(
 }
 
 librova::v1::ExportBookResponse CLibraryCatalogProtoMapper::ToProtoResponse(
-    const std::filesystem::path* exportedPath)
+    const std::filesystem::path* exportedPath,
+    const Librova::Domain::SDomainError* error)
 {
     librova::v1::ExportBookResponse response;
     if (exportedPath != nullptr)
     {
         response.set_exported_path(PathToUtf8(*exportedPath));
     }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
 
     return response;
 }
 
 librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse(
-    const Librova::Application::STrashedBookResult* result)
+    const Librova::Application::STrashedBookResult* result,
+    const Librova::Domain::SDomainError* error)
 {
     librova::v1::MoveBookToTrashResponse response;
     if (result != nullptr)
@@ -305,6 +336,10 @@ librova::v1::MoveBookToTrashResponse CLibraryCatalogProtoMapper::ToProtoResponse
                 ? librova::v1::DELETE_DESTINATION_RECYCLE_BIN
                 : librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
         response.set_has_orphaned_files(result->HasOrphanedFiles);
+    }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
     }
 
     return response;

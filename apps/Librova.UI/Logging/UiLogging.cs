@@ -75,6 +75,12 @@ internal static class UiLogging
         Log.Warning(messageTemplate, propertyValues);
     }
 
+    public static void Warning(Exception exception, string messageTemplate, params object[] propertyValues)
+    {
+        EnsureInitialized();
+        Log.Warning(exception, messageTemplate, propertyValues);
+    }
+
     public static void Error(Exception exception, string messageTemplate, params object[] propertyValues)
     {
         EnsureInitialized();

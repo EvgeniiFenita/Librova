@@ -12,6 +12,14 @@
 
 namespace {
 
+void CloseRepositoryAndRemoveAll(
+    const std::filesystem::path& path,
+    Librova::BookDatabase::CSqliteBookRepository& repository)
+{
+    repository.CloseSession();
+    std::filesystem::remove_all(path);
+}
+
 bool TryCreateDirectorySymlink(const std::filesystem::path& target, const std::filesystem::path& linkPath)
 {
     std::error_code errorCode;
@@ -201,7 +209,7 @@ TEST_CASE("Library trash facade keeps deleted files in managed trash when no rec
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Covers/0000000001.jpg"));
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
 
-    std::filesystem::remove_all(sandbox);
+    CloseRepositoryAndRemoveAll(sandbox, repository);
 }
 
 TEST_CASE("Library trash facade finalizes staged delete into recycle bin when Windows handoff succeeds", "[application][trash]")
@@ -250,7 +258,7 @@ TEST_CASE("Library trash facade finalizes staged delete into recycle bin when Wi
     REQUIRE(std::filesystem::exists(sandbox / "RecycleBin/0000000006.jpg"));
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
 
-    std::filesystem::remove_all(sandbox);
+    CloseRepositoryAndRemoveAll(sandbox, repository);
 }
 
 TEST_CASE("Library trash facade falls back to managed trash when recycle-bin handoff fails", "[application][trash]")
@@ -291,7 +299,7 @@ TEST_CASE("Library trash facade falls back to managed trash when recycle-bin han
     REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000007/book.epub"));
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
 
-    std::filesystem::remove_all(sandbox);
+    CloseRepositoryAndRemoveAll(sandbox, repository);
 }
 
 TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff succeeds after partial staging", "[application][trash]")

@@ -16,6 +16,16 @@ internal sealed class CoreHostProcess : IAsyncDisposable
     private SafeKernelHandle? _jobHandle;
     private SafeKernelHandle? _shutdownEventHandle;
 
+    public CoreHostProcess()
+    {
+    }
+
+    internal CoreHostProcess(SafeKernelHandle? lifetimeJobHandle, SafeKernelHandle? shutdownEventHandle)
+    {
+        _jobHandle = lifetimeJobHandle;
+        _shutdownEventHandle = shutdownEventHandle;
+    }
+
     public async Task StartAsync(CoreHostLaunchOptions options, CancellationToken cancellationToken)
     {
         options.Validate();
@@ -381,10 +391,6 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         _shutdownEventHandle.Dispose();
         _shutdownEventHandle = null;
     }
-
-    internal void SetLifetimeJobHandleForTests(SafeKernelHandle handle) => _jobHandle = handle;
-
-    internal void SetShutdownEventHandleForTests(SafeKernelHandle handle) => _shutdownEventHandle = handle;
 
     private const uint JobObjectExtendedLimitInformation = 9;
     private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;

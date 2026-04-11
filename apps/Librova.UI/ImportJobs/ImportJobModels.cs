@@ -32,7 +32,7 @@ internal enum ImportErrorCodeModel
     DatabaseFailure,
     Cancellation,
     IntegrityIssue,
-    Unknown
+    NotFound
 }
 
 internal sealed class StartImportRequestModel

@@ -34,6 +34,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
+    private CancellationTokenSource? _sourceValidationCancellation;
+    private bool _isValidatingSources;
 
     public event ImportCompletedSuccessfullyHandler? ImportCompletedSuccessfully;
     public event Action<bool>? ImportActivityChanged;
@@ -247,24 +249,28 @@ internal sealed class ImportJobsViewModel : ObservableObject
         };
 
     public void ApplyDroppedSourcePath(string? sourcePath)
-        => ApplyDroppedSourcePaths(string.IsNullOrWhiteSpace(sourcePath) ? [] : [sourcePath]);
+        => ApplyDroppedSourcePathsCore(string.IsNullOrWhiteSpace(sourcePath) ? [] : [sourcePath]);
 
     public void ApplyDroppedSourcePaths(IReadOnlyList<string> sourcePaths)
+        => ApplyDroppedSourcePathsCore(sourcePaths);
+
+    private bool ApplyDroppedSourcePathsCore(IReadOnlyList<string> sourcePaths)
     {
         if (IsBusy)
         {
             UiLogging.Warning("Ignored dropped source paths because an import job is already running.");
-            return;
+            return false;
         }
 
         if (sourcePaths.Count == 0 || sourcePaths.All(string.IsNullOrWhiteSpace))
         {
             UiLogging.Warning("Ignored dropped source paths because they were empty.");
-            return;
+            return false;
         }
 
         SetSourcePaths(sourcePaths);
         UiLogging.Information("Applied {SourceCount} dropped source path(s) to import shell.", SourcePaths.Count);
+        return true;
     }
 
     public Task ApplyDroppedSourcePathAndStartAsync(string? sourcePath)
@@ -272,7 +278,14 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task ApplyDroppedSourcePathsAndStartAsync(IReadOnlyList<string> sourcePaths)
     {
-        ApplyDroppedSourcePaths(sourcePaths);
+        if (!ApplyDroppedSourcePathsCore(sourcePaths))
+        {
+            return;
+        }
+
+        await WaitForSourceValidationAsync();
+
+        LogCanStartImportState("ApplyDroppedSourcePathsAndStartAsync");
 
         if (CanStartImport())
         {
@@ -289,6 +302,17 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task StartImportAsync()
     {
+        await WaitForSourceValidationAsync();
+        if (!CanStartImport())
+        {
+            throw new InvalidOperationException(
+                !string.IsNullOrWhiteSpace(SourceValidationMessage)
+                    ? SourceValidationMessage
+                    : !string.IsNullOrWhiteSpace(WorkingDirectoryValidationMessage)
+                        ? WorkingDirectoryValidationMessage
+                        : "Import request is not valid.");
+        }
+
         IsBusy = true;
         StatusText = "Starting import...";
         ProgressSummaryText = "Preparing import workload...";
@@ -312,7 +336,16 @@ internal sealed class ImportJobsViewModel : ObservableObject
             LastJobId = jobId;
             StatusText = $"Import job {jobId} started.";
             UiLogging.Information("Import job {JobId} started from UI shell.", jobId);
-            await PollUntilCompletedAsync(jobId, _activeImportCancellation.Token);
+            var result = await _importJobsService.WaitForCompletionAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromMilliseconds(250),
+                ApplySnapshot,
+                _activeImportCancellation.Token);
+
+            ApplyTerminalResult(result);
+            LogTerminalResult(jobId, result);
+            await RaiseImportCompletedSuccessfullyAsync(result);
         }
         finally
         {
@@ -362,20 +395,30 @@ internal sealed class ImportJobsViewModel : ObservableObject
             return;
         }
 
+        var jobId = LastJobId.Value;
         var cancellation = _activeImportCancellation ?? new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var accepted = await _importJobsService.CancelAsync(
-            LastJobId.Value,
-            TimeSpan.FromSeconds(5),
-            cancellation.Token);
-
-        if (!ReferenceEquals(cancellation, _activeImportCancellation))
+        try
         {
-            cancellation.Dispose();
-        }
+            var accepted = await _importJobsService.CancelAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
 
-        StatusText = accepted
-            ? $"Import job {LastJobId.Value} cancellation requested."
-            : $"Import job {LastJobId.Value} could not be cancelled.";
+            StatusText = accepted
+                ? $"Import job {jobId} cancellation requested."
+                : $"Import job {jobId} could not be cancelled.";
+        }
+        catch (ImportJobDomainException error) when (error.Error.Code is ImportErrorCodeModel.NotFound)
+        {
+            StatusText = $"Import job {jobId} could not be cancelled.";
+        }
+        finally
+        {
+            if (!ReferenceEquals(cancellation, _activeImportCancellation))
+            {
+                cancellation.Dispose();
+            }
+        }
     }
 
     public async Task RemoveCurrentAsync()
@@ -385,22 +428,29 @@ internal sealed class ImportJobsViewModel : ObservableObject
             return;
         }
 
+        var jobId = LastJobId.Value;
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var removed = await _importJobsService.RemoveAsync(
-            LastJobId.Value,
-            TimeSpan.FromSeconds(5),
-            cancellation.Token);
-
-        if (!removed)
+        try
         {
-            StatusText = $"Import job {LastJobId.Value} could not be removed.";
-            return;
-        }
+            var removed = await _importJobsService.RemoveAsync(
+                jobId,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
 
-        var removedJobId = LastJobId.Value;
-        LastJobId = null;
-        LastResult = null;
-        StatusText = $"Import job {removedJobId} was removed.";
+            if (!removed)
+            {
+                StatusText = $"Import job {jobId} could not be removed.";
+                return;
+            }
+
+            LastJobId = null;
+            LastResult = null;
+            StatusText = $"Import job {jobId} was removed.";
+        }
+        catch (ImportJobDomainException error) when (error.Error.Code is ImportErrorCodeModel.NotFound)
+        {
+            StatusText = $"Import job {jobId} could not be removed.";
+        }
     }
 
     public async Task BrowseSourceAsync()
@@ -423,6 +473,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
 
         SetSourcePaths(selectedPaths);
+        await WaitForSourceValidationAsync(cancellation.Token);
+        LogCanStartImportState("SelectSourceAndImportAsync");
         if (CanStartImport())
         {
             await StartImportAsync();
@@ -439,6 +491,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
 
         SetSourcePaths([selectedPath]);
+        await WaitForSourceValidationAsync(cancellation.Token);
+        LogCanStartImportState("SelectDirectoryAndImportAsync");
         if (CanStartImport())
         {
             await StartImportAsync();
@@ -452,39 +506,6 @@ internal sealed class ImportJobsViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(selectedPath))
         {
             WorkingDirectory = selectedPath;
-        }
-    }
-
-    private async Task PollUntilCompletedAsync(ulong jobId, CancellationToken cancellationToken)
-    {
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var result = await _importJobsService.TryGetResultAsync(
-                jobId,
-                TimeSpan.FromSeconds(5),
-                cancellationToken);
-
-            if (result is not null)
-            {
-                ApplyTerminalResult(result);
-                LogTerminalResult(jobId, result);
-                await RaiseImportCompletedSuccessfullyAsync(result);
-                return;
-            }
-
-            var snapshot = await _importJobsService.TryGetSnapshotAsync(
-                jobId,
-                TimeSpan.FromSeconds(5),
-                cancellationToken);
-
-            if (snapshot is not null)
-            {
-                ApplySnapshot(snapshot);
-            }
-
-            await Task.Delay(200, cancellationToken);
         }
     }
 
@@ -637,10 +658,30 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private bool CanStartImport() =>
         !IsBusy
+        && !_isValidatingSources
         && SourcePaths.Count > 0
         && !string.IsNullOrWhiteSpace(WorkingDirectory)
         && !HasSourceValidationError
         && !HasWorkingDirectoryValidationError;
+
+    private void LogCanStartImportState(string caller)
+    {
+        if (CanStartImport())
+        {
+            UiLogging.Information("{Caller}: CanStartImport=true.", caller);
+            return;
+        }
+
+        UiLogging.Warning(
+            "{Caller}: CanStartImport=false. IsBusy={IsBusy} IsValidating={IsValidating} PathCount={PathCount} WorkDir={WorkDir} SourceValidation={SourceMsg} WdValidation={WdMsg}",
+            caller,
+            IsBusy,
+            _isValidatingSources,
+            SourcePaths.Count,
+            WorkingDirectory.Length == 0 ? "<empty>" : WorkingDirectory,
+            SourceValidationMessage.Length == 0 ? "<ok>" : SourceValidationMessage,
+            WorkingDirectoryValidationMessage.Length == 0 ? "<ok>" : WorkingDirectoryValidationMessage);
+    }
 
     private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
 
@@ -650,15 +691,27 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private void UpdateValidationState()
     {
-        SourceValidationMessage = BuildSourceValidationMessage(SourcePaths);
-        WorkingDirectoryValidationMessage = BuildWorkingDirectoryValidationMessage(WorkingDirectory);
-        RaisePropertyChanged(nameof(HasSourceValidationError));
-        RaisePropertyChanged(nameof(HasWorkingDirectoryValidationError));
-        RaisePropertyChanged(nameof(ShowSourceHelperText));
-        RaisePropertyChanged(nameof(ShowWorkingDirectoryHelperText));
+        var localMsg = BuildLocalSourceValidationMessage(SourcePaths);
+        UiLogging.Information(
+            "UpdateValidationState: paths={PathCount} localMsg={LocalMsg} workDir={WorkDir}",
+            SourcePaths.Count,
+            localMsg.Length == 0 ? "<ok>" : localMsg,
+            WorkingDirectory.Length == 0 ? "<empty>" : WorkingDirectory);
+        UpdateSourceValidationMessage(localMsg);
+        UpdateWorkingDirectoryValidationMessage(BuildWorkingDirectoryValidationMessage(WorkingDirectory));
+
+        if (SourcePaths.Count == 0 || HasSourceValidationError)
+        {
+            CancelAndDisposeSourceValidation();
+            _isValidatingSources = false;
+            StartImportCommand.RaiseCanExecuteChanged();
+            return;
+        }
+
+        _ = RefreshSourceValidationAsync(SourcePaths);
     }
 
-    private static string BuildSourceValidationMessage(IReadOnlyList<string> sourcePaths)
+    private static string BuildLocalSourceValidationMessage(IReadOnlyList<string> sourcePaths)
     {
         if (sourcePaths.Count == 0)
         {
@@ -691,15 +744,6 @@ internal sealed class ImportJobsViewModel : ObservableObject
             if (!File.Exists(sourcePath))
             {
                 firstBlockingMessage ??= "A selected source does not exist.";
-                continue;
-            }
-
-            var extension = Path.GetExtension(sourcePath);
-            if (!extension.Equals(".fb2", StringComparison.OrdinalIgnoreCase)
-                && !extension.Equals(".epub", StringComparison.OrdinalIgnoreCase)
-                && !extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                firstBlockingMessage ??= "Supported source types are .fb2, .epub, and .zip, or a directory containing them.";
                 continue;
             }
 
@@ -736,5 +780,94 @@ internal sealed class ImportJobsViewModel : ObservableObject
             .Select(path => path.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private async Task RefreshSourceValidationAsync(IReadOnlyList<string> sourcePaths)
+    {
+        CancelAndDisposeSourceValidation();
+        _sourceValidationCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var validationCancellation = _sourceValidationCancellation;
+        _isValidatingSources = true;
+        StartImportCommand.RaiseCanExecuteChanged();
+
+        try
+        {
+            var blockingMessage = await _importJobsService.ValidateSourcesAsync(
+                sourcePaths,
+                TimeSpan.FromSeconds(5),
+                validationCancellation.Token);
+
+            UiLogging.Information(
+                "Remote source validation result: msg={Msg}",
+                blockingMessage.Length == 0 ? "<ok>" : blockingMessage);
+
+            if (ReferenceEquals(_sourceValidationCancellation, validationCancellation) && IsCurrentSourceValidation(sourcePaths))
+            {
+                UpdateSourceValidationMessage(blockingMessage);
+            }
+        }
+        catch (OperationCanceledException) when (validationCancellation.IsCancellationRequested)
+        {
+            UiLogging.Information("Remote source validation was cancelled.");
+        }
+        catch (Exception error)
+        {
+            UiLogging.Warning(error, "Remote source validation threw an unexpected exception.");
+            if (ReferenceEquals(_sourceValidationCancellation, validationCancellation) && IsCurrentSourceValidation(sourcePaths))
+            {
+                UpdateSourceValidationMessage(
+                    string.IsNullOrWhiteSpace(error.Message)
+                        ? "Failed to validate selected sources."
+                        : error.Message);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_sourceValidationCancellation, validationCancellation) && IsCurrentSourceValidation(sourcePaths))
+            {
+                CancelAndDisposeSourceValidation();
+                _isValidatingSources = false;
+                StartImportCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    private async Task WaitForSourceValidationAsync(CancellationToken ct = default)
+    {
+        while (_isValidatingSources)
+        {
+            await Task.Delay(10, ct);
+        }
+    }
+
+    private bool IsCurrentSourceValidation(IReadOnlyList<string> sourcePaths) =>
+        SourcePaths.SequenceEqual(sourcePaths, StringComparer.Ordinal);
+
+    private void UpdateSourceValidationMessage(string message)
+    {
+        SourceValidationMessage = message;
+        RaisePropertyChanged(nameof(HasSourceValidationError));
+        RaisePropertyChanged(nameof(ShowSourceHelperText));
+        StartImportCommand.RaiseCanExecuteChanged();
+    }
+
+    private void UpdateWorkingDirectoryValidationMessage(string message)
+    {
+        WorkingDirectoryValidationMessage = message;
+        RaisePropertyChanged(nameof(HasWorkingDirectoryValidationError));
+        RaisePropertyChanged(nameof(ShowWorkingDirectoryHelperText));
+        StartImportCommand.RaiseCanExecuteChanged();
+    }
+
+    private void CancelAndDisposeSourceValidation()
+    {
+        if (_sourceValidationCancellation is null)
+        {
+            return;
+        }
+
+        _sourceValidationCancellation.Cancel();
+        _sourceValidationCancellation.Dispose();
+        _sourceValidationCancellation = null;
     }
 }

@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "Application/LibraryImportFacade.hpp"
+#include "Domain/BookRepository.hpp"
 #include "Jobs/ImportJobManager.hpp"
 
 namespace {
@@ -70,6 +71,34 @@ private:
     mutable bool Started = false;
 };
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
 struct SImportSandbox
 {
     std::filesystem::path Root;
@@ -95,12 +124,17 @@ SImportSandbox CreateImportSandbox(const std::string_view scenario)
 
 TEST_CASE("Import job manager stores completed result for finished import", "[jobs][manager]")
 {
+    const auto sandbox = CreateImportSandbox("completed");
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
-    const auto sandbox = CreateImportSandbox("completed");
 
     const auto handle = manager.Start({
         .SourcePaths = {sandbox.SourcePath},
@@ -124,12 +158,17 @@ TEST_CASE("Import job manager stores completed result for finished import", "[jo
 
 TEST_CASE("Import job manager cancels a running job", "[jobs][manager]")
 {
+    const auto sandbox = CreateImportSandbox("cancel");
     CBlockingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
-    const auto sandbox = CreateImportSandbox("cancel");
 
     const auto handle = manager.Start({
         .SourcePaths = {sandbox.SourcePath},
@@ -159,7 +198,12 @@ TEST_CASE("Import job manager returns empty results for unknown job id", "[jobs]
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
 
@@ -171,12 +215,17 @@ TEST_CASE("Import job manager returns empty results for unknown job id", "[jobs]
 
 TEST_CASE("Import job manager can remove completed jobs", "[jobs][manager]")
 {
+    const auto sandbox = CreateImportSandbox("remove");
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
-    const auto sandbox = CreateImportSandbox("remove");
 
     const auto handle = manager.Start({
         .SourcePaths = {sandbox.SourcePath},
@@ -193,12 +242,17 @@ TEST_CASE("Import job manager can remove completed jobs", "[jobs][manager]")
 
 TEST_CASE("Import job manager does not remove running jobs", "[jobs][manager]")
 {
+    const auto sandbox = CreateImportSandbox("running-remove");
     CBlockingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sandbox.Root});
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
-    const auto sandbox = CreateImportSandbox("running-remove");
 
     const auto handle = manager.Start({
         .SourcePaths = {sandbox.SourcePath},

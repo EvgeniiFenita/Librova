@@ -135,11 +135,9 @@ public sealed class CoreHostProcessTests
     [Fact]
     public async Task DisposeAsync_ReleasesInjectedKernelHandlesWhenProcessWasNeverAssigned()
     {
-        var process = new CoreHostProcess();
         var jobHandle = new TestSafeKernelHandle(new IntPtr(1));
         var shutdownEventHandle = new TestSafeKernelHandle(new IntPtr(2));
-        process.SetLifetimeJobHandleForTests(jobHandle);
-        process.SetShutdownEventHandleForTests(shutdownEventHandle);
+        var process = new CoreHostProcess(jobHandle, shutdownEventHandle);
 
         await process.DisposeAsync();
 

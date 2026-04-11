@@ -135,6 +135,12 @@ public:
     }
 };
 
+Librova::Domain::IBookRepository& GetEmptyBookRepository()
+{
+    static CEmptyBookRepository repository;
+    return repository;
+}
+
 std::filesystem::path CreateImportSourcePath()
 {
     const auto root = std::filesystem::temp_directory_path() / "librova-pipe-client-import";
@@ -149,19 +155,24 @@ std::filesystem::path CreateImportSourcePath()
 
 TEST_CASE("Named pipe client performs typed StartImport call through host", "[pipe-client]")
 {
+    const auto sourcePath = CreateImportSourcePath();
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
     const CEmptyQueryRepository queryRepository;
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
     CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        bookRepository,
+        {.LibraryRoot = sourcePath.parent_path()});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, bookRepository);
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
     Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
@@ -187,8 +198,6 @@ TEST_CASE("Named pipe client performs typed StartImport call through host", "[pi
     readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
-    const auto sourcePath = CreateImportSourcePath();
-
     librova::v1::StartImportRequest request;
     auto* import = request.mutable_import();
     import->add_source_paths(sourcePath.string());
@@ -254,9 +263,13 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
 {
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
-    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
     const CStatisticsQueryRepository queryRepository;
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
     CEmptyBookRepository bookRepository;
     Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
@@ -264,7 +277,7 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
     Librova::Jobs::CImportJobRunner runner(facade);
     Librova::Jobs::CImportJobManager manager(runner);
     Librova::ApplicationJobs::CImportJobService service(manager);
-    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, catalogFacade, exportFacade, trashFacade);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
     Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
     Librova::PipeHost::CNamedPipeHost host(dispatcher);
 
@@ -304,4 +317,70 @@ TEST_CASE("Named pipe client performs typed GetLibraryStatistics call through ho
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
+}
+
+TEST_CASE("Named pipe client performs typed ValidateImportSources call through host", "[pipe-client]")
+{
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    const CEmptyQueryRepository queryRepository;
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, GetEmptyBookRepository());
+    CEmptyBookRepository bookRepository;
+    Librova::Application::CLibraryExportFacade exportFacade(bookRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(bookRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+    Librova::PipeHost::CNamedPipeHost host(dispatcher);
+
+    const auto pipePath = BuildTestPipePath();
+    std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
+
+    std::jthread serverThread([&] {
+        try
+        {
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
+            host.RunSingleSession(server.WaitForClient());
+        }
+        catch (...)
+        {
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
+        }
+    });
+
+    readySignal.Wait();
+
+    Librova::PipeClient::CNamedPipeClient client(pipePath);
+    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-client-validate";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root);
+    const auto unsupportedPath = root / "notes.txt";
+    std::ofstream(unsupportedPath).put('x');
+
+    librova::v1::ValidateImportSourcesRequest request;
+    request.add_source_paths(unsupportedPath.string());
+
+    const auto response = client.Call<librova::v1::ValidateImportSourcesRequest, librova::v1::ValidateImportSourcesResponse>(
+        Librova::PipeTransport::EPipeMethod::ValidateImportSources,
+        request,
+        std::chrono::seconds(2));
+
+    REQUIRE(response.has_blocking_message());
+    REQUIRE(response.blocking_message() == "Supported source types are .fb2, .epub, and .zip, or a directory containing them.");
+
+    serverThread.join();
+    REQUIRE(serverFailure == nullptr);
+    std::filesystem::remove_all(root);
 }

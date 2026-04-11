@@ -2,12 +2,13 @@ using Google.Protobuf;
 using Librova.V1;
 using Librova.UI.PipeTransport;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Librova.UI.ImportJobs;
 
-internal sealed class ImportJobClient
+internal class ImportJobClient
 {
     private readonly NamedPipeClient _pipeClient;
 
@@ -16,7 +17,7 @@ internal sealed class ImportJobClient
         _pipeClient = new NamedPipeClient(pipePath);
     }
 
-    public async Task<ulong> StartImportAsync(
+    public virtual async Task<ulong> StartImportAsync(
         ImportRequest importRequest,
         TimeSpan timeout,
         CancellationToken cancellationToken)
@@ -36,7 +37,7 @@ internal sealed class ImportJobClient
         return response.JobId;
     }
 
-    public Task<GetImportJobSnapshotResponse> GetSnapshotAsync(
+    public virtual Task<GetImportJobSnapshotResponse> GetSnapshotAsync(
         ulong jobId,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
@@ -47,7 +48,7 @@ internal sealed class ImportJobClient
             timeout,
             cancellationToken);
 
-    public Task<GetImportJobResultResponse> GetResultAsync(
+    public virtual Task<GetImportJobResultResponse> GetResultAsync(
         ulong jobId,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
@@ -58,7 +59,7 @@ internal sealed class ImportJobClient
             timeout,
             cancellationToken);
 
-    public Task<WaitImportJobResponse> WaitAsync(
+    public virtual Task<WaitImportJobResponse> WaitAsync(
         ulong jobId,
         TimeSpan timeout,
         TimeSpan waitTimeout,
@@ -74,7 +75,23 @@ internal sealed class ImportJobClient
             timeout,
             cancellationToken);
 
-    public Task<CancelImportJobResponse> CancelAsync(
+    public virtual Task<ValidateImportSourcesResponse> ValidateSourcesAsync(
+        IReadOnlyList<string> sourcePaths,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var request = new ValidateImportSourcesRequest();
+        request.SourcePaths.AddRange(sourcePaths);
+
+        return _pipeClient.CallAsync(
+            PipeMethod.ValidateImportSources,
+            request,
+            ValidateImportSourcesResponse.Parser,
+            timeout,
+            cancellationToken);
+    }
+
+    public virtual Task<CancelImportJobResponse> CancelAsync(
         ulong jobId,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>
@@ -85,7 +102,7 @@ internal sealed class ImportJobClient
             timeout,
             cancellationToken);
 
-    public Task<RemoveImportJobResponse> RemoveAsync(
+    public virtual Task<RemoveImportJobResponse> RemoveAsync(
         ulong jobId,
         TimeSpan timeout,
         CancellationToken cancellationToken) =>

@@ -59,6 +59,9 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     response.set_total_count(77);
     response.add_available_languages("en");
     response.add_available_languages("ru");
+    response.mutable_statistics()->set_book_count(77);
+    response.mutable_statistics()->set_total_managed_book_size_bytes(4096);
+    response.mutable_statistics()->set_total_library_size_bytes(8192);
     auto* item = response.add_items();
     item->set_book_id(101);
     item->set_title("Roadside Picnic");
@@ -69,8 +72,9 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     item->set_year(1972);
     item->add_tags("classic");
     item->set_format(librova::v1::BOOK_FORMAT_EPUB);
-    item->set_managed_path("Books/0000000101/book.epub");
-    item->set_cover_path("Covers/0000000101.jpg");
+    item->set_managed_file_name("book.epub");
+    item->set_cover_resource_available(true);
+    item->set_cover_file_extension("jpg");
     item->set_size_bytes(4096);
     item->set_added_at_unix_ms(1711807200000LL);
 
@@ -82,9 +86,14 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     REQUIRE(parsed.available_languages_size() == 2);
     REQUIRE(parsed.available_languages(0) == "en");
     REQUIRE(parsed.available_languages(1) == "ru");
+    REQUIRE(parsed.has_statistics());
+    REQUIRE(parsed.statistics().book_count() == 77);
+    REQUIRE(parsed.statistics().total_library_size_bytes() == 8192);
     REQUIRE(parsed.items_size() == 1);
     REQUIRE(parsed.items(0).book_id() == 101);
     REQUIRE(parsed.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
     REQUIRE(parsed.items(0).authors_size() == 1);
-    REQUIRE(parsed.items(0).has_cover_path());
+    REQUIRE(parsed.items(0).managed_file_name() == "book.epub");
+    REQUIRE(parsed.items(0).cover_resource_available());
+    REQUIRE(parsed.items(0).cover_file_extension() == "jpg");
 }

@@ -61,6 +61,12 @@ SPipeResponseEnvelope CPipeRequestDispatcher::Dispatch(const SPipeRequestEnvelop
             [this](const auto& typedRequest) {
                 return m_adapter.WaitImportJob(typedRequest);
             });
+    case EPipeMethod::ValidateImportSources:
+        return DispatchTyped<librova::v1::ValidateImportSourcesRequest, librova::v1::ValidateImportSourcesResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.ValidateImportSources(typedRequest);
+            });
     case EPipeMethod::CancelImportJob:
         return DispatchTyped<librova::v1::CancelImportJobRequest, librova::v1::CancelImportJobResponse>(
             request,

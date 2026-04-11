@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,10 +22,22 @@ internal interface IImportJobsService
         TimeSpan timeout,
         CancellationToken cancellationToken);
 
+    Task<string> ValidateSourcesAsync(
+        IReadOnlyList<string> sourcePaths,
+        TimeSpan timeout,
+        CancellationToken cancellationToken);
+
     Task<bool> WaitAsync(
         ulong jobId,
         TimeSpan timeout,
         TimeSpan waitTimeout,
+        CancellationToken cancellationToken);
+
+    Task<ImportJobResultModel> WaitForCompletionAsync(
+        ulong jobId,
+        TimeSpan timeout,
+        TimeSpan waitTimeout,
+        Action<ImportJobSnapshotModel>? onProgress,
         CancellationToken cancellationToken);
 
     Task<bool> CancelAsync(

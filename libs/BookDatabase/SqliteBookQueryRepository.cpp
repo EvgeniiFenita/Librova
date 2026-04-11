@@ -892,13 +892,16 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
     const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
     const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(coversRoot);
 
-    if (m_statisticsCache.has_value()
-        && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
-        && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
-        && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
-        && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
     {
-        return m_statisticsCache->Statistics;
+        const std::scoped_lock cacheLock(m_statisticsCacheMutex);
+        if (m_statisticsCache.has_value()
+            && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
+            && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
+        {
+            return m_statisticsCache->Statistics;
+        }
     }
 
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
@@ -921,15 +924,27 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
         .TotalLibrarySizeBytes = totalManagedBookSizeBytes + totalCoverSizeBytes + databaseSizeBytes
     };
 
-    m_statisticsCache = SStatisticsCache{
-        .DatabaseLastWriteTime = databaseLastWriteTime,
-        .CoverDirectorySnapshot = {
-            .FileCount = coverDirectorySnapshot.FileCount,
-            .TotalSizeBytes = coverDirectorySnapshot.TotalSizeBytes,
-            .LatestWriteTime = coverDirectorySnapshot.LatestWriteTime
-        },
-        .Statistics = statistics
-    };
+    {
+        const std::scoped_lock cacheLock(m_statisticsCacheMutex);
+        if (m_statisticsCache.has_value()
+            && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
+            && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
+        {
+            return m_statisticsCache->Statistics;
+        }
+
+        m_statisticsCache = SStatisticsCache{
+            .DatabaseLastWriteTime = databaseLastWriteTime,
+            .CoverDirectorySnapshot = {
+                .FileCount = coverDirectorySnapshot.FileCount,
+                .TotalSizeBytes = coverDirectorySnapshot.TotalSizeBytes,
+                .LatestWriteTime = coverDirectorySnapshot.LatestWriteTime
+            },
+            .Statistics = statistics
+        };
+    }
 
     return statistics;
 }

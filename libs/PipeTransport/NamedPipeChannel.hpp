@@ -25,6 +25,7 @@ public:
 
     [[nodiscard]] bool IsOpen() const noexcept;
     void WriteMessage(const std::vector<std::byte>& bytes) const;
+    void WriteMessage(const std::vector<std::byte>& bytes, std::chrono::milliseconds timeout) const;
     [[nodiscard]] std::vector<std::byte> ReadMessage() const;
     [[nodiscard]] std::vector<std::byte> ReadMessage(std::chrono::milliseconds timeout) const;
 

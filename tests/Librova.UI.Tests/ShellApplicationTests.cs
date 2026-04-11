@@ -382,7 +382,7 @@ public sealed class ShellApplicationTests
         application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
         application.Shell.ImportJobs.ForceEpubConversionOnImport = true;
 
-        await application.Shell._converterProbeTask;
+        await application.Shell.WaitForConverterProbeAsync();
 
         Assert.NotNull(preferencesStore.LastSavedSnapshot);
         Assert.Equal(UiConverterMode.BuiltInFb2Cng, preferencesStore.LastSavedSnapshot.ConverterMode);
@@ -424,7 +424,7 @@ public sealed class ShellApplicationTests
             converterProbe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
         application.Shell.Fb2CngExecutablePath = @"D:\Tools\fbc.exe";
 
-        await application.Shell._converterProbeTask;
+        await application.Shell.WaitForConverterProbeAsync();
 
         Assert.NotNull(preferencesStore.LastSavedSnapshot);
         Assert.Equal(@"D:\Tools\fbc.exe", preferencesStore.LastSavedSnapshot!.Fb2CngExecutablePath);
@@ -869,7 +869,7 @@ public sealed class ShellApplicationTests
             converterProbe: (_, _) => Task.FromResult(Fb2ProbeResult.Success));
 
         application.Shell.Fb2CngExecutablePath = @"C:\Tools\fbc.exe";
-        var probeTask = application.Shell._converterProbeTask;
+        var probeTask = application.Shell.WaitForConverterProbeAsync();
 
         Assert.True(application.Shell.IsConverterProbeInProgress);
 
@@ -966,6 +966,9 @@ public sealed class ShellApplicationTests
                 }
                 : null);
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             _resultReady = true;
@@ -988,6 +991,30 @@ public sealed class ShellApplicationTests
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
             => Task.FromResult(true);
+
+        public Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ImportJobResultModel
+            {
+                Snapshot = new ImportJobSnapshotModel
+                {
+                    JobId = jobId,
+                    Status = ImportJobStatusModel.Completed,
+                    Message = "Completed"
+                },
+                Summary = new ImportSummaryModel
+                {
+                    Mode = ImportModeModel.SingleFile,
+                    TotalEntries = 1,
+                    ImportedEntries = 1,
+                    FailedEntries = 0,
+                    SkippedEntries = 0
+                }
+            });
     }
 
     private sealed class BlockingImportJobsService : IImportJobsService
@@ -1016,6 +1043,9 @@ public sealed class ShellApplicationTests
                 }
                 : null);
 
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
         public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
         {
             _polling.TrySetResult();
@@ -1034,7 +1064,28 @@ public sealed class ShellApplicationTests
             => Task.FromResult(11UL);
 
         public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
-            => Task.FromResult(true);
+            => Task.FromResult(_cancelled);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            while (!await WaitAsync(jobId, timeout, waitTimeout, cancellationToken))
+            {
+                var snapshot = await TryGetSnapshotAsync(jobId, timeout, cancellationToken);
+                if (snapshot is not null)
+                {
+                    onProgress?.Invoke(snapshot);
+                }
+
+                await Task.Delay(20, cancellationToken);
+            }
+
+            return (await TryGetResultAsync(jobId, timeout, cancellationToken))!;
+        }
     }
 
     private sealed class FakeLibraryCatalogService : ILibraryCatalogService

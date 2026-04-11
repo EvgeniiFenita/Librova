@@ -47,7 +47,16 @@ public:
             .Payload = std::move(requestPayload)
         };
 
-        connection.WriteMessage(Librova::PipeTransport::SerializeRequestEnvelope(envelope));
+        const auto connectElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime);
+        if (connectElapsed >= timeout)
+        {
+            throw CPipeTransportError("Pipe call timed out.");
+        }
+
+        connection.WriteMessage(
+            Librova::PipeTransport::SerializeRequestEnvelope(envelope),
+            timeout - connectElapsed);
 
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - startTime);

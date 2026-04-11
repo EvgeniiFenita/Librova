@@ -3,6 +3,7 @@
 #include <chrono>
 #include <stdexcept>
 
+#include "Domain/DomainError.hpp"
 #include "Logging/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
@@ -124,7 +125,9 @@ std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
 
     if (!book->File.HasManagedPath())
     {
-        throw std::runtime_error("Book does not have a managed file path.");
+        throw Librova::Domain::CDomainException(
+            Librova::Domain::EDomainErrorCode::IntegrityIssue,
+            "Book does not have a managed file path.");
     }
 
     const auto sourcePath = ResolveManagedSourcePath(book->File.ManagedPath);
@@ -195,7 +198,9 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
 
     if (m_converter == nullptr || !m_converter->CanConvert(book.File.Format, exportFormat))
     {
-        throw std::runtime_error("Configured FB2 to EPUB export converter is unavailable.");
+        throw Librova::Domain::CDomainException(
+            Librova::Domain::EDomainErrorCode::ConverterUnavailable,
+            "Configured FB2 to EPUB export converter is unavailable.");
     }
 
     if (!destinationPath.parent_path().empty())
@@ -239,17 +244,23 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
 
     if (conversionResult.IsCancelled())
     {
-        throw std::runtime_error("Export conversion was cancelled.");
+        throw Librova::Domain::CDomainException(
+            Librova::Domain::EDomainErrorCode::Cancellation,
+            "Export conversion was cancelled.");
     }
 
     if (!conversionResult.IsSuccess())
     {
         if (!conversionResult.Warnings.empty())
         {
-            throw std::runtime_error(conversionResult.Warnings.front());
+            throw Librova::Domain::CDomainException(
+                Librova::Domain::EDomainErrorCode::ConverterFailed,
+                conversionResult.Warnings.front());
         }
 
-        throw std::runtime_error("Export conversion failed.");
+        throw Librova::Domain::CDomainException(
+            Librova::Domain::EDomainErrorCode::ConverterFailed,
+            "Export conversion failed.");
     }
 
     const auto exportedPath = conversionResult.HasOutput() ? conversionResult.OutputPath : destinationPath;

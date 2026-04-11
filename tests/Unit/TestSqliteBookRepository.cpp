@@ -13,6 +13,17 @@
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
 
+namespace {
+
+template <typename... TRepositories>
+void CloseRepositoriesAndRemoveDatabase(const std::filesystem::path& databasePath, TRepositories&... repositories)
+{
+    (repositories.CloseSession(), ...);
+    std::filesystem::remove(databasePath);
+}
+
+} // namespace
+
 TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository.db";
@@ -82,7 +93,7 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
         REQUIRE(tagStatement.GetColumnInt(0) == 2);
     }
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database]")
@@ -114,7 +125,7 @@ TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database
     const Librova::Domain::SBookId thirdReservedId = repository.ReserveId();
     REQUIRE(thirdReservedId.Value == secondReservedId.Value + 1);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository, secondRepository);
 }
 
 TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
@@ -165,7 +176,7 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
         REQUIRE(searchIndexStatement.GetColumnInt(0) == 0);
     }
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository inserts exactly one search-index row per added book", "[book-database]")
@@ -198,7 +209,7 @@ TEST_CASE("Sqlite book repository inserts exactly one search-index row per added
         REQUIRE(statement.GetColumnInt(0) == 1);
     }
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book query repository applies structured filters and FTS text search", "[book-database]")
@@ -266,7 +277,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
     REQUIRE(descriptionSearch.size() == 1);
     REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Roadside Picnic");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository lists available languages with combined filters even when current language is set", "[book-database]")
@@ -317,7 +328,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
 
     REQUIRE(languages == std::vector<std::string>({"en", "ru"}));
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo equivalence", "[book-database]")
@@ -377,7 +388,7 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo
     REQUIRE(descriptionPrefixSearch.size() == 1);
     REQUIRE(descriptionPrefixSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-insensitive", "[book-database]")
@@ -419,7 +430,7 @@ TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-inse
     REQUIRE(descriptionSearch.size() == 1);
     REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Прыгоды ў горадзе");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-text search", "[book-database]")
@@ -450,7 +461,7 @@ TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-t
     REQUIRE(books.size() == 1);
     REQUIRE(books.front().Metadata.TitleUtf8 == "Roadside Picnic");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository hydrates multi-book search results without losing order or metadata", "[book-database]")
@@ -513,7 +524,7 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     REQUIRE(books[1].File.ManagedPath == std::filesystem::path(u8"Books/0000000602/beta.fb2"));
     REQUIRE_FALSE(books[1].CoverPath.has_value());
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized title instead of ASCII-only collation", "[book-database]")
@@ -568,7 +579,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     REQUIRE(books[1].Metadata.TitleUtf8 == "ёж");
     REQUIRE(books[2].Metadata.TitleUtf8 == "Якорь");
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author names", "[book-database]")
@@ -623,7 +634,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     REQUIRE(books[1].Metadata.AuthorsUtf8 == std::vector<std::string>({"ёж автор"}));
     REQUIRE(books[2].Metadata.AuthorsUtf8 == std::vector<std::string>({"Яков Автор"}));
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository refreshes cached library statistics when a cover file is overwritten in place", "[book-database]")
@@ -673,6 +684,100 @@ TEST_CASE("Sqlite book query repository refreshes cached library statistics when
     const auto statisticsWithOverwrittenCover = queryRepository.GetLibraryStatistics();
     REQUIRE(statisticsWithOverwrittenCover.TotalLibrarySizeBytes == 616 + overwrittenCoverSize + databaseSize);
 
+    writeRepository.CloseSession();
+    writeRepository.CloseSession();
+    std::filesystem::remove_all(libraryRoot);
+}
+
+TEST_CASE("Sqlite book query repository serializes concurrent library statistics requests on a shared instance", "[book-database]")
+{
+    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-book-query-statistics-concurrency";
+    const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
+    std::filesystem::remove_all(libraryRoot);
+    std::filesystem::create_directories(databasePath.parent_path());
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Concurrent Statistics One";
+    firstBook.Metadata.AuthorsUtf8 = {"Author One"};
+    firstBook.Metadata.Language = "en";
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000710/one.epub";
+    firstBook.File.SizeBytes = 710;
+    firstBook.File.Sha256Hex = "hash-stats-concurrency-one";
+    firstBook.CoverPath = std::filesystem::path("Covers/0000000710.jpg");
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::April / 1 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook;
+    secondBook.Metadata.TitleUtf8 = "Concurrent Statistics Two";
+    secondBook.Metadata.AuthorsUtf8 = {"Author Two"};
+    secondBook.Metadata.Language = "en";
+    secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    secondBook.File.ManagedPath = "Books/0000000711/two.fb2";
+    secondBook.File.SizeBytes = 711;
+    secondBook.File.Sha256Hex = "hash-stats-concurrency-two";
+    secondBook.CoverPath = std::filesystem::path("Covers/0000000711.jpg");
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::April / 1 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    const std::filesystem::path firstCoverPath = libraryRoot / "Covers/0000000710.jpg";
+    const std::filesystem::path secondCoverPath = libraryRoot / "Covers/0000000711.jpg";
+    std::filesystem::create_directories(firstCoverPath.parent_path());
+    std::ofstream(firstCoverPath, std::ios::binary) << "first-cover";
+    std::ofstream(secondCoverPath, std::ios::binary) << "second-cover";
+
+    const std::uint64_t databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
+    const std::uint64_t firstCoverSize = static_cast<std::uint64_t>(std::filesystem::file_size(firstCoverPath));
+    const std::uint64_t secondCoverSize = static_cast<std::uint64_t>(std::filesystem::file_size(secondCoverPath));
+    const Librova::Domain::IBookQueryRepository::SLibraryStatistics expectedStatistics{
+        .BookCount = 2,
+        .TotalManagedBookSizeBytes = 710 + 711,
+        .TotalLibrarySizeBytes = 710 + 711 + firstCoverSize + secondCoverSize + databaseSize
+    };
+
+    std::exception_ptr unexpectedException;
+    std::atomic<bool> readyFlag{false};
+    std::vector<Librova::Domain::IBookQueryRepository::SLibraryStatistics> results(8);
+    std::vector<std::thread> threads;
+    threads.reserve(results.size());
+
+    for (std::size_t index = 0; index < results.size(); ++index)
+    {
+        threads.emplace_back([&, index]() {
+            while (!readyFlag.load(std::memory_order_acquire)) {}
+
+            try
+            {
+                results[index] = queryRepository.GetLibraryStatistics();
+            }
+            catch (...)
+            {
+                unexpectedException = std::current_exception();
+            }
+        });
+    }
+
+    readyFlag.store(true, std::memory_order_release);
+
+    for (std::thread& thread : threads)
+    {
+        thread.join();
+    }
+
+    REQUIRE(unexpectedException == nullptr);
+
+    for (const auto& statistics : results)
+    {
+        REQUIRE(statistics.BookCount == expectedStatistics.BookCount);
+        REQUIRE(statistics.TotalManagedBookSizeBytes == expectedStatistics.TotalManagedBookSizeBytes);
+        REQUIRE(statistics.TotalLibrarySizeBytes == expectedStatistics.TotalLibrarySizeBytes);
+    }
+
+    writeRepository.CloseSession();
     std::filesystem::remove_all(libraryRoot);
 }
 
@@ -731,7 +836,7 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
     REQUIRE(probableMatches.front().ExistingBookId.Value == storedId.Value);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the full normalized author set", "[book-database]")
@@ -779,7 +884,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     REQUIRE(probableMatches.front().ExistingBookId.Value == matchingBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the normalized title as well as the author set", "[book-database]")
@@ -813,7 +918,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
 
     REQUIRE(probableMatches.empty());
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection keeps duplicate-author candidate semantics unchanged", "[book-database]")
@@ -847,7 +952,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection keeps dupli
 
     REQUIRE(probableMatches.empty());
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository returns all probable duplicate matches for the same normalized title and authors", "[book-database]")
@@ -897,7 +1002,7 @@ TEST_CASE("Sqlite book query repository returns all probable duplicate matches f
     };
     REQUIRE(duplicateIds == std::unordered_set<std::int64_t>{firstBookId.Value, secondBookId.Value});
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection stays case-insensitive for extended Cyrillic", "[book-database]")
@@ -934,7 +1039,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection stays case-
     REQUIRE(probableMatches.front().ExistingBookId.Value == storedBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
 TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after normalization", "[book-database]")
@@ -981,7 +1086,7 @@ TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after nor
         REQUIRE(tagLinkStatement.GetColumnInt(0) == 1);
     }
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256_hex already exists", "[book-database]")
@@ -1035,7 +1140,7 @@ TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256
         REQUIRE(stmt.GetColumnInt(0) == 1);
     }
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already exists", "[book-database]")
@@ -1078,7 +1183,7 @@ TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already 
     REQUIRE(repository.GetById(firstId).has_value());
     REQUIRE(repository.GetById(secondId).has_value());
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even when another book has empty sha256_hex", "[book-database]")
@@ -1106,7 +1211,40 @@ TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even w
     REQUIRE_NOTHROW(repository.Add(makeBook("Book One", "Books/0000000001/a.fb2")));
     REQUIRE_NOTHROW(repository.Add(makeBook("Book Two", "Books/0000000002/b.fb2")));
 
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository keeps a reusable session open until the repository instance is destroyed", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-reusable-session.db";
     std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+        Librova::Domain::SBook book;
+        book.Metadata.TitleUtf8 = "Reusable Session";
+        book.Metadata.AuthorsUtf8 = {"Author"};
+        book.Metadata.Language = "en";
+        book.File.Format = Librova::Domain::EBookFormat::Fb2;
+        book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+        book.File.ManagedPath = "Books/0000000999/reusable.fb2";
+        book.File.SizeBytes = 256;
+        book.File.Sha256Hex = "reusable-session-hash";
+        book.AddedAtUtc = std::chrono::system_clock::now();
+
+        static_cast<void>(repository.Add(book));
+        REQUIRE(repository.GetById({1}).has_value());
+
+        std::error_code removeError;
+        const bool removedWhileRepositoryAlive = std::filesystem::remove(databasePath, removeError);
+        REQUIRE_FALSE(removedWhileRepositoryAlive);
+        REQUIRE(removeError.value() != 0);
+        REQUIRE(std::filesystem::exists(databasePath));
+    }
+
+    REQUIRE(std::filesystem::remove(databasePath));
 }
 
 TEST_CASE("Sqlite book repository stores managed_path and cover_path with forward slashes in SQLite on all platforms", "[book-database]")
@@ -1159,7 +1297,7 @@ TEST_CASE("Sqlite book repository stores managed_path and cover_path with forwar
     REQUIRE(loaded->File.ManagedPath == book.File.ManagedPath);
     REQUIRE(loaded->CoverPath == book.CoverPath);
 
-    std::filesystem::remove(databasePath);
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
 
 TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the same sha256_hex", "[book-database]")
@@ -1232,4 +1370,60 @@ TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the 
     }
 
     std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository serializes concurrent Add calls on a shared instance", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-shared-instance.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    const auto makeBook = [](const std::string& title, const std::string& path, const std::string& hash) {
+        Librova::Domain::SBook book;
+        book.Metadata.TitleUtf8 = title;
+        book.Metadata.AuthorsUtf8 = {"Author"};
+        book.Metadata.Language = "en";
+        book.File.Format = Librova::Domain::EBookFormat::Fb2;
+        book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+        book.File.ManagedPath = std::filesystem::path{path};
+        book.File.SizeBytes = 1024;
+        book.File.Sha256Hex = hash;
+        book.AddedAtUtc = std::chrono::system_clock::now();
+        return book;
+    };
+
+    std::exception_ptr unexpectedException;
+    std::atomic<bool> readyFlag{false};
+
+    const auto runImport = [&](const std::string& title, const std::string& path, const std::string& hash) {
+        while (!readyFlag.load(std::memory_order_acquire)) {}
+        try
+        {
+            static_cast<void>(repository.Add(makeBook(title, path, hash)));
+        }
+        catch (...)
+        {
+            unexpectedException = std::current_exception();
+        }
+    };
+
+    std::thread thread1([&]() { runImport("Shared One", "Books/0000000001/shared-one.fb2", "shared-hash-one"); });
+    std::thread thread2([&]() { runImport("Shared Two", "Books/0000000002/shared-two.fb2", "shared-hash-two"); });
+
+    readyFlag.store(true, std::memory_order_release);
+    thread1.join();
+    thread2.join();
+
+    REQUIRE(unexpectedException == nullptr);
+
+    {
+        Librova::Sqlite::CSqliteConnection conn(databasePath);
+        Librova::Sqlite::CSqliteStatement stmt(conn.GetNativeHandle(), "SELECT COUNT(*) FROM books;");
+        REQUIRE(stmt.Step());
+        REQUIRE(stmt.GetColumnInt(0) == 2);
+    }
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }

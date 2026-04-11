@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.Logging;
+using Librova.UI.Styling;
 using System;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace Librova.UI.ViewModels;
 
 internal sealed class LibraryCoverPresentationService
 {
-    private static readonly IBrush RealCoverBackground = new SolidColorBrush(Color.Parse("#0A0700"));
+    private static readonly IBrush RealCoverBackground = UiThemeResources.AppMatteBrush;
     private readonly ICoverImageLoader _coverImageLoader;
     private readonly string _libraryRoot;
 
@@ -22,21 +23,25 @@ internal sealed class LibraryCoverPresentationService
 
     public BookListItemModel Prepare(BookListItemModel item)
     {
-        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(item.ResolvedCoverImage, item.BookId, item.Title, item.AuthorsText);
-        item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
+        item.CoverPresentation.ResolvedCoverImage = LoadCoverImage(item.Storage.CoverRelativePath);
+        item.CoverPresentation.CoverBackgroundBrush = CreateCoverBackgroundBrush(
+            item.CoverPresentation.ResolvedCoverImage,
+            item.BookId,
+            item.Title,
+            item.AuthorsText);
+        item.CoverPresentation.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         return item;
     }
 
     public BookDetailsModel Prepare(BookDetailsModel item)
     {
-        item.ResolvedCoverImage = LoadCoverImage(item.CoverPath);
-        item.CoverBackgroundBrush = CreateCoverBackgroundBrush(
-            item.ResolvedCoverImage,
+        item.CoverPresentation.ResolvedCoverImage = LoadCoverImage(item.Storage.CoverRelativePath);
+        item.CoverPresentation.CoverBackgroundBrush = CreateCoverBackgroundBrush(
+            item.CoverPresentation.ResolvedCoverImage,
             item.BookId,
             item.Title,
             item.Authors.Count == 0 ? "Unknown author" : string.Join(", ", item.Authors));
-        item.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
+        item.CoverPresentation.CoverPlaceholderText = BuildCoverPlaceholderText(item.Title);
         return item;
     }
 
@@ -170,28 +175,10 @@ internal sealed class LibraryCoverPresentationService
 
     private static IBrush CreateGradientBrush(long bookId, string title, string authorsText)
     {
-        var palettes = new[]
-        {
-            (Start: Color.Parse("#6C4B3A"), End: Color.Parse("#D9A066")),
-            (Start: Color.Parse("#5C3A28"), End: Color.Parse("#C4855A")),
-            (Start: Color.Parse("#5A2F3D"), End: Color.Parse("#C18E78")),
-            (Start: Color.Parse("#40523B"), End: Color.Parse("#B6C58E")),
-            (Start: Color.Parse("#6B4C1E"), End: Color.Parse("#D2B87A"))
-        };
-
         var hash = HashCode.Combine(bookId, title, authorsText);
-        var index = SelectPaletteIndex(hash, palettes.Length);
-        var palette = palettes[index];
-        return new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops =
-            [
-                new GradientStop(palette.Start, 0),
-                new GradientStop(palette.End, 1)
-            ]
-        };
+        var palettes = UiThemeResources.CoverPlaceholderBrushes;
+        var index = SelectPaletteIndex(hash, palettes.Count);
+        return palettes[index];
     }
 
     internal static int SelectPaletteIndex(int hash, int paletteCount)

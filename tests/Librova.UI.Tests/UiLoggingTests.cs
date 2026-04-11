@@ -47,6 +47,45 @@ public sealed class UiLoggingTests
     }
 
     [Fact]
+    public async Task Warning_WithException_WritesExceptionDetailsIntoConfiguredFile()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-logging-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        var logFilePath = Path.Combine(sandboxRoot, "ui.log");
+
+        try
+        {
+            UiLogging.ReinitializeForTests(logFilePath);
+            UiLogging.Warning(new InvalidOperationException("warning boom"), "Warning with exception");
+            UiLogging.Shutdown();
+
+            var contents = await File.ReadAllTextAsync(logFilePath);
+            Assert.Contains("Warning with exception", contents);
+            Assert.Contains("InvalidOperationException", contents);
+            Assert.Contains("warning boom", contents);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task Reinitialize_MergesPreviousLogIntoNewFile()
     {
         var sandboxRoot = Path.Combine(

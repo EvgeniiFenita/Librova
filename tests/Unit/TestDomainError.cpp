@@ -7,6 +7,7 @@ TEST_CASE("Domain error codes convert to stable transport-friendly strings", "[d
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::Validation) == "validation");
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired) == "duplicate_decision_required");
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::IntegrityIssue) == "integrity_issue");
+    REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::NotFound) == "not_found");
 }
 
 TEST_CASE("Domain error exposes user-resolvable categories", "[domain][error]")

@@ -18,6 +18,7 @@
 
 All colours live in `Colors.axaml` as `Color` primitives + `SolidColorBrush` resources.  
 **Never hardcode hex values in views or styles — always use a `{DynamicResource}` brush.**
+For C# presentation helpers that cannot bind XAML resources directly, resolve shared brushes through `apps/Librova.UI/Styling/UiThemeResources.cs` so code stays aligned with the same named tokens and fallback values.
 
 ### Background layers (darkest → lightest)
 

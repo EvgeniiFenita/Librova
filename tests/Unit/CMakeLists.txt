@@ -9,6 +9,7 @@ if(BUILD_TESTING)
         TestImportJobClient.cpp
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
+        TestImportSourceExpander.cpp
         TestLibraryCatalogProtoMapper.cpp
         TestLibraryJobServiceAdapter.cpp
         TestNamedPipeClient.cpp

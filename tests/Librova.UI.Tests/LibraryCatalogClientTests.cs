@@ -86,6 +86,8 @@ public sealed class LibraryCatalogClientTests
             Assert.Single(response.Items);
             Assert.Equal("Roadside Picnic", response.Items[0].Title);
             Assert.Equal("Arkady Strugatsky", response.Items[0].Authors[0]);
+            Assert.NotNull(response.Statistics);
+            Assert.Equal(1UL, response.Statistics.BookCount);
         }
         finally
         {
@@ -292,7 +294,7 @@ public sealed class LibraryCatalogClientTests
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
             var expectedManagedBookSizeBytes = listResponse.Items
-                .Select(item => ResolveLibraryPath(options.LibraryRoot, item.ManagedPath))
+                .Select(item => ResolveManagedBookPath(options.LibraryRoot, item.BookId, item.ManagedFileName))
                 .Aggregate(0UL, (total, path) => total + (ulong)new FileInfo(path).Length);
             var databasePath = Path.Combine(options.LibraryRoot, "Database", "librova.db");
             var databaseSizeBytes = (ulong)new FileInfo(databasePath).Length;
@@ -300,6 +302,8 @@ public sealed class LibraryCatalogClientTests
             Assert.NotNull(response.Statistics);
             Assert.Equal(2UL, response.Statistics.BookCount);
             Assert.Equal(2, listResponse.Items.Count);
+            Assert.NotNull(listResponse.Statistics);
+            Assert.Equal(2UL, listResponse.Statistics.BookCount);
             Assert.True(databaseSizeBytes > 0);
             Assert.Equal(expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes, response.Statistics.TotalLibrarySizeBytes);
         }
@@ -516,14 +520,15 @@ public sealed class LibraryCatalogClientTests
             Assert.Equal(BookFormat.Fb2, listResponse.Items[0].Format);
 
             var exportPath = Path.Combine(sandboxRoot, "Exports", "ExportMeAsEpub.epub");
-            var error = await Assert.ThrowsAsync<Librova.UI.PipeTransport.PipeTransportException>(async () =>
-                await client.ExportBookAsync(
-                    listResponse.Items[0].BookId,
-                    exportPath,
-                    BookFormatModel.Epub,
-                    TimeSpan.FromSeconds(5),
-                    cancellation.Token));
-            Assert.Contains("converter is unavailable", error.Message, StringComparison.OrdinalIgnoreCase);
+            var exportResponse = await client.ExportBookAsync(
+                listResponse.Items[0].BookId,
+                exportPath,
+                BookFormatModel.Epub,
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            Assert.NotNull(exportResponse.Error);
+            Assert.Equal(ErrorCode.ConverterUnavailable, exportResponse.Error.Code);
+            Assert.Contains("converter is unavailable", exportResponse.Error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -642,8 +647,6 @@ public sealed class LibraryCatalogClientTests
         }
     }
 
-    private static string ResolveLibraryPath(string libraryRoot, string managedPath) =>
-        Path.IsPathFullyQualified(managedPath)
-            ? managedPath
-            : Path.GetFullPath(Path.Combine(libraryRoot, managedPath));
+    private static string ResolveManagedBookPath(string libraryRoot, long bookId, string managedFileName) =>
+        Path.GetFullPath(Path.Combine(libraryRoot, "Books", bookId.ToString("0000000000"), managedFileName));
 }

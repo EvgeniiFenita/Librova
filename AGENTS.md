@@ -95,11 +95,15 @@ scripts\ValidateProto.ps1
 - If SQLite schema depends on optional modules (e.g., FTS5), declare them explicitly in `vcpkg.json`.
 - External converter integration stays user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive.
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
-- Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade.
+- Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade. **IPC boundary logging is mandatory in both directions:**
+  - Every method in `CLibraryJobServiceAdapter` (C++) must log the key outcome after computing the response — blocking message, job ID, result flag, or count — not only on failure.
+  - Every managed `*Service.cs` class wrapping an IPC call must log the successful response outcome alongside the existing error-path log; error-only logs are a silent diagnostic gap.
+  - **Log level guide:** `Info` for expected outcomes and normal state transitions; `Warn` for unexpected-but-handled states (CanStartImport=false, empty result where non-empty was expected, degraded operation); `Error` / `Critical` for caught exceptions and failures surfaced to the user.
 - If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
-- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice.
+- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
 - When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 - When the user asks for a code review or review-pass style findings, write the review results in Russian by default.
+- Native tests that open a `CSqliteBookRepository` must call `repository.CloseSession()` before removing the database file — Windows does not allow deleting a file with an open handle.
 
 ---
 

@@ -54,6 +54,12 @@ The runtime deliberately does not depend on:
 - Search uses relational filters plus `FTS5` text search.
 - Unicode correctness is required across storage and search boundaries.
 
+#### 3.1.1 Write-Session Lifecycle
+
+`CSqliteBookRepository` keeps a single SQLite write connection open for the duration of the repository's lifetime rather than opening and closing one per operation. This connection is held in a mutex-protected write session that serialises concurrent write calls.
+
+In production, the connection is held until the host process terminates and is never explicitly closed. In tests that create a `CSqliteBookRepository` over a temp file, `repository.CloseSession()` must be called before the database file is removed, because Windows does not allow deleting a file that has an open file handle.
+
 ### 3.2 Managed Library
 
 One managed library root contains:

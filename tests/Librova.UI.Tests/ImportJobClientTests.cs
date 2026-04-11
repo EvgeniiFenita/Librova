@@ -8,6 +8,138 @@ namespace Librova.UI.Tests;
 public sealed class ImportJobClientTests
 {
     [Fact]
+    public async Task ImportJobClient_ValidateSourcesAsync_ReturnsBlockingMessageForUnsupportedSources()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-import-client",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.ImportTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
+            };
+
+            var unsupportedSourcePath = Path.Combine(sandboxRoot, "book.txt");
+            await File.WriteAllTextAsync(unsupportedSourcePath, "plain text");
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var client = new ImportJobClient(options.PipePath);
+            var response = await client.ValidateSourcesAsync(
+                [unsupportedSourcePath],
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.True(response.HasBlockingMessage);
+            Assert.Equal(
+                "Supported source types are .fb2, .epub, and .zip, or a directory containing them.",
+                response.BlockingMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobClient_ValidateSourcesAsync_AllowsMixedSupportedAndUnsupportedSources()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-import-client",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var options = new CoreHostLaunchOptions
+            {
+                ExecutablePath = CoreHostPathResolver.ResolveDevelopmentExecutablePath(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    "..")),
+                PipePath = $@"\\.\pipe\Librova.UI.ImportTests.{Environment.ProcessId}.{Environment.TickCount64}",
+                LibraryRoot = Path.Combine(sandboxRoot, "Library"),
+                LibraryOpenMode = UiLibraryOpenMode.CreateNew
+            };
+
+            var supportedSourcePath = Path.Combine(sandboxRoot, "book.fb2");
+            await File.WriteAllTextAsync(supportedSourcePath,
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <FictionBook xmlns:l="http://www.w3.org/1999/xlink">
+                  <description>
+                    <title-info>
+                      <book-title>Пикник на обочине</book-title>
+                      <author>
+                        <first-name>Аркадий</first-name>
+                        <last-name>Стругацкий</last-name>
+                      </author>
+                      <lang>ru</lang>
+                    </title-info>
+                  </description>
+                  <body>
+                    <section><p>Body</p></section>
+                  </body>
+                </FictionBook>
+                """);
+            var unsupportedSourcePath = Path.Combine(sandboxRoot, "notes.txt");
+            await File.WriteAllTextAsync(unsupportedSourcePath, "plain text");
+
+            await using var process = new CoreHostProcess();
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.StartAsync(options, cancellation.Token);
+
+            var client = new ImportJobClient(options.PipePath);
+            var response = await client.ValidateSourcesAsync(
+                [supportedSourcePath, unsupportedSourcePath],
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+
+            Assert.False(response.HasBlockingMessage);
+            Assert.Equal(string.Empty, response.BlockingMessage);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobClient_PerformsEndToEndStartWaitResultAndRemove()
     {
         var sandboxRoot = Path.Combine(

@@ -57,6 +57,56 @@ public sealed class FirstRunSetupViewModelTests
     }
 
     [Fact]
+    public async Task BrowseLibraryRootAsync_CompletesBeforeDeferredModeValidationAndContinuePerformsFinalCheck()
+    {
+        var selectedPath = BuildAvailableLibraryRoot("browse-deferred-validation");
+        Directory.CreateDirectory(selectedPath);
+        File.WriteAllText(Path.Combine(selectedPath, "existing.txt"), "occupied");
+        var deferredValidation = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var continueCalled = false;
+
+        try
+        {
+            var viewModel = new FirstRunSetupViewModel(
+                BuildAvailableLibraryRoot("initial-deferred-validation"),
+                new FakePathSelectionService
+                {
+                    SelectedWorkingDirectory = selectedPath
+                },
+                new FakePreferencesStore(),
+                (_, _) =>
+                {
+                    continueCalled = true;
+                    return Task.CompletedTask;
+                },
+                allowModeSelection: true,
+                modeValidationAsync: (_, _) => deferredValidation.Task);
+
+            await viewModel.BrowseLibraryRootCommand.ExecuteAsyncForTests();
+
+            Assert.Equal(selectedPath, viewModel.LibraryRoot);
+            Assert.True(viewModel.BrowseLibraryRootCommand.CanExecute(null));
+            Assert.True(viewModel.ContinueCommand.CanExecute(null));
+            Assert.False(viewModel.HasValidationError);
+
+            var continueTask = viewModel.ContinueCommand.ExecuteAsyncForTests();
+            Assert.False(continueTask.IsCompleted);
+
+            deferredValidation.SetResult("Create Library requires an empty target directory.");
+            await continueTask;
+
+            Assert.False(continueCalled);
+            Assert.True(viewModel.HasValidationError);
+            Assert.Equal("Create Library requires an empty target directory.", viewModel.ValidationMessage);
+            Assert.Equal("Create Library requires an empty target directory.", viewModel.StatusText);
+        }
+        finally
+        {
+            TryDeleteDirectory(selectedPath);
+        }
+    }
+
+    [Fact]
     public async Task ContinueCommand_SavesPreferenceAfterSuccessfulCallback()
     {
         var libraryRoot = BuildAvailableLibraryRoot("save-success");
@@ -228,20 +278,30 @@ public sealed class FirstRunSetupViewModelTests
         Directory.CreateDirectory(emptyDirectory);
         var managedLibraryRoot = BuildAvailableLibraryRoot("first-run-managed-open");
         CreateManagedLibraryRoot(managedLibraryRoot);
+        var preferences = new FakePreferencesStore();
+        var continued = false;
 
         try
         {
             var viewModel = new FirstRunSetupViewModel(
                 emptyDirectory,
                 new FakePathSelectionService(),
-                new FakePreferencesStore(),
-                (_, _) => Task.CompletedTask,
+                preferences,
+                (_, _) =>
+                {
+                    continued = true;
+                    return Task.CompletedTask;
+                },
                 allowModeSelection: true);
 
             await viewModel.SelectOpenLibraryModeCommand.ExecuteAsyncForTests();
 
-            Assert.False(viewModel.ContinueCommand.CanExecute(null));
+            await viewModel.ContinueCommand.ExecuteAsyncForTests();
+
+            Assert.False(continued);
+            Assert.Null(preferences.LastSavedSnapshot);
             Assert.Contains("existing Librova library", viewModel.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("existing Librova library", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
 
             viewModel.LibraryRoot = managedLibraryRoot;
 
@@ -252,6 +312,50 @@ public sealed class FirstRunSetupViewModelTests
         {
             TryDeleteDirectory(emptyDirectory);
             TryDeleteDirectory(managedLibraryRoot);
+        }
+    }
+
+    [Fact]
+    public async Task StaleOpenModeValidationResult_DoesNotOverrideLaterCreateModeSelection()
+    {
+        var emptyDirectory = BuildAvailableLibraryRoot("mode-toggle-regression");
+        Directory.CreateDirectory(emptyDirectory);
+        var openValidation = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var viewModel = new FirstRunSetupViewModel(
+                emptyDirectory,
+                new FakePathSelectionService(),
+                new FakePreferencesStore(),
+                (_, _) => Task.CompletedTask,
+                allowModeSelection: true,
+                modeValidationAsync: (_, mode) => mode switch
+                {
+                    UiLibraryOpenMode.OpenExisting => openValidation.Task,
+                    UiLibraryOpenMode.CreateNew => Task.FromResult(string.Empty),
+                    _ => Task.FromResult(string.Empty)
+                });
+
+            // Initially on Create New with a valid empty folder — Continue must be enabled.
+            Assert.True(viewModel.ContinueCommand.CanExecute(null), "Initial state: Continue must be enabled for a valid empty folder in Create New mode");
+
+            // Switch to Open Existing; validation is still pending, so Continue remains immediately available.
+            await viewModel.SelectOpenLibraryModeCommand.ExecuteAsyncForTests();
+            Assert.True(viewModel.ContinueCommand.CanExecute(null), "After switching to Open Existing: deferred validation should not lock the command immediately");
+
+            // Switch back to Create New before the stale Open Existing validation completes.
+            await viewModel.SelectCreateLibraryModeCommand.ExecuteAsyncForTests();
+            Assert.True(viewModel.ContinueCommand.CanExecute(null), "After switching back to Create New: Continue must be enabled again");
+
+            openValidation.SetResult("Selected folder is not an existing Librova library.");
+            await Task.Yield();
+
+            Assert.True(viewModel.ContinueCommand.CanExecute(null), "A stale Open Existing validation result must not disable Create New");
+            Assert.False(viewModel.HasValidationError);
+        }
+        finally
+        {
+            TryDeleteDirectory(emptyDirectory);
         }
     }
 

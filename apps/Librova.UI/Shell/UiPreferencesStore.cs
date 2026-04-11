@@ -37,7 +37,7 @@ internal sealed class UiPreferencesStore : IUiPreferencesStore
         }
         catch (Exception error)
         {
-            UiLogging.Warning("Failed to load UI preferences from {FilePath}: {Error}", FilePath, error.Message);
+            UiLogging.Warning(error, "Failed to load UI preferences from {FilePath}", FilePath);
             return null;
         }
     }

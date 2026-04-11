@@ -6,7 +6,7 @@ namespace Librova::Application {
 
 CLibraryCatalogFacade::CLibraryCatalogFacade(
     const Librova::Domain::IBookQueryRepository& bookQueryRepository,
-    const Librova::Domain::IBookRepository* bookRepository)
+    const Librova::Domain::IBookRepository& bookRepository)
     : m_bookQueryRepository(bookQueryRepository)
     , m_bookRepository(bookRepository)
 {
@@ -28,6 +28,7 @@ SBookListResult CLibraryCatalogFacade::ListBooks(const SBookListRequest& request
     SBookListResult result;
     result.TotalCount = m_bookQueryRepository.CountSearchResults(domainQuery);
     result.AvailableLanguages = m_bookQueryRepository.ListAvailableLanguages(languageQuery);
+    result.Statistics = GetLibraryStatistics();
     result.Items.reserve(books.size());
 
     for (const Librova::Domain::SBook& book : books)
@@ -45,12 +46,7 @@ std::optional<SBookDetails> CLibraryCatalogFacade::GetBookDetails(const Librova:
         throw std::invalid_argument("Book details request must use a valid book id.");
     }
 
-    if (m_bookRepository == nullptr)
-    {
-        throw std::logic_error("Book details are not available without a book repository.");
-    }
-
-    const auto book = m_bookRepository->GetById(id);
+    const auto book = m_bookRepository.GetById(id);
     if (!book.has_value())
     {
         return std::nullopt;

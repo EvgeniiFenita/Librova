@@ -344,9 +344,26 @@ CSqliteBookRepository::CSqliteBookRepository(std::filesystem::path databasePath)
 {
 }
 
+void CSqliteBookRepository::CloseSession()
+{
+    const std::scoped_lock lock(m_operationMutex);
+    m_connection.reset();
+}
+
+Librova::Sqlite::CSqliteConnection& CSqliteBookRepository::GetOrCreateConnection() const
+{
+    if (m_connection == nullptr)
+    {
+        m_connection = std::make_unique<Librova::Sqlite::CSqliteConnection>(m_databasePath);
+    }
+
+    return *m_connection;
+}
+
 Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook& book)
 {
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
     CSqliteTransaction transaction(connection);
 
     if (!book.File.Sha256Hex.empty())
@@ -370,7 +387,8 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
 
 Librova::Domain::SBookId CSqliteBookRepository::ForceAdd(const Librova::Domain::SBook& book)
 {
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
     CSqliteTransaction transaction(connection);
     const Librova::Domain::SBookId bookId{DoAddBook(connection, book)};
     transaction.Commit();
@@ -379,7 +397,8 @@ Librova::Domain::SBookId CSqliteBookRepository::ForceAdd(const Librova::Domain::
 
 Librova::Domain::SBookId CSqliteBookRepository::ReserveId()
 {
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
     CSqliteTransaction transaction(connection);
     Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
@@ -404,7 +423,8 @@ Librova::Domain::SBookId CSqliteBookRepository::ReserveId()
 
 std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Librova::Domain::SBookId id) const
 {
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
@@ -450,7 +470,8 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
 
 void CSqliteBookRepository::Remove(const Librova::Domain::SBookId id)
 {
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
     CSqliteTransaction transaction(connection);
     const std::optional<Librova::Domain::SBookMetadata> existingMetadata = ReadStoredMetadata(connection, id);
 

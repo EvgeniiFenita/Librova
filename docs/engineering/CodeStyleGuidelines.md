@@ -165,6 +165,16 @@ Logging rules:
 - When a project logging facade is introduced, use it consistently instead of mixing direct framework calls.
 - Command-line entry points may print usage or version text to standard output, but ordinary runtime diagnostics still belong in the logging facade.
 
+**IPC boundary logging rules** (mandatory):
+
+- Every method in `CLibraryJobServiceAdapter` must log the response outcome (blocking message, job ID, count, or result flag) after computing the response — not only on failure. A method that only logs errors leaves a silent diagnostic gap for every non-exception bug.
+- Every managed `*Service.cs` method that wraps an IPC call must log the successful response alongside the existing error-path log. Log the key fields the caller cares about (e.g. `HasBlockingMessage`, `JobId`, `Completed`).
+- Log level guide:
+  - `Info` / `Debug` — expected outcomes, normal state transitions, IPC results on happy path.
+  - `Warn` — unexpected-but-handled states: an operation proceeds but with a degraded or surprising result (e.g. `CanStartImport=false` after validation, empty result where non-empty was expected).
+  - `Error` — caught exceptions and user-visible failures.
+  - `Critical` — unrecoverable failures that require process restart.
+
 ## 10. Unicode and Path Handling
 
 - Core text data is UTF-8.
@@ -174,6 +184,7 @@ Logging rules:
 - Avoid `path.string()` when Unicode correctness matters; prefer keeping values as `std::filesystem::path` or using Unicode-safe conversions.
 - If the same Unicode/path-safety helper logic is needed in more than one module, extract a shared helper instead of copying anonymous-namespace utilities.
 - Shared native UTF-8 / wide / path transcoding must live in `libs/Unicode/UnicodeConversion.*`; call that slice instead of introducing local conversion helpers.
+- **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` that carries UTF-8 content.** The constructor `std::filesystem::path(std::string)` on Windows uses the system ANSI codepage, silently corrupting non-ASCII paths (e.g. Cyrillic). Use `PathFromUtf8()` for every UTF-8→path conversion, including all protobuf `string` fields received over IPC.
 - If bytes are transcoded from a legacy encoding into UTF-8, any retained XML or text encoding declaration must be rewritten to match the new UTF-8 content.
 
 ## 11. C# / Avalonia Rules

@@ -300,6 +300,40 @@ private:
     std::map<std::int64_t, Librova::Domain::SBook> m_books;
 };
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
+Librova::Domain::IBookRepository& GetEmptyBookRepository()
+{
+    static CEmptyBookRepository repository;
+    return repository;
+}
+
 class CImporterThatCancelsAfterFirstSuccess final : public Librova::Importing::ISingleFileImporter
 {
 public:
@@ -339,7 +373,11 @@ TEST_CASE("Library import facade routes regular files into single-file importer"
     CTestProgressSink progressSink;
     const auto sandbox = CreateImportSandbox("single-file");
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox.Root});
     const auto result = facade.Run({
         .SourcePaths = {sandbox.SourcePath},
         .WorkingDirectory = sandbox.WorkingDirectory,
@@ -371,7 +409,11 @@ TEST_CASE("Library import facade aggregates single-file failures into summary wa
     CTestProgressSink progressSink;
     const auto sandbox = CreateImportSandbox("single-file-failure");
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox.Root});
     const auto result = facade.Run({
         .SourcePaths = {sandbox.SourcePath},
         .WorkingDirectory = sandbox.WorkingDirectory
@@ -398,7 +440,11 @@ TEST_CASE("Library import facade batches multiple supported files", "[applicatio
     std::ofstream(sandbox / "one.fb2").put('a');
     std::ofstream(sandbox / "two.epub").put('b');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
         .WorkingDirectory = sandbox / "work"
@@ -422,7 +468,11 @@ TEST_CASE("Library import facade cleans per-source working directories after bat
     std::ofstream(sandbox / "one.fb2").put('a');
     std::ofstream(sandbox / "two.epub").put('b');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
         .WorkingDirectory = sandbox / "work"
@@ -453,7 +503,11 @@ TEST_CASE("Library import facade removes empty generated temp working directory 
     std::ofstream(sandbox / "two.epub").put('b');
     const auto workingDirectory = sandbox / "Library" / "Temp" / "UiImport";
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, nullptr, sandbox / "Library");
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox / "Library"});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
         .WorkingDirectory = workingDirectory
@@ -478,7 +532,11 @@ TEST_CASE("Library import facade preserves custom working directory outside libr
     std::ofstream(sandbox / "two.epub").put('b');
     const auto workingDirectory = sandbox / "CustomWork";
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, nullptr, sandbox / "Library");
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox / "Library"});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
         .WorkingDirectory = workingDirectory
@@ -503,7 +561,11 @@ TEST_CASE("Library import facade preserves custom working directory inside libra
     std::ofstream(sandbox / "two.epub").put('b');
     const auto workingDirectory = sandbox / "Library" / "Temp" / "MyCustomWork";
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, nullptr, sandbox / "Library");
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox / "Library"});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
         .WorkingDirectory = workingDirectory
@@ -527,7 +589,11 @@ TEST_CASE("Library import facade forwards forced EPUB conversion to single-file 
     CTestProgressSink progressSink;
     const auto sandbox = CreateImportSandbox("single-file-force-convert");
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox.Root});
     const auto result = facade.Run({
         .SourcePaths = {sandbox.SourcePath},
         .WorkingDirectory = sandbox.WorkingDirectory,
@@ -557,7 +623,11 @@ TEST_CASE("Library import facade expands directories recursively", "[application
     std::ofstream(sandbox / "nested" / "book.epub").put('b');
     std::ofstream(sandbox / "nested" / "note.txt").put('c');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox},
         .WorkingDirectory = "C:/work"
@@ -586,7 +656,11 @@ TEST_CASE("Library import facade keeps batch mode for empty selected directory",
     std::filesystem::create_directories(sandbox / "nested");
     std::ofstream(sandbox / "nested" / "note.txt").put('x');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox},
         .WorkingDirectory = sandbox / "work"
@@ -617,7 +691,11 @@ TEST_CASE("Library import facade keeps outer batch totals while ZIP entries are 
     std::ofstream(sandbox / "standalone.fb2").put('a');
     const auto zipPath = CreateZipFixture(sandbox / "batch.zip");
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "standalone.fb2", zipPath},
         .WorkingDirectory = sandbox / "work"
@@ -628,6 +706,28 @@ TEST_CASE("Library import facade keeps outer batch totals while ZIP entries are 
     REQUIRE(std::ranges::all_of(progressSink.Snapshots, [](const auto& snapshot) {
         return snapshot.TotalEntries == 3;
     }));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade accepts existing directories during source validation without recursive expansion", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-validation-directory";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "nested");
+    std::ofstream(sandbox / "nested" / "note.txt").put('x');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto validation = facade.ValidateImportSources({sandbox});
+
+    REQUIRE_FALSE(validation.BlockingMessage.has_value());
 
     std::filesystem::remove_all(sandbox);
 }
@@ -648,7 +748,11 @@ TEST_CASE("Library import facade continues batch import after unreadable ZIP sou
     std::ofstream(sandbox / "broken.zip") << "not a zip";
     std::ofstream(sandbox / "good.fb2").put('a');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "broken.zip", sandbox / "good.fb2"},
         .WorkingDirectory = sandbox / "work"
@@ -682,7 +786,11 @@ TEST_CASE("Library import facade logs skipped and failed batch sources into host
         Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
         CTestProgressSink progressSink;
 
-        const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+        const Librova::Application::CLibraryImportFacade facade(
+            importer,
+            zipCoordinator,
+            GetEmptyBookRepository(),
+            {.LibraryRoot = sandbox});
         const auto result = facade.Run({
             .SourcePaths = {sandbox / "duplicate.fb2", sandbox / "broken.fb2"},
             .WorkingDirectory = sandbox / "work"
@@ -718,7 +826,11 @@ TEST_CASE("Library import facade preserves duplicate-only batch semantics when e
     std::ofstream(sandbox / "strict.fb2").put('a');
     std::ofstream(sandbox / "probable.fb2").put('b');
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "strict.fb2", sandbox / "probable.fb2"},
         .WorkingDirectory = sandbox / "work"
@@ -759,7 +871,7 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
     repository.ThrowOnRemoveId = Librova::Domain::SBookId{11};
     CTestProgressSink progressSink;
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox);
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository, {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "first.fb2", sandbox / "second.fb2"},
         .WorkingDirectory = sandbox / "work"
@@ -805,7 +917,7 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
     repository.ThrowOnGetById = Librova::Domain::SBookId{11};
     CTestProgressSink progressSink;
 
-    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox);
+    const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository, {.LibraryRoot = sandbox});
     const auto result = facade.Run({
         .SourcePaths = {sandbox / "first.fb2", sandbox / "second.fb2"},
         .WorkingDirectory = sandbox / "work"
@@ -853,7 +965,7 @@ TEST_CASE("Library import facade logs rollback cleanup issues for unsafe managed
         });
         CTestProgressSink progressSink;
 
-        const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, &repository, sandbox);
+        const Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository, {.LibraryRoot = sandbox});
         const auto result = facade.Run({
             .SourcePaths = {sandbox / "first.fb2", sandbox / "second.fb2"},
             .WorkingDirectory = sandbox / "work"

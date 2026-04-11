@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -35,6 +36,7 @@ private:
     };
 
     std::filesystem::path m_databasePath;
+    mutable std::mutex m_statisticsCacheMutex;
     mutable std::optional<SStatisticsCache> m_statisticsCache;
 };
 

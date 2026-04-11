@@ -11,6 +11,34 @@
 
 namespace {
 
+class CEmptyBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return {1};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+};
+
 Librova::Domain::SBook MakeBook(
     const std::string_view title,
     const std::vector<std::string>& authors,
@@ -40,53 +68,58 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
-    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
-    Librova::Domain::SBook firstBook = MakeBook(
-        "Пикник на обочине",
-        {"Аркадий Стругацкий", "Борис Стругацкий"},
-        "ru",
-        Librova::Domain::EBookFormat::Epub,
-        "Books/0000001001/book.epub",
-        "catalog-hash-1",
-        std::chrono::sys_days{std::chrono::March / 30 / 2026});
-    firstBook.Metadata.TagsUtf8 = {"classic", "sci-fi"};
-    firstBook.Metadata.SeriesUtf8 = std::string{"Миры"};
-    firstBook.Metadata.SeriesIndex = 1.0;
-    firstBook.Metadata.Year = 1972;
-    firstBook.CoverPath = std::filesystem::path("Covers/0000001001.jpg");
-    static_cast<void>(writeRepository.Add(firstBook));
+        Librova::Domain::SBook firstBook = MakeBook(
+            "Пикник на обочине",
+            {"Аркадий Стругацкий", "Борис Стругацкий"},
+            "ru",
+            Librova::Domain::EBookFormat::Epub,
+            "Books/0000001001/book.epub",
+            "catalog-hash-1",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026});
+        firstBook.Metadata.TagsUtf8 = {"classic", "sci-fi"};
+        firstBook.Metadata.SeriesUtf8 = std::string{"Миры"};
+        firstBook.Metadata.SeriesIndex = 1.0;
+        firstBook.Metadata.Year = 1972;
+        firstBook.CoverPath = std::filesystem::path("Covers/0000001001.jpg");
+        static_cast<void>(writeRepository.Add(firstBook));
 
-    Librova::Domain::SBook secondBook = MakeBook(
-        "Roadside Picnic",
-        {"Arkady Strugatsky"},
-        "en",
-        Librova::Domain::EBookFormat::Fb2,
-        "Books/0000001002/book.fb2",
-        "catalog-hash-2",
-        std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
-    secondBook.Metadata.TagsUtf8 = {"translated", "zone"};
-    secondBook.Metadata.DescriptionUtf8 = std::string{"A dangerous zone full of artifacts"};
-    static_cast<void>(writeRepository.Add(secondBook));
+        Librova::Domain::SBook secondBook = MakeBook(
+            "Roadside Picnic",
+            {"Arkady Strugatsky"},
+            "en",
+            Librova::Domain::EBookFormat::Fb2,
+            "Books/0000001002/book.fb2",
+            "catalog-hash-2",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
+        secondBook.Metadata.TagsUtf8 = {"translated", "zone"};
+        secondBook.Metadata.DescriptionUtf8 = std::string{"A dangerous zone full of artifacts"};
+        static_cast<void>(writeRepository.Add(secondBook));
 
-    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
-    const Librova::Application::SBookListResult result = facade.ListBooks({
-        .TextUtf8 = "zone",
-        .SortBy = Librova::Domain::EBookSort::DateAdded,
-        .Limit = 10
-    });
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const Librova::Application::SBookListResult result = facade.ListBooks({
+            .TextUtf8 = "zone",
+            .SortBy = Librova::Domain::EBookSort::DateAdded,
+            .Limit = 10
+        });
 
-    REQUIRE_FALSE(result.IsEmpty());
-    REQUIRE(result.Items.size() == 1);
-    REQUIRE(result.TotalCount == 1);
-    REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
-    REQUIRE(result.Items.front().TitleUtf8 == "Roadside Picnic");
-    REQUIRE(result.Items.front().AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
-    REQUIRE(result.Items.front().Language == "en");
-    REQUIRE(result.Items.front().Format == Librova::Domain::EBookFormat::Fb2);
-    REQUIRE(result.Items.front().ManagedPath == std::filesystem::path("Books/0000001002/book.fb2"));
-    REQUIRE_FALSE(result.Items.front().CoverPath.has_value());
+        REQUIRE_FALSE(result.IsEmpty());
+        REQUIRE(result.Items.size() == 1);
+        REQUIRE(result.TotalCount == 1);
+        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
+        REQUIRE(result.Statistics.BookCount == 2);
+        REQUIRE(result.Statistics.TotalManagedBookSizeBytes == 8192);
+        REQUIRE(result.Statistics.TotalLibrarySizeBytes > 8192);
+        REQUIRE(result.Items.front().TitleUtf8 == "Roadside Picnic");
+        REQUIRE(result.Items.front().AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
+        REQUIRE(result.Items.front().Language == "en");
+        REQUIRE(result.Items.front().Format == Librova::Domain::EBookFormat::Fb2);
+        REQUIRE(result.Items.front().ManagedPath == std::filesystem::path("Books/0000001002/book.fb2"));
+        REQUIRE_FALSE(result.Items.front().CoverPath.has_value());
+    }
 
     std::filesystem::remove(databasePath);
 }
@@ -97,8 +130,9 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
-    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
     Librova::Domain::SBook firstBook = MakeBook(
         "Alpha",
@@ -133,20 +167,22 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
     thirdBook.Metadata.TagsUtf8 = {"selected"};
     static_cast<void>(writeRepository.Add(thirdBook));
 
-    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
-    const Librova::Application::SBookListResult result = facade.ListBooks({
-        .Language = std::string{"en"},
-        .TagsUtf8 = {"selected"},
-        .Format = Librova::Domain::EBookFormat::Epub,
-        .SortBy = Librova::Domain::EBookSort::Title,
-        .Offset = 1,
-        .Limit = 1
-    });
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const Librova::Application::SBookListResult result = facade.ListBooks({
+            .Language = std::string{"en"},
+            .TagsUtf8 = {"selected"},
+            .Format = Librova::Domain::EBookFormat::Epub,
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .Offset = 1,
+            .Limit = 1
+        });
 
-    REQUIRE(result.Items.size() == 1);
-    REQUIRE(result.TotalCount == 2);
-    REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
-    REQUIRE(result.Items.front().TitleUtf8 == "Beta");
+        REQUIRE(result.Items.size() == 1);
+        REQUIRE(result.TotalCount == 2);
+        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
+        REQUIRE(result.Statistics.BookCount == 3);
+        REQUIRE(result.Items.front().TitleUtf8 == "Beta");
+    }
 
     std::filesystem::remove(databasePath);
 }
@@ -157,8 +193,9 @@ TEST_CASE("Library catalog facade sorts by title descending when direction is De
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
-    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
     static_cast<void>(writeRepository.Add(MakeBook(
         "Alpha", {"Author A"}, "en",
@@ -173,27 +210,28 @@ TEST_CASE("Library catalog facade sorts by title descending when direction is De
         Librova::Domain::EBookFormat::Epub, "Books/0000002003/gamma.epub",
         "dir-hash-3", std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2})));
 
-    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
 
-    const auto ascending = facade.ListBooks({
-        .SortBy = Librova::Domain::EBookSort::Title,
-        .SortDirection = Librova::Domain::ESortDirection::Ascending,
-        .Limit = 10
-    });
-    REQUIRE(ascending.Items.size() == 3);
-    REQUIRE(ascending.Items[0].TitleUtf8 == "Alpha");
-    REQUIRE(ascending.Items[1].TitleUtf8 == "Beta");
-    REQUIRE(ascending.Items[2].TitleUtf8 == "Gamma");
+        const auto ascending = facade.ListBooks({
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .SortDirection = Librova::Domain::ESortDirection::Ascending,
+            .Limit = 10
+        });
+        REQUIRE(ascending.Items.size() == 3);
+        REQUIRE(ascending.Items[0].TitleUtf8 == "Alpha");
+        REQUIRE(ascending.Items[1].TitleUtf8 == "Beta");
+        REQUIRE(ascending.Items[2].TitleUtf8 == "Gamma");
 
-    const auto descending = facade.ListBooks({
-        .SortBy = Librova::Domain::EBookSort::Title,
-        .SortDirection = Librova::Domain::ESortDirection::Descending,
-        .Limit = 10
-    });
-    REQUIRE(descending.Items.size() == 3);
-    REQUIRE(descending.Items[0].TitleUtf8 == "Gamma");
-    REQUIRE(descending.Items[1].TitleUtf8 == "Beta");
-    REQUIRE(descending.Items[2].TitleUtf8 == "Alpha");
+        const auto descending = facade.ListBooks({
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .SortDirection = Librova::Domain::ESortDirection::Descending,
+            .Limit = 10
+        });
+        REQUIRE(descending.Items.size() == 3);
+        REQUIRE(descending.Items[0].TitleUtf8 == "Gamma");
+        REQUIRE(descending.Items[1].TitleUtf8 == "Beta");
+        REQUIRE(descending.Items[2].TitleUtf8 == "Alpha");
+    }
 
     std::filesystem::remove(databasePath);
 }
@@ -230,7 +268,8 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
     };
 
     const CUnusedQueryRepository repository;
-    const Librova::Application::CLibraryCatalogFacade facade(repository);
+    CEmptyBookRepository bookRepository;
+    const Librova::Application::CLibraryCatalogFacade facade(repository, bookRepository);
 
     REQUIRE_THROWS_AS(
         facade.ListBooks({
@@ -246,8 +285,9 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
-    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
     Librova::Domain::SBook book = MakeBook(
         "Definitely Maybe",
@@ -266,18 +306,19 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
     book.CoverPath = std::filesystem::path("Covers/0000001201.jpg");
     const auto addedId = writeRepository.Add(book);
 
-    const Librova::Application::CLibraryCatalogFacade facade(queryRepository, &writeRepository);
-    const auto details = facade.GetBookDetails(addedId);
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const auto details = facade.GetBookDetails(addedId);
 
-    REQUIRE(details.has_value());
-    REQUIRE(details->Id.Value == addedId.Value);
-    REQUIRE(details->TitleUtf8 == "Definitely Maybe");
-    REQUIRE(details->PublisherUtf8 == std::optional<std::string>{"Macmillan"});
-    REQUIRE(details->Isbn == std::optional<std::string>{"9785170000001"});
-    REQUIRE(details->DescriptionUtf8 == std::optional<std::string>{"Aliens land only in one city."});
-    REQUIRE(details->Identifier == std::optional<std::string>{"details-id-1"});
-    REQUIRE(details->Sha256Hex == "details-hash-1");
-    REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Covers/0000001201.jpg")});
+        REQUIRE(details.has_value());
+        REQUIRE(details->Id.Value == addedId.Value);
+        REQUIRE(details->TitleUtf8 == "Definitely Maybe");
+        REQUIRE(details->PublisherUtf8 == std::optional<std::string>{"Macmillan"});
+        REQUIRE(details->Isbn == std::optional<std::string>{"9785170000001"});
+        REQUIRE(details->DescriptionUtf8 == std::optional<std::string>{"Aliens land only in one city."});
+        REQUIRE(details->Identifier == std::optional<std::string>{"details-id-1"});
+        REQUIRE(details->Sha256Hex == "details-hash-1");
+        REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Covers/0000001201.jpg")});
+    }
 
     std::filesystem::remove(databasePath);
 }
@@ -291,8 +332,9 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     std::filesystem::create_directories(libraryRoot / "Covers");
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
-    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
-    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
     Librova::Domain::SBook firstBook = MakeBook(
         "Alpha",
@@ -317,16 +359,17 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     secondBook.File.SizeBytes = 2048;
     static_cast<void>(writeRepository.Add(secondBook));
 
-    std::ofstream(libraryRoot / "Covers/0000001301.png", std::ios::binary) << "cover-bytes";
+        std::ofstream(libraryRoot / "Covers/0000001301.png", std::ios::binary) << "cover-bytes";
 
-    const Librova::Application::CLibraryCatalogFacade facade(queryRepository);
-    const auto statistics = facade.GetLibraryStatistics();
-    const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(libraryRoot / "Covers/0000001301.png"));
-    const auto databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const auto statistics = facade.GetLibraryStatistics();
+        const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(libraryRoot / "Covers/0000001301.png"));
+        const auto databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
 
-    REQUIRE(statistics.BookCount == 2);
-    REQUIRE(statistics.TotalManagedBookSizeBytes == 3072);
-    REQUIRE(statistics.TotalLibrarySizeBytes == 3072 + coverSize + databaseSize);
+        REQUIRE(statistics.BookCount == 2);
+        REQUIRE(statistics.TotalManagedBookSizeBytes == 3072);
+        REQUIRE(statistics.TotalLibrarySizeBytes == 3072 + coverSize + databaseSize);
+    }
 
     std::filesystem::remove_all(libraryRoot);
 }

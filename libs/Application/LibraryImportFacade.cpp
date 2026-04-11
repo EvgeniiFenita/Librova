@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <map>
-#include <set>
 #include <stdexcept>
 
+#include "Application/ImportRollbackService.hpp"
+#include "Application/ImportWorkloadPlanner.hpp"
+#include "Application/StructuredProgressMapper.hpp"
+#include "ImportSourceExpander/ImportDiagnostics.hpp"
+#include "ImportSourceExpander/ImportSourceExpander.hpp"
 #include "Logging/Logging.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
@@ -19,17 +21,6 @@ namespace {
         return static_cast<char>(std::tolower(ch));
     });
     return value;
-}
-
-[[nodiscard]] bool IsSupportedStandaloneImportPath(const std::filesystem::path& path)
-{
-    const auto extension = ToLower(path.extension().string());
-    return extension == ".fb2" || extension == ".epub" || extension == ".zip";
-}
-
-[[nodiscard]] bool IsZipStandalonePath(const std::filesystem::path& path)
-{
-    return ToLower(path.extension().string()) == ".zip";
 }
 
 [[nodiscard]] std::string JoinWarningsAndError(
@@ -151,99 +142,6 @@ namespace {
     return ENoSuccessfulImportReason::UnsupportedFormat;
 }
 
-void LogImportSourceIssueIfInitialized(
-    const std::filesystem::path& sourcePath,
-    std::string_view stage,
-    std::string_view outcome,
-    std::string_view status,
-    std::string_view reason)
-{
-    if (!Librova::Logging::CLogging::IsInitialized())
-    {
-        return;
-    }
-
-    const auto utf8SourcePath = Librova::Unicode::PathToUtf8(sourcePath);
-    if (outcome == "failed")
-    {
-        Librova::Logging::Error(
-            "Import source failed: source='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
-            utf8SourcePath,
-            stage,
-            outcome,
-            status,
-            reason);
-        return;
-    }
-
-    Librova::Logging::Warn(
-        "Import source skipped: source='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
-        utf8SourcePath,
-        stage,
-        outcome,
-        status,
-        reason);
-}
-
-[[nodiscard]] std::optional<std::filesystem::path> TryResolveManagedPathWithinRoot(
-    const std::filesystem::path& root,
-    const std::filesystem::path& managedPath)
-{
-    if (managedPath.empty())
-    {
-        return std::nullopt;
-    }
-
-    const auto normalizedManagedPath = managedPath.lexically_normal();
-
-    if (!normalizedManagedPath.is_absolute()
-        && !Librova::ManagedPaths::IsSafeRelativeManagedPath(normalizedManagedPath))
-    {
-        return std::nullopt;
-    }
-
-    const std::filesystem::path candidatePath = normalizedManagedPath.is_absolute()
-        ? normalizedManagedPath
-        : (root / normalizedManagedPath).lexically_normal();
-
-    if (!std::filesystem::exists(candidatePath))
-    {
-        return std::nullopt;
-    }
-
-    return Librova::ManagedPaths::ResolveExistingPathWithinRoot(
-        root,
-        managedPath,
-        "Managed rollback path does not exist.",
-        "Managed rollback path is unsafe.",
-        "Managed rollback path could not be canonicalized.");
-}
-
-[[nodiscard]] bool IsContainedWithinRoot(
-    const std::filesystem::path& root,
-    const std::filesystem::path& candidate) noexcept
-{
-    if (root.empty() || candidate.empty())
-    {
-        return false;
-    }
-
-    const auto normalizedRoot = root.lexically_normal();
-    const auto normalizedCandidate = candidate.lexically_normal();
-
-    auto rootIt = normalizedRoot.begin();
-    auto candidateIt = normalizedCandidate.begin();
-    for (; rootIt != normalizedRoot.end(); ++rootIt, ++candidateIt)
-    {
-        if (candidateIt == normalizedCandidate.end() || *rootIt != *candidateIt)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::filesystem::path& stopRoot) noexcept
 {
     std::error_code errorCode;
@@ -308,119 +206,6 @@ void CleanupWorkingDirectoryNoThrow(
     RemovePathNoThrow(normalizedWorkingDirectory);
 }
 
-void LogRollbackCleanupIssueIfInitialized(
-    const std::filesystem::path& managedPath,
-    std::string_view reason) noexcept
-{
-    if (!Librova::Logging::CLogging::IsInitialized())
-    {
-        return;
-    }
-
-    try
-    {
-        Librova::Logging::Warn(
-            "Import cancellation rollback could not clean up managed path '{}'. Reason='{}'.",
-            Librova::Unicode::PathToUtf8(managedPath),
-            reason);
-    }
-    catch (...)
-    {
-    }
-}
-
-[[nodiscard]] std::optional<std::string> CleanupManagedPathNoThrow(
-    const std::filesystem::path& root,
-    const std::filesystem::path& managedPath) noexcept
-{
-    if (managedPath.empty())
-    {
-        return std::nullopt;
-    }
-
-    const auto normalizedManagedPath = managedPath.lexically_normal();
-    const auto candidatePath = normalizedManagedPath.is_absolute()
-        ? normalizedManagedPath
-        : (root / normalizedManagedPath).lexically_normal();
-
-    try
-    {
-        if (!std::filesystem::exists(candidatePath))
-        {
-            return std::nullopt;
-        }
-
-        const auto resolvedPath = TryResolveManagedPathWithinRoot(root, normalizedManagedPath);
-        if (!resolvedPath.has_value())
-        {
-            const std::string reason = "Path could not be resolved safely within the library root.";
-            LogRollbackCleanupIssueIfInitialized(normalizedManagedPath, reason);
-            return "Cancellation rollback left managed artifact '"
-                + Librova::Unicode::PathToUtf8(candidatePath)
-                + "' on disk because "
-                + reason;
-        }
-
-        std::error_code errorCode;
-        std::filesystem::remove(*resolvedPath, errorCode);
-        if (errorCode)
-        {
-            const std::string reason = "Filesystem remove failed: " + errorCode.message();
-            LogRollbackCleanupIssueIfInitialized(*resolvedPath, reason);
-            return "Cancellation rollback left managed artifact '"
-                + Librova::Unicode::PathToUtf8(*resolvedPath)
-                + "' on disk because "
-                + reason;
-        }
-
-        if (std::filesystem::exists(*resolvedPath))
-        {
-            const std::string reason = "Filesystem remove reported success but the path still exists.";
-            LogRollbackCleanupIssueIfInitialized(*resolvedPath, reason);
-            return "Cancellation rollback left managed artifact '"
-                + Librova::Unicode::PathToUtf8(*resolvedPath)
-                + "' on disk because "
-                + reason;
-        }
-
-        CleanupEmptyParentsNoThrow(*resolvedPath, root);
-        return std::nullopt;
-    }
-    catch (const std::exception& error)
-    {
-        const std::string reason = std::string{"Cleanup threw an exception: "} + error.what();
-        LogRollbackCleanupIssueIfInitialized(normalizedManagedPath, reason);
-        return "Cancellation rollback left managed artifact '"
-            + Librova::Unicode::PathToUtf8(candidatePath)
-            + "' on disk because "
-            + reason;
-    }
-    catch (...)
-    {
-        const std::string reason = "Cleanup threw a non-standard exception.";
-        LogRollbackCleanupIssueIfInitialized(normalizedManagedPath, reason);
-        return "Cancellation rollback left managed artifact '"
-            + Librova::Unicode::PathToUtf8(candidatePath)
-            + "' on disk because "
-            + reason;
-    }
-}
-
-void LogRollbackFailureIfInitialized(
-    const Librova::Domain::SBookId bookId,
-    const std::exception& error)
-{
-    if (!Librova::Logging::CLogging::IsInitialized())
-    {
-        return;
-    }
-
-    Librova::Logging::Error(
-        "Import cancellation rollback failed for book {}. Error='{}'.",
-        bookId.Value,
-        error.what());
-}
-
 } // namespace
 
 namespace Librova::Application {
@@ -428,12 +213,13 @@ namespace Librova::Application {
 CLibraryImportFacade::CLibraryImportFacade(
     const Librova::Importing::ISingleFileImporter& singleFileImporter,
     const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator,
-    Librova::Domain::IBookRepository* bookRepository,
-    std::filesystem::path libraryRoot)
+    Librova::Domain::IBookRepository& bookRepository,
+    SLibraryImportContext libraryContext)
     : m_singleFileImporter(singleFileImporter)
     , m_zipImportCoordinator(zipImportCoordinator)
-    , m_bookRepository(bookRepository)
-    , m_libraryRoot(std::move(libraryRoot))
+    , m_workloadPlanner(zipImportCoordinator)
+    , m_rollbackService(bookRepository, libraryContext.LibraryRoot)
+    , m_libraryRoot(std::move(libraryContext.LibraryRoot))
 {
 }
 
@@ -442,288 +228,7 @@ bool CLibraryImportFacade::IsZipPath(const std::filesystem::path& path)
     return ToLower(path.extension().string()) == ".zip";
 }
 
-CLibraryImportFacade::SRollbackResult CLibraryImportFacade::RollbackImportedBooks(
-    const std::vector<Librova::Domain::SBookId>& importedBookIds) const
-{
-    SRollbackResult rollbackResult;
-
-    if (m_bookRepository == nullptr || m_libraryRoot.empty())
-    {
-        rollbackResult.RemainingBookIds = importedBookIds;
-        return rollbackResult;
-    }
-
-    for (auto iterator = importedBookIds.rbegin(); iterator != importedBookIds.rend(); ++iterator)
-    {
-        std::optional<Librova::Domain::SBook> book;
-        try
-        {
-            book = m_bookRepository->GetById(*iterator);
-        }
-        catch (const std::exception& error)
-        {
-            rollbackResult.RemainingBookIds.push_back(*iterator);
-            rollbackResult.Warnings.push_back(
-                "Cancellation rollback left book "
-                + std::to_string(iterator->Value)
-                + " in the library because catalog lookup failed: "
-                + error.what());
-            LogRollbackFailureIfInitialized(*iterator, error);
-            continue;
-        }
-
-        try
-        {
-            m_bookRepository->Remove(*iterator);
-        }
-        catch (const std::exception& error)
-        {
-            rollbackResult.RemainingBookIds.push_back(*iterator);
-            rollbackResult.Warnings.push_back(
-                "Cancellation rollback left book "
-                + std::to_string(iterator->Value)
-                + " in the library because catalog removal failed: "
-                + error.what());
-            LogRollbackFailureIfInitialized(*iterator, error);
-            continue;
-        }
-
-        if (book.has_value())
-        {
-            if (book->CoverPath.has_value())
-            {
-                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *book->CoverPath); cleanupWarning.has_value())
-                {
-                    rollbackResult.HasCleanupResidue = true;
-                    rollbackResult.Warnings.push_back(*cleanupWarning);
-                }
-            }
-
-            if (book->File.HasManagedPath())
-            {
-                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, book->File.ManagedPath); cleanupWarning.has_value())
-                {
-                    rollbackResult.HasCleanupResidue = true;
-                    rollbackResult.Warnings.push_back(*cleanupWarning);
-                }
-            }
-        }
-    }
-
-    if (Librova::Logging::CLogging::IsInitialized())
-    {
-        if (rollbackResult.RemainingBookIds.empty())
-        {
-            Librova::Logging::Warn(
-                "Rolled back {} previously imported book(s) after cancellation.",
-                importedBookIds.size());
-        }
-        else
-        {
-            Librova::Logging::Warn(
-                "Cancellation rollback left {} of {} imported book(s) in the library after catalog-removal failures.",
-                rollbackResult.RemainingBookIds.size(),
-                importedBookIds.size());
-        }
-
-        if (rollbackResult.HasCleanupResidue)
-        {
-            Librova::Logging::Warn(
-                "Cancellation rollback left managed artifacts on disk for at least one imported book.");
-        }
-    }
-
-    return rollbackResult;
-}
-
 namespace {
-
-struct SExpandedImportSources
-{
-    std::vector<std::filesystem::path> Candidates;
-    std::vector<std::string> Warnings;
-};
-
-struct SPreparedImportWorkload
-{
-    std::size_t TotalEntries = 0;
-    std::map<std::filesystem::path, std::size_t> PlannedEntriesBySource;
-    std::vector<std::string> Warnings;
-};
-
-class CScopedStructuredProgressSink final : public Librova::Domain::IProgressSink, public Librova::Domain::IStructuredImportProgressSink
-{
-public:
-    CScopedStructuredProgressSink(
-        Librova::Domain::IProgressSink& innerSink,
-        const std::size_t totalEntries,
-        const std::size_t processedEntries,
-        const std::size_t contributionEntries)
-        : m_innerSink(innerSink)
-        , m_totalEntries(totalEntries)
-        , m_processedEntries(processedEntries)
-        , m_contributionEntries(std::max<std::size_t>(contributionEntries, 1))
-    {
-    }
-
-    void ReportValue(const int percent, std::string_view message) override
-    {
-        m_innerSink.ReportValue(MapPercent(percent), message);
-    }
-
-    bool IsCancellationRequested() const override
-    {
-        return m_innerSink.IsCancellationRequested();
-    }
-
-    void ReportStructuredProgress(
-        const std::size_t totalEntries,
-        const std::size_t processedEntries,
-        const std::size_t importedEntries,
-        const std::size_t failedEntries,
-        const std::size_t skippedEntries,
-        const int percent,
-        std::string_view message) override
-    {
-        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&m_innerSink); structuredSink != nullptr)
-        {
-            structuredSink->ReportStructuredProgress(
-                m_totalEntries,
-                m_processedEntries + processedEntries,
-                importedEntries,
-                failedEntries,
-                skippedEntries,
-                MapPercent(percent),
-                message);
-            return;
-        }
-
-        m_innerSink.ReportValue(MapPercent(percent), message);
-    }
-
-private:
-    [[nodiscard]] int MapPercent(const int localPercent) const noexcept
-    {
-        const auto clampedLocalPercent = std::clamp(localPercent, 0, 100);
-        const auto scaledProgress = static_cast<long long>(m_processedEntries * 100)
-            + (static_cast<long long>(m_contributionEntries) * clampedLocalPercent);
-        const auto denominator = static_cast<long long>(std::max<std::size_t>(m_totalEntries, 1)) * 100LL;
-        return static_cast<int>(std::clamp((scaledProgress * 100LL) / denominator, 0LL, 100LL));
-    }
-
-    Librova::Domain::IProgressSink& m_innerSink;
-    std::size_t m_totalEntries = 0;
-    std::size_t m_processedEntries = 0;
-    std::size_t m_contributionEntries = 1;
-};
-
-[[nodiscard]] SExpandedImportSources ExpandImportSources(const Librova::Application::SImportRequest& request)
-{
-    SExpandedImportSources expanded;
-    std::set<std::string> seenPaths;
-
-    for (const auto& rawSourcePath : request.SourcePaths)
-    {
-        const auto sourcePath = rawSourcePath.lexically_normal();
-        if (sourcePath.empty())
-        {
-            continue;
-        }
-
-        std::error_code errorCode;
-        const bool isDirectory = std::filesystem::is_directory(sourcePath, errorCode);
-        if (isDirectory)
-        {
-            std::size_t discoveredSupportedEntries = 0;
-            for (std::filesystem::recursive_directory_iterator iterator(
-                     sourcePath,
-                     std::filesystem::directory_options::skip_permission_denied,
-                     errorCode),
-                 end;
-                 iterator != end;
-                 iterator.increment(errorCode))
-            {
-                if (errorCode)
-                {
-                    expanded.Warnings.push_back(
-                        "Failed to enumerate directory '" + Librova::Unicode::PathToUtf8(sourcePath) + "'.");
-                    break;
-                }
-
-                if (!iterator->is_regular_file())
-                {
-                    continue;
-                }
-
-                const auto candidatePath = iterator->path().lexically_normal();
-                if (!IsSupportedStandaloneImportPath(candidatePath))
-                {
-                    continue;
-                }
-
-                const auto candidateKey = Librova::Unicode::PathToUtf8(candidatePath);
-                if (!seenPaths.insert(candidateKey).second)
-                {
-                    continue;
-                }
-
-                expanded.Candidates.push_back(candidatePath);
-                ++discoveredSupportedEntries;
-            }
-
-            if (discoveredSupportedEntries == 0)
-            {
-                const auto warning =
-                    "Directory '" + Librova::Unicode::PathToUtf8(sourcePath) + "' does not contain supported .fb2, .epub, or .zip files.";
-                expanded.Warnings.push_back(warning);
-                LogImportSourceIssueIfInitialized(
-                    sourcePath,
-                    "source-selection",
-                    "skipped",
-                    "empty-directory",
-                    warning);
-            }
-
-            continue;
-        }
-
-        if (std::filesystem::is_regular_file(sourcePath, errorCode))
-        {
-            if (!IsSupportedStandaloneImportPath(sourcePath))
-            {
-                const auto warning =
-                    "Unsupported selected source '" + Librova::Unicode::PathToUtf8(sourcePath) + "'. Only .fb2, .epub, and .zip are supported.";
-                expanded.Warnings.push_back(warning);
-                LogImportSourceIssueIfInitialized(
-                    sourcePath,
-                    "source-selection",
-                    "skipped",
-                    "unsupported-source",
-                    warning);
-                continue;
-            }
-
-            const auto sourceKey = Librova::Unicode::PathToUtf8(sourcePath);
-            if (seenPaths.insert(sourceKey).second)
-            {
-                expanded.Candidates.push_back(sourcePath);
-            }
-
-            continue;
-        }
-
-        const auto warning = "Selected import source '" + Librova::Unicode::PathToUtf8(sourcePath) + "' does not exist.";
-        expanded.Warnings.push_back(warning);
-        LogImportSourceIssueIfInitialized(
-            sourcePath,
-            "source-selection",
-            "failed",
-            "missing-source",
-            warning);
-    }
-
-    return expanded;
-}
 
 [[nodiscard]] Librova::Application::EImportMode DetermineImportMode(
     const Librova::Application::SImportRequest& request,
@@ -745,7 +250,9 @@ private:
         return Librova::Application::EImportMode::Batch;
     }
 
-    if (candidates.size() == 1 && IsSupportedStandaloneImportPath(candidates.front()) && ToLower(candidates.front().extension().string()) == ".zip")
+    if (candidates.size() == 1
+        && Librova::ImportSourceExpander::CImportSourceExpander::IsSupportedStandaloneImportPath(candidates.front())
+        && ToLower(candidates.front().extension().string()) == ".zip")
     {
         return Librova::Application::EImportMode::ZipArchive;
     }
@@ -760,54 +267,59 @@ void MergeWarnings(std::vector<std::string>& target, const std::vector<std::stri
     target.insert(target.end(), source.begin(), source.end());
 }
 
-[[nodiscard]] SPreparedImportWorkload PrepareImportWorkload(
-    const std::vector<std::filesystem::path>& candidates,
-    const Librova::ZipImporting::CZipImportCoordinator& zipImportCoordinator,
-    const Librova::Domain::IProgressSink& progressSink,
-    const std::stop_token stopToken)
+} // namespace
+
+SImportSourceValidation CLibraryImportFacade::ValidateImportSources(
+    const std::vector<std::filesystem::path>& sourcePaths) const
 {
-    SPreparedImportWorkload workload;
-
-    for (const auto& sourcePath : candidates)
+    if (sourcePaths.empty())
     {
-        if (stopToken.stop_requested() || progressSink.IsCancellationRequested())
-        {
-            break;
-        }
-
-        if (IsZipStandalonePath(sourcePath))
-        {
-            try
-            {
-                const auto plannedEntries = zipImportCoordinator.CountPlannedEntries(sourcePath, &progressSink, stopToken);
-                workload.PlannedEntriesBySource.emplace(sourcePath, plannedEntries);
-                workload.TotalEntries += plannedEntries;
-            }
-            catch (const std::exception& error)
-            {
-                workload.PlannedEntriesBySource.emplace(sourcePath, 1);
-                ++workload.TotalEntries;
-                const auto warning =
-                    "Failed to inspect ZIP archive '" + Librova::Unicode::PathToUtf8(sourcePath) + "': " + error.what();
-                workload.Warnings.push_back(warning);
-                LogImportSourceIssueIfInitialized(
-                    sourcePath,
-                    "zip-inspection",
-                    "failed",
-                    "source-inspection-failed",
-                    error.what());
-            }
-        }
-        else
-        {
-            ++workload.TotalEntries;
-        }
+        return {};
     }
 
-    return workload;
-}
+    bool hasUsableSource = false;
+    bool hasMissingSource = false;
 
-} // namespace
+    for (const auto& rawSourcePath : sourcePaths)
+    {
+        const auto sourcePath = rawSourcePath.lexically_normal();
+        if (sourcePath.empty())
+        {
+            continue;
+        }
+
+        std::error_code errorCode;
+        if (std::filesystem::is_directory(sourcePath, errorCode))
+        {
+            hasUsableSource = true;
+            continue;
+        }
+
+        if (std::filesystem::is_regular_file(sourcePath, errorCode))
+        {
+            if (Librova::ImportSourceExpander::CImportSourceExpander::IsSupportedStandaloneImportPath(sourcePath))
+            {
+                hasUsableSource = true;
+            }
+
+            continue;
+        }
+
+        hasMissingSource = true;
+    }
+
+    if (hasUsableSource)
+    {
+        return {};
+    }
+
+    if (hasMissingSource)
+    {
+        return {.BlockingMessage = "A selected source does not exist."};
+    }
+
+    return {.BlockingMessage = Librova::ImportSourceExpander::CImportSourceExpander::BuildSupportedImportSourcesMessage()};
+}
 
 SImportResult CLibraryImportFacade::Run(
     const SImportRequest& request,
@@ -819,8 +331,8 @@ SImportResult CLibraryImportFacade::Run(
         throw std::invalid_argument("Import request must contain source path and working directory.");
     }
 
-    const auto expandedSources = ExpandImportSources(request);
-    const auto preparedWorkload = PrepareImportWorkload(expandedSources.Candidates, m_zipImportCoordinator, progressSink, stopToken);
+    const auto expandedSources = Librova::ImportSourceExpander::CImportSourceExpander::Expand(request.SourcePaths);
+    const auto preparedWorkload = m_workloadPlanner.Prepare(expandedSources.Candidates, progressSink, stopToken);
     SImportResult result;
     result.Summary.Mode = DetermineImportMode(request, expandedSources.Candidates);
     result.Summary.Warnings = expandedSources.Warnings;
@@ -831,17 +343,14 @@ SImportResult CLibraryImportFacade::Run(
         : ENoSuccessfulImportReason::None;
     std::size_t processedEntries = 0;
 
-    if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
-    {
-        structuredSink->ReportStructuredProgress(
-            result.Summary.TotalEntries,
-            0,
-            0,
-            0,
-            0,
-            0,
-            result.Summary.TotalEntries == 0 ? "No supported import entries were found." : "Prepared import workload");
-    }
+    ReportStructuredProgressIfSupported(
+        progressSink,
+        result.Summary.TotalEntries,
+        0,
+        0,
+        0,
+        0,
+        result.Summary.TotalEntries == 0 ? "No supported import entries were found." : "Prepared import workload");
 
     for (const auto& sourcePath : expandedSources.Candidates)
     {
@@ -941,18 +450,14 @@ SImportResult CLibraryImportFacade::Run(
                     }
                 }
 
-                if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
-                {
-                    const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
-                    structuredSink->ReportStructuredProgress(
-                        result.Summary.TotalEntries,
-                        processedEntries,
-                        result.Summary.ImportedEntries,
-                        result.Summary.FailedEntries,
-                        result.Summary.SkippedEntries,
-                        percent,
-                        "Processed archive source");
-                }
+                ReportStructuredProgressIfSupported(
+                    progressSink,
+                    result.Summary.TotalEntries,
+                    processedEntries,
+                    result.Summary.ImportedEntries,
+                    result.Summary.FailedEntries,
+                    result.Summary.SkippedEntries,
+                    "Processed archive source");
             }
             catch (const std::exception& error)
             {
@@ -965,25 +470,21 @@ SImportResult CLibraryImportFacade::Run(
                 result.Summary.FailedEntries += zipEntryCount;
                 result.Summary.Warnings.push_back(
                     "ZIP archive '" + Librova::Unicode::PathToUtf8(sourcePath) + "' failed: " + error.what());
-                LogImportSourceIssueIfInitialized(
+                Librova::ImportSourceExpander::LogImportSourceIssueIfInitialized(
                     sourcePath,
                     "zip-import",
                     "failed",
                     "archive-run-failed",
                     error.what());
 
-                if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
-                {
-                    const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
-                    structuredSink->ReportStructuredProgress(
-                        result.Summary.TotalEntries,
-                        processedEntries,
-                        result.Summary.ImportedEntries,
-                        result.Summary.FailedEntries,
-                        result.Summary.SkippedEntries,
-                        percent,
-                        "Archive source failed");
-                }
+                ReportStructuredProgressIfSupported(
+                    progressSink,
+                    result.Summary.TotalEntries,
+                    processedEntries,
+                    result.Summary.ImportedEntries,
+                    result.Summary.FailedEntries,
+                    result.Summary.SkippedEntries,
+                    "Archive source failed");
             }
 
             continue;
@@ -1034,18 +535,14 @@ SImportResult CLibraryImportFacade::Run(
             {
                 result.ImportedBookIds.push_back(*singleFileResult.ImportedBookId);
             }
-            if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
-            {
-                const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
-                structuredSink->ReportStructuredProgress(
-                    result.Summary.TotalEntries,
-                    processedEntries,
-                    result.Summary.ImportedEntries,
-                    result.Summary.FailedEntries,
-                    result.Summary.SkippedEntries,
-                    percent,
-                    "Processed source file");
-            }
+            ReportStructuredProgressIfSupported(
+                progressSink,
+                result.Summary.TotalEntries,
+                processedEntries,
+                result.Summary.ImportedEntries,
+                result.Summary.FailedEntries,
+                result.Summary.SkippedEntries,
+                "Processed source file");
             continue;
         }
 
@@ -1111,7 +608,7 @@ SImportResult CLibraryImportFacade::Run(
                 break;
             }
 
-            LogImportSourceIssueIfInitialized(
+            Librova::ImportSourceExpander::LogImportSourceIssueIfInitialized(
                 sourcePath,
                 stage,
                 outcome,
@@ -1119,18 +616,14 @@ SImportResult CLibraryImportFacade::Run(
                 GetSingleFileLogReason(singleFileResult));
         }
 
-        if (auto* structuredSink = dynamic_cast<Librova::Domain::IStructuredImportProgressSink*>(&progressSink); structuredSink != nullptr)
-        {
-            const auto percent = static_cast<int>((processedEntries * 100) / std::max<std::size_t>(result.Summary.TotalEntries, 1));
-            structuredSink->ReportStructuredProgress(
-                result.Summary.TotalEntries,
-                processedEntries,
-                result.Summary.ImportedEntries,
-                result.Summary.FailedEntries,
-                result.Summary.SkippedEntries,
-                percent,
-                "Processed source file");
-        }
+        ReportStructuredProgressIfSupported(
+            progressSink,
+            result.Summary.TotalEntries,
+            processedEntries,
+            result.Summary.ImportedEntries,
+            result.Summary.FailedEntries,
+            result.Summary.SkippedEntries,
+            "Processed source file");
     }
 
     if (expandedSources.Candidates.empty())
@@ -1151,7 +644,7 @@ SImportResult CLibraryImportFacade::Run(
     result.WasCancelled = result.WasCancelled || stopToken.stop_requested() || progressSink.IsCancellationRequested();
     if (result.WasCancelled && !result.ImportedBookIds.empty())
     {
-        const auto rollbackResult = RollbackImportedBooks(result.ImportedBookIds);
+        const auto rollbackResult = m_rollbackService.RollbackImportedBooks(result.ImportedBookIds);
         MergeWarnings(result.Summary.Warnings, rollbackResult.Warnings);
         result.ImportedBookIds = rollbackResult.RemainingBookIds;
         result.Summary.ImportedEntries = result.ImportedBookIds.size();
