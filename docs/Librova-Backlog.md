@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#109`
+Last assigned id: `#112`
 
 ## 2. Priority Meanings
 
@@ -36,6 +36,12 @@ Last assigned id: `#109`
 
 ### Critical
 ### Major
+- `#110` fix the first-run screen so the `Librova` label in the left panel is not clipped vertically.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: the current first-run layout clips the `Librova` branding text by height in the left hero panel; adjust the typography, container sizing, or vertical alignment so the label remains fully visible at the intended desktop scale without introducing a new layout regression.
+
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`
@@ -79,6 +85,12 @@ Last assigned id: `#109`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
+- `#111` add clearer visual confirmation in `Settings` when a converter is configured successfully.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: the converter settings panel currently lacks strong positive feedback after a valid converter path is accepted; add an explicit configured-state affordance such as a bright checkmark, stronger success styling, or a more prominent state label so the user can tell at a glance that conversion is enabled.
+
 - `#63` normalize FB2 genre codes to human-readable English names at import time so the database stores display-ready strings rather than raw format-specific codes.
   - Status: `Open`
   - Type: `Feature`
@@ -98,6 +110,11 @@ Last assigned id: `#109`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
 ### Low
+- `#112` reduce native test-run log noise so routine runs show failures and final summary rather than every passing test case.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: the current C++ test invocation logs each individual passing test, which makes routine runs noisy and harder to scan; change the default test runner output to focus on failures and the final aggregate result while still keeping enough detail for debugging failed cases.
 
 ## 4. Done Criteria
 
