@@ -17,6 +17,24 @@ TEST_CASE("Search query reports text and structured filters", "[domain][query]")
     REQUIRE(query.HasStructuredFilters());
 }
 
+TEST_CASE("Search query reports Languages as structured filter", "[domain][query]")
+{
+    Librova::Domain::SSearchQuery query;
+    REQUIRE_FALSE(query.HasStructuredFilters());
+
+    query.Languages = {"en", "ru"};
+    REQUIRE(query.HasStructuredFilters());
+}
+
+TEST_CASE("Search query reports GenresUtf8 as structured filter", "[domain][query]")
+{
+    Librova::Domain::SSearchQuery query;
+    REQUIRE_FALSE(query.HasStructuredFilters());
+
+    query.GenresUtf8 = {"classic"};
+    REQUIRE(query.HasStructuredFilters());
+}
+
 TEST_CASE("Search query keeps MVP defaults for pagination", "[domain][query]")
 {
     const Librova::Domain::SSearchQuery query;

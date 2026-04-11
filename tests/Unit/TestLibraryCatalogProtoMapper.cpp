@@ -9,8 +9,8 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
     const Librova::Application::SBookListRequest request{
         .TextUtf8 = "zone",
         .AuthorUtf8 = std::string{"Arkady Strugatsky"},
-        .Language = std::string{"en"},
-        .GenreUtf8 = std::string{"classic"},
+        .Languages = {"en", "ru"},
+        .GenresUtf8 = {"classic", "sci-fi"},
         .SeriesUtf8 = std::string{"Noon Universe"},
         .TagsUtf8 = {"classic", "sci-fi"},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -25,8 +25,8 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
 
     REQUIRE(restored.TextUtf8 == request.TextUtf8);
     REQUIRE(restored.AuthorUtf8 == request.AuthorUtf8);
-    REQUIRE(restored.Language == request.Language);
-    REQUIRE(restored.GenreUtf8 == request.GenreUtf8);
+    REQUIRE(restored.Languages == request.Languages);
+    REQUIRE(restored.GenresUtf8 == request.GenresUtf8);
     REQUIRE(restored.SeriesUtf8 == request.SeriesUtf8);
     REQUIRE(restored.TagsUtf8 == request.TagsUtf8);
     REQUIRE(restored.Format == request.Format);

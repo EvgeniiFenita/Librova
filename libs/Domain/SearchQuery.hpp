@@ -25,9 +25,10 @@ struct SSearchQuery
 {
     std::string TextUtf8;
     std::optional<std::string> AuthorUtf8;
-    std::optional<std::string> Language;
+    std::vector<std::string> Languages;
     std::optional<std::string> SeriesUtf8;
     std::vector<std::string> TagsUtf8;
+    std::vector<std::string> GenresUtf8;
     std::optional<EBookFormat> Format;
     std::optional<EBookSort> SortBy;
     std::optional<ESortDirection> SortDirection;
@@ -42,9 +43,10 @@ struct SSearchQuery
     [[nodiscard]] bool HasStructuredFilters() const noexcept
     {
         return AuthorUtf8.has_value()
-            || Language.has_value()
+            || !Languages.empty()
             || SeriesUtf8.has_value()
             || !TagsUtf8.empty()
+            || !GenresUtf8.empty()
             || Format.has_value();
     }
 };

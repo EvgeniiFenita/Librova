@@ -218,7 +218,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 |---|---|---|
 | `TextBox` | `AppTextInput` | h=42, SurfaceAlt bg, Medium radius |
 | `TextBox` | `AppTextArea` | Multi-line, TextWrapping=Wrap |
-| `ComboBox` | `AppComboBox` | Popup styled via `Border#PopupBorder` override |
+| `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup |
 | `CheckBox` | *(none)* | Foreground override to Primary |
 
 ### ToolTip
@@ -328,6 +328,17 @@ To swap the entire colour palette, update exactly these four locations:
 - `BoxShadow` values (e.g., BookCard hover glow `#38F5A623`) and `TextControlSelectionHighlightColor` (`#40F5A623`) cannot reference `StaticResource` because `BoxShadow` is a parsed struct string and `<Color>` text content cannot be a markup extension. Both values are declared as named tokens (`Color.AccentGlow`, `Color.AccentSelection`) in `Colors.axaml` for documentation, but the consuming sites hardcode the literal hex with a comment referencing the token name. Update all four together when changing the palette.
 - `AppSidebarGradientBrush` gradient stops also use hardcoded hex values for the same reason — update alongside `Color.Sidebar` / `Color.Background`.
 
+### Popup / Dropdown surface rule
+
+**Все всплывающие поверхности (Popup, dropdown, flyout) должны использовать одинаковую визуальную пару:**
+
+| Token | Value | Назначение |
+|---|---|---|
+| Background | `AppSurfaceElevatedBrush` (`Color.SurfaceElevated` = `#2E2414`) | Тёплый amber, заметно светлее основного окна |
+| Border | `AppAccentBorderBrush` (`Color.AccentBorder` = `#3D2C0A`) | Amber-рамка, выделяет контейнер без BoxShadow |
+
+Это правило применено к `Border.FilterPopup` (filter facet flyout) и `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown). Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
+
 ---
 
 ## 15. Section Transitions
@@ -345,3 +356,75 @@ All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150
 **Annotation typography** — The book annotation text in the details panel uses `FontStyle="Italic"` to evoke a book excerpt feel.
 
 **First-run hero branding** — The left setup panel keeps the `Librova` wordmark at 22 px Bold with an explicit 30 px line-height so Avalonia does not clip the glyphs vertically on the startup screen.
+
+---
+
+## 17. Filter Panel
+
+The library filter panel is a single **ToggleButton + Popup** — a store-style faceted flyout grouping Languages and Genres in one place.
+
+### Trigger button
+
+`ToggleButton` with `Classes="FilterButton"`. Label bound to `LibraryBrowser.FilterButtonLabel` — shows `"Filters"` when no filter is active, `"Filters · N"` (amber) when N facets are selected. Checked state gets `AccentSurfaceBrush` background. `IsChecked` bound two-way to `LibraryBrowser.IsFilterPanelOpen`.
+
+`PlacementTarget` assigned in code-behind (`LibraryView.axaml.cs`) after `AvaloniaXamlLoader.Load` because Avalonia compiled-XAML bindings do not support `x:Reference` for `PlacementTarget`.
+
+### Popup
+
+`Popup` with `Placement="Bottom"`, `IsLightDismissEnabled="True"`, `IsOpen` bound two-way to `LibraryBrowser.IsFilterPanelOpen`. Width 320. Content wrapped in `Border.FilterPopup`.
+
+### Layout inside popup
+
+```
+FilterSectionHeader "LANGUAGES"
+ScrollViewer MaxHeight=110
+  ItemsControl ← LanguageFacets
+    CheckBox (FilterPopup CheckBox style)
+1 px divider (AppBorderBrush)
+FilterSectionHeader "GENRES"
+TextBox "Search genres…" ← GenreSearchText
+ScrollViewer MaxHeight=140
+  ItemsControl ← FilteredGenreFacets
+    CheckBox
+footer row (visible when HasActiveFilters):
+  "N selected" TextBlock + "Clear all" Button.FilterClearButton
+```
+
+### Facet semantics
+
+Empty selection ≡ no filter applied (all values pass through). Both facets use OR semantics within the facet. SQL: languages → `b.language IN (?,…)`, genres → `AND EXISTS (… WHERE normalized_name IN (?,…))`.
+
+### ViewModel API
+
+| Property / Command | Type | Purpose |
+|---|---|---|
+| `LanguageFacets` | `ObservableCollection<FilterFacetItem>` | Populated from `AvailableLanguages` on each server response |
+| `GenreFacets` | `ObservableCollection<FilterFacetItem>` | Populated from `AvailableGenres` |
+| `FilteredGenreFacets` | computed | Filters `GenreFacets` by `GenreSearchText` |
+| `IsFilterPanelOpen` | `bool` | Opens/closes the Popup |
+| `ActiveFilterCount` | `int` | Sum of selected languages + genres |
+| `FilterButtonLabel` | `string` | `"Filters"` or `"Filters · N"` |
+| `ClearAllFiltersCommand` | `ICommand` | Deselects all facets |
+
+### FilterFacetItem
+
+`sealed class FilterFacetItem : INotifyPropertyChanged` — `Value: string` (display / filter value), `IsSelected: bool` (two-way bound to CheckBox). ViewModel subscribes to each item's `PropertyChanged` on add, unsubscribes on remove; selection changes trigger `OnFacetSelectionChanged` which updates `LibraryBrowseQueryState` and schedules a debounced refresh.
+
+`SynchronizeFacets(newValues, facets, subscribe, unsubscribe)` helper preserves `IsSelected` state for items already in the collection — avoids reset flicker when the server refreshes available values.
+
+### Styles
+
+| Selector | Description |
+|---|---|
+| `ToggleButton.FilterButton` | Default: `AppSurfaceAltBrush` bg (через `/template/ ContentPresenter`), `AppBorderBrush` border, `Radius.Medium`, `MinHeight="42"`, `FontSize="14"`, `HorizontalContentAlignment=Center`, `VerticalContentAlignment=Center` |
+| `ToggleButton.FilterButton:checked` | `AppAccentMutedBrush` (#2A1C06) bg — тёплый amber-тинт, ясно читается как активное; `AppAccentBrush` border+text |
+| `ToggleButton.FilterButton:checked:pointerover` | `AppAccentBorderBrush` (#3D2C0A) bg, `AppAccentBrightBrush` text |
+| `ToggleButton.FilterButton:pointerover` | `AppSurfaceHoverBrush` bg |
+| `Border.FilterPopup` | `AppSurfaceElevatedBrush` bg (`#2E2414`, warm amber elevated), `AppAccentBorderBrush` amber border, `Radius.Large` (12) — popup выделяется тёплой рамкой без тени (BoxShadow не используется: Avalonia Popup рендерит прямоугольную тень внутри PopupRoot, не уважая CornerRadius) |
+| `TextBlock.FilterSectionHeader` | `FontSize.Xs` (11), uppercase labels, `TextMutedBrush`, 0,0,0,6 margin |
+| `Border.FilterPopup CheckBox` | Transparent bg, `AppTextPrimaryBrush` foreground |
+| `Button.FilterClearButton` | Transparent bg, `AppAccentBrush` text, no border; hover → `AppAccentBrightBrush`; pressed → `AppAccentDimBrush` |
+
+### Icon
+
+`IconFilter` StreamGeometry in `Colors.axaml` — funnel shape for use as `PathIcon` or `DrawingImage`.

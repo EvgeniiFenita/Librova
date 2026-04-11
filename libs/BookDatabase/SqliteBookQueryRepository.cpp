@@ -274,9 +274,9 @@ void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& paramete
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
     }
 
-    if (query.Language.has_value())
+    for (const std::string& language : query.Languages)
     {
-        statement.BindText(parameterIndex++, *query.Language);
+        statement.BindText(parameterIndex++, language);
     }
 
     if (query.SeriesUtf8.has_value())
@@ -287,6 +287,11 @@ void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& paramete
     for (const std::string& tag : query.TagsUtf8)
     {
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    for (const std::string& genre : query.GenresUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
     }
 
     if (query.Format.has_value())
@@ -339,9 +344,11 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
         sql += "AND a_filter.normalized_name = ? ";
     }
 
-    if (query.Language.has_value())
+    if (!query.Languages.empty())
     {
-        sql += "AND b.language = ? ";
+        sql += "AND b.language IN ";
+        sql += BuildIdInClause(query.Languages.size());
+        sql += " ";
     }
 
     if (query.SeriesUtf8.has_value())
@@ -357,6 +364,16 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
             "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
             "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
             ") ";
+    }
+
+    if (!query.GenresUtf8.empty())
+    {
+        sql += "AND EXISTS ("
+               "SELECT 1 FROM book_tags bt_genre "
+               "INNER JOIN tags t_genre ON t_genre.id = bt_genre.tag_id "
+               "WHERE bt_genre.book_id = b.id AND t_genre.normalized_name IN ";
+        sql += BuildIdInClause(query.GenresUtf8.size());
+        sql += ") ";
     }
 
     if (query.Format.has_value())
@@ -420,9 +437,11 @@ std::string BuildSearchCountSql(const Librova::Domain::SSearchQuery& query)
         sql += "AND a_filter.normalized_name = ? ";
     }
 
-    if (query.Language.has_value())
+    if (!query.Languages.empty())
     {
-        sql += "AND b.language = ? ";
+        sql += "AND b.language IN ";
+        sql += BuildIdInClause(query.Languages.size());
+        sql += " ";
     }
 
     if (query.SeriesUtf8.has_value())
@@ -438,6 +457,16 @@ std::string BuildSearchCountSql(const Librova::Domain::SSearchQuery& query)
             "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
             "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
             ") ";
+    }
+
+    if (!query.GenresUtf8.empty())
+    {
+        sql += "AND EXISTS ("
+               "SELECT 1 FROM book_tags bt_genre "
+               "INNER JOIN tags t_genre ON t_genre.id = bt_genre.tag_id "
+               "WHERE bt_genre.book_id = b.id AND t_genre.normalized_name IN ";
+        sql += BuildIdInClause(query.GenresUtf8.size());
+        sql += ") ";
     }
 
     if (query.Format.has_value())
@@ -494,6 +523,16 @@ std::string BuildAvailableLanguagesSql(const Librova::Domain::SSearchQuery& quer
             ") ";
     }
 
+    if (!query.GenresUtf8.empty())
+    {
+        sql += "AND EXISTS ("
+               "SELECT 1 FROM book_tags bt_genre "
+               "INNER JOIN tags t_genre ON t_genre.id = bt_genre.tag_id "
+               "WHERE bt_genre.book_id = b.id AND t_genre.normalized_name IN ";
+        sql += BuildIdInClause(query.GenresUtf8.size());
+        sql += ") ";
+    }
+
     if (query.Format.has_value())
     {
         sql += "AND b.preferred_format = ? ";
@@ -536,9 +575,11 @@ std::string BuildAvailableTagsSql(const Librova::Domain::SSearchQuery& query)
         sql += "AND a_filter.normalized_name = ? ";
     }
 
-    if (query.Language.has_value())
+    if (!query.Languages.empty())
     {
-        sql += "AND b.language = ? ";
+        sql += "AND b.language IN ";
+        sql += BuildIdInClause(query.Languages.size());
+        sql += " ";
     }
 
     if (query.SeriesUtf8.has_value())
@@ -581,9 +622,9 @@ void BindSearchCountFilters(
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
     }
 
-    if (query.Language.has_value())
+    for (const std::string& language : query.Languages)
     {
-        statement.BindText(parameterIndex++, *query.Language);
+        statement.BindText(parameterIndex++, language);
     }
 
     if (query.SeriesUtf8.has_value())
@@ -594,6 +635,11 @@ void BindSearchCountFilters(
     for (const std::string& tag : query.TagsUtf8)
     {
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    for (const std::string& genre : query.GenresUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
     }
 
     if (query.Format.has_value())
@@ -628,6 +674,11 @@ void BindAvailableLanguageFilters(
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
     }
 
+    for (const std::string& genre : query.GenresUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
+    }
+
     if (query.Format.has_value())
     {
         statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
@@ -650,9 +701,9 @@ void BindAvailableTagFilters(
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
     }
 
-    if (query.Language.has_value())
+    for (const std::string& language : query.Languages)
     {
-        statement.BindText(parameterIndex++, *query.Language);
+        statement.BindText(parameterIndex++, language);
     }
 
     if (query.SeriesUtf8.has_value())

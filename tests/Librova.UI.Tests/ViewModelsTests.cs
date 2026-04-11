@@ -1224,23 +1224,30 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_PassesSearchLanguageAndGenreIntoCatalogRequest()
+    public async Task LibraryBrowserViewModel_PassesSelectedLanguagesAndGenresIntoCatalogRequest()
     {
-        var service = new RecordingLibraryCatalogService();
+        var service = new RecordingLibraryCatalogService
+        {
+            AvailableLanguages = ["en", "ru"],
+            AvailableGenres = ["sci-fi", "adventure"]
+        };
         var viewModel = new LibraryBrowserViewModel(service)
         {
             SearchText = "road",
-            LanguageFilter = "en",
-            GenreFilter = "sci-fi",
             PageSize = 10
         };
 
         await viewModel.RefreshAsync();
 
+        viewModel.LanguageFacets.Single(f => f.Value == "en").IsSelected = true;
+        viewModel.GenreFacets.Single(f => f.Value == "sci-fi").IsSelected = true;
+
+        await viewModel.RefreshAsync();
+
         Assert.NotNull(service.LastRequest);
         Assert.Equal("road", service.LastRequest!.Text);
-        Assert.Equal("en", service.LastRequest.Language);
-        Assert.Equal("sci-fi", service.LastRequest.Genre);
+        Assert.Equal(["en"], service.LastRequest.Languages);
+        Assert.Equal(["sci-fi"], service.LastRequest.Genres);
         Assert.Null(service.LastRequest.Author);
         Assert.Null(service.LastRequest.Format);
         Assert.Equal(BookSortModel.Title, service.LastRequest.SortBy);
@@ -1301,15 +1308,14 @@ public sealed class ViewModelsTests
 
         await viewModel.RefreshAsync();
 
-        Assert.Contains("en", viewModel.AvailableLanguageFilters);
-        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+        Assert.Contains("en", viewModel.LanguageFacets.Select(f => f.Value));
+        Assert.Contains("ru", viewModel.LanguageFacets.Select(f => f.Value));
 
-        viewModel.LanguageFilter = "en";
+        viewModel.LanguageFacets.Single(f => f.Value == "en").IsSelected = true;
         await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Language == "en"));
 
-        Assert.Contains("All languages", viewModel.AvailableLanguageFilters);
-        Assert.Contains("en", viewModel.AvailableLanguageFilters);
-        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+        Assert.Contains("en", viewModel.LanguageFacets.Select(f => f.Value));
+        Assert.Contains("ru", viewModel.LanguageFacets.Select(f => f.Value));
     }
 
     [Fact]
@@ -1320,15 +1326,30 @@ public sealed class ViewModelsTests
 
         await viewModel.RefreshAsync();
 
-        Assert.Contains("adventure", viewModel.AvailableGenreFilters);
-        Assert.Contains("sci-fi", viewModel.AvailableGenreFilters);
+        Assert.Contains("adventure", viewModel.GenreFacets.Select(f => f.Value));
+        Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
 
-        viewModel.GenreFilter = "sci-fi";
+        viewModel.GenreFacets.Single(f => f.Value == "sci-fi").IsSelected = true;
         await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Tags.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
 
-        Assert.Contains("All genres", viewModel.AvailableGenreFilters);
-        Assert.Contains("adventure", viewModel.AvailableGenreFilters);
-        Assert.Contains("sci-fi", viewModel.AvailableGenreFilters);
+        Assert.Contains("adventure", viewModel.GenreFacets.Select(f => f.Value));
+        Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_KeepsSelectedFacetVisibleWhenBackendOmitsItFromAvailableValues()
+    {
+        var service = new OmittingSelectedFacetLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        viewModel.LanguageFacets.Single(f => f.Value == "ru").IsSelected = true;
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Language == "ru"));
+
+        Assert.Contains("ru", viewModel.LanguageFacets.Select(f => f.Value));
+        Assert.True(viewModel.LanguageFacets.Single(f => f.Value == "ru").IsSelected);
+        Assert.Equal(["ru"], service.LastRequest?.Languages);
     }
 
     [Fact]
@@ -1343,8 +1364,8 @@ public sealed class ViewModelsTests
         await viewModel.RefreshAsync();
 
         Assert.Equal(["Alpha", "Beta"], viewModel.Books.Select(book => book.Title).ToArray());
-        Assert.Contains("en", viewModel.AvailableLanguageFilters);
-        Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+        Assert.Contains("en", viewModel.LanguageFacets.Select(f => f.Value));
+        Assert.Contains("ru", viewModel.LanguageFacets.Select(f => f.Value));
         Assert.Equal("3 books", viewModel.BookCountText);
     }
 
@@ -1359,8 +1380,8 @@ public sealed class ViewModelsTests
 
         await viewModel.MoveSelectedBookToTrashAsync();
 
-        Assert.DoesNotContain("ru", viewModel.AvailableLanguageFilters);
-        Assert.Contains("en", viewModel.AvailableLanguageFilters);
+        Assert.DoesNotContain("ru", viewModel.LanguageFacets.Select(f => f.Value));
+        Assert.Contains("en", viewModel.LanguageFacets.Select(f => f.Value));
         Assert.Equal("1 book", viewModel.BookCountText);
     }
 
@@ -1683,34 +1704,6 @@ public sealed class ViewModelsTests
         Assert.False(viewModel.IsExportBusy);
         Assert.False(viewModel.IsBusy);
         Assert.Contains("Exported", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void LibraryBrowserViewModel_KeepsLanguageFilterWhenComboBoxSelectionTemporarilyClears()
-    {
-        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
-        {
-            LanguageFilter = "ru"
-        };
-
-        viewModel.SelectedLanguageFilter = null!;
-
-        Assert.Equal("ru", viewModel.LanguageFilter);
-        Assert.Equal("ru", viewModel.SelectedLanguageFilter);
-    }
-
-    [Fact]
-    public void LibraryBrowserViewModel_KeepsGenreFilterWhenComboBoxSelectionTemporarilyClears()
-    {
-        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
-        {
-            GenreFilter = "sci-fi"
-        };
-
-        viewModel.SelectedGenreFilter = null!;
-
-        Assert.Equal("sci-fi", viewModel.GenreFilter);
-        Assert.Equal("sci-fi", viewModel.SelectedGenreFilter);
     }
 
     [Fact]
@@ -2888,11 +2881,17 @@ public sealed class ViewModelsTests
     {
         public BookListRequestModel? LastRequest { get; private set; }
         public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
+        public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
+        public IReadOnlyList<string> AvailableGenres { get; init; } = [];
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult(new BookListPageModel());
+            return Task.FromResult(new BookListPageModel
+            {
+                AvailableLanguages = AvailableLanguages,
+                AvailableGenres = AvailableGenres
+            });
         }
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -2961,14 +2960,14 @@ public sealed class ViewModelsTests
                 filtered = filtered.Where(book => book.Title.Contains(request.Text, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Language))
+            if (request.Languages.Count > 0)
             {
-                filtered = filtered.Where(book => string.Equals(book.Language, request.Language, StringComparison.OrdinalIgnoreCase));
+                filtered = filtered.Where(book => request.Languages.Contains(book.Language, StringComparer.OrdinalIgnoreCase));
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Genre))
+            if (request.Genres.Count > 0)
             {
-                filtered = filtered.Where(book => book.Tags.Contains(request.Genre, StringComparer.OrdinalIgnoreCase));
+                filtered = filtered.Where(book => book.Tags.Any(tag => request.Genres.Contains(tag, StringComparer.OrdinalIgnoreCase)));
             }
 
             var filteredItems = filtered.ToArray();
@@ -2987,6 +2986,79 @@ public sealed class ViewModelsTests
                     .ToArray(),
                 Items = filteredItems,
                 Statistics = Statistics
+            });
+        }
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
+    }
+
+    private sealed class OmittingSelectedFacetLibraryCatalogService : ILibraryCatalogService
+    {
+        private static readonly BookListItemModel[] AllBooks =
+        [
+            new BookListItemModel
+            {
+                BookId = 1,
+                Title = "English Book",
+                Authors = ["Author One"],
+                Language = "en",
+                Tags = ["adventure"],
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000001001/en.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            },
+            new BookListItemModel
+            {
+                BookId = 2,
+                Title = "Russian Book",
+                Authors = ["Author Two"],
+                Language = "ru",
+                Tags = ["classic"],
+                Format = BookFormatModel.Epub,
+                ManagedPath = "Books/0000001002/ru.epub",
+                AddedAtUtc = DateTimeOffset.UtcNow
+            }
+        ];
+
+        public int ListCalls { get; private set; }
+        public BookListRequestModel? LastRequest { get; private set; }
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            ListCalls++;
+
+            var filteredItems = AllBooks
+                .Where(book => request.Languages.Count == 0
+                    || request.Languages.Contains(book.Language, StringComparer.OrdinalIgnoreCase))
+                .ToArray();
+
+            IReadOnlyList<string> availableLanguages = request.Languages.Count == 0
+                ? ["en", "ru"]
+                : ["en"];
+
+            return Task.FromResult(new BookListPageModel
+            {
+                TotalCount = (ulong)filteredItems.Length,
+                AvailableLanguages = availableLanguages,
+                AvailableGenres = ["adventure", "classic"],
+                Items = filteredItems
             });
         }
 

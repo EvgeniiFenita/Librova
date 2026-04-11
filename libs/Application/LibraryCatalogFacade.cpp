@@ -21,9 +21,9 @@ SBookListResult CLibraryCatalogFacade::ListBooks(const SBookListRequest& request
 
     const auto domainQuery = ToDomainQuery(request);
     auto languageRequest = request;
-    languageRequest.Language.reset();
+    languageRequest.Languages.clear();
     auto genreRequest = request;
-    genreRequest.GenreUtf8.reset();
+    genreRequest.GenresUtf8.clear();
 
     const std::vector<Librova::Domain::SBook> books = m_bookQueryRepository.Search(domainQuery);
 
@@ -70,18 +70,13 @@ SLibraryStatistics CLibraryCatalogFacade::GetLibraryStatistics() const
 
 Librova::Domain::SSearchQuery CLibraryCatalogFacade::ToDomainQuery(const SBookListRequest& request)
 {
-    std::vector<std::string> tags = request.TagsUtf8;
-    if (request.GenreUtf8.has_value())
-    {
-        tags.push_back(*request.GenreUtf8);
-    }
-
     return {
         .TextUtf8 = request.TextUtf8,
         .AuthorUtf8 = request.AuthorUtf8,
-        .Language = request.Language,
+        .Languages = request.Languages,
         .SeriesUtf8 = request.SeriesUtf8,
-        .TagsUtf8 = std::move(tags),
+        .TagsUtf8 = request.TagsUtf8,
+        .GenresUtf8 = request.GenresUtf8,
         .Format = request.Format,
         .SortBy = request.SortBy,
         .SortDirection = request.SortDirection,

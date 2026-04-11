@@ -248,7 +248,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
 
     const Librova::Domain::SSearchQuery query{
         .AuthorUtf8 = std::string{"Борис Стругацкий"},
-        .Language = std::string{"ru"},
+        .Languages = {"ru"},
         .TagsUtf8 = {"classic"},
         .Format = Librova::Domain::EBookFormat::Epub,
         .SortBy = Librova::Domain::EBookSort::Title
@@ -320,7 +320,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     const std::vector<std::string> languages = queryRepository.ListAvailableLanguages({
         .TextUtf8 = "shared",
         .AuthorUtf8 = std::string{"Common Author"},
-        .Language = std::string{"en"},
+        .Languages = {"en"},
         .SeriesUtf8 = std::string{"Series Shared"},
         .TagsUtf8 = {"shared-tag"},
         .Format = Librova::Domain::EBookFormat::Epub
@@ -373,7 +373,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
     const std::vector<std::string> tags = queryRepository.ListAvailableTags({
         .TextUtf8 = "shared",
         .AuthorUtf8 = std::string{"Common Author"},
-        .Language = std::string{"en"},
+        .Languages = {"en"},
         .SeriesUtf8 = std::string{"Series Shared"},
         .TagsUtf8 = {"shared-tag", "adventure"},
         .Format = Librova::Domain::EBookFormat::Epub
@@ -556,7 +556,7 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     static_cast<void>(writeRepository.Add(secondBook));
 
     const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
-        .Language = std::string{"en"},
+        .Languages = {"en"},
         .SortBy = Librova::Domain::EBookSort::Title
     });
 
@@ -623,7 +623,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     static_cast<void>(writeRepository.Add(thirdBook));
 
     const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
-        .Language = std::string{"ru"},
+        .Languages = {"ru"},
         .SortBy = Librova::Domain::EBookSort::Title
     });
 
@@ -678,7 +678,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     static_cast<void>(writeRepository.Add(thirdBook));
 
     const std::vector<Librova::Domain::SBook> books = queryRepository.Search({
-        .Language = std::string{"ru"},
+        .Languages = {"ru"},
         .SortBy = Librova::Domain::EBookSort::Author
     });
 

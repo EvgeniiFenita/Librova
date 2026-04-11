@@ -109,17 +109,83 @@
                     Spacing="8"
                     VerticalAlignment="Center">
 
-          <!-- Language filter -->
-          <ComboBox Classes="AppComboBox"
-                    MinWidth="110"
-                    SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
-                    ItemsSource="{Binding LibraryBrowser.AvailableLanguageFilters}" />
-
-          <!-- Genre filter -->
-          <ComboBox Classes="AppComboBox"
-                    MinWidth="130"
-                    SelectedItem="{Binding LibraryBrowser.SelectedGenreFilter}"
-                    ItemsSource="{Binding LibraryBrowser.AvailableGenreFilters}" />
+          <!-- Filter button + flyout -->
+          <ToggleButton x:Name="FilterBtn"
+                        Classes="FilterButton"
+                        IsChecked="{Binding LibraryBrowser.IsFilterPanelOpen, Mode=TwoWay}"
+                        Content="{Binding LibraryBrowser.FilterButtonLabel}" />
+          <Popup x:Name="FilterPopup"
+                 IsOpen="{Binding LibraryBrowser.IsFilterPanelOpen, Mode=TwoWay}"
+                 IsLightDismissEnabled="True"
+                 Placement="Bottom">
+            <Border Classes="FilterPopup" Width="420">
+              <Border.Resources>
+                <!-- Scoped checkbox fill: slightly darker than popup bg so the box is visible -->
+                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUnchecked"              Color="#221A0E" />
+                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUncheckedPointerOver"   Color="#2A2012" />
+                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUncheckedPressed"       Color="#1C160C" />
+              </Border.Resources>
+              <StackPanel Spacing="0">
+                <!-- LANGUAGES section -->
+                <TextBlock Classes="FilterSectionHeader" Text="LANGUAGES" />
+                <ScrollViewer MaxHeight="110" Margin="0,0,0,12">
+                  <ItemsControl ItemsSource="{Binding LibraryBrowser.LanguageFacets}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="viewModels:FilterFacetItem">
+                        <CheckBox Content="{Binding Value}"
+                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <!-- Divider -->
+                <Border Height="1"
+                        Margin="0,0,0,12"
+                        Background="{DynamicResource AppBorderStrongBrush}" />
+                <!-- GENRES section with search -->
+                <TextBlock Classes="FilterSectionHeader" Text="GENRES" />
+                <TextBox Classes="AppTextBox"
+                         PlaceholderText="Search genres…"
+                         Text="{Binding LibraryBrowser.GenreSearchText, Mode=TwoWay}"
+                         Margin="0,0,0,6" />
+                <ScrollViewer MaxHeight="140" Margin="0,0,0,12">
+                  <ItemsControl ItemsSource="{Binding LibraryBrowser.FilteredGenreFacets}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="viewModels:FilterFacetItem">
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  Margin="0,1,6,1">
+                          <TextBlock Text="{Binding Value}"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{Binding Value}" />
+                        </CheckBox>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <!-- Footer -->
+                <Border Height="1"
+                        Margin="0,0,0,10"
+                        Background="{DynamicResource AppBorderStrongBrush}"
+                        IsVisible="{Binding LibraryBrowser.HasActiveFilters}" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            IsVisible="{Binding LibraryBrowser.HasActiveFilters}">
+                  <TextBlock Text="{Binding LibraryBrowser.ActiveFilterCountText}"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource AppTextSecondaryBrush}"
+                             FontSize="{DynamicResource FontSize.Sm}" />
+                  <Button Classes="FilterClearButton"
+                          Command="{Binding LibraryBrowser.ClearAllFiltersCommand}"
+                          Content="Clear all" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </Popup>
 
           <!-- Vertical divider -->
           <Border Width="1"

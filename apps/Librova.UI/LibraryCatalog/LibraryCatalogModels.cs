@@ -47,8 +47,8 @@ internal sealed class BookListRequestModel
 {
     public string Text { get; init; } = string.Empty;
     public string? Author { get; init; }
-    public string? Language { get; init; }
-    public string? Genre { get; init; }
+    public IReadOnlyList<string> Languages { get; init; } = [];
+    public IReadOnlyList<string> Genres { get; init; } = [];
     public string? Series { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public BookFormatModel? Format { get; init; }

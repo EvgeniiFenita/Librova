@@ -132,6 +132,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#113` redesign library filters into a single faceted panel with multi-select languages and genres.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: реализован полный вертикальный срез — proto repeated fields (languages/genres), domain/application слои, SQL (OR-семантика для жанров, IN для языков), proto mapper, C# модели и маппер, FilterFacetItem VM, LibraryBrowseQueryState, LibraryBrowserViewModel (LanguageFacets/GenreFacets, IsFilterPanelOpen, ClearAllFiltersCommand), XAML ToggleButton + Popup, стили (FilterButton/FilterPopup/FilterSectionHeader), иконка IconFilter; тесты C++ и C# обновлены и расширены.
+
 - `#110` fix the first-run screen so the `Librova` label in the left panel is not clipped vertically.
   - Status: `Closed`
   - Type: `Bug`

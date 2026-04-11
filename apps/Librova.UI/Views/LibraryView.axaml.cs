@@ -32,6 +32,13 @@ internal sealed partial class LibraryView : UserControl
             _booksViewport.PropertyChanged += OnBooksViewportPropertyChanged;
         }
 
+        var filterPopup = this.FindControl<Avalonia.Controls.Primitives.Popup>("FilterPopup");
+        var filterBtn = this.FindControl<Avalonia.Controls.Primitives.ToggleButton>("FilterBtn");
+        if (filterPopup is not null && filterBtn is not null)
+        {
+            filterPopup.PlacementTarget = filterBtn;
+        }
+
         DataContextChanged += OnDataContextChanged;
         AttachToViewModel(DataContext as ShellViewModel);
     }
@@ -70,8 +77,7 @@ internal sealed partial class LibraryView : UserControl
         }
 
         if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SearchText)
-            or nameof(LibraryBrowserViewModel.LanguageFilter)
-            or nameof(LibraryBrowserViewModel.GenreFilter)
+            or nameof(LibraryBrowserViewModel.ActiveFilterCount)
             or nameof(LibraryBrowserViewModel.SelectedSortKey)
             or nameof(LibraryBrowserViewModel.SortDescending))
         {

@@ -15,8 +15,8 @@ struct SBookListRequest
 {
     std::string TextUtf8;
     std::optional<std::string> AuthorUtf8;
-    std::optional<std::string> Language;
-    std::optional<std::string> GenreUtf8;
+    std::vector<std::string> Languages;
+    std::vector<std::string> GenresUtf8;
     std::optional<std::string> SeriesUtf8;
     std::vector<std::string> TagsUtf8;
     std::optional<Librova::Domain::EBookFormat> Format;

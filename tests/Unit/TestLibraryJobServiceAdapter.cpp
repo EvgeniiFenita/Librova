@@ -735,8 +735,8 @@ TEST_CASE("Library job service adapter logs genre alongside language for ListBoo
         librova::v1::ListBooksRequest request;
         auto* query = request.mutable_query();
         query->set_text("road");
-        query->set_language("en");
-        query->set_genre("sci-fi");
+        query->add_languages("en");
+        query->add_genres("sci-fi");
         query->set_limit(10);
 
         const auto response = adapter.ListBooks(request);
@@ -752,8 +752,8 @@ TEST_CASE("Library job service adapter logs genre alongside language for ListBoo
     }
 
     const auto logText = ReadAllText(logPath);
-    REQUIRE(logText.find("Language='en'") != std::string::npos);
-    REQUIRE(logText.find("Genre='sci-fi'") != std::string::npos);
+    REQUIRE(logText.find("Languages=1") != std::string::npos);
+    REQUIRE(logText.find("Genres=1") != std::string::npos);
 
     CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }

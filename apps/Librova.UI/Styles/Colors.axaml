@@ -14,6 +14,7 @@
   <Color x:Key="Color.SurfaceMuted">#1C160C</Color>
   <Color x:Key="Color.SurfaceAlt">#221A0E</Color>
   <Color x:Key="Color.SurfaceHover">#2A2012</Color>
+  <Color x:Key="Color.SurfaceElevated">#2E2414</Color>
 
   <!-- Borders -->
   <Color x:Key="Color.Border">#2A200E</Color>
@@ -26,6 +27,7 @@
   <Color x:Key="Color.AccentDim">#B87A1A</Color>
   <Color x:Key="Color.AccentMuted">#2A1C06</Color>
   <Color x:Key="Color.AccentSurface">#1A1003</Color>
+  <Color x:Key="Color.AccentSurfaceHover">#231507</Color>
   <Color x:Key="Color.AccentBorder">#3D2C0A</Color>
 
   <!-- Status — success -->
@@ -99,7 +101,9 @@
   <SolidColorBrush x:Key="AppAccentDimBrush" Color="{StaticResource Color.AccentDim}" />
   <SolidColorBrush x:Key="AppAccentMutedBrush" Color="{StaticResource Color.AccentMuted}" />
   <SolidColorBrush x:Key="AppAccentSurfaceBrush" Color="{StaticResource Color.AccentSurface}" />
+  <SolidColorBrush x:Key="AppAccentSurfaceHoverBrush" Color="{StaticResource Color.AccentSurfaceHover}" />
   <SolidColorBrush x:Key="AppAccentBorderBrush" Color="{StaticResource Color.AccentBorder}" />
+  <SolidColorBrush x:Key="AppSurfaceElevatedBrush" Color="{StaticResource Color.SurfaceElevated}" />
   <SolidColorBrush x:Key="AppSuccessSurfaceBrush" Color="{StaticResource Color.SuccessSurface}" />
   <SolidColorBrush x:Key="AppSuccessBorderBrush" Color="{StaticResource Color.SuccessBorder}" />
   <SolidColorBrush x:Key="AppSuccessBrush" Color="{StaticResource Color.Success}" />
@@ -129,6 +133,11 @@
   <Thickness x:Key="Padding.Card">22</Thickness>
   <Thickness x:Key="Padding.CardCompact">16</Thickness>
   <Thickness x:Key="Padding.Sidebar">16,20</Thickness>
+
+  <!-- ═══════════════ FONT SIZE TOKENS ═══════════════ -->
+
+  <x:Double x:Key="FontSize.Xs">11</x:Double>
+  <x:Double x:Key="FontSize.Sm">13</x:Double>
 
   <!-- ═══════════════ FLUENT TEXTBOX RESOURCE OVERRIDES ════════════════
        Override the DynamicResource keys consumed by FluentTheme's TextBox
@@ -213,8 +222,8 @@
   <SolidColorBrush x:Key="ComboBoxForegroundDisabled"          Color="{StaticResource Color.TextMuted}" />
 
   <!-- Dropdown popup surface -->
-  <SolidColorBrush x:Key="ComboBoxDropDownBackground"          Color="{StaticResource Color.SurfaceMuted}" />
-  <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush"         Color="{StaticResource Color.Border}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBackground"          Color="{StaticResource Color.SurfaceElevated}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush"         Color="{StaticResource Color.AccentBorder}" />
   <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground"     Color="{StaticResource Color.TextSecondary}" />
 
   <!-- ═══════════════ FLUENT SCROLLBAR RESOURCE OVERRIDES ═══════════════
@@ -308,5 +317,6 @@
   <!-- Sort direction: simple chevrons, both geometrically centred at (12,12) on 24px grid -->
   <StreamGeometry x:Key="IconSortAsc">M5,15 L12,9 L19,15</StreamGeometry>
   <StreamGeometry x:Key="IconSortDesc">M5,9 L12,15 L19,9</StreamGeometry>
+  <StreamGeometry x:Key="IconFilter">M4,5 L20,5 L14,13 L14,19 L10,17 L10,13 Z</StreamGeometry>
 
 </ResourceDictionary>

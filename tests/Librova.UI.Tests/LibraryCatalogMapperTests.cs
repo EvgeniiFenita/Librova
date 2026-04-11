@@ -1,4 +1,4 @@
-using Librova.UI.LibraryCatalog;
+﻿using Librova.UI.LibraryCatalog;
 using Librova.V1;
 using System;
 using Xunit;
@@ -237,5 +237,32 @@ public sealed class LibraryCatalogMapperTests
 
         Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
         Assert.Contains("catalog domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_MapsLanguagesAndGenresToProto()
+    {
+        var request = new BookListRequestModel
+        {
+            Languages = ["en", "ru"],
+            Genres = ["classic", "sci-fi"],
+            Limit = 20
+        };
+
+        var proto = LibraryCatalogMapper.ToProto(request);
+
+        Assert.Equal(["en", "ru"], proto.Languages);
+        Assert.Equal(["classic", "sci-fi"], proto.Genres);
+    }
+
+    [Fact]
+    public void Mapper_MapsEmptyLanguagesAndGenresToEmptyProtoFields()
+    {
+        var request = new BookListRequestModel { Limit = 10 };
+
+        var proto = LibraryCatalogMapper.ToProto(request);
+
+        Assert.Empty(proto.Languages);
+        Assert.Empty(proto.Genres);
     }
 }

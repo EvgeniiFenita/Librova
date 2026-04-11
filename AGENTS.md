@@ -104,6 +104,8 @@ scripts\ValidateProto.ps1
 - When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 - When the user asks for a code review or review-pass style findings, write the review results in Russian by default.
 - Native tests that open a `CSqliteBookRepository` must call `repository.CloseSession()` before removing the database file — Windows does not allow deleting a file with an open handle.
+- All popup / dropdown / flyout surfaces must share the same visual pair: `AppSurfaceElevatedBrush` (`#2E2414`) background + `AppAccentBorderBrush` (`#3D2C0A`) amber border. Applied to `Border.FilterPopup` and `ComboBox.AppComboBox /template/ Border#PopupBorder`. Any new Popup or flyout container must follow the same pair. See `docs/UiDesignSystem.md` § 14 "Popup / Dropdown surface rule".
+- Controls that serve the same role in the toolbar (ComboBox, ToggleButton trigger) must share the same default height (`MinHeight="42"`), background token (`AppSurfaceAltBrush` via `/template/ ContentPresenter`), and border token (`AppBorderBrush`). Do not use a fixed `Height` setter on toolbar controls — use `MinHeight` so content can expand.
 
 ---
 

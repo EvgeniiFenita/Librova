@@ -170,8 +170,8 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
         const Librova::Application::SBookListResult result = facade.ListBooks({
-            .Language = std::string{"en"},
-            .GenreUtf8 = std::string{"selected"},
+            .Languages = {"en"},
+            .GenresUtf8 = {"selected"},
             .TagsUtf8 = {"selected"},
             .Format = Librova::Domain::EBookFormat::Epub,
             .SortBy = Librova::Domain::EBookSort::Title,
@@ -380,4 +380,84 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     }
 
     std::filesystem::remove_all(libraryRoot);
+}
+
+TEST_CASE("Library catalog facade filters books by multiple languages", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-language.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+        static_cast<void>(writeRepository.Add(MakeBook("English Book", {"Author A"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002101/en.epub", "ml-hash-1",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026})));
+        static_cast<void>(writeRepository.Add(MakeBook("Russian Book", {"Author B"}, "ru",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002102/ru.epub", "ml-hash-2",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1})));
+        static_cast<void>(writeRepository.Add(MakeBook("German Book", {"Author C"}, "de",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002103/de.epub", "ml-hash-3",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2})));
+
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const Librova::Application::SBookListResult result = facade.ListBooks({
+            .Languages = {"en", "ru"},
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .Limit = 10
+        });
+
+        REQUIRE(result.Items.size() == 2);
+        REQUIRE(result.TotalCount == 2);
+        REQUIRE(result.Items[0].TitleUtf8 == "English Book");
+        REQUIRE(result.Items[1].TitleUtf8 == "Russian Book");
+    }
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Library catalog facade filters books by multiple genres with OR semantics", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-genre.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+        Librova::Domain::SBook scifiBook = MakeBook("Sci-Fi Book", {"Author X"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002201/scifi.epub", "mg-hash-1",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026});
+        scifiBook.Metadata.TagsUtf8 = {"sci-fi"};
+        static_cast<void>(writeRepository.Add(scifiBook));
+
+        Librova::Domain::SBook classicBook = MakeBook("Classic Book", {"Author Y"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002202/classic.epub", "mg-hash-2",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
+        classicBook.Metadata.TagsUtf8 = {"classic"};
+        static_cast<void>(writeRepository.Add(classicBook));
+
+        Librova::Domain::SBook otherBook = MakeBook("Other Book", {"Author Z"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002203/other.epub", "mg-hash-3",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
+        otherBook.Metadata.TagsUtf8 = {"thriller"};
+        static_cast<void>(writeRepository.Add(otherBook));
+
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const Librova::Application::SBookListResult result = facade.ListBooks({
+            .GenresUtf8 = {"sci-fi", "classic"},
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .Limit = 10
+        });
+
+        REQUIRE(result.Items.size() == 2);
+        REQUIRE(result.TotalCount == 2);
+        REQUIRE(result.Items[0].TitleUtf8 == "Classic Book");
+        REQUIRE(result.Items[1].TitleUtf8 == "Sci-Fi Book");
+    }
+
+    std::filesystem::remove(databasePath);
 }

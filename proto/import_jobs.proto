@@ -98,15 +98,19 @@ message ImportJobResult {
 message BookListRequest {
   string text = 1;
   optional string author = 2;
-  optional string language = 3;
+  reserved 3;
+  reserved "language";
   optional string series = 4;
   repeated string tags = 5;
   optional BookFormat format = 6;
   optional BookSort sort_by = 7;
   optional BookSortDirection sort_direction = 10;
-  optional string genre = 11;
+  reserved 11;
+  reserved "genre";
   uint64 offset = 8;
   uint64 limit = 9;
+  repeated string languages = 12;
+  repeated string genres = 13;
 }
 
 message BookListItem {

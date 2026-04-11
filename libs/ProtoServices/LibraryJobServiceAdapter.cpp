@@ -102,12 +102,12 @@ librova::v1::ListBooksResponse CLibraryJobServiceAdapter::ListBooks(
     const auto bookListRequest = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request.query());
     const auto result = m_libraryCatalogFacade.ListBooks(bookListRequest);
     LogInfoIfInitialized(
-        "ListBooks returned {} item(s) with TotalCount={}. Query='{}' Language='{}' Genre='{}' Offset={} Limit={}.",
+        "ListBooks returned {} item(s) with TotalCount={}. Query='{}' Languages={} Genres={} Offset={} Limit={}.",
         result.Items.size(),
         result.TotalCount,
         bookListRequest.TextUtf8,
-        bookListRequest.Language.value_or(""),
-        bookListRequest.GenreUtf8.value_or(""),
+        bookListRequest.Languages.size(),
+        bookListRequest.GenresUtf8.size(),
         bookListRequest.Offset,
         bookListRequest.Limit);
     return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(result);

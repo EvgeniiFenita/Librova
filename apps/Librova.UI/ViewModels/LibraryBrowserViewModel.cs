@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,6 +39,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private bool _isExportBusy;
     private bool _isLoadingMore;
     private bool _isLoadingSelectionDetails;
+    private bool _isFilterPanelOpen;
+    private string _genreSearchText = string.Empty;
     private readonly LibrarySelectionState _selectionState = new(FormatSizeInMegabytes);
     private LibraryStatisticsModel _libraryStatistics = new();
 
@@ -67,19 +70,26 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
-        foreach (var language in _browseState.AvailableLanguageFilters)
+        ClearAllFiltersCommand = new AsyncCommand(ClearAllFiltersAsync, () => true, HandleCommandErrorAsync);
+        LanguageFacets.CollectionChanged += (_, _) =>
         {
-            AvailableLanguageFilters.Add(language);
-        }
-        foreach (var genre in _browseState.AvailableGenreFilters)
+            RaisePropertyChanged(nameof(FilteredGenreFacets));
+            RaisePropertyChanged(nameof(ActiveFilterCount));
+            RaisePropertyChanged(nameof(HasActiveFilters));
+            RaisePropertyChanged(nameof(FilterButtonLabel));
+        };
+        GenreFacets.CollectionChanged += (_, _) =>
         {
-            AvailableGenreFilters.Add(genre);
-        }
+            RaisePropertyChanged(nameof(FilteredGenreFacets));
+            RaisePropertyChanged(nameof(ActiveFilterCount));
+            RaisePropertyChanged(nameof(HasActiveFilters));
+            RaisePropertyChanged(nameof(FilterButtonLabel));
+        };
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
-    public ObservableCollection<string> AvailableLanguageFilters { get; } = [];
-    public ObservableCollection<string> AvailableGenreFilters { get; } = [];
+    public ObservableCollection<FilterFacetItem> LanguageFacets { get; } = [];
+    public ObservableCollection<FilterFacetItem> GenreFacets { get; } = [];
     public IReadOnlyList<SortKeyOption> AvailableSortKeys { get; } = SortKeyOption.All;
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
@@ -89,6 +99,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public AsyncCommand<BookListItemModel?> SelectBookCommand { get; }
     public AsyncCommand CloseSelectionCommand { get; }
     public AsyncCommand ToggleSortDirectionCommand { get; }
+    public AsyncCommand ClearAllFiltersCommand { get; }
 
     public string SearchText
     {
@@ -105,71 +116,62 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         }
     }
 
-    public string LanguageFilter
+    public bool IsFilterPanelOpen
     {
-        get => _browseState.LanguageFilter;
+        get => _isFilterPanelOpen;
+        set => SetProperty(ref _isFilterPanelOpen, value);
+    }
+
+    public string GenreSearchText
+    {
+        get => _genreSearchText;
         set
         {
-            if (_browseState.LanguageFilter == value)
+            if (_genreSearchText == value)
             {
                 return;
             }
-            _browseState.LanguageFilter = value;
+
+            _genreSearchText = value;
             RaisePropertyChanged();
-            RaisePropertyChanged(nameof(SelectedLanguageFilter));
-            RaisePropertyChanged(nameof(BookCountText));
-            RaisePropertyChanged(nameof(EmptyStateTitle));
-            RaisePropertyChanged(nameof(EmptyStateDescription));
-            ScheduleRefresh();
+            RaisePropertyChanged(nameof(FilteredGenreFacets));
         }
     }
 
-    public string SelectedLanguageFilter
+    public IReadOnlyList<FilterFacetItem> FilteredGenreFacets
     {
-        get => _browseState.SelectedLanguageFilter;
-        set
+        get
         {
-            if (value is null)
+            if (string.IsNullOrWhiteSpace(_genreSearchText))
             {
-                RaisePropertyChanged(nameof(SelectedLanguageFilter));
-                return;
+                return GenreFacets;
             }
 
-            LanguageFilter = _browseState.NormalizeSelectedLanguageFilter(value);
+            return GenreFacets
+                .Where(f => f.Value.Contains(_genreSearchText, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
         }
     }
 
-    public string GenreFilter
+    public int ActiveFilterCount => _browseState.SelectedLanguages.Count + _browseState.SelectedGenres.Count;
+
+    public bool HasActiveFilters => _browseState.HasActiveFilters;
+
+    public string FilterButtonLabel
     {
-        get => _browseState.GenreFilter;
-        set
+        get
         {
-            if (_browseState.GenreFilter == value)
-            {
-                return;
-            }
-            _browseState.GenreFilter = value;
-            RaisePropertyChanged();
-            RaisePropertyChanged(nameof(SelectedGenreFilter));
-            RaisePropertyChanged(nameof(BookCountText));
-            RaisePropertyChanged(nameof(EmptyStateTitle));
-            RaisePropertyChanged(nameof(EmptyStateDescription));
-            ScheduleRefresh();
+            var count = ActiveFilterCount;
+            return count == 0 ? "Filters ▾" : $"Filters · {count} ▾";
         }
     }
 
-    public string SelectedGenreFilter
+    public string ActiveFilterCountText
     {
-        get => _browseState.SelectedGenreFilter;
-        set
+        get
         {
-            if (value is null)
-            {
-                RaisePropertyChanged(nameof(SelectedGenreFilter));
-                return;
-            }
-
-            GenreFilter = _browseState.NormalizeSelectedGenreFilter(value);
+            var count = ActiveFilterCount;
+            return count == 0 ? "No filters active" : $"{count} filter{(count == 1 ? "" : "s")} active";
         }
     }
 
@@ -353,7 +355,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalLibrarySizeBytes)}";
     public string EmptyStateTitle => HasActiveFilters ? "Nothing found" : "Library is empty";
     public string EmptyStateDescription => HasActiveFilters
-        ? "Try a different search query or clear the current language or genre filter."
+        ? "Try a different search query or clear the active language / genre filters."
         : "Import books to start building your library.";
     public string SelectedBookTitle => _selectionState.SelectedBookTitle;
     public string SelectedBookAuthorText => _selectionState.SelectedBookAuthorText;
@@ -365,8 +367,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public bool HasSelectedBookCover => _selectionState.HasSelectedBookCover;
     public bool ShowSelectedBookCoverPlaceholder => _selectionState.ShowSelectedBookCoverPlaceholder;
     public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => _selectionState.SelectedBookMetadataPairs;
-
-    private bool HasActiveFilters => _browseState.HasActiveFilters;
 
     public async Task RefreshAsync()
     {
@@ -885,58 +885,118 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
     {
-        _browseState.UpdateAvailableLanguages(availableLanguages);
-        SynchronizeFilters(AvailableLanguageFilters, _browseState.AvailableLanguageFilters);
-
-        RaisePropertyChanged(nameof(SelectedLanguageFilter));
+        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableLanguages, _browseState.SelectedLanguages);
+        SynchronizeFacets(LanguageFacets, desired, _browseState.SelectedLanguages);
     }
 
     private void UpdateAvailableGenres(IEnumerable<string> availableGenres)
     {
-        _browseState.UpdateAvailableGenres(availableGenres);
-        SynchronizeFilters(AvailableGenreFilters, _browseState.AvailableGenreFilters);
-
-        RaisePropertyChanged(nameof(SelectedGenreFilter));
+        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableGenres, _browseState.SelectedGenres);
+        SynchronizeFacets(GenreFacets, desired, _browseState.SelectedGenres);
+        RaisePropertyChanged(nameof(FilteredGenreFacets));
     }
 
-    private static void SynchronizeFilters(ObservableCollection<string> targetCollection, IReadOnlyList<string> desiredItems)
+    private void SynchronizeFacets(
+        ObservableCollection<FilterFacetItem> facets,
+        IReadOnlyList<string> desiredValues,
+        IReadOnlyList<string> selectedValues)
     {
-        for (var index = targetCollection.Count - 1; index >= 0; index--)
+        var selectedLookup = new HashSet<string>(selectedValues, StringComparer.OrdinalIgnoreCase);
+
+        for (var i = facets.Count - 1; i >= 0; i--)
         {
-            if (!desiredItems.Contains(targetCollection[index], StringComparer.OrdinalIgnoreCase))
+            if (!desiredValues.Contains(facets[i].Value, StringComparer.OrdinalIgnoreCase))
             {
-                targetCollection.RemoveAt(index);
+                facets[i].PropertyChanged -= OnFacetSelectionChanged;
+                facets.RemoveAt(i);
             }
         }
 
-        for (var desiredIndex = 0; desiredIndex < desiredItems.Count; desiredIndex++)
+        for (var di = 0; di < desiredValues.Count; di++)
         {
-            var desiredItem = desiredItems[desiredIndex];
-            var existingIndex = IndexOfFilter(targetCollection, desiredItem);
+            var value = desiredValues[di];
+            var existingIndex = -1;
+            for (var ei = 0; ei < facets.Count; ei++)
+            {
+                if (string.Equals(facets[ei].Value, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    existingIndex = ei;
+                    break;
+                }
+            }
+
             if (existingIndex < 0)
             {
-                targetCollection.Insert(desiredIndex, desiredItem);
-                continue;
+                var item = new FilterFacetItem(value)
+                {
+                    IsSelected = selectedLookup.Contains(value)
+                };
+                item.PropertyChanged += OnFacetSelectionChanged;
+                facets.Insert(di, item);
+            }
+            else if (existingIndex != di)
+            {
+                facets.Move(existingIndex, di);
             }
 
-            if (existingIndex != desiredIndex)
+            if (facets[di].IsSelected != selectedLookup.Contains(facets[di].Value))
             {
-                targetCollection.Move(existingIndex, desiredIndex);
+                facets[di].IsSelected = selectedLookup.Contains(facets[di].Value);
             }
         }
     }
 
-    private static int IndexOfFilter(ObservableCollection<string> targetCollection, string value)
+    private void OnFacetSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        for (var index = 0; index < targetCollection.Count; index++)
+        if (e.PropertyName != nameof(FilterFacetItem.IsSelected))
         {
-            if (string.Equals(targetCollection[index], value, StringComparison.OrdinalIgnoreCase))
-            {
-                return index;
-            }
+            return;
         }
 
-        return -1;
+        _browseState.SelectedLanguages = LanguageFacets
+            .Where(f => f.IsSelected)
+            .Select(f => f.Value)
+            .ToArray();
+        _browseState.SelectedGenres = GenreFacets
+            .Where(f => f.IsSelected)
+            .Select(f => f.Value)
+            .ToArray();
+
+        RaisePropertyChanged(nameof(ActiveFilterCount));
+        RaisePropertyChanged(nameof(HasActiveFilters));
+        RaisePropertyChanged(nameof(FilterButtonLabel));
+        RaisePropertyChanged(nameof(ActiveFilterCountText));
+        RaisePropertyChanged(nameof(BookCountText));
+        RaisePropertyChanged(nameof(EmptyStateTitle));
+        RaisePropertyChanged(nameof(EmptyStateDescription));
+        ScheduleRefresh();
+    }
+
+    private Task ClearAllFiltersAsync()
+    {
+        foreach (var facet in LanguageFacets)
+        {
+            facet.IsSelected = false;
+        }
+
+        foreach (var facet in GenreFacets)
+        {
+            facet.IsSelected = false;
+        }
+
+        _browseState.SelectedLanguages = [];
+        _browseState.SelectedGenres = [];
+        GenreSearchText = string.Empty;
+
+        RaisePropertyChanged(nameof(ActiveFilterCount));
+        RaisePropertyChanged(nameof(HasActiveFilters));
+        RaisePropertyChanged(nameof(FilterButtonLabel));
+        RaisePropertyChanged(nameof(ActiveFilterCountText));
+        RaisePropertyChanged(nameof(BookCountText));
+        RaisePropertyChanged(nameof(EmptyStateTitle));
+        RaisePropertyChanged(nameof(EmptyStateDescription));
+        ScheduleRefresh();
+        return Task.CompletedTask;
     }
 
     private static string FormatBookCount(ulong bookCount) =>

@@ -101,15 +101,8 @@ internal static class LibraryCatalogMapper
             request.Author = model.Author;
         }
 
-        if (!string.IsNullOrWhiteSpace(model.Language))
-        {
-            request.Language = model.Language;
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.Genre))
-        {
-            request.Genre = model.Genre;
-        }
+        request.Languages.AddRange(model.Languages);
+        request.Genres.AddRange(model.Genres);
 
         if (!string.IsNullOrWhiteSpace(model.Series))
         {
