@@ -343,3 +343,5 @@ All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150
 **Version badge** — A small 11 px muted `TextBlock` at the bottom of the sidebar DockPanel, bound to `Shell.ApplicationVersionText`. Only visible when `HasShell=true`.
 
 **Annotation typography** — The book annotation text in the details panel uses `FontStyle="Italic"` to evoke a book excerpt feel.
+
+**First-run hero branding** — The left setup panel keeps the `Librova` wordmark at 22 px Bold with an explicit 30 px line-height so Avalonia does not clip the glyphs vertically on the startup screen.

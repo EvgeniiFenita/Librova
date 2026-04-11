@@ -36,12 +36,6 @@ Last assigned id: `#112`
 
 ### Critical
 ### Major
-- `#110` fix the first-run screen so the `Librova` label in the left panel is not clipped vertically.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.1`
-  - Note: the current first-run layout clips the `Librova` branding text by height in the left hero panel; adjust the typography, container sizing, or vertical alignment so the label remains fully visible at the intended desktop scale without introducing a new layout regression.
-
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`

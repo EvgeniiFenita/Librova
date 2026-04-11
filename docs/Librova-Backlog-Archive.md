@@ -132,6 +132,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#110` fix the first-run screen so the `Librova` label in the left panel is not clipped vertically.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: the first-run left hero panel now gives the `Librova` wordmark an explicit 30 px line-height so Avalonia does not clip it vertically on the setup screen.
+
 - `#107` implement and prove the intended reusable SQLite write-session lifecycle for the repository layer.
   - Status: `Closed`
   - Type: `Feature`
