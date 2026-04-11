@@ -19,11 +19,15 @@ std::string PathToUtf8(const std::filesystem::path& path)
 
 std::filesystem::path PathFromUtf8(const std::string_view path)
 {
+#ifdef _WIN32
+    return std::filesystem::path{Utf8ToWide(path)};
+#else
     const auto utf8Path = std::u8string{
         reinterpret_cast<const char8_t*>(path.data()),
         reinterpret_cast<const char8_t*>(path.data()) + path.size()
     };
     return std::filesystem::path{utf8Path};
+#endif
 }
 
 std::string CodePageToUtf8(const std::string_view value, const unsigned int codePage, const std::string_view errorContext)

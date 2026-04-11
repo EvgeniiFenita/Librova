@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Critical
 
+- `#114` prevent native host startup from crashing before first-run library creation completes.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: Windows UTF-8 path parsing now converts through the shared UTF-16 helper before constructing `std::filesystem::path`, restoring stable core-host startup for `--help`, first-run create-library bootstrap, and other pipe/library-root argument paths.
+
 - `#109` close the remaining pre-merge review blockers before merging the refactoring branch.
   - Status: `Closed`
   - Type: `Bug`

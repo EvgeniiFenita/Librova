@@ -47,4 +47,29 @@ TEST_CASE("Unicode conversion decodes windows-1251 text into UTF-8", "[unicode]"
         1251,
         "cp1251 decode failed") == expectedUtf8);
 }
+
+TEST_CASE("Unicode conversion restores Windows absolute UTF-8 paths", "[unicode]")
+{
+    const auto utf8Bytes = std::filesystem::path(u8"C:/Книги/Новая библиотека").generic_u8string();
+    const std::string utf8Path(
+        reinterpret_cast<const char*>(utf8Bytes.data()),
+        utf8Bytes.size());
+
+    const std::filesystem::path restored = Librova::Unicode::PathFromUtf8(utf8Path);
+
+    REQUIRE(restored == std::filesystem::path(u8"C:/Книги/Новая библиотека"));
+    REQUIRE(Librova::Unicode::PathToUtf8(restored) == utf8Path);
+}
+
+TEST_CASE("Unicode conversion restores Windows named pipe UTF-8 paths", "[unicode]")
+{
+    const auto utf8Bytes = std::filesystem::path(u8R"(\\.\pipe\Librova.Тест)").generic_u8string();
+    const std::string utf8Path(
+        reinterpret_cast<const char*>(utf8Bytes.data()),
+        utf8Bytes.size());
+
+    const std::filesystem::path restored = Librova::Unicode::PathFromUtf8(utf8Path);
+
+    REQUIRE(Librova::Unicode::PathToUtf8(restored) == utf8Path);
+}
 #endif
