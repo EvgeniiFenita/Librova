@@ -27,7 +27,7 @@ Both sides (C++ and C#) must always stay synchronized.
 - [ ] Add proto mapping
 - [ ] Add or extend native application facade method
 - [ ] Add or extend native service adapter
-- [ ] Add new method to native pipe method enum (append-only — never reorder or reuse)
+- [ ] Add or update the native pipe method enum so it matches the managed side exactly for this checkpoint
 - [ ] Add validation for the new method id in the native request parser
 - [ ] Add case to native pipe request dispatcher
 - [ ] Update host composition if constructor shape changes
@@ -57,8 +57,8 @@ All four steps must be green before closing the checkpoint.
 ## Transport Invariants (summary — full detail in `docs/engineering/TransportInvariants.md`)
 
 - Protobuf field numbers: append-only, never reuse.
-- Named-pipe method ids: append-only, never reorder or reuse.
-- Every new method must exist in **both** native and managed `PipeProtocol` enums.
+- Named-pipe method ids must stay synchronized between native and managed `PipeProtocol` enums for the same checkpoint.
+- UI and host are shipped in lockstep; if a method is replaced or removed, update both sides, docs, and tests in the same checkpoint.
 - gRPC runtime must **not** be introduced in the MVP path.
 
 ---

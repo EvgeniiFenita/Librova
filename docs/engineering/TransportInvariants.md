@@ -11,8 +11,9 @@ This document captures the invariants that keep the C++ and C# IPC surfaces in s
 
 ## 2. Named-Pipe Method Rules
 
-- Named-pipe method ids are append-only.
-- Never reorder or reuse method ids.
+- Librova ships `Librova.UI` and `Librova.Core` in lockstep for a given release; cross-version named-pipe compatibility between different checkpoints is not a supported runtime contract.
+- Within one checkpoint, native and managed named-pipe method ids must match exactly.
+- When a method is replaced or removed, update both sides in the same checkpoint and keep the change explicit in tests and docs.
 - Every new method must be added in both:
   - native `PipeProtocol`
   - C# `PipeProtocol`

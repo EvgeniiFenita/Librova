@@ -12,7 +12,7 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Milestone: `1.1`
-  - Note: removed the reintroduced managed mapper drift fallbacks, finished the safe catalog transport cleanup, restored mandatory IPC success-path logging, and aligned the regression surface with the final contract.
+  - Note: removed the reintroduced managed mapper drift fallbacks, finished the safe catalog transport cleanup, restored mandatory IPC success-path logging, and aligned the regression surface, docs, and tests with the final lockstep UI+host transport contract.
 
 - `#108` restore immediate first-run folder selection interaction after the architecture refactor.
   - Status: `Closed`

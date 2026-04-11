@@ -6,7 +6,7 @@
 
 #include "PipeTransport/PipeProtocol.hpp"
 
-TEST_CASE("Pipe method ids stay fixed across checkpoints", "[pipe]")
+TEST_CASE("Pipe method ids stay synchronized for the current checkpoint", "[pipe]")
 {
     REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::StartImport) == 1);
     REQUIRE(static_cast<std::uint32_t>(Librova::PipeTransport::EPipeMethod::ListBooks) == 2);

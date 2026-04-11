@@ -2661,9 +2661,6 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(Statistics);
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -2696,9 +2693,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel());
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -2760,9 +2754,6 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
         }
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => throw new InvalidOperationException("legacy statistics RPC should not be used during refresh");
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -2872,9 +2863,6 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel());
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -2958,12 +2946,6 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = (ulong)AllBooks.Count
-            });
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -3024,13 +3006,6 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = 1,
-                TotalLibrarySizeBytes = 1024
-            });
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -3072,9 +3047,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel { BookCount = 1 });
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -3137,13 +3109,6 @@ public sealed class ViewModelsTests
                 AddedAtUtc = DateTimeOffset.UtcNow
             });
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = 1,
-                TotalLibrarySizeBytes = 512
-            });
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -3190,9 +3155,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel { BookCount = 1 });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
@@ -3256,9 +3218,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => throw new InvalidOperationException("legacy statistics RPC should not be used during refresh");
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -3335,12 +3294,6 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = 3
-            });
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -3396,12 +3349,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = 2
-            });
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -3460,9 +3407,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel { BookCount = 3 });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
@@ -3529,12 +3473,6 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = (ulong)_books.Count
-            });
-
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
@@ -3592,12 +3530,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = (ulong)_books.Count
-            });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
@@ -3686,9 +3618,6 @@ public sealed class ViewModelsTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel { BookCount = (ulong)_books.Count });
-
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
 
@@ -3729,12 +3658,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = (ulong)_books.Count
-            });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
@@ -3777,12 +3700,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel
-            {
-                BookCount = (ulong)_books.Count
-            });
 
         public Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<string?>(destinationPath);
@@ -3830,9 +3747,6 @@ public sealed class ViewModelsTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(new LibraryStatisticsModel());
 
         public async Task<string?> ExportBookAsync(long bookId, string destinationPath, BookFormatModel? exportFormat, TimeSpan timeout, CancellationToken cancellationToken)
         {

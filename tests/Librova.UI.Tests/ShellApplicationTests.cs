@@ -1107,9 +1107,6 @@ public sealed class ShellApplicationTests
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
 
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(Statistics);
-
         public Task<string?> ExportBookAsync(
             long bookId,
             string destinationPath,
@@ -1162,9 +1159,6 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
-
-        public Task<LibraryStatisticsModel> GetLibraryStatisticsAsync(TimeSpan timeout, CancellationToken cancellationToken)
-            => Task.FromResult(_statistics);
 
         public Task<string?> ExportBookAsync(
             long bookId,
