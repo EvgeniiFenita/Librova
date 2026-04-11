@@ -10,6 +10,7 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
         .TextUtf8 = "zone",
         .AuthorUtf8 = std::string{"Arkady Strugatsky"},
         .Language = std::string{"en"},
+        .GenreUtf8 = std::string{"classic"},
         .SeriesUtf8 = std::string{"Noon Universe"},
         .TagsUtf8 = {"classic", "sci-fi"},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -25,6 +26,7 @@ TEST_CASE("Library catalog proto mapper round-trips book list request filters", 
     REQUIRE(restored.TextUtf8 == request.TextUtf8);
     REQUIRE(restored.AuthorUtf8 == request.AuthorUtf8);
     REQUIRE(restored.Language == request.Language);
+    REQUIRE(restored.GenreUtf8 == request.GenreUtf8);
     REQUIRE(restored.SeriesUtf8 == request.SeriesUtf8);
     REQUIRE(restored.TagsUtf8 == request.TagsUtf8);
     REQUIRE(restored.Format == request.Format);
@@ -80,6 +82,7 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
         .Items = {item},
         .TotalCount = 12,
         .AvailableLanguages = {"en", "ru"},
+        .AvailableGenres = {"classic", "sci-fi"},
         .Statistics = {
             .BookCount = 12,
             .TotalManagedBookSizeBytes = 4096,
@@ -93,6 +96,9 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     REQUIRE(response.available_languages_size() == 2);
     REQUIRE(response.available_languages(0) == "en");
     REQUIRE(response.available_languages(1) == "ru");
+    REQUIRE(response.available_genres_size() == 2);
+    REQUIRE(response.available_genres(0) == "classic");
+    REQUIRE(response.available_genres(1) == "sci-fi");
     REQUIRE(response.has_statistics());
     REQUIRE(response.statistics().book_count() == 12);
     REQUIRE(response.statistics().total_library_size_bytes() == 16384);

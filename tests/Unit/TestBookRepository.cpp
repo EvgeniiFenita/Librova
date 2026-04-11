@@ -69,6 +69,11 @@ public:
         return {"en"};
     }
 
+    [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const override
     {
         if (candidate.HasHash())

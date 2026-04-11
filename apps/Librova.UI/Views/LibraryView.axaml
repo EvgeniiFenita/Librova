@@ -103,7 +103,7 @@
                    Text="{Binding LibraryBrowser.SearchText, UpdateSourceTrigger=PropertyChanged}" />
         </Grid>
 
-        <!-- Zone 2: View options cluster (language filter + sort group) -->
+        <!-- Zone 2: View options cluster (language filter + genre filter + sort group) -->
         <StackPanel Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="8"
@@ -114,6 +114,12 @@
                     MinWidth="110"
                     SelectedItem="{Binding LibraryBrowser.SelectedLanguageFilter}"
                     ItemsSource="{Binding LibraryBrowser.AvailableLanguageFilters}" />
+
+          <!-- Genre filter -->
+          <ComboBox Classes="AppComboBox"
+                    MinWidth="130"
+                    SelectedItem="{Binding LibraryBrowser.SelectedGenreFilter}"
+                    ItemsSource="{Binding LibraryBrowser.AvailableGenreFilters}" />
 
           <!-- Vertical divider -->
           <Border Width="1"

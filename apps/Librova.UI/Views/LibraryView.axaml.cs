@@ -71,6 +71,7 @@ internal sealed partial class LibraryView : UserControl
 
         if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.SearchText)
             or nameof(LibraryBrowserViewModel.LanguageFilter)
+            or nameof(LibraryBrowserViewModel.GenreFilter)
             or nameof(LibraryBrowserViewModel.SelectedSortKey)
             or nameof(LibraryBrowserViewModel.SortDescending))
         {

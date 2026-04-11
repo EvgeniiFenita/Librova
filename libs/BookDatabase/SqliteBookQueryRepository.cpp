@@ -503,6 +503,68 @@ std::string BuildAvailableLanguagesSql(const Librova::Domain::SSearchQuery& quer
     return sql;
 }
 
+std::string BuildAvailableTagsSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT DISTINCT t.display_name "
+        "FROM books b ";
+
+    if (query.HasText())
+    {
+        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        sql +=
+            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
+            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
+    }
+
+    sql +=
+        "INNER JOIN book_tags bt_list ON bt_list.book_id = b.id "
+        "INNER JOIN tags t ON t.id = bt_list.tag_id "
+        "WHERE t.display_name <> '' ";
+
+    if (query.HasText())
+    {
+        sql += "AND search_index MATCH ? ";
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        sql += "AND a_filter.normalized_name = ? ";
+    }
+
+    if (query.Language.has_value())
+    {
+        sql += "AND b.language = ? ";
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        sql += "AND b.series = ? ";
+    }
+
+    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
+    {
+        sql +=
+            "AND EXISTS ("
+            "SELECT 1 FROM book_tags bt_filter "
+            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
+            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
+            ") ";
+    }
+
+    if (query.Format.has_value())
+    {
+        sql += "AND b.preferred_format = ? ";
+    }
+
+    sql += "ORDER BY t.display_name COLLATE NOCASE ASC;";
+    return sql;
+}
+
 void BindSearchCountFilters(
     Librova::Sqlite::CSqliteStatement& statement,
     const Librova::Domain::SSearchQuery& query)
@@ -554,6 +616,43 @@ void BindAvailableLanguageFilters(
     if (query.AuthorUtf8.has_value())
     {
         statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, *query.SeriesUtf8);
+    }
+
+    for (const std::string& tag : query.TagsUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    if (query.Format.has_value())
+    {
+        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
+    }
+}
+
+void BindAvailableTagFilters(
+    Librova::Sqlite::CSqliteStatement& statement,
+    const Librova::Domain::SSearchQuery& query)
+{
+    int parameterIndex = 1;
+
+    if (query.HasText())
+    {
+        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
+    }
+
+    if (query.Language.has_value())
+    {
+        statement.BindText(parameterIndex++, *query.Language);
     }
 
     if (query.SeriesUtf8.has_value())
@@ -825,6 +924,21 @@ std::vector<std::string> CSqliteBookQueryRepository::ListAvailableLanguages(cons
     }
 
     return languages;
+}
+
+std::vector<std::string> CSqliteBookQueryRepository::ListAvailableTags(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildAvailableTagsSql(query));
+    BindAvailableTagFilters(statement, query);
+
+    std::vector<std::string> tags;
+    while (statement.Step())
+    {
+        tags.push_back(statement.GetColumnText(0));
+    }
+
+    return tags;
 }
 
 std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const

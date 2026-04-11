@@ -96,6 +96,7 @@ The user can:
 - search books through a single full-text field that matches title, authors, tags, and description;
 - use that same full-text field with ordinary punctuation without breaking the search flow through raw FTS syntax errors;
 - filter the grid by language;
+- filter the grid by genre;
 - see a library summary in the left `Current Library` panel with total managed-book count and one aggregate library-size metric in megabytes that includes managed books, stored covers, and the SQLite database;
 - browse books as cover-driven cards in a responsive grid;
 - see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
@@ -106,7 +107,7 @@ The user can:
 - export the selected book;
 - move the selected book to the Windows `Recycle Bin`.
 
-Series and genres are already surfaced in the details panel when available; first-class browser filtering and browsing workflows for them remain future work.
+Series and genres are already surfaced in the details panel when available; first-class browser filtering for genres is available in the `Library` toolbar, while dedicated series browsing remains future work.
 
 ### 3.4 Export
 

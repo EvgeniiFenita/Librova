@@ -16,6 +16,7 @@ struct SBookListRequest
     std::string TextUtf8;
     std::optional<std::string> AuthorUtf8;
     std::optional<std::string> Language;
+    std::optional<std::string> GenreUtf8;
     std::optional<std::string> SeriesUtf8;
     std::vector<std::string> TagsUtf8;
     std::optional<Librova::Domain::EBookFormat> Format;
@@ -59,6 +60,7 @@ struct SBookListResult
     std::vector<SBookListItem> Items;
     std::uint64_t TotalCount = 0;
     std::vector<std::string> AvailableLanguages;
+    std::vector<std::string> AvailableGenres;
     SLibraryStatistics Statistics;
 
     [[nodiscard]] bool IsEmpty() const noexcept

@@ -33,7 +33,12 @@ internal sealed class LibraryBrowseRefreshController
 
         var visibleItems = page.Items.Select(prepare).ToArray();
         _browseState.SetLoadedState(batchNumber, page.TotalCount, visibleItems.Length);
-        return new LibraryBrowseRefreshResult(visibleItems, page.TotalCount, page.AvailableLanguages, page.Statistics);
+        return new LibraryBrowseRefreshResult(
+            visibleItems,
+            page.TotalCount,
+            page.AvailableLanguages,
+            page.AvailableGenres,
+            page.Statistics);
     }
 
     public async Task<LibraryBrowseRefreshResult> LoadMoreAsync(
@@ -48,7 +53,12 @@ internal sealed class LibraryBrowseRefreshController
             cancellationToken);
 
         var visibleItems = page.Items.Select(prepare).ToArray();
-        return new LibraryBrowseRefreshResult(visibleItems, page.TotalCount, page.AvailableLanguages, page.Statistics);
+        return new LibraryBrowseRefreshResult(
+            visibleItems,
+            page.TotalCount,
+            page.AvailableLanguages,
+            page.AvailableGenres,
+            page.Statistics);
     }
 
     public async Task<LibraryBrowseRefreshResult> RefreshRangeAsync(
@@ -64,7 +74,12 @@ internal sealed class LibraryBrowseRefreshController
 
         var visibleItems = page.Items.Select(prepare).ToArray();
         _browseState.SetLoadedRangeState(visibleItems.Length, page.TotalCount);
-        return new LibraryBrowseRefreshResult(visibleItems, page.TotalCount, page.AvailableLanguages, page.Statistics);
+        return new LibraryBrowseRefreshResult(
+            visibleItems,
+            page.TotalCount,
+            page.AvailableLanguages,
+            page.AvailableGenres,
+            page.Statistics);
     }
 }
 
@@ -72,4 +87,5 @@ internal sealed record LibraryBrowseRefreshResult(
     IReadOnlyList<BookListItemModel> VisibleItems,
     ulong TotalCount,
     IReadOnlyList<string> AvailableLanguages,
+    IReadOnlyList<string> AvailableGenres,
     LibraryStatisticsModel? Statistics);

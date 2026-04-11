@@ -52,6 +52,11 @@ Librova::Application::SBookListRequest CLibraryCatalogProtoMapper::FromProto(
         result.Language = request.language();
     }
 
+    if (request.has_genre())
+    {
+        result.GenreUtf8 = request.genre();
+    }
+
     if (request.has_series())
     {
         result.SeriesUtf8 = request.series();
@@ -93,6 +98,11 @@ librova::v1::BookListRequest CLibraryCatalogProtoMapper::ToProto(
     if (request.Language.has_value())
     {
         proto.set_language(*request.Language);
+    }
+
+    if (request.GenreUtf8.has_value())
+    {
+        proto.set_genre(*request.GenreUtf8);
     }
 
     if (request.SeriesUtf8.has_value())
@@ -178,6 +188,10 @@ librova::v1::ListBooksResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     for (const std::string& language : result.AvailableLanguages)
     {
         response.add_available_languages(language);
+    }
+    for (const std::string& genre : result.AvailableGenres)
+    {
+        response.add_available_genres(genre);
     }
 
     for (const Librova::Application::SBookListItem& item : result.Items)

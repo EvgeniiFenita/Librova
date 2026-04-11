@@ -12,10 +12,12 @@ internal sealed class LibraryBrowseQueryState
         SelectedSortKey = initialSortKey;
         SortDescending = initialSortDescending;
         AvailableLanguageFilters = ["All languages"];
+        AvailableGenreFilters = ["All genres"];
     }
 
     public string SearchText { get; set; } = string.Empty;
     public string LanguageFilter { get; set; } = string.Empty;
+    public string GenreFilter { get; set; } = string.Empty;
     public SortKeyOption SelectedSortKey { get; set; }
     public bool SortDescending { get; set; }
 
@@ -30,15 +32,23 @@ internal sealed class LibraryBrowseQueryState
     public bool HasMoreResults { get; set; }
     public ulong TotalBookCount { get; private set; }
     public IReadOnlyList<string> AvailableLanguageFilters { get; private set; }
+    public IReadOnlyList<string> AvailableGenreFilters { get; private set; }
 
     public string SelectedLanguageFilter => string.IsNullOrWhiteSpace(LanguageFilter) ? "All languages" : LanguageFilter;
+    public string SelectedGenreFilter => string.IsNullOrWhiteSpace(GenreFilter) ? "All genres" : GenreFilter;
 
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(SearchText)
-        || !string.IsNullOrWhiteSpace(LanguageFilter);
+        || !string.IsNullOrWhiteSpace(LanguageFilter)
+        || !string.IsNullOrWhiteSpace(GenreFilter);
 
     public string NormalizeSelectedLanguageFilter(string value) =>
         string.Equals(value, "All languages", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : value;
+
+    public string NormalizeSelectedGenreFilter(string value) =>
+        string.Equals(value, "All genres", StringComparison.OrdinalIgnoreCase)
             ? string.Empty
             : value;
 
@@ -47,6 +57,7 @@ internal sealed class LibraryBrowseQueryState
         {
             Text = SearchText,
             Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+            Genre = string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
             SortBy = SelectedSortKey.Key,
             SortDirection = SortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = checked((ulong)Math.Max(0, batchNumber - 1) * (ulong)PageSize),
@@ -58,6 +69,7 @@ internal sealed class LibraryBrowseQueryState
         {
             Text = SearchText,
             Language = string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+            Genre = string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
             SortBy = SelectedSortKey.Key,
             SortDirection = SortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = 0,
@@ -82,17 +94,30 @@ internal sealed class LibraryBrowseQueryState
 
     public void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
     {
-        var items = new List<string> { "All languages" };
-        items.AddRange(availableLanguages
-            .Where(language => !string.IsNullOrWhiteSpace(language))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(language => language, StringComparer.OrdinalIgnoreCase));
+        AvailableLanguageFilters = BuildAvailableFilters(availableLanguages, "All languages", LanguageFilter);
+    }
 
-        if (!string.IsNullOrWhiteSpace(LanguageFilter) && !items.Contains(LanguageFilter, StringComparer.OrdinalIgnoreCase))
+    public void UpdateAvailableGenres(IEnumerable<string> availableGenres)
+    {
+        AvailableGenreFilters = BuildAvailableFilters(availableGenres, "All genres", GenreFilter);
+    }
+
+    private static IReadOnlyList<string> BuildAvailableFilters(
+        IEnumerable<string> availableValues,
+        string allLabel,
+        string currentValue)
+    {
+        var items = new List<string> { allLabel };
+        items.AddRange(availableValues
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(currentValue) && !items.Contains(currentValue, StringComparer.OrdinalIgnoreCase))
         {
-            items.Add(LanguageFilter);
+            items.Add(currentValue);
         }
 
-        AvailableLanguageFilters = items.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return items.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 }

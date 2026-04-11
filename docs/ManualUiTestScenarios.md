@@ -43,6 +43,7 @@
 | [library.md](manual-tests/library.md) | 2 | Full Details Loading | ✓ |
 | [library.md](manual-tests/library.md) | 2.1 | Covers And Legacy FB2 Metadata | ✓ |
 | [library.md](manual-tests/library.md) | 2.2 | Placeholder Covers Stay Fully Visible | |
+| [library.md](manual-tests/library.md) | 2.3 | Library Genre Filter | |
 | [library.md](manual-tests/library.md) | 3 | Library Sort Controls | ✓ |
 | [export.md](manual-tests/export.md) | 1 | Export Book | ✓ |
 | [export.md](manual-tests/export.md) | 2 | Export as EPUB Progress Feedback | ✓ |

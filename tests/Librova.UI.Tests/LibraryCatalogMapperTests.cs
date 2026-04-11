@@ -143,6 +143,20 @@ public sealed class LibraryCatalogMapperTests
     }
 
     [Fact]
+    public void Mapper_MapsAvailableGenresFromListResponse()
+    {
+        var page = LibraryCatalogMapper.FromProto(new ListBooksResponse
+        {
+            TotalCount = 2,
+            AvailableLanguages = { "en" },
+            AvailableGenres = { "adventure", "sci-fi" }
+        });
+
+        Assert.Equal(["adventure", "sci-fi"], page.AvailableGenres);
+        Assert.Equal(["en"], page.AvailableLanguages);
+    }
+
+    [Fact]
     public void Mapper_RejectsMissingManagedFileNameInListItems()
     {
         var error = Assert.Throws<InvalidOperationException>(() =>

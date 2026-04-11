@@ -123,6 +123,11 @@ public:
         return {};
     }
 
+    [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return {};
@@ -680,6 +685,77 @@ TEST_CASE("Library job service adapter logs import snapshot wait and missing res
     REQUIRE(logText.find("GetImportJobResult requested unknown job 404.") != std::string::npos);
 
     std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library job service adapter logs genre alongside language for ListBooks", "[proto-service][logging][catalog]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-list-books-logging";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+
+    const auto logPath = sandbox / "host.log";
+    const auto databasePath = sandbox / "catalog.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.Metadata.TagsUtf8 = {"sci-fi"};
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.SizeBytes = 512;
+    book.File.Sha256Hex = "list-books-logging-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(book));
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        writeRepository,
+        {.LibraryRoot = sandbox});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, writeRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, sandbox);
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox);
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, sandbox);
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
+
+    try
+    {
+        Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+        librova::v1::ListBooksRequest request;
+        auto* query = request.mutable_query();
+        query->set_text("road");
+        query->set_language("en");
+        query->set_genre("sci-fi");
+        query->set_limit(10);
+
+        const auto response = adapter.ListBooks(request);
+        REQUIRE(response.items_size() == 1);
+
+        Librova::Logging::CLogging::Shutdown();
+    }
+    catch (...)
+    {
+        Librova::Logging::CLogging::Shutdown();
+        CloseRepositoryAndRemoveAll(sandbox, writeRepository);
+        throw;
+    }
+
+    const auto logText = ReadAllText(logPath);
+    REQUIRE(logText.find("Language='en'") != std::string::npos);
+    REQUIRE(logText.find("Genre='sci-fi'") != std::string::npos);
+
+    CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }
 
 TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when converter is configured", "[proto-service][catalog]")

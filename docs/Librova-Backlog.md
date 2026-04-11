@@ -48,11 +48,11 @@ Last assigned id: `#112`
   - Milestone: `1.1`
   - Note: the scenario is a user who already has an FB2 library and then configures a converter for the first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted, failed, skipped); a per-book conversion failure must keep the original FB2 intact as the managed file — never remove it; the terminal summary must remain visible after the job finishes; cancellation must stop new conversions and leave already-converted books in their new EPUB state; the feature spans a new native pipeline stage, IPC contract, and UI workflow.
 
-- `#26` complete first-class browser support for `series` and `genres` once metadata parsing and details display are in place.
+- `#26` complete first-class browser support for `genres` once metadata parsing and details display are in place.
   - Status: `Open`
   - Type: `Feature`
   - Milestone: `1.1`
-  - Note: focus this item on browse-time behavior: filter sources, filter UI, request plumbing, result counts, and any related series/genres browsing flows rather than parser-only metadata extraction.
+  - Note: focus this item on browse-time genre behavior: filter sources, filter UI, request plumbing, result counts, and genre browsing flows rather than parser-only metadata extraction.
 
 - `#59` add Favorites and Read as built-in user collections with per-book membership, sidebar navigation, filtered browse, card-level toggle controls, and details-panel membership display.
   - Status: `Open`

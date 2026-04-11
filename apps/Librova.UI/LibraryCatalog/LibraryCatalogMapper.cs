@@ -106,6 +106,11 @@ internal static class LibraryCatalogMapper
             request.Language = model.Language;
         }
 
+        if (!string.IsNullOrWhiteSpace(model.Genre))
+        {
+            request.Genre = model.Genre;
+        }
+
         if (!string.IsNullOrWhiteSpace(model.Series))
         {
             request.Series = model.Series;
@@ -145,6 +150,7 @@ internal static class LibraryCatalogMapper
             Items = response.Items.Select(FromProto).ToArray(),
             TotalCount = response.TotalCount,
             AvailableLanguages = response.AvailableLanguages.ToArray(),
+            AvailableGenres = response.AvailableGenres.ToArray(),
             Statistics = response.Statistics is null ? null : FromProto(response.Statistics)
         };
 

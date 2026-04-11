@@ -1224,13 +1224,14 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
-    public async Task LibraryBrowserViewModel_PassesSearchAndLanguageIntoCatalogRequest()
+    public async Task LibraryBrowserViewModel_PassesSearchLanguageAndGenreIntoCatalogRequest()
     {
         var service = new RecordingLibraryCatalogService();
         var viewModel = new LibraryBrowserViewModel(service)
         {
             SearchText = "road",
             LanguageFilter = "en",
+            GenreFilter = "sci-fi",
             PageSize = 10
         };
 
@@ -1239,6 +1240,7 @@ public sealed class ViewModelsTests
         Assert.NotNull(service.LastRequest);
         Assert.Equal("road", service.LastRequest!.Text);
         Assert.Equal("en", service.LastRequest.Language);
+        Assert.Equal("sci-fi", service.LastRequest.Genre);
         Assert.Null(service.LastRequest.Author);
         Assert.Null(service.LastRequest.Format);
         Assert.Equal(BookSortModel.Title, service.LastRequest.SortBy);
@@ -1308,6 +1310,25 @@ public sealed class ViewModelsTests
         Assert.Contains("All languages", viewModel.AvailableLanguageFilters);
         Assert.Contains("en", viewModel.AvailableLanguageFilters);
         Assert.Contains("ru", viewModel.AvailableLanguageFilters);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_KeepsOtherKnownGenresVisibleWhenGenreFilterIsApplied()
+    {
+        var service = new QueryFilteringLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        Assert.Contains("adventure", viewModel.AvailableGenreFilters);
+        Assert.Contains("sci-fi", viewModel.AvailableGenreFilters);
+
+        viewModel.GenreFilter = "sci-fi";
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Tags.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
+
+        Assert.Contains("All genres", viewModel.AvailableGenreFilters);
+        Assert.Contains("adventure", viewModel.AvailableGenreFilters);
+        Assert.Contains("sci-fi", viewModel.AvailableGenreFilters);
     }
 
     [Fact]
@@ -1676,6 +1697,20 @@ public sealed class ViewModelsTests
 
         Assert.Equal("ru", viewModel.LanguageFilter);
         Assert.Equal("ru", viewModel.SelectedLanguageFilter);
+    }
+
+    [Fact]
+    public void LibraryBrowserViewModel_KeepsGenreFilterWhenComboBoxSelectionTemporarilyClears()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
+        {
+            GenreFilter = "sci-fi"
+        };
+
+        viewModel.SelectedGenreFilter = null!;
+
+        Assert.Equal("sci-fi", viewModel.GenreFilter);
+        Assert.Equal("sci-fi", viewModel.SelectedGenreFilter);
     }
 
     [Fact]
@@ -2892,6 +2927,7 @@ public sealed class ViewModelsTests
                 Title = "Roadside Picnic",
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
+                Tags = ["sci-fi"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Books/0000000001/roadside.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -2902,6 +2938,7 @@ public sealed class ViewModelsTests
                 Title = "Monday Begins on Saturday",
                 Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
                 Language = "ru",
+                Tags = ["adventure"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Books/0000000002/monday.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -2929,6 +2966,11 @@ public sealed class ViewModelsTests
                 filtered = filtered.Where(book => string.Equals(book.Language, request.Language, StringComparison.OrdinalIgnoreCase));
             }
 
+            if (!string.IsNullOrWhiteSpace(request.Genre))
+            {
+                filtered = filtered.Where(book => book.Tags.Contains(request.Genre, StringComparer.OrdinalIgnoreCase));
+            }
+
             var filteredItems = filtered.ToArray();
             return Task.FromResult(new BookListPageModel
             {
@@ -2937,6 +2979,11 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                AvailableGenres = AllBooks
+                    .SelectMany(book => book.Tags)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
                     .ToArray(),
                 Items = filteredItems,
                 Statistics = Statistics
@@ -3429,6 +3476,7 @@ public sealed class ViewModelsTests
                 Title = "Alpha",
                 Authors = ["Author One"],
                 Language = "en",
+                Tags = ["adventure"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Books/0000000001/alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3439,6 +3487,7 @@ public sealed class ViewModelsTests
                 Title = "Beta",
                 Authors = ["Author Two"],
                 Language = "en",
+                Tags = ["sci-fi"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Books/0000000002/beta.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3449,6 +3498,7 @@ public sealed class ViewModelsTests
                 Title = "Gamma",
                 Authors = ["Author Three"],
                 Language = "ru",
+                Tags = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Books/0000000003/gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3466,6 +3516,7 @@ public sealed class ViewModelsTests
             {
                 TotalCount = (ulong)_books.Count,
                 AvailableLanguages = ["en", "ru"],
+                AvailableGenres = ["adventure", "sci-fi"],
                 Items = items
             });
         }
@@ -3494,6 +3545,7 @@ public sealed class ViewModelsTests
                 Title = "Alpha",
                 Authors = ["Author One"],
                 Language = "en",
+                Tags = ["adventure"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Books/0000000001/alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3504,6 +3556,7 @@ public sealed class ViewModelsTests
                 Title = "Gamma",
                 Authors = ["Author Three"],
                 Language = "ru",
+                Tags = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Books/0000000002/gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3523,6 +3576,11 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                AvailableGenres = _books
+                    .SelectMany(book => book.Tags)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
                     .ToArray(),
                 Items = items
             });

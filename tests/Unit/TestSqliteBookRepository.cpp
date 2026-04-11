@@ -331,6 +331,59 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
+TEST_CASE("Sqlite book query repository lists available tags with combined filters even when current tag is set", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-tag-filters.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook firstBook;
+    firstBook.Metadata.TitleUtf8 = "Shared Shelf";
+    firstBook.Metadata.AuthorsUtf8 = {"Common Author"};
+    firstBook.Metadata.Language = "en";
+    firstBook.Metadata.SeriesUtf8 = std::string{"Series Shared"};
+    firstBook.Metadata.TagsUtf8 = {"adventure", "shared-tag"};
+    firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    firstBook.File.ManagedPath = "Books/0000000106/first.epub";
+    firstBook.File.SizeBytes = 100;
+    firstBook.File.Sha256Hex = "tag-filter-1";
+    firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(firstBook));
+
+    Librova::Domain::SBook secondBook = firstBook;
+    secondBook.Metadata.Language = "ru";
+    secondBook.Metadata.TagsUtf8 = {"mystery", "shared-tag"};
+    secondBook.File.ManagedPath = "Books/0000000107/second.epub";
+    secondBook.File.Sha256Hex = "tag-filter-2";
+    secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
+    static_cast<void>(writeRepository.Add(secondBook));
+
+    Librova::Domain::SBook ignoredBook = firstBook;
+    ignoredBook.Metadata.Language = "de";
+    ignoredBook.Metadata.SeriesUtf8 = std::string{"Different Series"};
+    ignoredBook.Metadata.TagsUtf8 = {"ignored-tag"};
+    ignoredBook.File.ManagedPath = "Books/0000000108/ignored.epub";
+    ignoredBook.File.Sha256Hex = "tag-filter-3";
+    ignoredBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
+    static_cast<void>(writeRepository.Add(ignoredBook));
+
+    const std::vector<std::string> tags = queryRepository.ListAvailableTags({
+        .TextUtf8 = "shared",
+        .AuthorUtf8 = std::string{"Common Author"},
+        .Language = std::string{"en"},
+        .SeriesUtf8 = std::string{"Series Shared"},
+        .TagsUtf8 = {"shared-tag", "adventure"},
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(tags == std::vector<std::string>({"adventure", "shared-tag"}));
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
 TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo equivalence", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic.db";

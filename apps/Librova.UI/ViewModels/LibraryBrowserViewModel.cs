@@ -71,10 +71,15 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         {
             AvailableLanguageFilters.Add(language);
         }
+        foreach (var genre in _browseState.AvailableGenreFilters)
+        {
+            AvailableGenreFilters.Add(genre);
+        }
     }
 
     public ObservableCollection<BookListItemModel> Books { get; } = [];
     public ObservableCollection<string> AvailableLanguageFilters { get; } = [];
+    public ObservableCollection<string> AvailableGenreFilters { get; } = [];
     public IReadOnlyList<SortKeyOption> AvailableSortKeys { get; } = SortKeyOption.All;
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
@@ -131,6 +136,40 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             }
 
             LanguageFilter = _browseState.NormalizeSelectedLanguageFilter(value);
+        }
+    }
+
+    public string GenreFilter
+    {
+        get => _browseState.GenreFilter;
+        set
+        {
+            if (_browseState.GenreFilter == value)
+            {
+                return;
+            }
+            _browseState.GenreFilter = value;
+            RaisePropertyChanged();
+            RaisePropertyChanged(nameof(SelectedGenreFilter));
+            RaisePropertyChanged(nameof(BookCountText));
+            RaisePropertyChanged(nameof(EmptyStateTitle));
+            RaisePropertyChanged(nameof(EmptyStateDescription));
+            ScheduleRefresh();
+        }
+    }
+
+    public string SelectedGenreFilter
+    {
+        get => _browseState.SelectedGenreFilter;
+        set
+        {
+            if (value is null)
+            {
+                RaisePropertyChanged(nameof(SelectedGenreFilter));
+                return;
+            }
+
+            GenreFilter = _browseState.NormalizeSelectedGenreFilter(value);
         }
     }
 
@@ -314,7 +353,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalLibrarySizeBytes)}";
     public string EmptyStateTitle => HasActiveFilters ? "Nothing found" : "Library is empty";
     public string EmptyStateDescription => HasActiveFilters
-        ? "Try a different search query or clear the current language filter."
+        ? "Try a different search query or clear the current language or genre filter."
         : "Import books to start building your library.";
     public string SelectedBookTitle => _selectionState.SelectedBookTitle;
     public string SelectedBookAuthorText => _selectionState.SelectedBookAuthorText;
@@ -653,6 +692,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
             SyncHasMoreResults(previousHasMoreResults);
             UpdateAvailableLanguages(refreshResult.AvailableLanguages);
+            UpdateAvailableGenres(refreshResult.AvailableGenres);
             RaisePropertyChanged(nameof(HasBooks));
             RaisePropertyChanged(nameof(ShowEmptyState));
             RaisePropertyChanged(nameof(BookCountText));
@@ -732,6 +772,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     {
         ApplyVisibleItems(refreshResult.VisibleItems);
         UpdateAvailableLanguages(refreshResult.AvailableLanguages);
+        UpdateAvailableGenres(refreshResult.AvailableGenres);
 
         if (previousSelectionId is not null)
         {
@@ -845,43 +886,51 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
     {
         _browseState.UpdateAvailableLanguages(availableLanguages);
-        SynchronizeLanguageFilters(_browseState.AvailableLanguageFilters);
+        SynchronizeFilters(AvailableLanguageFilters, _browseState.AvailableLanguageFilters);
 
         RaisePropertyChanged(nameof(SelectedLanguageFilter));
     }
 
-    private void SynchronizeLanguageFilters(IReadOnlyList<string> desiredItems)
+    private void UpdateAvailableGenres(IEnumerable<string> availableGenres)
     {
-        for (var index = AvailableLanguageFilters.Count - 1; index >= 0; index--)
+        _browseState.UpdateAvailableGenres(availableGenres);
+        SynchronizeFilters(AvailableGenreFilters, _browseState.AvailableGenreFilters);
+
+        RaisePropertyChanged(nameof(SelectedGenreFilter));
+    }
+
+    private static void SynchronizeFilters(ObservableCollection<string> targetCollection, IReadOnlyList<string> desiredItems)
+    {
+        for (var index = targetCollection.Count - 1; index >= 0; index--)
         {
-            if (!desiredItems.Contains(AvailableLanguageFilters[index], StringComparer.OrdinalIgnoreCase))
+            if (!desiredItems.Contains(targetCollection[index], StringComparer.OrdinalIgnoreCase))
             {
-                AvailableLanguageFilters.RemoveAt(index);
+                targetCollection.RemoveAt(index);
             }
         }
 
         for (var desiredIndex = 0; desiredIndex < desiredItems.Count; desiredIndex++)
         {
             var desiredItem = desiredItems[desiredIndex];
-            var existingIndex = IndexOfLanguageFilter(desiredItem);
+            var existingIndex = IndexOfFilter(targetCollection, desiredItem);
             if (existingIndex < 0)
             {
-                AvailableLanguageFilters.Insert(desiredIndex, desiredItem);
+                targetCollection.Insert(desiredIndex, desiredItem);
                 continue;
             }
 
             if (existingIndex != desiredIndex)
             {
-                AvailableLanguageFilters.Move(existingIndex, desiredIndex);
+                targetCollection.Move(existingIndex, desiredIndex);
             }
         }
     }
 
-    private int IndexOfLanguageFilter(string value)
+    private static int IndexOfFilter(ObservableCollection<string> targetCollection, string value)
     {
-        for (var index = 0; index < AvailableLanguageFilters.Count; index++)
+        for (var index = 0; index < targetCollection.Count; index++)
         {
-            if (string.Equals(AvailableLanguageFilters[index], value, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetCollection[index], value, StringComparison.OrdinalIgnoreCase))
             {
                 return index;
             }

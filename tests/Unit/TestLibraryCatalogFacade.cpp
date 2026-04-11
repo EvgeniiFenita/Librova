@@ -110,6 +110,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 1);
         REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
+        REQUIRE(result.AvailableGenres == std::vector<std::string>({"translated", "zone"}));
         REQUIRE(result.Statistics.BookCount == 2);
         REQUIRE(result.Statistics.TotalManagedBookSizeBytes == 8192);
         REQUIRE(result.Statistics.TotalLibrarySizeBytes > 8192);
@@ -170,6 +171,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
         const Librova::Application::SBookListResult result = facade.ListBooks({
             .Language = std::string{"en"},
+            .GenreUtf8 = std::string{"selected"},
             .TagsUtf8 = {"selected"},
             .Format = Librova::Domain::EBookFormat::Epub,
             .SortBy = Librova::Domain::EBookSort::Title,
@@ -180,6 +182,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 2);
         REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
+        REQUIRE(result.AvailableGenres == std::vector<std::string>({"selected"}));
         REQUIRE(result.Statistics.BookCount == 3);
         REQUIRE(result.Items.front().TitleUtf8 == "Beta");
     }
@@ -252,6 +255,11 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
         }
 
         [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }

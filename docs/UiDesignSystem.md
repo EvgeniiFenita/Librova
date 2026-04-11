@@ -273,7 +273,7 @@ Window (Background = AppBackgroundBrush)
 
 | View | DataContext | Key layout |
 |---|---|---|
-| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Content = book grid (AppPanelFlat) + details panel (360 px fixed, right) |
+| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right) |
 | `ImportView` | `ShellViewModel` | ScrollViewer → StackPanel. Drop zone → options → running state → result |
 | `SettingsView` | `ShellViewModel` | ScrollViewer → StackPanel. Converter → About → Diagnostics panels |
 
