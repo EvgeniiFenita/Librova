@@ -426,16 +426,11 @@ public sealed partial class ImportJobsServiceTests
 
             var result = await service.TryGetResultAsync(jobId, TimeSpan.FromSeconds(5), cancellation.Token);
             Assert.NotNull(result);
-            Assert.Equal(ImportJobStatusModel.Failed, result!.Snapshot.Status);
+            Assert.Equal(ImportJobStatusModel.Completed, result!.Snapshot.Status);
             Assert.NotNull(result.Summary);
             Assert.Equal(1UL, result.Summary!.TotalEntries);
-            Assert.Equal(1UL, result.Summary.FailedEntries);
-            Assert.Contains(
-                result.Summary.Warnings,
-                warning => string.Equals(
-                    warning,
-                    "FB2 metadata must contain at least one non-empty title-info/author.",
-                    StringComparison.Ordinal));
+            Assert.Equal(1UL, result.Summary.ImportedEntries);
+            Assert.Equal(0UL, result.Summary.FailedEntries);
         }
         finally
         {

@@ -1204,6 +1204,90 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
     CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
+TEST_CASE("Sqlite book query repository still finds a match when same ISBN but publisher differs", "[book-database]")
+{
+    // Regression: same ISBN is the strongest identifier — publisher differences from different
+    // metadata sources must not suppress the match.
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-pub.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Война и мир";
+    existingBook.Metadata.AuthorsUtf8 = {"Лев Толстой"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.Metadata.Isbn = std::string{"978-5-17-090001-5"};
+    existingBook.Metadata.PublisherUtf8 = std::string{"АСТ"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    existingBook.File.ManagedPath = "Books/0000002001/book.fb2";
+    existingBook.File.SizeBytes = 1200;
+    existingBook.File.Sha256Hex = "voyna-isbn-pub-hash";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto existingId = writeRepository.Add(existingBook);
+
+    // Same title/authors/ISBN, different publisher (from a different source or scrape)
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Война и мир",
+            .AuthorsUtf8 = {"Лев Толстой"},
+            .Language = "ru",
+            .PublisherUtf8 = std::string{"Эксмо"},
+            .Isbn = std::string{"978-5-17-090001-5"}
+        },
+        .Format = Librova::Domain::EBookFormat::Fb2
+    });
+
+    REQUIRE(matches.size() == 1);
+    REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Sqlite book query repository still finds a match when same ISBN but series differs", "[book-database]")
+{
+    // Regression: same ISBN is the strongest identifier — series differences from different
+    // metadata sources must not suppress the match.
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-series.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Мастер и Маргарита";
+    existingBook.Metadata.AuthorsUtf8 = {"Михаил Булгаков"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.Metadata.Isbn = std::string{"978-5-04-001015-7"};
+    existingBook.Metadata.SeriesUtf8 = std::string{"Библиотека классики"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    existingBook.File.ManagedPath = "Books/0000002002/book.epub";
+    existingBook.File.SizeBytes = 900;
+    existingBook.File.Sha256Hex = "master-isbn-series-hash";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto existingId = writeRepository.Add(existingBook);
+
+    // Same title/authors/ISBN, different series (from a different source or scrape)
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Мастер и Маргарита",
+            .AuthorsUtf8 = {"Михаил Булгаков"},
+            .Language = "ru",
+            .SeriesUtf8 = std::string{"Русская классика"},
+            .Isbn = std::string{"978-5-04-001015-7"}
+        },
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(matches.size() == 1);
+    REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
 TEST_CASE("Sqlite book query repository flags as probable duplicate when same-title-author book has no distinguishing metadata", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-no-meta.db";

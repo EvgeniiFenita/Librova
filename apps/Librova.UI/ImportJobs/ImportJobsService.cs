@@ -141,6 +141,11 @@ internal sealed class ImportJobsService : IImportJobsService
         Action<ImportJobSnapshotModel>? onProgress,
         CancellationToken cancellationToken)
     {
+        ImportJobStatusModel? lastHeartbeatStatus = null;
+        string? lastHeartbeatMessage = null;
+        var lastHeartbeatAt = DateTimeOffset.MinValue;
+        var heartbeatInterval = TimeSpan.FromSeconds(10);
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -162,6 +167,29 @@ internal sealed class ImportJobsService : IImportJobsService
             if (snapshot is not null)
             {
                 onProgress?.Invoke(snapshot);
+
+                var now = DateTimeOffset.UtcNow;
+                var statusChanged = snapshot.Status != lastHeartbeatStatus;
+                var messageChanged = !string.IsNullOrEmpty(snapshot.Message) && snapshot.Message != lastHeartbeatMessage;
+                var heartbeatDue = (now - lastHeartbeatAt) >= heartbeatInterval;
+
+                if (statusChanged || messageChanged || heartbeatDue)
+                {
+                    UiLogging.Information(
+                        "Import job in progress. JobId={JobId} Status={Status} Percent={Percent} " +
+                        "Imported={Imported} Failed={Failed} Skipped={Skipped} Message={Message}",
+                        jobId,
+                        snapshot.Status,
+                        snapshot.Percent,
+                        snapshot.ImportedEntries,
+                        snapshot.FailedEntries,
+                        snapshot.SkippedEntries,
+                        snapshot.Message.Length == 0 ? "<none>" : snapshot.Message);
+
+                    lastHeartbeatStatus = snapshot.Status;
+                    lastHeartbeatMessage = snapshot.Message;
+                    lastHeartbeatAt = now;
+                }
             }
         }
     }

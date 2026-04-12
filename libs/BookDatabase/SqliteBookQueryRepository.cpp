@@ -907,12 +907,17 @@ struct SProbableCandidateRow
     const SProbableCandidateRow& existing,
     const Librova::Domain::SCandidateBook& candidate)
 {
-    // Both sides have ISBN and they differ → different print edition
     const std::optional<std::string> normalizedCandidateIsbn = Librova::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
-    if (normalizedCandidateIsbn.has_value() && !existing.Isbn.empty() && *normalizedCandidateIsbn != existing.Isbn)
+
+    // When both sides have ISBN, it is the authoritative edition identifier.
+    // Matching ISBNs → same edition regardless of publisher/series differences from different sources.
+    // Different ISBNs → different print edition.
+    if (normalizedCandidateIsbn.has_value() && !existing.Isbn.empty())
     {
-        return true;
+        return *normalizedCandidateIsbn != existing.Isbn;
     }
+
+    // ISBN missing on at least one side: fall back to series/publisher as edition heuristics.
 
     // Both sides have a series name and normalized names differ → different series/translation
     if (candidate.Metadata.SeriesUtf8.has_value() && !candidate.Metadata.SeriesUtf8->empty() && !existing.Series.empty())
