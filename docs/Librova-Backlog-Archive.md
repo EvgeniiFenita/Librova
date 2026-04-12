@@ -138,6 +138,18 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#118` harden FB2 parser against real-world lib.rus.ec quirks: non-numeric sequence numbers, non-integer years, missing lang, expand genre mapper, reduce import log noise.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `TryParseNumber<T>` helper replaces `ParseExactNumber` for sequence and year — invalid values now warn+skip instead of throwing; missing `<lang>` node warns and falls back to empty string; 53 new genre codes added to `CFb2GenreMapper` (from two lib.rus.ec import batches); C++ polling methods (`GetImportJobSnapshot`, `WaitImportJob completed=false`) downgraded to Debug so they no longer appear in host.log; C# file sink restricted to `Information` level so `TryGetSnapshotAsync` and `WaitAsync` polling no longer appear in ui.log; 345/272 tests pass.
+
+- `#115` improve FB2 parser encoding robustness: strip UTF-8 BOM, add CP1251 fallback, and recover metadata from files with malformed body XML.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: added `IsValidUtf8()` RFC 3629 state machine; `ReadTextFile()` strips BOM, converts explicit CP1251 declarations, falls back to CP1251 for misdeclared files; unknown FB2 genre codes emit `Warn`; added `TryParseDescriptionOnly()` fallback in `ParseXml()` — when strict pugixml parse fails (e.g. lib.rus.ec `<...>` ellipsis or `<:>` separators in body text), extracts `<description>` and parses it in isolation to recover metadata; `Warn` logged on recovery; cover extraction gracefully yields nothing when binary nodes absent; added `child_4` and `child_characters` genre codes to `Fb2GenreMapper`; all fixes covered by tests; 344/272 tests pass.
+
 - `#116` separate genres from tags: introduce first-class `genres`/`book_genres` model with provenance and rebuild legacy libraries by re-parsing managed files.
   - Status: `Closed`
   - Type: `Feature`

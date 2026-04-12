@@ -73,3 +73,35 @@ TEST_CASE("Unicode conversion restores Windows named pipe UTF-8 paths", "[unicod
     REQUIRE(Librova::Unicode::PathToUtf8(restored) == utf8Path);
 }
 #endif
+
+TEST_CASE("IsValidUtf8 accepts valid ASCII", "[unicode]")
+{
+    REQUIRE(Librova::Unicode::IsValidUtf8("Hello, world!"));
+}
+
+TEST_CASE("IsValidUtf8 accepts valid Cyrillic UTF-8", "[unicode]")
+{
+    // "Привет" encoded as UTF-8
+    const std::string cyrillic = "\xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82";
+    REQUIRE(Librova::Unicode::IsValidUtf8(cyrillic));
+}
+
+TEST_CASE("IsValidUtf8 accepts empty string", "[unicode]")
+{
+    REQUIRE(Librova::Unicode::IsValidUtf8(""));
+}
+
+TEST_CASE("IsValidUtf8 rejects raw CP1251 Cyrillic bytes", "[unicode]")
+{
+    // "Привет" in CP1251 — not valid UTF-8
+    const std::string cp1251 = "\xCF\xF0\xE8\xE2\xE5\xF2";
+    REQUIRE_FALSE(Librova::Unicode::IsValidUtf8(cp1251));
+}
+
+TEST_CASE("IsValidUtf8 rejects truncated multi-byte sequence", "[unicode]")
+{
+    // First byte of a 2-byte sequence with no continuation
+    const std::string truncated = "\xC3";
+    REQUIRE_FALSE(Librova::Unicode::IsValidUtf8(truncated));
+}
+

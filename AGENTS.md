@@ -200,4 +200,5 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 - `$vertical-slice` — end-to-end checklist for any new feature
 - `$transport-rpc` — step-by-step guide for adding a new IPC method
 - `$epub-import` — import pipeline extension checklist
+- `$analyze-logs` — analyze host.log + ui.log after an import run: parse errors, genre gaps, encoding fallbacks, noise check
 - `$review-pass` — pre-release review and verification checklist

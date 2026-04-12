@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#116`
+Last assigned id: `#118`
 
 ## 2. Priority Meanings
 
@@ -36,11 +36,11 @@ Last assigned id: `#116`
 
 ### Critical
 ### Major
-- `#115` improve FB2 parser encoding robustness: strip UTF-8 BOM and add CP1251 fallback for misdeclared files.
+- `#117` investigate why `Run-Tests.ps1` hangs when invoked from an automation/agent context.
   - Status: `Open`
   - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: implementation is in `libs/Fb2Parsing/Fb2Parser.cpp` → `ReadTextFile()`. Step 1 — strip UTF-8 BOM (`EF BB BF`) from the raw byte buffer before passing it to pugixml; this fixes `Error parsing document declaration` on BOM-prefixed files. Step 2 — after the existing explicit-encoding check (first 512 bytes for `encoding="windows-1251"`/`"cp1251"`), validate the full buffer with an `IsValidUtf8()` helper (RFC 3629 state machine, same algorithm as `C:\Users\evgen\Desktop\Librium\libs\Fb2\StringUtils.cpp` `IsUtf8()`); if the buffer is NOT valid UTF-8, convert it from CP1251 using the existing `Librova::Unicode::CodePageToUtf8(CP_ACP, ...)` and patch the XML declaration encoding attribute to `utf-8` so pugixml accepts it. Reference implementation: `C:\Users\evgen\Desktop\Librium\libs\Fb2\Fb2Parser.cpp` `NormalizeXmlEncoding()`. No new external dependencies are needed — `CodePageToUtf8` already exists in `libs/Unicode/UnicodeConversion.*`. The `IsValidUtf8` helper should be added to `UnicodeConversion.hpp/.cpp` as a standalone function (not local to the parser) so it can be reused. Log outcomes at `Debug` level (BOM stripped / CP1251 fallback triggered / file path) to aid future diagnostics. Analysis of a 6000-book lib.rus.ec import log identified 280 pugixml parse failures; approximately 100–180 are likely misdeclared-encoding files that this fix would rescue.
+  - Milestone: `unscheduled`
+  - Note: the script completes normally when run interactively but hangs indefinitely when called by the agent (cmake/ctest/dotnet output appears to stall). Likely cause: output buffering or an interactive prompt (e.g. developer-certificate trust dialog) not visible in automation. Needs a minimal repro and a non-interactive invocation fix or a `--no-interactive` wrapper.
 
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`

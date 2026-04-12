@@ -57,6 +57,15 @@ void LogInfoIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... a
 }
 
 template <typename... TArgs>
+void LogDebugIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Debug(format, std::forward<TArgs>(args)...);
+    }
+}
+
+template <typename... TArgs>
 void LogWarnIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
 {
     if (Librova::Logging::CLogging::IsInitialized())
@@ -242,7 +251,7 @@ librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJo
     const auto snapshot = m_importJobService.TryGetSnapshot(request.job_id());
     if (snapshot.has_value())
     {
-        LogInfoIfInitialized(
+        LogDebugIfInitialized(
             "GetImportJobSnapshot returned status {} for job {}.",
             static_cast<int>(snapshot->Status),
             request.job_id());
@@ -295,10 +304,14 @@ librova::v1::WaitImportJobResponse CLibraryJobServiceAdapter::WaitImportJob(
 {
     librova::v1::WaitImportJobResponse response;
     response.set_completed(m_importJobService.Wait(request.job_id(), std::chrono::milliseconds(request.timeout_ms())));
-    LogInfoIfInitialized(
-        "WaitImportJob for job {} completed={}.",
-        request.job_id(),
-        response.completed());
+    if (response.completed())
+    {
+        LogInfoIfInitialized("WaitImportJob for job {} completed=true.", request.job_id());
+    }
+    else
+    {
+        LogDebugIfInitialized("WaitImportJob for job {} completed=false.", request.job_id());
+    }
     return response;
 }
 

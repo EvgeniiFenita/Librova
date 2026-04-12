@@ -686,7 +686,8 @@ TEST_CASE("Library job service adapter logs import snapshot wait and missing res
 
     const auto logText = ReadAllText(logPath);
     REQUIRE(logText.find("GetImportJobSnapshot requested unknown job 404.") != std::string::npos);
-    REQUIRE(logText.find("WaitImportJob for job 404 completed=false.") != std::string::npos);
+    // WaitImportJob completed=false is logged at Debug level and must NOT appear in the Info-level log file.
+    REQUIRE(logText.find("WaitImportJob for job 404 completed=false.") == std::string::npos);
     REQUIRE(logText.find("GetImportJobResult requested unknown job 404.") != std::string::npos);
 
     std::filesystem::remove_all(sandbox);

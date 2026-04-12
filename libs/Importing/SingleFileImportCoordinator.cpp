@@ -154,7 +154,7 @@ bool IsCancellationRequested(
         {
             if (Librova::Logging::CLogging::IsInitialized())
             {
-                Librova::Logging::Info(
+                Librova::Logging::Debug(
                     "Prepared managed cover for '{}': status='{}' output_extension='{}' dimensions={}x{} bytes={}",
                     Librova::Unicode::PathToUtf8(sourcePath),
                     processingResult.Status == Librova::Domain::ECoverProcessingStatus::Processed ? "processed" : "unchanged",

@@ -12,6 +12,7 @@ target_include_directories(LibrovaFb2Parsing PUBLIC
 target_link_libraries(LibrovaFb2Parsing PUBLIC
     LibrovaDomain
     LibrovaUnicode
+    LibrovaLogging
     pugixml::pugixml
 )
 

@@ -63,6 +63,12 @@ internal static class UiLogging
         }
     }
 
+    public static void Debug(string messageTemplate, params object[] propertyValues)
+    {
+        EnsureInitialized();
+        Log.Debug(messageTemplate, propertyValues);
+    }
+
     public static void Information(string messageTemplate, params object[] propertyValues)
     {
         EnsureInitialized();
@@ -101,6 +107,7 @@ internal static class UiLogging
                 rollingInterval: RollingInterval.Infinite,
                 retainedFileCountLimit: 7,
                 shared: true,
+                restrictedToMinimumLevel: LogEventLevel.Information,
                 outputTemplate:
                 "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();

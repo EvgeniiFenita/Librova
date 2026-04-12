@@ -16,6 +16,7 @@
 
 #include <pugixml.hpp>
 
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 #if defined(_WIN32)
@@ -190,6 +191,21 @@ std::string ReplaceEncodingDeclaration(std::string text)
     }
 
     std::string text{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
+    const std::string pathUtf8 = Librova::Unicode::PathToUtf8(filePath);
+
+    // Step 1 — strip UTF-8 BOM (EF BB BF) so pugixml does not choke on the
+    // XML declaration ("Error parsing document declaration" on BOM files).
+    if (text.size() >= 3
+        && static_cast<unsigned char>(text[0]) == 0xEFu
+        && static_cast<unsigned char>(text[1]) == 0xBBu
+        && static_cast<unsigned char>(text[2]) == 0xBFu)
+    {
+        text.erase(0, 3);
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Debug("FB2 UTF-8 BOM stripped: {}", pathUtf8);
+        }
+    }
 
 #if defined(_WIN32)
     const auto lowerPrefix = [](std::string value) {
@@ -201,15 +217,39 @@ std::string ReplaceEncodingDeclaration(std::string text)
 
     const auto prefixLength = std::min<std::size_t>(text.size(), 512);
     const std::string prefix = lowerPrefix(text.substr(0, prefixLength));
+
+    // Step 2 — explicit CP1251 declaration: file says encoding="windows-1251" or "cp1251".
     if (prefix.find("encoding=\"windows-1251\"") != std::string::npos
         || prefix.find("encoding='windows-1251'") != std::string::npos
         || prefix.find("encoding=\"cp1251\"") != std::string::npos
         || prefix.find("encoding='cp1251'") != std::string::npos)
     {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Debug("FB2 explicit CP1251 declaration — converting to UTF-8: {}", pathUtf8);
+        }
         const std::string utf8Text = Librova::Unicode::CodePageToUtf8(
             text,
             1251,
             "Failed to decode FB2 file from windows-1251.");
+        return ReplaceEncodingDeclaration(std::move(utf8Text));
+    }
+
+    // Step 3 — CP1251 fallback: no explicit declaration but the byte stream is
+    // not valid UTF-8 (misdeclared or encoding-less files from older tools).
+    if (!Librova::Unicode::IsValidUtf8(text))
+    {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Warn(
+                "FB2 file is not valid UTF-8 and has no CP1251 declaration — "
+                "applying CP1251 fallback: {}",
+                pathUtf8);
+        }
+        const std::string utf8Text = Librova::Unicode::CodePageToUtf8(
+            text,
+            1251,
+            "Failed to decode misdeclared FB2 file from windows-1251 (fallback).");
         return ReplaceEncodingDeclaration(std::move(utf8Text));
     }
 #endif
@@ -217,21 +257,76 @@ std::string ReplaceEncodingDeclaration(std::string text)
     return text;
 }
 
+// Tries to extract the <description> block from a FB2 file that failed strict XML parsing.
+// lib.rus.ec files frequently contain malformed body content (unescaped '<...>' ellipsis,
+// '<:>' separators, embedded binary with bare '<') while the <description> section is valid.
+// Since <description> always precedes <body>, we can salvage metadata by parsing it in isolation.
+[[nodiscard]] std::optional<pugi::xml_document> TryParseDescriptionOnly(const std::string& text)
+{
+    const std::string_view view{text};
+
+    // Find the opening <description tag (may have attributes or namespace prefixes)
+    const std::size_t descOpen = view.find("<description");
+    if (descOpen == std::string_view::npos)
+    {
+        return std::nullopt;
+    }
+
+    const std::size_t descClose = view.find("</description>", descOpen);
+    if (descClose == std::string_view::npos)
+    {
+        return std::nullopt;
+    }
+
+    const std::size_t descEnd = descClose + std::string_view{"</description>"}.size();
+    const std::string descXml =
+        "<FictionBook xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">"
+        + std::string{view.substr(descOpen, descEnd - descOpen)}
+        + "</FictionBook>";
+
+    pugi::xml_document doc;
+    const pugi::xml_parse_result parseResult = doc.load_buffer(descXml.data(), descXml.size());
+
+    if (!parseResult && !doc.first_child())
+    {
+        return std::nullopt;
+    }
+
+    return doc;
+}
+
 [[nodiscard]] pugi::xml_document ParseXml(const std::string& text, const std::filesystem::path& filePath)
 {
     pugi::xml_document document;
     const pugi::xml_parse_result result = document.load_buffer(text.data(), text.size());
 
-    if (!result)
+    if (result)
     {
-        throw std::runtime_error(
-            "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath)
-            + ": " + result.description()
-            + " [size_bytes=" + std::to_string(TryGetFileSize(filePath))
-            + ", xml_preview=\"" + CompactPreview(text) + "\"]");
+        return document;
     }
 
-    return document;
+    // Strict parse failed. Try extracting just <description>...</description> — malformed body
+    // content (unescaped '<...>' ellipsis, '<:>' separators, etc.) causes 100% of real-world
+    // lib.rus.ec parse failures while the description section itself is valid.
+    if (std::optional<pugi::xml_document> recovered = TryParseDescriptionOnly(text))
+    {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Warn(
+                "FB2 XML strict parse failed, recovered metadata from <description> block: "
+                "file='{}' error='{}' [size_bytes={}]",
+                Librova::Unicode::PathToUtf8(filePath),
+                result.description(),
+                TryGetFileSize(filePath));
+        }
+        return std::move(*recovered);
+    }
+
+    throw std::runtime_error(
+        "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath)
+        + ": " + result.description()
+        + " [size_bytes=" + std::to_string(TryGetFileSize(filePath))
+        + ", xml_preview=\"" + CompactPreview(text) + "\"]");
 }
 
 [[nodiscard]] std::string Trim(const std::string_view value)
@@ -378,7 +473,7 @@ void AppendNonEmptyNodeText(std::vector<std::string>& values, const pugi::xml_no
 }
 
 template <typename TValue>
-TValue ParseExactNumber(const std::string_view value, const char* errorMessage)
+[[nodiscard]] std::optional<TValue> TryParseNumber(const std::string_view value) noexcept
 {
     TValue parsedValue{};
     const char* begin = value.data();
@@ -387,7 +482,7 @@ TValue ParseExactNumber(const std::string_view value, const char* errorMessage)
 
     if (errorCode != std::errc{} || parseEnd != end)
     {
-        throw std::runtime_error(errorMessage);
+        return std::nullopt;
     }
 
     return parsedValue;
@@ -615,7 +710,20 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
     }
 
     parsedBook.Metadata.TitleUtf8 = *title;
-    parsedBook.Metadata.Language = RequireTextChild(titleInfoNode, "lang", "lang");
+
+    if (const std::optional<std::string> lang = TryReadTextChild(titleInfoNode, "lang"))
+    {
+        parsedBook.Metadata.Language = *lang;
+    }
+    else
+    {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Warn("FB2 missing required <lang> node in '{}'; language will be empty.",
+                Librova::Unicode::PathToUtf8(filePath));
+        }
+        parsedBook.Metadata.Language = "";
+    }
 
     for (const pugi::xml_node authorNode : titleInfoNode.children())
     {
@@ -648,7 +756,15 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
             const std::optional<std::string> rawCode = TryReadNodeText(childNode);
             if (rawCode.has_value())
             {
-                parsedBook.Metadata.GenresUtf8.push_back(std::string{CFb2GenreMapper::ResolveGenreName(*rawCode)});
+                const std::string_view resolvedName = CFb2GenreMapper::ResolveGenreName(*rawCode);
+                if (resolvedName == std::string_view{*rawCode} && Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "FB2 unknown genre code '{}' (no mapping) in file: {}",
+                        *rawCode,
+                        Librova::Unicode::PathToUtf8(filePath));
+                }
+                parsedBook.Metadata.GenresUtf8.push_back(std::string{resolvedName});
             }
         }
     }
@@ -664,7 +780,21 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
     if (const char* sequenceNumber = FindFirstChildByLocalName(titleInfoNode, "sequence").attribute("number").as_string(); sequenceNumber != nullptr && sequenceNumber[0] != '\0')
     {
-        parsedBook.Metadata.SeriesIndex = ParseExactNumber<double>(sequenceNumber, "Failed to parse FB2 sequence number.");
+        const auto parsed = TryParseNumber<double>(sequenceNumber);
+        if (parsed.has_value())
+        {
+            parsedBook.Metadata.SeriesIndex = *parsed;
+        }
+        else
+        {
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "FB2 non-numeric sequence number '{}' skipped in file: {}",
+                    sequenceNumber,
+                    Librova::Unicode::PathToUtf8(filePath));
+            }
+        }
     }
 
     if (const pugi::xml_node annotationNode = FindFirstChildByLocalName(titleInfoNode, "annotation"))
@@ -691,7 +821,21 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
         if (const std::optional<std::string> year = TryReadTextChild(publishInfoNode, "year"))
         {
-            parsedBook.Metadata.Year = ParseExactNumber<int>(*year, "Failed to parse FB2 publish year.");
+            const auto parsed = TryParseNumber<int>(*year);
+            if (parsed.has_value())
+            {
+                parsedBook.Metadata.Year = *parsed;
+            }
+            else
+            {
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "FB2 non-integer publish year '{}' skipped in file: {}",
+                        *year,
+                        Librova::Unicode::PathToUtf8(filePath));
+                }
+            }
         }
     }
 

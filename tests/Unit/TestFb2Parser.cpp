@@ -310,7 +310,114 @@ TEST_CASE("FB2 parser accepts dot-separated sequence numbers independently from 
     REQUIRE(parsedBook.Metadata.SeriesIndex == std::optional<double>{1.5});
 }
 
-TEST_CASE("FB2 parser rejects invalid publish year text", "[fb2-parsing]")
+TEST_CASE("FB2 parser strips UTF-8 BOM and parses correctly", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-bom");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "bom.fb2";
+
+    // UTF-8 BOM (EF BB BF) prepended to a valid UTF-8 FB2 file.
+    // Causes "Error parsing document declaration" in pugixml without BOM stripping.
+    std::string fb2Text;
+    fb2Text += '\xEF';
+    fb2Text += '\xBB';
+    fb2Text += '\xBF';
+    fb2Text +=
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        "<FictionBook>\n"
+        "  <description>\n"
+        "    <title-info>\n"
+        "      <book-title>\xD0\x9C\xD0\xB0\xD1\x81\xD1\x82\xD0\xB5\xD1\x80 \xD0\xB8 \xD0\x9C\xD0\xB0\xD1\x80\xD0\xB3\xD0\xB0\xD1\x80\xD0\xB8\xD1\x82\xD0\xB0</book-title>\n"
+        "      <author>\n"
+        "        <first-name>\xD0\x9C\xD0\xB8\xD1\x85\xD0\xB0\xD0\xB8\xD0\xBB</first-name>\n"
+        "        <last-name>\xD0\x91\xD1\x83\xD0\xBB\xD0\xB3\xD0\xB0\xD0\xBA\xD0\xBE\xD0\xB2</last-name>\n"
+        "      </author>\n"
+        "      <lang>ru</lang>\n"
+        "    </title-info>\n"
+        "  </description>\n"
+        "</FictionBook>";
+
+    WriteTextFile(fb2Path, fb2Text);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Мастер и Маргарита");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>{"Михаил Булгаков"});
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+
+#ifdef _WIN32
+TEST_CASE("FB2 parser falls back to CP1251 for misdeclared UTF-8 files", "[fb2-parsing]")
+{
+    // Simulates a real-world file with no encoding declaration (or silently
+    // misdeclared as UTF-8) but containing raw CP1251 bytes.
+    // Affects ~100–180 books per lib.rus.ec 6000-book batch based on import log analysis.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251-fallback");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "misdeclared.fb2";
+
+    const std::string fb2Text =
+        "<?xml version=\"1.0\"?>\r\n"
+        "<FictionBook>\r\n"
+        "  <description>\r\n"
+        "    <title-info>\r\n"
+        "      <book-title>\xC2\xEE\xE9\xED\xE0 \xE8 \xEC\xE8\xF0</book-title>\r\n"
+        "      <author>\r\n"
+        "        <first-name>\xcb\xe5\xe2</first-name>\r\n"
+        "        <last-name>\xd2\xee\xeb\xf1\xf2\xee\xe9</last-name>\r\n"
+        "      </author>\r\n"
+        "      <lang>ru</lang>\r\n"
+        "    </title-info>\r\n"
+        "  </description>\r\n"
+        "</FictionBook>";
+
+    WriteTextFile(fb2Path, fb2Text);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Война и мир");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>{"Лев Толстой"});
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+#endif
+
+TEST_CASE("FB2 parser recovers metadata from file with malformed body XML", "[fb2-parsing]")
+{
+    // Simulates lib.rus.ec files where body text contains unescaped '<' (e.g. "<...>" ellipsis,
+    // "<:>" separators). The <description> comes before <body> so parse_recover salvages metadata.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-recover");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "malformed-body.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Роза мира</book-title>
+      <author>
+        <first-name>Даниил</first-name>
+        <last-name>Андреев</last-name>
+      </author>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+  <body>
+    <section>
+      <p>Текст <...> с многоточием и <:> разделителем.</p>
+    </section>
+  </body>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Роза мира");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>{"Даниил Андреев"});
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+
+TEST_CASE("FB2 parser skips non-integer publish year with warning and still imports book", "[fb2-parsing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid-year");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid-year.fb2";
@@ -329,20 +436,69 @@ TEST_CASE("FB2 parser rejects invalid publish year text", "[fb2-parsing]")
       <lang>ru</lang>
     </title-info>
     <publish-info>
-      <year>1972abc</year>
+      <year>March 2004</year>
     </publish-info>
   </description>
 </FictionBook>)");
 
     const Librova::Fb2Parsing::CFb2Parser parser;
+    const auto result = parser.Parse(fb2Path);
+    REQUIRE(result.Metadata.TitleUtf8 == "Test");
+    REQUIRE_FALSE(result.Metadata.Year.has_value());
+}
 
-    try
-    {
-        static_cast<void>(parser.Parse(fb2Path));
-        FAIL("Expected parser to reject invalid FB2 publish year.");
-    }
-    catch (const std::exception& error)
-    {
-        REQUIRE(std::string{error.what()}.find("publish year") != std::string::npos);
-    }
+TEST_CASE("FB2 parser skips non-numeric sequence number with warning and still imports book", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid-seq");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid-seq.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Test Series</book-title>
+      <author>
+        <first-name>Author</first-name>
+        <last-name>Name</last-name>
+      </author>
+      <lang>ru</lang>
+      <sequence name="TestSeries" number="abc" />
+    </title-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const auto result = parser.Parse(fb2Path);
+    REQUIRE(result.Metadata.TitleUtf8 == "Test Series");
+    REQUIRE(result.Metadata.SeriesUtf8.has_value());
+    REQUIRE(*result.Metadata.SeriesUtf8 == "TestSeries");
+    REQUIRE_FALSE(result.Metadata.SeriesIndex.has_value());
+}
+
+TEST_CASE("FB2 parser accepts missing lang node and imports book with empty language", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-no-lang");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "no-lang.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>No Language Book</book-title>
+      <author>
+        <first-name>Author</first-name>
+        <last-name>Name</last-name>
+      </author>
+    </title-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const auto result = parser.Parse(fb2Path);
+    REQUIRE(result.Metadata.TitleUtf8 == "No Language Book");
+    REQUIRE(result.Metadata.Language.empty());
 }

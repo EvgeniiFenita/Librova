@@ -43,7 +43,7 @@ internal sealed class ImportJobsService : IImportJobsService
         {
             var response = await _client.GetSnapshotAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             var result = ImportJobMapper.FromProto(response);
-            UiLogging.Information(
+            UiLogging.Debug(
                 "TryGetSnapshotAsync completed. JobId={JobId} Found={Found} Status={Status}",
                 jobId,
                 result is not null,
@@ -111,11 +111,20 @@ internal sealed class ImportJobsService : IImportJobsService
         try
         {
             var response = await _client.WaitAsync(jobId, timeout, waitTimeout, cancellationToken).ConfigureAwait(false);
-            UiLogging.Information(
-                "WaitAsync completed. JobId={JobId} Completed={Completed} WaitTimeoutMs={WaitTimeoutMs}",
-                jobId,
-                response.Completed,
-                waitTimeout.TotalMilliseconds);
+            if (response.Completed)
+            {
+                UiLogging.Information(
+                    "WaitAsync completed. JobId={JobId} Completed=true WaitTimeoutMs={WaitTimeoutMs}",
+                    jobId,
+                    waitTimeout.TotalMilliseconds);
+            }
+            else
+            {
+                UiLogging.Debug(
+                    "WaitAsync completed. JobId={JobId} Completed=false WaitTimeoutMs={WaitTimeoutMs}",
+                    jobId,
+                    waitTimeout.TotalMilliseconds);
+            }
             return response.Completed;
         }
         catch (Exception error)
