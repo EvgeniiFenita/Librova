@@ -258,8 +258,6 @@ Librova::Domain::EDomainErrorCode CImportJobProtoMapper::FromProto(const librova
         return Librova::Domain::EDomainErrorCode::UnsupportedFormat;
     case librova::v1::ERROR_CODE_DUPLICATE_REJECTED:
         return Librova::Domain::EDomainErrorCode::DuplicateRejected;
-    case librova::v1::ERROR_CODE_DUPLICATE_DECISION_REQUIRED:
-        return Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired;
     case librova::v1::ERROR_CODE_PARSER_FAILURE:
         return Librova::Domain::EDomainErrorCode::ParserFailure;
     case librova::v1::ERROR_CODE_CONVERTER_UNAVAILABLE:
@@ -328,8 +326,6 @@ librova::v1::ErrorCode CImportJobProtoMapper::ToProto(const Librova::Domain::EDo
         return librova::v1::ERROR_CODE_UNSUPPORTED_FORMAT;
     case Librova::Domain::EDomainErrorCode::DuplicateRejected:
         return librova::v1::ERROR_CODE_DUPLICATE_REJECTED;
-    case Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired:
-        return librova::v1::ERROR_CODE_DUPLICATE_DECISION_REQUIRED;
     case Librova::Domain::EDomainErrorCode::ParserFailure:
         return librova::v1::ERROR_CODE_PARSER_FAILURE;
     case Librova::Domain::EDomainErrorCode::ConverterUnavailable:

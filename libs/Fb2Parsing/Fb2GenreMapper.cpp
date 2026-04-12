@@ -258,6 +258,21 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     // Business & Economics
     {"popular_business",       "Popular Business"},
     {"marketing",              "Marketing"},
+    {"sci_economy",            "Economics"},
+    {"economics",              "Economics"},
+    {"management",             "Management"},
+
+    // Health & Alternative Medicine
+    {"sci_medicine_alternative", "Alternative Medicine"},
+    {"health_sex",             "Erotica & Sex"},
+
+    // Science Fiction variants
+    {"sf_postapocalyptic",     "Post-Apocalyptic"},
+
+    // Non-standard / Russian-language codes from lib.rus.ec
+    {"SF",                     "Science Fiction"},
+    {"публицистика",           "Publicism"},
+    {"Детская литература",     "Children's"},
 
     // Arts & Architecture
     {"architecture",           "Architecture"},

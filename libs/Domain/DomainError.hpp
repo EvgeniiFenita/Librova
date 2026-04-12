@@ -11,7 +11,6 @@ enum class EDomainErrorCode
     Validation,
     UnsupportedFormat,
     DuplicateRejected,
-    DuplicateDecisionRequired,
     ParserFailure,
     ConverterUnavailable,
     ConverterFailed,
@@ -30,7 +29,6 @@ struct SDomainError
     [[nodiscard]] bool IsUserResolvable() const noexcept
     {
         return Code == EDomainErrorCode::Validation
-            || Code == EDomainErrorCode::DuplicateDecisionRequired
             || Code == EDomainErrorCode::ConverterUnavailable;
     }
 

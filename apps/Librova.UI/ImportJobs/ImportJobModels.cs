@@ -24,7 +24,6 @@ internal enum ImportErrorCodeModel
     Validation,
     UnsupportedFormat,
     DuplicateRejected,
-    DuplicateDecisionRequired,
     ParserFailure,
     ConverterUnavailable,
     ConverterFailed,

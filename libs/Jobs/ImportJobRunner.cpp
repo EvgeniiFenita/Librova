@@ -140,12 +140,7 @@ std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
         case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
             return Librova::Domain::SDomainError{
                 .Code = Librova::Domain::EDomainErrorCode::DuplicateRejected,
-                .Message = "Import rejected because a strict duplicate already exists."
-            };
-        case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
-            return Librova::Domain::SDomainError{
-                .Code = Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired,
-                .Message = "Import requires user confirmation for a probable duplicate."
+                .Message = "Import rejected because a duplicate already exists."
             };
         case Librova::Importing::ESingleFileImportStatus::Cancelled:
             return Librova::Domain::SDomainError{
@@ -232,13 +227,7 @@ SImportJobResult CImportJobRunner::Run(
             case Librova::Application::ENoSuccessfulImportReason::DuplicateRejected:
                 error = {
                     .Code = Librova::Domain::EDomainErrorCode::DuplicateRejected,
-                    .Message = "Import rejected because strict duplicates already exist for all selected sources."
-                };
-                break;
-            case Librova::Application::ENoSuccessfulImportReason::DuplicateDecisionRequired:
-                error = {
-                    .Code = Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired,
-                    .Message = "Import requires user confirmation because all selected sources are probable duplicates."
+                    .Message = "Import rejected because duplicates already exist for all selected sources."
                 };
                 break;
             case Librova::Application::ENoSuccessfulImportReason::UnsupportedFormat:

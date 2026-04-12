@@ -23,13 +23,15 @@ struct SDuplicateMatch
     EDuplicateSeverity Severity = EDuplicateSeverity::None;
     EDuplicateReason Reason = EDuplicateReason::SameHash;
     SBookId ExistingBookId;
+    std::string ExistingTitle;
+    std::string ExistingAuthors;
 
     [[nodiscard]] bool IsStrictRejection() const noexcept
     {
         return Severity == EDuplicateSeverity::Strict;
     }
 
-    [[nodiscard]] bool RequiresUserDecision() const noexcept
+    [[nodiscard]] bool IsProbable() const noexcept
     {
         return Severity == EDuplicateSeverity::Probable;
     }

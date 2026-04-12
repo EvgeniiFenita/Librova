@@ -7,7 +7,6 @@ internal enum LibraryCatalogErrorCodeModel
     Validation,
     UnsupportedFormat,
     DuplicateRejected,
-    DuplicateDecisionRequired,
     ParserFailure,
     ConverterUnavailable,
     ConverterFailed,

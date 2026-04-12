@@ -758,12 +758,13 @@ void BindAvailableTagFilters(
     }
 }
 
-void AppendStrictDuplicateMatches(
+void AppendDuplicateMatches(
     std::vector<Librova::Domain::SDuplicateMatch>& matches,
     std::unordered_set<std::int64_t>& seenIds,
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::string_view sql,
     const std::string_view value,
+    const Librova::Domain::EDuplicateSeverity severity,
     const Librova::Domain::EDuplicateReason reason)
 {
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
@@ -779,9 +780,11 @@ void AppendStrictDuplicateMatches(
         }
 
         matches.push_back({
-            .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+            .Severity = severity,
             .Reason = reason,
-            .ExistingBookId = Librova::Domain::SBookId{existingId}
+            .ExistingBookId = Librova::Domain::SBookId{existingId},
+            .ExistingTitle = statement.GetColumnText(1),
+            .ExistingAuthors = statement.GetColumnText(2)
         });
     }
 }
@@ -803,6 +806,60 @@ std::vector<std::string> BuildNormalizedAuthors(const std::vector<std::string>& 
 
     std::sort(normalizedAuthors.begin(), normalizedAuthors.end());
     return normalizedAuthors;
+}
+
+// Splits the authors string produced by GROUP_CONCAT(display_name, '; ')
+// into individual normalized names for exact per-author comparison.
+std::vector<std::string> SplitAndNormalizeAuthors(const std::string& authorsStr)
+{
+    std::vector<std::string> result;
+    constexpr std::string_view kSeparator = "; ";
+    std::size_t start = 0;
+    while (true)
+    {
+        const std::size_t pos = authorsStr.find(kSeparator, start);
+        const std::string token = authorsStr.substr(start, pos == std::string::npos ? std::string::npos : pos - start);
+        const std::string normalized = Librova::Domain::NormalizeText(token);
+        if (!normalized.empty())
+            result.push_back(normalized);
+        if (pos == std::string::npos)
+            break;
+        start = pos + kSeparator.size();
+    }
+    return result;
+}
+
+// Returns true when an ISBN match is credible — i.e. the candidate shares
+// a title or at least one author with the existing book.
+// Without this guard, anthology ISBNs (shared across all stories in the
+// collection by lib.rus.ec) produce a false positive for every story.
+[[nodiscard]] bool IsIsbnMatchCredible(
+    const Librova::Domain::SCandidateBook& candidate,
+    const Librova::Domain::SDuplicateMatch& match)
+{
+    const std::string candidateNormalizedTitle = Librova::Domain::NormalizeText(candidate.Metadata.TitleUtf8);
+    const std::string existingNormalizedTitle  = Librova::Domain::NormalizeText(match.ExistingTitle);
+
+    if (candidateNormalizedTitle == existingNormalizedTitle)
+        return true;
+
+    const std::vector<std::string> existingAuthors = SplitAndNormalizeAuthors(match.ExistingAuthors);
+    for (const std::string& author : candidate.Metadata.AuthorsUtf8)
+    {
+        if (author.empty())
+            continue;
+        const std::string normalizedAuthor = Librova::Domain::NormalizeText(author);
+        if (!normalizedAuthor.empty())
+        {
+            for (const std::string& existingAuthor : existingAuthors)
+            {
+                if (normalizedAuthor == existingAuthor)
+                    return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 std::string BuildNormalizedTitle(const std::string& title)
@@ -901,6 +958,8 @@ struct SProbableCandidateRow
     std::string Isbn;
     std::string Series;
     std::string Publisher;
+    std::string Title;
+    std::string AuthorsCache;
 };
 
 [[nodiscard]] bool IsEditionConflict(
@@ -958,7 +1017,8 @@ std::vector<SProbableCandidateRow> FindProbableDuplicateCandidates(
     }
 
     std::string sql =
-        "SELECT ba.book_id, COALESCE(b.isbn, '') AS isbn, COALESCE(b.series, '') AS series, COALESCE(b.publisher, '') AS publisher "
+        "SELECT ba.book_id, COALESCE(b.isbn, '') AS isbn, COALESCE(b.series, '') AS series, COALESCE(b.publisher, '') AS publisher, b.title, "
+        "COALESCE((SELECT GROUP_CONCAT(a2.display_name, '; ') FROM book_authors ba2 JOIN authors a2 ON a2.id = ba2.author_id WHERE ba2.book_id = ba.book_id), '') AS authors_str "
         "FROM book_authors ba "
         "INNER JOIN authors a ON a.id = ba.author_id "
         "INNER JOIN books b ON b.id = ba.book_id "
@@ -987,10 +1047,12 @@ std::vector<SProbableCandidateRow> FindProbableDuplicateCandidates(
     while (statement.Step())
     {
         rows.push_back({
-            .BookId    = statement.GetColumnInt64(0),
-            .Isbn      = statement.GetColumnText(1),
-            .Series    = statement.GetColumnText(2),
-            .Publisher = statement.GetColumnText(3)
+            .BookId       = statement.GetColumnInt64(0),
+            .Isbn         = statement.GetColumnText(1),
+            .Series       = statement.GetColumnText(2),
+            .Publisher    = statement.GetColumnText(3),
+            .Title        = statement.GetColumnText(4),
+            .AuthorsCache = statement.GetColumnText(5)
         });
     }
 
@@ -1193,12 +1255,13 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
     if (candidate.HasHash())
     {
-        AppendStrictDuplicateMatches(
+        AppendDuplicateMatches(
             matches,
             seenIds,
             connection,
-            "SELECT id FROM books WHERE sha256_hex = ?;",
+            "SELECT b.id, b.title, COALESCE((SELECT GROUP_CONCAT(a.display_name, '; ') FROM book_authors ba JOIN authors a ON a.id = ba.author_id WHERE ba.book_id = b.id), '') FROM books b WHERE b.sha256_hex = ?;",
             *candidate.Sha256Hex,
+            Librova::Domain::EDuplicateSeverity::Strict,
             Librova::Domain::EDuplicateReason::SameHash);
     }
 
@@ -1208,13 +1271,26 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
         if (normalizedIsbn.has_value())
         {
-            AppendStrictDuplicateMatches(
-                matches,
-                seenIds,
+            // Collect ISBN matches into a temporary set so we can filter before
+            // committing to seenIds. ISBN alone is not sufficient — lib.rus.ec
+            // assigns anthology ISBNs to every individual story. We only accept
+            // the match when title or at least one author also overlaps.
+            std::vector<Librova::Domain::SDuplicateMatch> isbnMatches;
+            std::unordered_set<std::int64_t> isbnSeenIds;
+            AppendDuplicateMatches(
+                isbnMatches,
+                isbnSeenIds,
                 connection,
-                "SELECT id FROM books WHERE isbn = ?;",
+                "SELECT b.id, b.title, COALESCE((SELECT GROUP_CONCAT(a.display_name, '; ') FROM book_authors ba JOIN authors a ON a.id = ba.author_id WHERE ba.book_id = b.id), '') FROM books b WHERE b.isbn = ?;",
                 *normalizedIsbn,
+                Librova::Domain::EDuplicateSeverity::Probable,
                 Librova::Domain::EDuplicateReason::SameIsbn);
+
+            for (auto& m : isbnMatches)
+            {
+                if (IsIsbnMatchCredible(candidate, m) && seenIds.insert(m.ExistingBookId.Value).second)
+                    matches.push_back(std::move(m));
+            }
         }
     }
 
@@ -1237,7 +1313,9 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
             matches.push_back({
                 .Severity = Librova::Domain::EDuplicateSeverity::Probable,
                 .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
-                .ExistingBookId = Librova::Domain::SBookId{probableCandidate.BookId}
+                .ExistingBookId = Librova::Domain::SBookId{probableCandidate.BookId},
+                .ExistingTitle = probableCandidate.Title,
+                .ExistingAuthors = probableCandidate.AuthorsCache
             });
             seenIds.insert(probableCandidate.BookId);
         }

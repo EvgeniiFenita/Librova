@@ -239,7 +239,7 @@ public:
         }
 
         return {
-            .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
+            .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
             .Warnings = {"Probable duplicate."}
         };
     }
@@ -840,7 +840,7 @@ TEST_CASE("Library import facade preserves duplicate-only batch semantics when e
     REQUIRE(result.Summary.ImportedEntries == 0);
     REQUIRE(result.Summary.FailedEntries == 0);
     REQUIRE(result.Summary.SkippedEntries == 2);
-    REQUIRE(result.NoSuccessfulImportReason == Librova::Application::ENoSuccessfulImportReason::DuplicateDecisionRequired);
+    REQUIRE(result.NoSuccessfulImportReason == Librova::Application::ENoSuccessfulImportReason::DuplicateRejected);
 
     std::filesystem::remove_all(sandbox);
 }

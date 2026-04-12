@@ -652,7 +652,7 @@ TEST_CASE("Single file import rejects strict duplicates before reserving storage
     CStubQueryRepository queryRepository;
     queryRepository.Duplicates = {{
         .Severity = Librova::Domain::EDuplicateSeverity::Strict,
-        .Reason = Librova::Domain::EDuplicateReason::SameIsbn,
+        .Reason = Librova::Domain::EDuplicateReason::SameHash,
         .ExistingBookId = {42}
     }};
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
@@ -677,7 +677,7 @@ TEST_CASE("Single file import rejects strict duplicates before reserving storage
     REQUIRE_FALSE(managedStorage.CommitCalled);
 }
 
-TEST_CASE("Single file import returns decision required for probable duplicates without approval", "[importing]")
+TEST_CASE("Single file import rejects probable duplicates before reserving storage", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-probable-duplicate");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
@@ -705,7 +705,7 @@ TEST_CASE("Single file import returns decision required for probable duplicates 
         .WorkingDirectory = sandbox.GetPath() / "work"
     }, progressSink, {});
 
-    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE_FALSE(bookRepository.ReservedId.has_value());
     REQUIRE_FALSE(managedStorage.CommitCalled);

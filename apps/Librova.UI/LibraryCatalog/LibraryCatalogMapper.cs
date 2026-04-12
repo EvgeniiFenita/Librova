@@ -32,7 +32,6 @@ internal static class LibraryCatalogMapper
             ErrorCode.Validation => LibraryCatalogErrorCodeModel.Validation,
             ErrorCode.UnsupportedFormat => LibraryCatalogErrorCodeModel.UnsupportedFormat,
             ErrorCode.DuplicateRejected => LibraryCatalogErrorCodeModel.DuplicateRejected,
-            ErrorCode.DuplicateDecisionRequired => LibraryCatalogErrorCodeModel.DuplicateDecisionRequired,
             ErrorCode.ParserFailure => LibraryCatalogErrorCodeModel.ParserFailure,
             ErrorCode.ConverterUnavailable => LibraryCatalogErrorCodeModel.ConverterUnavailable,
             ErrorCode.ConverterFailed => LibraryCatalogErrorCodeModel.ConverterFailed,

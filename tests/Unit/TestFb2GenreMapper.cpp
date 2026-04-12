@@ -98,18 +98,27 @@ TEST_CASE("Fb2GenreMapper resolves known FB2 2.1 codes to display names", "[fb2-
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("architecture")            == "Architecture");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sci_philology")           == "Philology");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sf_writing")              == "Writing");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sci_economy")             == "Economics");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("economics")               == "Economics");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("management")              == "Management");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sci_medicine_alternative")== "Alternative Medicine");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("health_sex")              == "Erotica & Sex");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sf_postapocalyptic")      == "Post-Apocalyptic");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("SF")                      == "Science Fiction");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("публицистика")            == "Publicism");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Детская литература")      == "Children's");
 }
 
 TEST_CASE("Fb2GenreMapper returns the raw code unchanged for unrecognized input", "[fb2-genre-mapper]")
 {
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("custom_genre")    == "custom_genre");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("")                == "");
-    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("SF")              == "SF");
 }
 
 TEST_CASE("Fb2GenreMapper resolution is case-sensitive", "[fb2-genre-mapper]")
 {
     // FB2 codes are always lowercase; uppercase variants are not recognised codes
+    // Exception: 'SF' is a known non-standard code from lib.rus.ec and IS mapped.
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("SF_SPACE")   == "SF_SPACE");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Adventure")  == "Adventure");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("THRILLER")   == "THRILLER");

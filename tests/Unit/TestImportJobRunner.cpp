@@ -107,7 +107,7 @@ public:
         }
 
         return {
-            .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
+            .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
             .Warnings = {"Probable duplicate."}
         };
     }
@@ -379,11 +379,11 @@ TEST_CASE("Import job runner reports completed status for successful import", "[
     std::filesystem::remove_all(sandbox.Root);
 }
 
-TEST_CASE("Import job runner maps duplicate decision required into structured failure", "[jobs][import]")
+TEST_CASE("Import job runner maps probable duplicate rejection into structured failure", "[jobs][import]")
 {
     CStubSingleFileImporter importer;
     importer.Result = {
-        .Status = Librova::Importing::ESingleFileImportStatus::DecisionRequired,
+        .Status = Librova::Importing::ESingleFileImportStatus::RejectedDuplicate,
         .Warnings = {"Probable duplicate"}
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -402,8 +402,8 @@ TEST_CASE("Import job runner maps duplicate decision required into structured fa
 
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
     REQUIRE(result.Error.has_value());
-    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired);
-    REQUIRE(result.Snapshot.Message == "Import requires user confirmation for a probable duplicate.");
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateRejected);
+    REQUIRE(result.Snapshot.Message == "Import rejected because a duplicate already exists.");
     std::filesystem::remove_all(sandbox.Root);
 }
 
@@ -581,7 +581,7 @@ TEST_CASE("Import job runner keeps duplicate semantics when ZIP import skips eve
     REQUIRE(result.ImportResult->Summary.SkippedEntries == 2);
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Failed);
     REQUIRE(result.Error.has_value());
-    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateDecisionRequired);
+    REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::DuplicateRejected);
 }
 
 TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][import]")

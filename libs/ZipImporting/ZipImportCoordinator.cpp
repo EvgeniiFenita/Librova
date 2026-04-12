@@ -60,14 +60,12 @@ namespace {
 [[nodiscard]] bool IsSkippedSingleFileResult(const Librova::Importing::SSingleFileImportResult& result) noexcept
 {
     return result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
-        || result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
         || result.Status == Librova::Importing::ESingleFileImportStatus::UnsupportedFormat;
 }
 
 [[nodiscard]] std::string_view GetSingleFileStage(const Librova::Importing::SSingleFileImportResult& result) noexcept
 {
     return result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
-            || result.Status == Librova::Importing::ESingleFileImportStatus::DecisionRequired
         ? "duplicate-check"
         : "single-file-import";
 }
@@ -78,8 +76,6 @@ namespace {
     {
     case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
         return "rejected-duplicate";
-    case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
-        return "decision-required";
     case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
         return "unsupported-format";
     case Librova::Importing::ESingleFileImportStatus::Cancelled:

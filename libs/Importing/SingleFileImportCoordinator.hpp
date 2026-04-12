@@ -17,7 +17,6 @@ enum class ESingleFileImportStatus
 {
     Imported,
     RejectedDuplicate,
-    DecisionRequired,
     Cancelled,
     Failed,
     UnsupportedFormat

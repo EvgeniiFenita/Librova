@@ -16,7 +16,6 @@ internal static class ImportJobMapper
             ErrorCode.Validation => ImportErrorCodeModel.Validation,
             ErrorCode.UnsupportedFormat => ImportErrorCodeModel.UnsupportedFormat,
             ErrorCode.DuplicateRejected => ImportErrorCodeModel.DuplicateRejected,
-            ErrorCode.DuplicateDecisionRequired => ImportErrorCodeModel.DuplicateDecisionRequired,
             ErrorCode.ParserFailure => ImportErrorCodeModel.ParserFailure,
             ErrorCode.ConverterUnavailable => ImportErrorCodeModel.ConverterUnavailable,
             ErrorCode.ConverterFailed => ImportErrorCodeModel.ConverterFailed,

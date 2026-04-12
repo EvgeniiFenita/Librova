@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include "Domain/DuplicateMatch.hpp"
+
 #include "Hashing/Sha256.hpp"
 #include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -15,9 +17,73 @@
 namespace {
 
 constexpr auto GStrictDuplicateWarning = "Import rejected because a strict duplicate already exists.";
-constexpr auto GProbableDuplicateWarning = "Import requires user confirmation because a probable duplicate was found.";
+constexpr auto GProbableDuplicateWarning = "Import skipped because a probable duplicate was found.";
 constexpr auto GForcedStrictDuplicateWarning = "Import continued with explicit strict duplicate override.";
 constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit probable duplicate override.";
+
+[[nodiscard]] std::string_view DuplicateReasonLabel(const Librova::Domain::EDuplicateReason reason) noexcept
+{
+    switch (reason)
+    {
+    case Librova::Domain::EDuplicateReason::SameHash:
+        return "SameHash";
+    case Librova::Domain::EDuplicateReason::SameIsbn:
+        return "SameIsbn";
+    case Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors:
+        return "SameNormalizedTitleAndAuthors";
+    }
+    return "Unknown";
+}
+
+[[nodiscard]] std::string JoinAuthors(const std::vector<std::string>& authors)
+{
+    std::string result;
+    for (std::size_t i = 0; i < authors.size(); ++i)
+    {
+        if (i > 0)
+            result += "; ";
+        result += authors[i];
+    }
+    return result;
+}
+
+void LogDuplicateCandidateDetails(
+    const Librova::Domain::SBookMetadata& metadata,
+    const std::optional<std::string>& sha256Hex,
+    const std::vector<Librova::Domain::SDuplicateMatch>& matches)
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+        return;
+
+    const std::string authorsStr = JoinAuthors(metadata.AuthorsUtf8);
+
+    for (const auto& match : matches)
+    {
+        std::string matchDetail;
+        switch (match.Reason)
+        {
+        case Librova::Domain::EDuplicateReason::SameHash:
+            matchDetail = sha256Hex.value_or("<unavailable>");
+            break;
+        case Librova::Domain::EDuplicateReason::SameIsbn:
+            matchDetail = metadata.Isbn.value_or("<unavailable>");
+            break;
+        case Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors:
+            matchDetail = "title='" + metadata.TitleUtf8 + "' authors='" + authorsStr + "'";
+            break;
+        }
+
+        Librova::Logging::Warn(
+            "Duplicate candidate fields: title='{}' authors='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
+            metadata.TitleUtf8,
+            authorsStr,
+            DuplicateReasonLabel(match.Reason),
+            matchDetail,
+            match.ExistingBookId.Value,
+            match.ExistingTitle,
+            match.ExistingAuthors);
+    }
+}
 constexpr std::uint32_t GManagedCoverMaxWidth = 512;
 constexpr std::uint32_t GManagedCoverMaxHeight = 768;
 
@@ -84,7 +150,7 @@ bool HasProbableDuplicate(const std::vector<Librova::Domain::SDuplicateMatch>& d
 {
     for (const auto& duplicate : duplicates)
     {
-        if (duplicate.RequiresUserDecision())
+        if (duplicate.IsProbable())
         {
             return true;
         }
@@ -334,6 +400,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (HasStrictDuplicate(duplicates) && !request.AllowProbableDuplicates)
         {
+            LogDuplicateCandidateDetails(parsedBook.Metadata, effectiveSha256Hex, duplicates);
             return {
                 .Status = ESingleFileImportStatus::RejectedDuplicate,
                 .StoredFormat = parsedBook.SourceFormat,
@@ -344,8 +411,9 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (HasProbableDuplicate(duplicates) && !request.AllowProbableDuplicates)
         {
+            LogDuplicateCandidateDetails(parsedBook.Metadata, effectiveSha256Hex, duplicates);
             return {
-                .Status = ESingleFileImportStatus::DecisionRequired,
+                .Status = ESingleFileImportStatus::RejectedDuplicate,
                 .StoredFormat = parsedBook.SourceFormat,
                 .DuplicateMatches = duplicates,
                 .Warnings = {GProbableDuplicateWarning}

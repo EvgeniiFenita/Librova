@@ -86,12 +86,6 @@ namespace {
         return ENoSuccessfulImportReason::UnsupportedFormat;
     }
 
-    if (currentReason == ENoSuccessfulImportReason::DuplicateDecisionRequired
-        || nextReason == ENoSuccessfulImportReason::DuplicateDecisionRequired)
-    {
-        return ENoSuccessfulImportReason::DuplicateDecisionRequired;
-    }
-
     return ENoSuccessfulImportReason::DuplicateRejected;
 }
 
@@ -104,8 +98,6 @@ namespace {
     {
     case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
         return ENoSuccessfulImportReason::DuplicateRejected;
-    case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
-        return ENoSuccessfulImportReason::DuplicateDecisionRequired;
     case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
         return ENoSuccessfulImportReason::UnsupportedFormat;
     case Librova::Importing::ESingleFileImportStatus::Imported:
@@ -549,7 +541,6 @@ SImportResult CLibraryImportFacade::Run(
         switch (singleFileResult.Status)
         {
         case Librova::Importing::ESingleFileImportStatus::RejectedDuplicate:
-        case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
         case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
             ++result.Summary.SkippedEntries;
             result.NoSuccessfulImportReason = CombineNoSuccessfulImportReason(
@@ -583,11 +574,6 @@ SImportResult CLibraryImportFacade::Run(
                 stage = "duplicate-check";
                 outcome = "skipped";
                 status = "rejected-duplicate";
-                break;
-            case Librova::Importing::ESingleFileImportStatus::DecisionRequired:
-                stage = "duplicate-check";
-                outcome = "skipped";
-                status = "decision-required";
                 break;
             case Librova::Importing::ESingleFileImportStatus::UnsupportedFormat:
                 stage = "format-detection";

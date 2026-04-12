@@ -11,7 +11,7 @@ TEST_CASE("Duplicate match exposes strict rejection rule", "[domain][duplicate]"
     };
 
     REQUIRE(strictMatch.IsStrictRejection());
-    REQUIRE_FALSE(strictMatch.RequiresUserDecision());
+    REQUIRE_FALSE(strictMatch.IsProbable());
 }
 
 TEST_CASE("Duplicate match exposes probable duplicate confirmation rule", "[domain][duplicate]")
@@ -23,5 +23,5 @@ TEST_CASE("Duplicate match exposes probable duplicate confirmation rule", "[doma
     };
 
     REQUIRE_FALSE(probableMatch.IsStrictRejection());
-    REQUIRE(probableMatch.RequiresUserDecision());
+    REQUIRE(probableMatch.IsProbable());
 }

@@ -28,8 +28,7 @@ enum class ENoSuccessfulImportReason
 {
     None,
     UnsupportedFormat,
-    DuplicateRejected,
-    DuplicateDecisionRequired
+    DuplicateRejected
 };
 
 struct SImportRequest

@@ -6,6 +6,26 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ## Closed Backlog
 
+### Minor
+
+- `#123` add diagnostic fields to duplicate-rejection log lines so actual match values are visible.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: added `LogDuplicateCandidateDetails` helper in `SingleFileImportCoordinator.cpp`; every strict/probable duplicate rejection now emits a `[warning]` line with `title`, `authors`, `reason` (SameHash/SameIsbn/SameNormalizedTitleAndAuthors), `matchValue`, and `existingBookId` before returning the result.
+
+- `#125` demote SameIsbn duplicate check from Strict to Probable.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: lib.rus.ec archives assign a single anthology ISBN to every story inside it; the Strict ISBN check caused 36 false-positive rejections in a real import run. Changed `AppendStrictDuplicateMatches` → `AppendDuplicateMatches` with an explicit severity parameter; SameIsbn now returns `EDuplicateSeverity::Probable`, prompting a user decision instead of auto-rejecting. SameHash remains Strict.
+
+
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: all three codes observed in lib.rus.ec archives mapped to nothing and fell back to raw code display; added to `Fb2GenreMapper.cpp` (`sci_economy`/`economics` → "Economics", `management` → "Management") with corresponding `REQUIRE` assertions in `TestFb2GenreMapper.cpp`.
+
 ### Critical
 
 - `#114` prevent native host startup from crashing before first-run library creation completes.

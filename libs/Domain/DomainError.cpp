@@ -12,8 +12,6 @@ std::string_view ToString(const EDomainErrorCode code) noexcept
         return "unsupported_format";
     case EDomainErrorCode::DuplicateRejected:
         return "duplicate_rejected";
-    case EDomainErrorCode::DuplicateDecisionRequired:
-        return "duplicate_decision_required";
     case EDomainErrorCode::ParserFailure:
         return "parser_failure";
     case EDomainErrorCode::ConverterUnavailable:
