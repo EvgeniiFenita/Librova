@@ -25,3 +25,12 @@ Project documentation:
 - `docs/Librova-Product.md`
 - `docs/Librova-Architecture.md`
 - `docs/Librova-Backlog.md`
+
+## Branch structure
+
+| Branch | Purpose |
+|---|---|
+| `main` | Stable releases only — each commit corresponds to a release tag |
+| `dev/<version>` | Development branch for the next release (WIP — not yet released) |
+
+Development is never done directly on `main`. See `AGENTS.md § Branching Policy` for the full workflow.

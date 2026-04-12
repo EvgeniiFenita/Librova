@@ -149,6 +149,40 @@ This applies to `README.md` as well: keep it current when project scope, archite
 
 ---
 
+## Branching Policy
+
+`main` is a **stable release branch**. No development is done directly on `main`.
+
+`dev/<version>` is the **development branch** for the next release. All work — features, fixes, stabilization — happens there. The name deliberately says *dev*, not *release*, to make clear that the branch is a **work-in-progress**, not a released artifact.
+
+### Release workflow
+
+1. Create a dev branch: `dev/<version>` (e.g., `dev/1.1`) from the last release tag on `main`.
+2. All development, fixes, and stabilization work happen in `dev/<version>`.
+3. When the release is ready, tag the tip of `dev/<version>` with the version tag (e.g., `1.1.0`).
+4. Merge into `main` with `--no-ff` to preserve full commit history:
+   ```
+   git checkout main
+   git merge --no-ff dev/1.1 -m "Release 1.1.0"
+   ```
+5. Push `main` and the tag to origin. **Do not force-push `main` except to fix policy violations.**
+
+### Branch naming
+
+| Branch | Purpose |
+|---|---|
+| `main` | Stable releases only; each commit on `main` corresponds to a release tag |
+| `dev/<version>` | Development branch for the next release (WIP — not yet released) |
+
+### Rules
+
+- **Never commit development work directly to `main`.**
+- `main` must always point to a tagged release commit or a merge-from-release commit.
+- Do not delete `dev/<version>` branches after merging — they serve as history anchors.
+- There is only one active `dev/<version>` branch at any time.
+
+---
+
 ## Skills Available
 
 Use these skills for common recurring workflows (type `$` in the CLI to pick a skill):
