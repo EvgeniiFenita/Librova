@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#121`
+Last assigned id: `#122`
 
 ## 2. Priority Meanings
 
@@ -98,6 +98,12 @@ Last assigned id: `#121`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
 ### Low
+- `#122` audit and consolidate FB2 genre display names to reduce visual clutter in genre filters
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `unscheduled`
+  - Note: review the full genre mapping table and identify clusters of codes that resolve to overly similar or redundant display names (e.g. multiple regional sub-genres collapsing to one concept); consolidate them into a smaller, cleaner set of user-visible names without breaking import compatibility — code-to-name resolution must remain stable for all known FB2 codes.
+
 - `#112` reduce native test-run log noise so routine runs show failures and final summary rather than every passing test case.
   - Status: `Open`
   - Type: `Bug`
