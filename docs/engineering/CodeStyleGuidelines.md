@@ -59,6 +59,7 @@ enum class EImportResult
 
 - Functions and methods must use `PascalCase`.
 - Boolean-returning functions should read clearly as predicates when possible, for example `IsValid`, `HasCover`, `CanConvert`.
+- **Infrastructure utility functions that operate on state or resources (database connections, file handles, IPC channels) must be grouped as `static` methods of a `final` class with a `C` prefix — not as free functions in a namespace.** Free functions are acceptable only for pure stateless transformations (e.g. math helpers, string formatting). When in doubt, use a class.
 
 ### Parameters and Local Variables
 

@@ -29,6 +29,7 @@ if(BUILD_TESTING)
         TestConverterConfiguration.cpp
         TestExternalBookConverter.cpp
         TestEpubParser.cpp
+        TestFb2GenreMapper.cpp
         TestFb2Parser.cpp
         TestCoreHostApp.cpp
         TestHostOptions.cpp

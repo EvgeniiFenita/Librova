@@ -91,6 +91,7 @@ internal sealed record BookListItemDataModel
     public double? SeriesIndex { get; init; }
     public int? Year { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
+    public IReadOnlyList<string> Genres { get; init; } = [];
     public BookFormatModel Format { get; init; }
     public BookStorageInfoModel Storage { get; init; } = new();
     public ulong SizeBytes { get; init; }
@@ -259,6 +260,12 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
     {
         get => Data.Tags;
         init => _data = Data with { Tags = value };
+    }
+
+    public IReadOnlyList<string> Genres
+    {
+        get => Data.Genres;
+        init => _data = Data with { Genres = value };
     }
 
     public BookFormatModel Format
@@ -432,6 +439,7 @@ internal sealed record BookDetailsDataModel
     public int? Year { get; init; }
     public string? Isbn { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
+    public IReadOnlyList<string> Genres { get; init; } = [];
     public string? Description { get; init; }
     public string? Identifier { get; init; }
     public BookFormatModel Format { get; init; }
@@ -522,6 +530,12 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
     {
         get => Data.Tags;
         init => _data = Data with { Tags = value };
+    }
+
+    public IReadOnlyList<string> Genres
+    {
+        get => Data.Genres;
+        init => _data = Data with { Genres = value };
     }
 
     public string? Description

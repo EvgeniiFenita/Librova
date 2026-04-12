@@ -313,7 +313,8 @@ TEST_CASE("EPUB parser extracts subjects and collection series metadata", "[epub
     REQUIRE(parsedBook.Metadata.TitleUtf8 == "Leviathan Wakes");
     REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>({"James S. A. Corey"}));
     REQUIRE(parsedBook.Metadata.Language == "en");
-    REQUIRE(parsedBook.Metadata.TagsUtf8 == std::vector<std::string>({"Science Fiction", "Space Opera"}));
+    REQUIRE(parsedBook.Metadata.TagsUtf8.empty());
+    REQUIRE(parsedBook.Metadata.GenresUtf8 == std::vector<std::string>({"Science Fiction", "Space Opera"}));
     REQUIRE(parsedBook.Metadata.SeriesUtf8 == std::optional<std::string>{"The Expanse"});
     REQUIRE(parsedBook.Metadata.SeriesIndex == std::optional<double>{1.0});
     REQUIRE(parsedBook.Metadata.Identifier == std::optional<std::string>{"urn:isbn:9780316129084"});

@@ -95,7 +95,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
             "Books/0000001002/book.fb2",
             "catalog-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
-        secondBook.Metadata.TagsUtf8 = {"translated", "zone"};
+        secondBook.Metadata.GenresUtf8 = {"translated", "zone"};
         secondBook.Metadata.DescriptionUtf8 = std::string{"A dangerous zone full of artifacts"};
         static_cast<void>(writeRepository.Add(secondBook));
 
@@ -143,7 +143,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         "Books/0000001101/alpha.epub",
         "catalog-page-1",
         std::chrono::sys_days{std::chrono::March / 30 / 2026});
-    firstBook.Metadata.TagsUtf8 = {"selected"};
+    firstBook.Metadata.GenresUtf8 = {"selected"};
     static_cast<void>(writeRepository.Add(firstBook));
 
     Librova::Domain::SBook secondBook = MakeBook(
@@ -154,7 +154,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         "Books/0000001102/beta.epub",
         "catalog-page-2",
         std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
-    secondBook.Metadata.TagsUtf8 = {"selected"};
+    secondBook.Metadata.GenresUtf8 = {"selected"};
     static_cast<void>(writeRepository.Add(secondBook));
 
     Librova::Domain::SBook thirdBook = MakeBook(
@@ -165,14 +165,13 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         "Books/0000001103/gamma.epub",
         "catalog-page-3",
         std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
-    thirdBook.Metadata.TagsUtf8 = {"selected"};
+    thirdBook.Metadata.GenresUtf8 = {"selected"};
     static_cast<void>(writeRepository.Add(thirdBook));
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
         const Librova::Application::SBookListResult result = facade.ListBooks({
             .Languages = {"en"},
             .GenresUtf8 = {"selected"},
-            .TagsUtf8 = {"selected"},
             .Format = Librova::Domain::EBookFormat::Epub,
             .SortBy = Librova::Domain::EBookSort::Title,
             .Offset = 1,
@@ -260,6 +259,11 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
         }
 
         [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }
@@ -431,19 +435,19 @@ TEST_CASE("Library catalog facade filters books by multiple genres with OR seman
         Librova::Domain::SBook scifiBook = MakeBook("Sci-Fi Book", {"Author X"}, "en",
             Librova::Domain::EBookFormat::Epub, "Books/0000002201/scifi.epub", "mg-hash-1",
             std::chrono::sys_days{std::chrono::March / 30 / 2026});
-        scifiBook.Metadata.TagsUtf8 = {"sci-fi"};
+        scifiBook.Metadata.GenresUtf8 = {"sci-fi"};
         static_cast<void>(writeRepository.Add(scifiBook));
 
         Librova::Domain::SBook classicBook = MakeBook("Classic Book", {"Author Y"}, "en",
             Librova::Domain::EBookFormat::Epub, "Books/0000002202/classic.epub", "mg-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
-        classicBook.Metadata.TagsUtf8 = {"classic"};
+        classicBook.Metadata.GenresUtf8 = {"classic"};
         static_cast<void>(writeRepository.Add(classicBook));
 
         Librova::Domain::SBook otherBook = MakeBook("Other Book", {"Author Z"}, "en",
             Librova::Domain::EBookFormat::Epub, "Books/0000002203/other.epub", "mg-hash-3",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
-        otherBook.Metadata.TagsUtf8 = {"thriller"};
+        otherBook.Metadata.GenresUtf8 = {"thriller"};
         static_cast<void>(writeRepository.Add(otherBook));
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
@@ -457,6 +461,56 @@ TEST_CASE("Library catalog facade filters books by multiple genres with OR seman
         REQUIRE(result.TotalCount == 2);
         REQUIRE(result.Items[0].TitleUtf8 == "Classic Book");
         REQUIRE(result.Items[1].TitleUtf8 == "Sci-Fi Book");
+    }
+
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Library catalog facade applies independent genre and tag filters", "[application][catalog]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-genre-tag-combined.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+        // Book A: genre "sci-fi", tag "award-winner" -> matches genre+tag filter
+        Librova::Domain::SBook bookA = MakeBook("Book A", {"Author A"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002501/a.epub", "gt-hash-1",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026});
+        bookA.Metadata.GenresUtf8 = {"sci-fi"};
+        bookA.Metadata.TagsUtf8 = {"award-winner"};
+        static_cast<void>(writeRepository.Add(bookA));
+
+        // Book B: genre "sci-fi", wrong tag -> should NOT match
+        Librova::Domain::SBook bookB = MakeBook("Book B", {"Author B"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002502/b.epub", "gt-hash-2",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
+        bookB.Metadata.GenresUtf8 = {"sci-fi"};
+        bookB.Metadata.TagsUtf8 = {"bestseller"};
+        static_cast<void>(writeRepository.Add(bookB));
+
+        // Book C: matching tag, wrong genre -> should NOT match
+        Librova::Domain::SBook bookC = MakeBook("Book C", {"Author C"}, "en",
+            Librova::Domain::EBookFormat::Epub, "Books/0000002503/c.epub", "gt-hash-3",
+            std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
+        bookC.Metadata.GenresUtf8 = {"thriller"};
+        bookC.Metadata.TagsUtf8 = {"award-winner"};
+        static_cast<void>(writeRepository.Add(bookC));
+
+        const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
+        const Librova::Application::SBookListResult result = facade.ListBooks({
+            .GenresUtf8 = {"sci-fi"},
+            .TagsUtf8 = {"award-winner"},
+            .SortBy = Librova::Domain::EBookSort::Title,
+            .Limit = 10
+        });
+
+        REQUIRE(result.Items.size() == 1);
+        REQUIRE(result.TotalCount == 1);
+        REQUIRE(result.Items.front().TitleUtf8 == "Book A");
     }
 
     std::filesystem::remove(databasePath);

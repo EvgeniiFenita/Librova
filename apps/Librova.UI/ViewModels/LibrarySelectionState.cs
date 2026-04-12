@@ -94,6 +94,14 @@ internal sealed class LibrarySelectionState
 
         pairs.Add(new("Format", source?.Format.ToString().ToUpperInvariant() ?? SelectedBook.FormatText));
 
+        var genres = source?.Genres.Count > 0
+            ? string.Join(", ", source.Genres)
+            : null;
+        if (!string.IsNullOrWhiteSpace(genres))
+        {
+            pairs.Add(new("Genres", genres));
+        }
+
         var tags = source?.Tags.Count > 0
             ? string.Join(", ", source.Tags)
             : SelectedBook.Tags.Count > 0
@@ -101,7 +109,7 @@ internal sealed class LibrarySelectionState
                 : null;
         if (!string.IsNullOrWhiteSpace(tags))
         {
-            pairs.Add(new("Genres", tags));
+            pairs.Add(new("Tags", tags));
         }
 
         pairs.Add(new("Size", _formatSize(SelectedBook.SizeBytes)));

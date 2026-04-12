@@ -149,6 +149,11 @@ librova::v1::BookListItem CLibraryCatalogProtoMapper::ToProto(
         proto.add_tags(tag);
     }
 
+    for (const std::string& genre : item.GenresUtf8)
+    {
+        proto.add_genres(genre);
+    }
+
     if (item.SeriesUtf8.has_value())
     {
         proto.set_series(*item.SeriesUtf8);
@@ -217,6 +222,11 @@ librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
     for (const std::string& tag : details.TagsUtf8)
     {
         proto.add_tags(tag);
+    }
+
+    for (const std::string& genre : details.GenresUtf8)
+    {
+        proto.add_genres(genre);
     }
 
     if (details.SeriesUtf8.has_value())

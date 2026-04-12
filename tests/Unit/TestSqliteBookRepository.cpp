@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -1235,8 +1236,124 @@ TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already 
 
     REQUIRE(repository.GetById(firstId).has_value());
     REQUIRE(repository.GetById(secondId).has_value());
+}
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-genres.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepo(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository readRepo(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Roadside Picnic";
+    book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
+    book.Metadata.Language = "en";
+    book.Metadata.GenresUtf8 = {"Science Fiction", "Adventure"};
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    book.File.ManagedPath = std::filesystem::path{"Books/0000000001/roadside.fb2"};
+    book.File.SizeBytes = 1024;
+    book.AddedAtUtc = std::chrono::system_clock::now();
+
+    const Librova::Domain::SBookId id = writeRepo.Add(book);
+    REQUIRE(id.IsValid());
+
+    // Verify source_type is 'fb2_genre' for an FB2 book
+    {
+        Librova::Sqlite::CSqliteConnection rawConn(databasePath);
+        rawConn.Execute("PRAGMA journal_mode = WAL;");
+        Librova::Sqlite::CSqliteStatement stypeStmt(
+            rawConn.GetNativeHandle(),
+            "SELECT bg.source_type FROM book_genres bg "
+            "INNER JOIN genres g ON g.id = bg.genre_id "
+            "WHERE bg.book_id = ? ORDER BY g.display_name;");
+        stypeStmt.BindInt64(1, id.Value);
+        while (stypeStmt.Step())
+        {
+            REQUIRE(stypeStmt.GetColumnText(0) == std::string("fb2_genre"));
+        }
+    }
+
+    const auto details = writeRepo.GetById(id);
+    REQUIRE(details.has_value());
+    REQUIRE(details->Metadata.GenresUtf8.size() == 2);
+    REQUIRE(std::find(details->Metadata.GenresUtf8.begin(), details->Metadata.GenresUtf8.end(), "Science Fiction") != details->Metadata.GenresUtf8.end());
+    REQUIRE(std::find(details->Metadata.GenresUtf8.begin(), details->Metadata.GenresUtf8.end(), "Adventure") != details->Metadata.GenresUtf8.end());
+
+    Librova::Domain::SSearchQuery query;
+    const auto genres = readRepo.ListAvailableGenres(query);
+    REQUIRE(genres.size() == 2);
+    REQUIRE(std::find(genres.begin(), genres.end(), "Science Fiction") != genres.end());
+    REQUIRE(std::find(genres.begin(), genres.end(), "Adventure") != genres.end());
+
+    // Verify EPUB book gets 'epub_subject' source_type
+    Librova::Domain::SBook epubBook;
+    epubBook.Metadata.TitleUtf8 = "EPUB Title";
+    epubBook.Metadata.AuthorsUtf8 = {"Author Two"};
+    epubBook.Metadata.Language = "en";
+    epubBook.Metadata.GenresUtf8 = {"Mystery"};
+    epubBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    epubBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+    epubBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/epub.epub"};
+    epubBook.File.SizeBytes = 512;
+    epubBook.AddedAtUtc = std::chrono::system_clock::now();
+
+    const Librova::Domain::SBookId epubId = writeRepo.Add(epubBook);
+    {
+        Librova::Sqlite::CSqliteConnection rawConn(databasePath);
+        rawConn.Execute("PRAGMA journal_mode = WAL;");
+        Librova::Sqlite::CSqliteStatement stypeStmt(
+            rawConn.GetNativeHandle(),
+            "SELECT bg.source_type FROM book_genres bg WHERE bg.book_id = ?;");
+        stypeStmt.BindInt64(1, epubId.Value);
+        REQUIRE(stypeStmt.Step());
+        REQUIRE(stypeStmt.GetColumnText(0) == std::string("epub_subject"));
+    }
+
+    writeRepo.CloseSession();
+    std::filesystem::remove(databasePath);
+}
+
+TEST_CASE("Sqlite book repository genre filter returns only matching books", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-genre-filter.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepo(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository readRepo(databasePath);
+
+    auto makeBook = [](const std::string& title, const std::string& genre, const std::string& path)
+    {
+        Librova::Domain::SBook b;
+        b.Metadata.TitleUtf8 = title;
+        b.Metadata.AuthorsUtf8 = {"Author"};
+        b.Metadata.Language = "en";
+        b.Metadata.GenresUtf8 = {genre};
+        b.File.Format = Librova::Domain::EBookFormat::Fb2;
+        b.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+        b.File.ManagedPath = std::filesystem::path{path};
+        b.File.SizeBytes = 512;
+        b.AddedAtUtc = std::chrono::system_clock::now();
+        return b;
+    };
+
+    static_cast<void>(writeRepo.Add(makeBook("Book A", "Science Fiction", "Books/0000000001/a.fb2")));
+    static_cast<void>(writeRepo.Add(makeBook("Book B", "Adventure", "Books/0000000002/b.fb2")));
+    static_cast<void>(writeRepo.Add(makeBook("Book C", "Science Fiction", "Books/0000000003/c.fb2")));
+
+    Librova::Domain::SSearchQuery query;
+    query.GenresUtf8 = {"Science Fiction"};
+    const auto results = readRepo.Search(query);
+    REQUIRE(results.size() == 2);
+    for (const auto& b : results)
+        REQUIRE(std::find(b.Metadata.GenresUtf8.begin(), b.Metadata.GenresUtf8.end(), "Science Fiction") != b.Metadata.GenresUtf8.end());
+
+    writeRepo.CloseSession();
+    std::filesystem::remove(databasePath);
 }
 
 TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even when another book has empty sha256_hex", "[book-database]")

@@ -138,6 +138,18 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#116` separate genres from tags: introduce first-class `genres`/`book_genres` model with provenance and rebuild legacy libraries by re-parsing managed files.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.0`
+  - Note: implemented `genres`/`book_genres` schema (schema v1), `GenresUtf8` domain field separate from `TagsUtf8`; FB2 parser resolves raw genre codes to human-readable English via `CFb2GenreMapper`; EPUB parser stores `dc:subject` as-is; repository write/read sides, proto fields, C# models and mappers wired; genre filter and details panel display genres from the new model; FTS `search_index` gains a `genres` column; all pre-v1 DB migration infrastructure removed — incompatible databases require recreation; closes `#63`.
+
+- `#63` normalize FB2 genre codes to human-readable English names at import time so the database stores display-ready strings rather than raw format-specific codes.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: superseded by and closed as part of `#116`; FB2 genre codes are now resolved to human-readable English names at parse time via `CFb2GenreMapper` and stored in the `genres`/`book_genres` tables with `source_type = 'fb2_genre'`.
+
 - `#113` redesign library filters into a single faceted panel with multi-select languages and genres.
   - Status: `Closed`
   - Type: `Feature`

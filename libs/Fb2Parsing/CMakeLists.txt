@@ -1,6 +1,7 @@
 find_package(pugixml CONFIG REQUIRED)
 
 add_library(LibrovaFb2Parsing STATIC
+    Fb2GenreMapper.cpp
     Fb2Parser.cpp
 )
 

@@ -128,6 +128,11 @@ public:
         return {};
     }
 
+    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    {
+        return {};
+    }
+
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
     {
         return {};
@@ -704,7 +709,7 @@ TEST_CASE("Library job service adapter logs genre alongside language for ListBoo
     book.Metadata.TitleUtf8 = "Roadside Picnic";
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
-    book.Metadata.TagsUtf8 = {"sci-fi"};
+    book.Metadata.GenresUtf8 = {"sci-fi"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
     book.File.ManagedPath = "Books/0000000301/book.epub";
     book.File.SizeBytes = 512;

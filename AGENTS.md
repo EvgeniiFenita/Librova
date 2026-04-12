@@ -93,6 +93,7 @@ scripts\ValidateProto.ps1
 - In native libraries: keep `.hpp` and `.cpp` together unless a different layout is clearly necessary.
 - Disposable runtime files, logs, and transient state go under `out/` rather than scattered across source.
 - If SQLite schema depends on optional modules (e.g., FTS5), declare them explicitly in `vcpkg.json`.
+- **Database schema version policy**: the current schema is version 1. `CSchemaMigrator` accepts only `user_version == 0` (creates fresh DB) or `user_version == expected` (no-op). Any other version throws an incompatibility error requiring the user to delete and recreate the database. **Do not add automatic upgrade paths** unless the schema change is non-destructive and the decision is deliberate; when upgrading is appropriate, follow the dispatch pattern documented in `docs/Librova-Architecture.md § 5.2`.
 - External converter integration stays user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive.
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
 - Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade. **IPC boundary logging is mandatory in both directions:**

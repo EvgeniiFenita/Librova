@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#114`
+Last assigned id: `#116`
 
 ## 2. Priority Meanings
 
@@ -36,6 +36,12 @@ Last assigned id: `#114`
 
 ### Critical
 ### Major
+- `#115` improve FB2 parser encoding robustness: strip UTF-8 BOM and add CP1251 fallback for misdeclared files.
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: implementation is in `libs/Fb2Parsing/Fb2Parser.cpp` → `ReadTextFile()`. Step 1 — strip UTF-8 BOM (`EF BB BF`) from the raw byte buffer before passing it to pugixml; this fixes `Error parsing document declaration` on BOM-prefixed files. Step 2 — after the existing explicit-encoding check (first 512 bytes for `encoding="windows-1251"`/`"cp1251"`), validate the full buffer with an `IsValidUtf8()` helper (RFC 3629 state machine, same algorithm as `C:\Users\evgen\Desktop\Librium\libs\Fb2\StringUtils.cpp` `IsUtf8()`); if the buffer is NOT valid UTF-8, convert it from CP1251 using the existing `Librova::Unicode::CodePageToUtf8(CP_ACP, ...)` and patch the XML declaration encoding attribute to `utf-8` so pugixml accepts it. Reference implementation: `C:\Users\evgen\Desktop\Librium\libs\Fb2\Fb2Parser.cpp` `NormalizeXmlEncoding()`. No new external dependencies are needed — `CodePageToUtf8` already exists in `libs/Unicode/UnicodeConversion.*`. The `IsValidUtf8` helper should be added to `UnicodeConversion.hpp/.cpp` as a standalone function (not local to the parser) so it can be reused. Log outcomes at `Debug` level (BOM stripped / CP1251 fallback triggered / file path) to aid future diagnostics. Analysis of a 6000-book lib.rus.ec import log identified 280 pugixml parse failures; approximately 100–180 are likely misdeclared-encoding files that this fix would rescue.
+
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`
@@ -90,12 +96,6 @@ Last assigned id: `#114`
   - Type: `Feature`
   - Milestone: `1.1`
   - Note: the converter settings panel currently lacks strong positive feedback after a valid converter path is accepted; add an explicit configured-state affordance such as a bright checkmark, stronger success styling, or a more prominent state label so the user can tell at a glance that conversion is enabled.
-
-- `#63` normalize FB2 genre codes to human-readable English names at import time so the database stores display-ready strings rather than raw format-specific codes.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: FB2 uses a fixed genre code vocabulary (e.g., sf_space, det_police, love_sf) with a well-known English-name mapping; a static code-to-name lookup table should live in the FB2 parser slice and be applied during metadata extraction before the book record is written; EPUB `dc:subject` values are already extracted as free-form strings and need basic normalization (trim, dedup, case); decide whether genres should remain unified with tags or become a distinct field across database schema, domain model, proto contracts, and details-panel display.
 
 - `#64` allow the user to assign or replace a cover image for any managed book by selecting an image file from the filesystem, without modifying the source book file.
   - Status: `Open`

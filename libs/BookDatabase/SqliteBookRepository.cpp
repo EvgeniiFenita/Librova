@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "BookDatabase/SqliteGenreHelpers.hpp"
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
 #include "Domain/StorageEncoding.hpp"
@@ -230,6 +231,29 @@ std::vector<std::string> ReadTags(const Librova::Sqlite::CSqliteConnection& conn
     return tags;
 }
 
+using Librova::BookDatabase::CSqliteGenreHelpers;
+
+std::vector<std::string> ReadGenres(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
+{
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT g.display_name "
+        "FROM book_genres bg "
+        "INNER JOIN genres g ON g.id = bg.genre_id "
+        "WHERE bg.book_id = ? "
+        "ORDER BY g.display_name ASC;");
+    statement.BindInt64(1, bookId);
+
+    std::vector<std::string> genres;
+
+    while (statement.Step())
+    {
+        genres.push_back(statement.GetColumnText(0));
+    }
+
+    return genres;
+}
+
 std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
     const Librova::Sqlite::CSqliteConnection& connection,
     const Librova::Domain::SBookId id)
@@ -257,6 +281,7 @@ std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
     metadata.Identifier = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
     metadata.AuthorsUtf8 = ReadAuthors(connection, id.Value);
     metadata.TagsUtf8 = ReadTags(connection, id.Value);
+    metadata.GenresUtf8 = ReadGenres(connection, id.Value);
 
     return metadata;
 }
@@ -332,6 +357,10 @@ std::int64_t DoAddBook(
 
     InsertAuthors(connection, bookId, book.Metadata.AuthorsUtf8);
     InsertTags(connection, bookId, book.Metadata.TagsUtf8);
+
+    const std::string_view genreSourceType =
+        book.File.Format == Librova::Domain::EBookFormat::Fb2 ? "fb2_genre" : "epub_subject";
+    CSqliteGenreHelpers::InsertGenres(connection, bookId, book.Metadata.GenresUtf8, genreSourceType);
     Librova::SearchIndex::CSearchIndexMaintenance::InsertBook(connection, bookId, book.Metadata);
 
     return bookId;
@@ -457,6 +486,7 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     book.Metadata.Identifier = statement.IsColumnNull(9) ? std::nullopt : std::make_optional(statement.GetColumnText(9));
     book.Metadata.AuthorsUtf8 = ReadAuthors(connection, book.Id.Value);
     book.Metadata.TagsUtf8 = ReadTags(connection, book.Id.Value);
+    book.Metadata.GenresUtf8 = ReadGenres(connection, book.Id.Value);
     book.File.Format = *format;
     book.File.StorageEncoding = *storageEncoding;
     book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(12));

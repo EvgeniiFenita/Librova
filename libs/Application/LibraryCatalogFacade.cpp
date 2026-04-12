@@ -30,7 +30,7 @@ SBookListResult CLibraryCatalogFacade::ListBooks(const SBookListRequest& request
     SBookListResult result;
     result.TotalCount = m_bookQueryRepository.CountSearchResults(domainQuery);
     result.AvailableLanguages = m_bookQueryRepository.ListAvailableLanguages(ToDomainQuery(languageRequest));
-    result.AvailableGenres = m_bookQueryRepository.ListAvailableTags(ToDomainQuery(genreRequest));
+    result.AvailableGenres = m_bookQueryRepository.ListAvailableGenres(ToDomainQuery(genreRequest));
     result.Statistics = GetLibraryStatistics();
     result.Items.reserve(books.size());
 
@@ -96,6 +96,7 @@ SBookListItem CLibraryCatalogFacade::ToListItem(const Librova::Domain::SBook& bo
         .SeriesIndex = book.Metadata.SeriesIndex,
         .Year = book.Metadata.Year,
         .TagsUtf8 = book.Metadata.TagsUtf8,
+        .GenresUtf8 = book.Metadata.GenresUtf8,
         .Format = book.File.Format,
         .ManagedPath = book.File.ManagedPath,
         .CoverPath = book.CoverPath,
@@ -117,6 +118,7 @@ SBookDetails CLibraryCatalogFacade::ToDetails(const Librova::Domain::SBook& book
         .Year = book.Metadata.Year,
         .Isbn = book.Metadata.Isbn,
         .TagsUtf8 = book.Metadata.TagsUtf8,
+        .GenresUtf8 = book.Metadata.GenresUtf8,
         .DescriptionUtf8 = book.Metadata.DescriptionUtf8,
         .Identifier = book.Metadata.Identifier,
         .Format = book.File.Format,

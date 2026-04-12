@@ -192,6 +192,7 @@ internal static class LibraryCatalogMapper
             SeriesIndex = item.HasSeriesIndex ? item.SeriesIndex : null,
             Year = item.HasYear ? item.Year : null,
             Tags = item.Tags.ToArray(),
+            Genres = item.Genres.ToArray(),
             Format = item.Format switch
             {
                 BookFormat.Epub => BookFormatModel.Epub,
@@ -224,6 +225,7 @@ internal static class LibraryCatalogMapper
             Year = item.HasYear ? item.Year : null,
             Isbn = item.HasIsbn ? item.Isbn : null,
             Tags = item.Tags.ToArray(),
+            Genres = item.Genres.ToArray(),
             Description = item.HasDescription ? item.Description : null,
             Identifier = item.HasIdentifier ? item.Identifier : null,
             Format = item.Format switch

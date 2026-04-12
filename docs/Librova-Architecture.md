@@ -129,7 +129,47 @@ Search is hybrid:
 
 The UI browser is read-side oriented and goes through application facades and transport contracts rather than querying storage directly.
 
-Series and genres are expected to be supported coherently through parser output, persistence, transport contracts, and UI-facing filters/details.
+Series and genres are supported coherently through parser output, persistence, transport contracts, and UI-facing filters/details.
+
+## 5.1 Genre Model
+
+Genres are a first-class entity, separate from user-defined tags:
+
+- **`genres` table**: stores deduplicated genres with `normalized_name` (lowercase lookup key) and `display_name` (human-readable, stored in English, e.g. `"Science Fiction"`).
+- **`book_genres` table**: join table linking books to genres, with a mandatory `source_type` provenance column. Valid values:
+  - `fb2_genre` — parsed from an FB2 `<genre>` element; FB2 raw codes are resolved to human-readable display names via `CFb2GenreMapper` at parse time.
+  - `epub_subject` — parsed from an EPUB `dc:subject` element; stored as-is without FB2 vocabulary transformation.
+
+This model guarantees that FB2 genre codes like `sf` are never stored as bare raw codes in the database, and that EPUB subjects are never corrupted by FB2-specific normalization.
+
+**Known display-name aliases**: `adv_history` (Adventure › History) and `sci_history` (Science › History) both map to the display name `"History"`. Books carrying one of these codes will appear under a single "History" filter entry. Distinguishing the two categories at the filter level is deferred post-MVP.
+
+**Domain**: `SBookMetadata::GenresUtf8` carries parsed genres. `SBookMetadata::TagsUtf8` remains for future user-defined tags and is currently unused by parsers.
+
+**FTS**: the `search_index` virtual table includes a `genres` column alongside `title`, `authors`, `tags`, and `description`.
+
+## 5.2 Database Schema Version Policy
+
+The library SQLite database carries a `user_version` PRAGMA that Librova checks at startup.
+
+**Current schema version: 1.**
+
+`CSchemaMigrator::Migrate` enforces the following rules:
+
+- **`user_version == 0`** — brand-new database; applies the full schema script and sets `user_version = 1`.
+- **`user_version == current`** — already up to date; no-op.
+- **any other value** — version is incompatible; throws an error requiring the user to delete the library database so Librova can recreate it.
+
+**No automatic upgrade paths are provided for existing databases.** This is an intentional policy: the schema was simplified in version 1 (genres/tags separated, migration infrastructure removed) and compatibility with pre-v1 databases cannot be provided without re-introducing that complexity.
+
+**Future migrations**: when a future schema change can be handled non-destructively (e.g., adding a nullable column or a new table), restore the upgrade dispatch pattern in `CSchemaMigrator::Migrate`:
+
+```cpp
+if (currentVersion < 2) { UpgradeToVersion2(connection); }
+if (currentVersion < 3) { UpgradeToVersion3(connection); }
+```
+
+Bump `GetCurrentVersion()` in `DatabaseSchema.cpp` to match. If the change is breaking, keep the incompatibility error and require DB recreation instead.
 
 ## 6. Build And Repository Layout
 

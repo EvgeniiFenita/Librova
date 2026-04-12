@@ -1,6 +1,7 @@
 add_library(LibrovaBookDatabase STATIC
     SqliteBookQueryRepository.cpp
     SqliteBookRepository.cpp
+    SqliteGenreHelpers.cpp
 )
 
 target_include_directories(LibrovaBookDatabase PUBLIC

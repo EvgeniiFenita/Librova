@@ -23,6 +23,7 @@ struct SBookMetadata
     std::optional<int> Year;
     std::optional<std::string> Isbn;
     std::vector<std::string> TagsUtf8;
+    std::vector<std::string> GenresUtf8;
     std::optional<std::string> DescriptionUtf8;
     std::optional<std::string> Identifier;
 

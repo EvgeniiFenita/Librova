@@ -287,7 +287,7 @@ public sealed class StrongIntegrationTests
             await viewModel.ToggleSelectedBookAsync(Assert.Single(viewModel.Books));
 
             Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Series" && pair.Value.StartsWith("Noon Universe #", StringComparison.Ordinal));
-            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Genres" && pair.Value == "adventure, science_fiction");
+            Assert.Contains(viewModel.SelectedBookMetadataPairs, pair => pair.Label == "Genres" && pair.Value == "Adventure, Science Fiction");
         }
         finally
         {

@@ -118,6 +118,11 @@ TEST_CASE("Pipe dispatcher executes StartImport through protobuf adapter", "[pip
             return {};
         }
 
+        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
         [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
         {
             return {};
@@ -204,6 +209,11 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
             return {};
         }
 
+        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
         [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook&) const override
         {
             return {};
@@ -273,6 +283,11 @@ TEST_CASE("Pipe dispatcher executes ValidateImportSources through protobuf adapt
         }
 
         [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
+        {
+            return {};
+        }
+
+        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }

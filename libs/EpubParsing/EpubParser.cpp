@@ -294,7 +294,7 @@ void ParseSubjects(const pugi::xml_node& metadataNode, Librova::Domain::SParsedB
         const std::optional<std::string> subject = TryReadNodeText(childNode);
         if (subject.has_value())
         {
-            AppendUniqueText(parsedBook.Metadata.TagsUtf8, *subject);
+            AppendUniqueText(parsedBook.Metadata.GenresUtf8, *subject);
         }
     }
 }

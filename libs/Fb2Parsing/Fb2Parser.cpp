@@ -1,4 +1,5 @@
 #include "Fb2Parsing/Fb2Parser.hpp"
+#include "Fb2Parsing/Fb2GenreMapper.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -644,7 +645,11 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
     {
         if (MatchesLocalName(childNode, "genre"))
         {
-            AppendNonEmptyNodeText(parsedBook.Metadata.TagsUtf8, childNode);
+            const std::optional<std::string> rawCode = TryReadNodeText(childNode);
+            if (rawCode.has_value())
+            {
+                parsedBook.Metadata.GenresUtf8.push_back(std::string{CFb2GenreMapper::ResolveGenreName(*rawCode)});
+            }
         }
     }
 

@@ -41,6 +41,7 @@ struct SBookListItem
     std::optional<double> SeriesIndex;
     std::optional<int> Year;
     std::vector<std::string> TagsUtf8;
+    std::vector<std::string> GenresUtf8;
     Librova::Domain::EBookFormat Format = Librova::Domain::EBookFormat::Epub;
     std::filesystem::path ManagedPath;
     std::optional<std::filesystem::path> CoverPath;
@@ -81,6 +82,7 @@ struct SBookDetails
     std::optional<int> Year;
     std::optional<std::string> Isbn;
     std::vector<std::string> TagsUtf8;
+    std::vector<std::string> GenresUtf8;
     std::optional<std::string> DescriptionUtf8;
     std::optional<std::string> Identifier;
     Librova::Domain::EBookFormat Format = Librova::Domain::EBookFormat::Epub;
