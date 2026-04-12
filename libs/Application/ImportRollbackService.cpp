@@ -270,6 +270,26 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         }
     }
 
+    if (rollbackResult.RemainingBookIds.empty())
+    {
+        try
+        {
+            m_bookRepository.Compact();
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Info("Database compacted after cancellation rollback.");
+            }
+        }
+        catch (const std::exception& error)
+        {
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "Database compaction after cancellation rollback failed: '{}'.", error.what());
+            }
+        }
+    }
+
     return rollbackResult;
 }
 

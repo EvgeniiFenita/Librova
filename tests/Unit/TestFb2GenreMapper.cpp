@@ -92,6 +92,12 @@ TEST_CASE("Fb2GenreMapper resolves known FB2 2.1 codes to display names", "[fb2-
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("literature_fairy")        == "Fairy Tales");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("biogr_arts")              == "Arts & Culture Biographies");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("travel_guidebook_series") == "Travel Guides");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("love_sf")                 == "Romance Science Fiction");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("popular_business")        == "Popular Business");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("marketing")               == "Marketing");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("architecture")            == "Architecture");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sci_philology")           == "Philology");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sf_writing")              == "Writing");
 }
 
 TEST_CASE("Fb2GenreMapper returns the raw code unchanged for unrecognized input", "[fb2-genre-mapper]")

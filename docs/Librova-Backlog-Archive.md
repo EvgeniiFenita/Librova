@@ -594,3 +594,21 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Status: `Closed`
   - Type: `Bug`
   - Note: `CSchemaMigrator::Migrate` now throws `std::runtime_error` with the detected and expected versions when `currentVersion > GetCurrentVersion()`; `user_version` is never overwritten in that path; regression test verifies both the throw and that the future version is preserved on disk.
+
+- `#119` FB2 books with empty author nodes silently fail import instead of importing under "Аноним".
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: fixed — when all `<title-info><author>` name fields are empty (or the node is absent), the parser now emits a `[warning]` and stores `"Аноним"` as the author instead of throwing a hard error that skips the book entirely; test updated from "expect throw" to "expect Аноним in AuthorsUtf8".
+
+- `#120` database file remains several MB after import cancellation instead of shrinking to near-zero.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: fixed — after a complete cancellation rollback (all book rows deleted), `CSqliteBookRepository::Compact()` (new override) executes `VACUUM;` to reclaim freed pages; `Compact()` is called from `CImportRollbackService::RollbackImportedBooks()` when `RemainingBookIds` is empty; the `IBookRepository` interface received a default no-op `Compact()` so test doubles require no changes.
+
+- `#121` six FB2 genre codes from this import batch lack display-name mappings.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: added `love_sf` (21 hits), `popular_business` (3), `marketing` (2), `architecture` (1), `sci_philology` (1), `sf_writing` (1) to `Fb2GenreMapper.cpp`; REQUIRE assertions added to `TestFb2GenreMapper.cpp`.

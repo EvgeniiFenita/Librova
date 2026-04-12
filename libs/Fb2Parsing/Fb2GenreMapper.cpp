@@ -251,6 +251,22 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"chris_pravoslavie",      "Orthodox Christianity"},
     {"chris_edu",              "Christian Education"},
     {"child_9",                "Children's"},
+
+    // Romance
+    {"love_sf",                "Romance Science Fiction"},
+
+    // Business & Economics
+    {"popular_business",       "Popular Business"},
+    {"marketing",              "Marketing"},
+
+    // Arts & Architecture
+    {"architecture",           "Architecture"},
+
+    // Linguistics
+    {"sci_philology",          "Philology"},
+
+    // Creative Writing
+    {"sf_writing",             "Writing"},
 };
 // clang-format on
 

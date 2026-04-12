@@ -895,7 +895,47 @@ std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::pat
     return lastWriteTime;
 }
 
-std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
+struct SProbableCandidateRow
+{
+    std::int64_t BookId = 0;
+    std::string Isbn;
+    std::string Series;
+    std::string Publisher;
+};
+
+[[nodiscard]] bool IsEditionConflict(
+    const SProbableCandidateRow& existing,
+    const Librova::Domain::SCandidateBook& candidate)
+{
+    // Both sides have ISBN and they differ → different print edition
+    const std::optional<std::string> normalizedCandidateIsbn = Librova::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
+    if (normalizedCandidateIsbn.has_value() && !existing.Isbn.empty() && *normalizedCandidateIsbn != existing.Isbn)
+    {
+        return true;
+    }
+
+    // Both sides have a series name and normalized names differ → different series/translation
+    if (candidate.Metadata.SeriesUtf8.has_value() && !candidate.Metadata.SeriesUtf8->empty() && !existing.Series.empty())
+    {
+        if (Librova::Domain::NormalizeText(*candidate.Metadata.SeriesUtf8) != Librova::Domain::NormalizeText(existing.Series))
+        {
+            return true;
+        }
+    }
+
+    // Both sides have a publisher and normalized names differ → different publisher edition
+    if (candidate.Metadata.PublisherUtf8.has_value() && !candidate.Metadata.PublisherUtf8->empty() && !existing.Publisher.empty())
+    {
+        if (Librova::Domain::NormalizeText(*candidate.Metadata.PublisherUtf8) != Librova::Domain::NormalizeText(existing.Publisher))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+std::vector<SProbableCandidateRow> FindProbableDuplicateCandidates(
     const Librova::Sqlite::CSqliteConnection& connection,
     const Librova::Domain::SCandidateBook& candidate)
 {
@@ -913,7 +953,7 @@ std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
     }
 
     std::string sql =
-        "SELECT ba.book_id "
+        "SELECT ba.book_id, COALESCE(b.isbn, '') AS isbn, COALESCE(b.series, '') AS series, COALESCE(b.publisher, '') AS publisher "
         "FROM book_authors ba "
         "INNER JOIN authors a ON a.id = ba.author_id "
         "INNER JOIN books b ON b.id = ba.book_id "
@@ -938,13 +978,18 @@ std::vector<std::int64_t> FindProbableDuplicateCandidateIds(
     statement.BindText(parameterIndex++, normalizedTitle);
     statement.BindInt64(parameterIndex, static_cast<std::int64_t>(normalizedAuthors.size()));
 
-    std::vector<std::int64_t> bookIds;
+    std::vector<SProbableCandidateRow> rows;
     while (statement.Step())
     {
-        bookIds.push_back(statement.GetColumnInt64(0));
+        rows.push_back({
+            .BookId    = statement.GetColumnInt64(0),
+            .Isbn      = statement.GetColumnText(1),
+            .Series    = statement.GetColumnText(2),
+            .Publisher = statement.GetColumnText(3)
+        });
     }
 
-    return bookIds;
+    return rows;
 }
 
 } // namespace
@@ -1170,13 +1215,16 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 
     if (candidate.Metadata.HasTitle() && candidate.Metadata.HasAuthors())
     {
-        const std::vector<std::int64_t> probableCandidateIds = FindProbableDuplicateCandidateIds(connection, candidate);
+        const std::vector<SProbableCandidateRow> probableCandidates = FindProbableDuplicateCandidates(connection, candidate);
 
-        for (const std::int64_t probableCandidateId : probableCandidateIds)
+        for (const SProbableCandidateRow& probableCandidate : probableCandidates)
         {
-            const Librova::Domain::SBookId bookId{probableCandidateId};
+            if (seenIds.contains(probableCandidate.BookId))
+            {
+                continue;
+            }
 
-            if (seenIds.contains(bookId.Value))
+            if (IsEditionConflict(probableCandidate, candidate))
             {
                 continue;
             }
@@ -1184,9 +1232,9 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
             matches.push_back({
                 .Severity = Librova::Domain::EDuplicateSeverity::Probable,
                 .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
-                .ExistingBookId = bookId
+                .ExistingBookId = Librova::Domain::SBookId{probableCandidate.BookId}
             });
-            seenIds.insert(bookId.Value);
+            seenIds.insert(probableCandidate.BookId);
         }
     }
 

@@ -742,11 +742,17 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
     if (parsedBook.Metadata.AuthorsUtf8.empty())
     {
-        throw std::runtime_error(
-            "FB2 metadata must contain at least one non-empty title-info/author."
-            " [title_info_author_nodes=" + std::to_string(CountAuthorNodes(titleInfoNode))
-            + ", title_info_preview=\"" + BuildNodePreview(titleInfoNode) + "\""
-            + ", document_info_preview=\"" + BuildNodePreview(FindFirstChildByLocalName(descriptionNode, "document-info")) + "\"]");
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Warn(
+                "FB2 title-info has no non-empty author nodes; using 'Аноним' fallback."
+                " [title_info_author_nodes={}, title_info_preview=\"{}\", document_info_preview=\"{}\", file=\"{}\"]",
+                CountAuthorNodes(titleInfoNode),
+                BuildNodePreview(titleInfoNode),
+                BuildNodePreview(FindFirstChildByLocalName(descriptionNode, "document-info")),
+                Librova::Unicode::PathToUtf8(filePath));
+        }
+        parsedBook.Metadata.AuthorsUtf8.push_back("Аноним");
     }
 
     for (const pugi::xml_node childNode : titleInfoNode.children())

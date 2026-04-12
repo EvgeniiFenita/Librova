@@ -47,6 +47,7 @@ public:
 
     virtual std::optional<SBook> GetById(SBookId id) const = 0;
     virtual void Remove(SBookId id) = 0;
+    virtual void Compact() {}
 };
 
 class IBookQueryRepository

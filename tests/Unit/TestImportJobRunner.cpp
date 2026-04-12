@@ -192,6 +192,13 @@ public:
         m_books.erase(id.Value);
     }
 
+    void Compact() override
+    {
+        ++CompactCallCount;
+    }
+
+    mutable int CompactCallCount = 0;
+
 private:
     std::int64_t m_nextId = 0;
     std::map<std::int64_t, Librova::Domain::SBook> m_books;
@@ -467,6 +474,30 @@ TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled 
 
     std::filesystem::remove(outsidePath);
 }
+
+TEST_CASE("Import job runner calls Compact on repository after a clean full rollback", "[jobs][import][rollback]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-compact-after-rollback");
+    std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
+    std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
+
+    CImporterThatCancelsAfterFirstSuccess importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CRollbackAwareBookRepository repository;
+    // No pre-added book with an unsafe managed path → rollback will succeed cleanly
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository, {.LibraryRoot = sandbox.GetPath()});
+    Librova::Jobs::CImportJobRunner runner(facade);
+
+    const auto result = runner.Run({
+        .SourcePaths = {sandbox.GetPath() / "first.fb2", sandbox.GetPath() / "second.fb2"},
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, {});
+
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
+    REQUIRE_FALSE(result.ImportResult->HasRollbackCleanupResidue);
+    REQUIRE(repository.CompactCallCount == 1);
+}
+
 
 TEST_CASE("Import job runner reports partial success for ZIP import with failures", "[jobs][import]")
 {

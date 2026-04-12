@@ -516,4 +516,11 @@ void CSqliteBookRepository::Remove(const Librova::Domain::SBookId id)
     transaction.Commit();
 }
 
+void CSqliteBookRepository::Compact()
+{
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
+    connection.Execute("VACUUM;");
+}
+
 } // namespace Librova::BookDatabase

@@ -1096,6 +1096,188 @@ TEST_CASE("Sqlite book query repository probable duplicate detection stays case-
     CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
 }
 
+TEST_CASE("Sqlite book query repository does not flag as probable duplicate when series differ", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-series.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Harry Potter and the Philosopher's Stone";
+    existingBook.Metadata.AuthorsUtf8 = {"J. K. Rowling"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.Metadata.SeriesUtf8 = std::string{"Росмэн"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    existingBook.File.ManagedPath = "Books/0000001001/book.fb2";
+    existingBook.File.SizeBytes = 500;
+    existingBook.File.Sha256Hex = "hp-rosmen-hash";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(existingBook));
+
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Harry Potter and the Philosopher's Stone",
+            .AuthorsUtf8 = {"J. K. Rowling"},
+            .Language = "ru",
+            .SeriesUtf8 = std::string{"Азбука"}
+        },
+        .Format = Librova::Domain::EBookFormat::Fb2
+    });
+
+    REQUIRE(matches.empty());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Sqlite book query repository does not flag as probable duplicate when publishers differ", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-publisher.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Мастер и Маргарита";
+    existingBook.Metadata.AuthorsUtf8 = {"Михаил Булгаков"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.Metadata.PublisherUtf8 = std::string{"АСТ"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    existingBook.File.ManagedPath = "Books/0000001002/book.fb2";
+    existingBook.File.SizeBytes = 700;
+    existingBook.File.Sha256Hex = "master-ast-hash";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(existingBook));
+
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Мастер и Маргарита",
+            .AuthorsUtf8 = {"Михаил Булгаков"},
+            .Language = "ru",
+            .PublisherUtf8 = std::string{"Эксмо"}
+        },
+        .Format = Librova::Domain::EBookFormat::Fb2
+    });
+
+    REQUIRE(matches.empty());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Sqlite book query repository does not flag as probable duplicate when ISBNs differ", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-isbn.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Война и мир";
+    existingBook.Metadata.AuthorsUtf8 = {"Лев Толстой"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.Metadata.Isbn = std::string{"978-5-17-090001-5"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    existingBook.File.ManagedPath = "Books/0000001003/book.fb2";
+    existingBook.File.SizeBytes = 1200;
+    existingBook.File.Sha256Hex = "voyna-ast-hash";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    static_cast<void>(writeRepository.Add(existingBook));
+
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Война и мир",
+            .AuthorsUtf8 = {"Лев Толстой"},
+            .Language = "ru",
+            .Isbn = std::string{"978-5-04-090002-7"}
+        },
+        .Format = Librova::Domain::EBookFormat::Fb2
+    });
+
+    REQUIRE(matches.empty());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Sqlite book query repository flags as probable duplicate when same-title-author book has no distinguishing metadata", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-no-meta.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "Преступление и наказание";
+    existingBook.Metadata.AuthorsUtf8 = {"Фёдор Достоевский"};
+    existingBook.Metadata.Language = "ru";
+    existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
+    existingBook.File.ManagedPath = "Books/0000001004/book.fb2";
+    existingBook.File.SizeBytes = 900;
+    existingBook.File.Sha256Hex = "crime-hash-1";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto existingId = writeRepository.Add(existingBook);
+
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "Преступление и наказание",
+            .AuthorsUtf8 = {"Фёдор Достоевский"},
+            .Language = "ru"
+        },
+        .Format = Librova::Domain::EBookFormat::Fb2
+    });
+
+    REQUIRE(matches.size() == 1);
+    REQUIRE(matches.front().Severity == Librova::Domain::EDuplicateSeverity::Probable);
+    REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Sqlite book query repository flags as probable duplicate when one side lacks series and the other has it", "[book-database]")
+{
+    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-one-sided-series.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    // Existing book has a series; candidate has none → cannot tell if different edition
+    Librova::Domain::SBook existingBook;
+    existingBook.Metadata.TitleUtf8 = "The Hobbit";
+    existingBook.Metadata.AuthorsUtf8 = {"J. R. R. Tolkien"};
+    existingBook.Metadata.Language = "en";
+    existingBook.Metadata.SeriesUtf8 = std::string{"Middle-earth Universe"};
+    existingBook.File.Format = Librova::Domain::EBookFormat::Epub;
+    existingBook.File.ManagedPath = "Books/0000001005/book.epub";
+    existingBook.File.SizeBytes = 400;
+    existingBook.File.Sha256Hex = "hobbit-hash-1";
+    existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto existingId = writeRepository.Add(existingBook);
+
+    const std::vector<Librova::Domain::SDuplicateMatch> matches = queryRepository.FindDuplicates({
+        .Metadata = {
+            .TitleUtf8 = "The Hobbit",
+            .AuthorsUtf8 = {"J. R. R. Tolkien"},
+            .Language = "en"
+        },
+        .Format = Librova::Domain::EBookFormat::Epub
+    });
+
+    REQUIRE(matches.size() == 1);
+    REQUIRE(matches.front().Severity == Librova::Domain::EDuplicateSeverity::Probable);
+    REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+}
+
 TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after normalization", "[book-database]")
 {
     const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-dedup.db";

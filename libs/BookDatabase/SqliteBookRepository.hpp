@@ -21,6 +21,7 @@ public:
     [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override;
     [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId id) const override;
     void Remove(Librova::Domain::SBookId id) override;
+    void Compact() override;
 
 private:
     [[nodiscard]] Librova::Sqlite::CSqliteConnection& GetOrCreateConnection() const;
