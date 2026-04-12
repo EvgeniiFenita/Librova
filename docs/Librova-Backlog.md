@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#125`
+Last assigned id: `#128`
 
 ## 2. Priority Meanings
 
@@ -47,6 +47,12 @@ Last assigned id: `#125`
   - Type: `Feature`
   - Milestone: `1.1`
   - Note: extend source selection, recursive directory discovery, and archive import handling so `.rar` files are accepted anywhere `.zip` is currently supported, with the same per-entry diagnostics, partial-success behavior, cancellation semantics, and duplicate handling as ZIP imports.
+
+- `#128` add two explicit cancellation modes to the import dialog: "Cancel and discard" and "Stop here".
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: currently a single Cancel button stops the pipeline with undefined semantics regarding already-imported books; replace it with two explicit actions — "Cancel and discard" rolls back and removes all books imported in the current batch, "Stop here" halts new processing but retains every book successfully imported so far; both buttons must be disabled and replaced with a "Cancelling…" indicator while the pipeline winds down, so the user cannot submit duplicate requests.
 
 - `#68` add a Batch Convert to EPUB workflow that re-converts all managed FB2 books to EPUB using the active converter, with aggregate progress and summary.
   - Status: `Open`
@@ -79,6 +85,18 @@ Last assigned id: `#125`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
+- `#126` disable the Cancel button and show a "Cancelling…" indicator after the user clicks it during import.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: once a cancellation request is submitted, the Cancel button (or both cancel buttons after `#128` lands) must become disabled and the progress area must display a visible "Cancelling…" label or spinner so the user has unambiguous feedback that wind-down is in progress and cannot submit duplicate cancel requests.
+
+- `#127` add an "Import covers" checkbox to the import dialog, checked by default.
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: when unchecked, the import pipeline must skip cover extraction and storage entirely for the whole batch — no cover file is written to disk and no cover reference is stored in the database; this reduces disk usage and import time for users who do not need cover art; the setting applies only to the current import session and is not persisted globally.
+
 - `#111` add clearer visual confirmation in `Settings` when a converter is configured successfully.
   - Status: `Open`
   - Type: `Feature`
