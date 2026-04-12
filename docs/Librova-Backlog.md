@@ -54,12 +54,6 @@ Last assigned id: `#121`
   - Milestone: `1.1`
   - Note: the scenario is a user who already has an FB2 library and then configures a converter for the first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted, failed, skipped); a per-book conversion failure must keep the original FB2 intact as the managed file — never remove it; the terminal summary must remain visible after the job finishes; cancellation must stop new conversions and leave already-converted books in their new EPUB state; the feature spans a new native pipeline stage, IPC contract, and UI workflow.
 
-- `#26` complete first-class browser support for `genres` once metadata parsing and details display are in place.
-  - Status: `Open`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: focus this item on browse-time genre behavior: filter sources, filter UI, request plumbing, result counts, and genre browsing flows rather than parser-only metadata extraction.
-
 - `#59` add Favorites and Read as built-in user collections with per-book membership, sidebar navigation, filtered browse, card-level toggle controls, and details-panel membership display.
   - Status: `Open`
   - Type: `Feature`
@@ -84,31 +78,7 @@ Last assigned id: `#121`
   - Milestone: `1.1`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
-- `#113` redesign library filters into a single faceted panel with multi-select languages and genres.
-  - Status: `Closed`
-  - Type: `Feature`
-  - Milestone: `1.1`
-  - Note: реализован полный вертикальный срез — proto repeated fields (languages/genres), domain/application слои, SQL (OR-семантика для жанров, IN для языков), proto mapper, C# модели и маппер, FilterFacetItem VM, LibraryBrowseQueryState, LibraryBrowserViewModel (LanguageFacets/GenreFacets, IsFilterPanelOpen, ClearAllFiltersCommand), XAML ToggleButton + Popup, стили (FilterButton/FilterPopup/FilterSectionHeader), иконка IconFilter; тесты C++ и C# обновлены и расширены.
-
 ### Minor
-- `#119` FB2 books with empty author nodes silently fail import instead of importing under "Аноним".
-  - Status: `Closed`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: fixed — when all `<title-info><author>` name fields are empty (or the node is absent), the parser now emits a `[warning]` and stores `"Аноним"` as the author instead of throwing a hard error that skips the book entirely; test updated from "expect throw" to "expect Аноним in AuthorsUtf8".
-
-- `#120` database file remains several MB after import cancellation instead of shrinking to near-zero.
-  - Status: `Closed`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: fixed — after a complete cancellation rollback (all book rows deleted), `CSqliteBookRepository::Compact()` (new override) executes `VACUUM;` to reclaim freed pages; `Compact()` is called from `CImportRollbackService::RollbackImportedBooks()` when `RemainingBookIds` is empty; the `IBookRepository` interface received a default no-op `Compact()` so test doubles require no changes.
-
-- `#121` six FB2 genre codes from this import batch lack display-name mappings.
-  - Status: `Closed`
-  - Type: `Bug`
-  - Milestone: `1.0`
-  - Note: added `love_sf` (21 hits), `popular_business` (3), `marketing` (2), `architecture` (1), `sci_philology` (1), `sf_writing` (1) to `Fb2GenreMapper.cpp`; REQUIRE assertions added to `TestFb2GenreMapper.cpp`.
-
 - `#111` add clearer visual confirmation in `Settings` when a converter is configured successfully.
   - Status: `Open`
   - Type: `Feature`

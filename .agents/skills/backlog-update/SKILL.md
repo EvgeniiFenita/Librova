@@ -68,11 +68,25 @@ When the user says "next task" or "take the next task":
 
 ## 3. Closing a Task
 
-- [ ] Write a one-sentence `Note` summarizing what was actually done (no file-by-file detail, no exhaustive list of changes).
-- [ ] Set `Status` to `Closed`.
-- [ ] Remove the full entry from `docs/Librova-Backlog.md`.
-- [ ] Append the entry to the matching priority section (`### Critical` / `### Major` / `### Minor` / `### Low`) in `docs/Librova-Backlog-Archive.md`. Preserve the `Milestone` field if it was present.
-- [ ] Verify the task id is no longer present in `docs/Librova-Backlog.md`.
+**The close operation is EXACTLY three steps, in this order. Do not skip or reorder.**
+
+**Step 1 — Prepare the closed entry** (do this in memory, not yet in any file):
+- Write a one-sentence `Note` summarizing what was actually done (no file-by-file detail).
+- Set `Status` to `Closed`.
+- Keep all other fields (`Type`, `Milestone`) unchanged.
+
+**Step 2 — Append to archive FIRST** (write to `docs/Librova-Backlog-Archive.md`):
+- Append the full closed entry (title + all sub-fields) to the matching priority section (`### Critical` / `### Major` / `### Minor` / `### Low`).
+- Preserve the `Milestone` field.
+
+**Step 3 — Delete from open backlog** (write to `docs/Librova-Backlog.md`):
+- Remove the ENTIRE entry — title line and all sub-field lines — from `docs/Librova-Backlog.md`.
+- ⚠️ **Do NOT just change the status to `Closed` and leave the entry in place. The entry must be physically deleted from this file.**
+- ⚠️ **Do NOT leave the entry in `docs/Librova-Backlog.md` with `Status: Closed`. That is an invalid state.**
+
+**Immediate verification after close:**
+- [ ] `grep "#<id>" docs/Librova-Backlog.md` returns no results.
+- [ ] `grep "#<id>" docs/Librova-Backlog-Archive.md` returns exactly one result.
 
 ---
 

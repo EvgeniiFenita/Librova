@@ -162,6 +162,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.1`
   - Note: superseded by and closed as part of `#116`; FB2 genre codes are now resolved to human-readable English names at parse time via `CFb2GenreMapper` and stored in the `genres`/`book_genres` tables with `source_type = 'fb2_genre'`.
 
+- `#26` complete first-class browser support for `genres` once metadata parsing and details display are in place.
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: закрыто в рамках #113 — жанровая фильтрация реализована полностью: proto repeated fields, SQL OR-семантика, FilterFacetItem VM, GenreFacets в LibraryBrowserViewModel, XAML Popup с multi-select; browse-time genre behavior полностью покрыт.
+
 - `#113` redesign library filters into a single faceted panel with multi-select languages and genres.
   - Status: `Closed`
   - Type: `Feature`
