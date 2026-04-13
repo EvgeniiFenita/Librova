@@ -134,6 +134,22 @@
     <Setter Property="Opacity" Value="0.45" />
   </Style>
 
+  <!--
+    Lockout — generic lock-out state for shell regions during long-running jobs.
+    Apply Classes.Lockout="{Binding ...}" to any container that should be
+    disabled and dimmed as a unit. Adding a new long-running job type only
+    requires binding the property; no per-widget wiring is needed.
+  -->
+  <Style Selector=":is(Control).Lockout">
+    <Setter Property="IsEnabled" Value="False" />
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <!-- NavItem buttons carry their own :disabled opacity; suppress the
+       extra multiplier when the entire parent region is already Lockout-dimmed. -->
+  <Style Selector=":is(Control).Lockout Button.NavItem:disabled">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <!-- Primary (accent-filled) -->
   <Style Selector="Button.PrimaryAction">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />

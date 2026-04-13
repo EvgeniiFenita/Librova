@@ -14,19 +14,6 @@ tasks:
     before the total is known.
 
     '
-- id: 132
-  summary: disable and dim all shell regions outside the active import card during an import
-  status: Open
-  type: Bug
-  priority: Major
-  milestone: '1.1'
-  note: 'during an active import the left-panel logo + "Your shelf your story" tagline and the Ingest
-    tab header controls ("Ingest", "Import Books", "Drop local…") remain visually bright and interactive;
-    introduce a universal import-lock-out state in the shell that dims and disables every region outside
-    the running import card; the mechanism should be generic enough to cover future long-running jobs
-    without per-widget wiring.
-
-    '
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
   status: Open

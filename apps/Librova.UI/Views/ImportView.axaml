@@ -27,7 +27,8 @@
                 Margin="20">
 
       <!-- Page header -->
-      <StackPanel Spacing="4">
+      <StackPanel Spacing="4"
+                  Classes.Lockout="{Binding ImportJobs.IsBusy}">
         <TextBlock Classes="SectionEyebrow"
                    Text="INGEST" />
         <TextBlock Classes="ViewTitle"

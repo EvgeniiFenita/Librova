@@ -1086,3 +1086,12 @@ tasks:
   milestone: '1.1'
   note: Added IsConverterConfiguredSuccessfully to ShellConverterSettingsState and ShellViewModel; SettingsView.axaml
     shows green checkmark and 'Converter configured successfully' label after successful validation.
+- id: 132
+  summary: disable and dim all shell regions outside the active import card during an import
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Added generic Lockout CSS class (IsEnabled=False + Opacity=0.4); applied to sidebar branding+nav
+    section and ImportView page header; anti-double-dim override for NavItem:disabled inside Lockout;
+    UiDesignSystem.md updated.

@@ -292,6 +292,24 @@ During import (`IsImportInProgress = true`) the UI is locked:
 - OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims both checkboxes (Allow duplicate import, Force conversion to EPUB) via parent propagation
 - Only the "Cancel" button remains active
 
+### Lockout class — generic region lock-out
+
+For entire shell regions (not single controls), use the `Lockout` CSS class. It sets `IsEnabled=False` and `Opacity=0.4` on the container and all children in one step — no per-widget wiring needed.
+
+```xml
+<StackPanel Classes.Lockout="{Binding Shell.IsImportInProgress}">
+    <!-- entire region dims and disables as a unit -->
+</StackPanel>
+```
+
+**Currently applied to:**
+- Sidebar top section (branding + nav) — `MainWindow.axaml`, bound to `Shell.IsImportInProgress`
+- ImportView page header ("INGEST / Import Books") — `ImportView.axaml`, bound to `ImportJobs.IsBusy`
+
+**Anti-double-dim rule:** `NavItem:disabled` buttons inside a Lockout container have `Opacity=1` overridden in `Components.axaml` so the parent's 0.4 is the only dim applied (instead of multiplicative `0.4 × 0.45 = 0.18`).
+
+**Adding a new long-running job type:** bind the container's `Classes.Lockout` to the relevant `IsBusy` property — no new style rules needed.
+
 > **Important:** Nav commands must NOT use `CurrentSection is not ShellSection.X` in CanExecute — that would disable the active button and break active-state styling.
 
 ---

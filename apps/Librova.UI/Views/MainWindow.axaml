@@ -386,7 +386,8 @@
           </StackPanel>
 
           <!-- Top: branding + primary nav (fills remaining space) -->
-          <StackPanel Spacing="4">
+          <StackPanel Spacing="4"
+                      Classes.Lockout="{Binding Shell.IsImportInProgress}">
             <!-- App identity -->
             <Border Background="{DynamicResource AppAccentSurfaceBrush}"
                     BorderBrush="{DynamicResource AppAccentBorderBrush}"
@@ -399,9 +400,12 @@
                 <PathIcon Classes="AppIconAccent"
                           Width="22"
                           Height="22"
+                          VerticalAlignment="Center"
                           Data="{StaticResource IconBook}" />
                 <TextBlock FontSize="20"
                            FontWeight="Bold"
+                           LineHeight="28"
+                           VerticalAlignment="Center"
                            Text="Librova" />
               </StackPanel>
             </Border>
