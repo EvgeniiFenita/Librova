@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#129`
+Last assigned id: `#132`
 
 ## 2. Priority Meanings
 
@@ -36,6 +36,18 @@ Last assigned id: `#129`
 
 ### Critical
 ### Major
+- `#130` replace indeterminate import progress bar with a finite percentage counter
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: the import pipeline knows the total source-file count at job start; replace the infinite spinner/indeterminate bar with a deterministic progress bar and a live "N / Total — X%" label so the user can see how far along the job is; the counter must update in real time and be accurate for single-file, directory, and ZIP batch imports; the indeterminate animation may still be used briefly during the pre-scan phase before the total is known.
+
+- `#132` disable and dim all shell regions outside the active import card during an import
+  - Status: `Open`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: during an active import the left-panel logo + "Your shelf your story" tagline and the Ingest tab header controls ("Ingest", "Import Books", "Drop local…") remain visually bright and interactive; introduce a universal import-lock-out state in the shell that dims and disables every region outside the running import card; the mechanism should be generic enough to cover future long-running jobs without per-widget wiring.
+
 - `#117` investigate why `Run-Tests.ps1` hangs when invoked from an automation/agent context.
   - Status: `Open`
   - Type: `Bug`
@@ -85,6 +97,12 @@ Last assigned id: `#129`
   - Note: affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward (cross-platform image processing library, socket-based IPC) prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
 ### Minor
+- `#131` replace import-stage sub-label with rotating book facts
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: the import card currently shows the internal processing stage for the current book (e.g. "Parsing metadata"); replace this sub-label with a rotating display picked from a curated set of ~100 short book-related facts (one sentence, fits the card width); shuffle the set per session, show each fact for a few seconds then advance; the fact display must be hidden once the import completes or is cancelled.
+
 - `#126` disable the Cancel button and show a "Cancelling…" indicator after the user clicks it during import.
   - Status: `Open`
   - Type: `Feature`
