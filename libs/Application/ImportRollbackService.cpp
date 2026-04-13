@@ -49,7 +49,9 @@ void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::fi
     auto current = path.parent_path();
     const auto normalizedStopRoot = stopRoot.lexically_normal();
 
-    while (!current.empty() && current.lexically_normal() != normalizedStopRoot)
+    while (!current.empty()
+        && current.lexically_normal() != normalizedStopRoot
+        && current.parent_path().lexically_normal() != normalizedStopRoot)
     {
         if (!std::filesystem::remove(current, errorCode) || errorCode)
         {

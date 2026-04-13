@@ -39,6 +39,7 @@ if(BUILD_TESTING)
         TestImportConversionPolicy.cpp
         TestImportJobManager.cpp
         TestImportJobRunner.cpp
+        TestImportRollbackService.cpp
         TestLogging.cpp
         TestUnicodeConversion.cpp
         TestSingleFileImportCoordinator.cpp
