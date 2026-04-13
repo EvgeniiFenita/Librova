@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Preset = "x64-debug",
     [string]$Configuration = "Debug",
     [switch]$SkipConfigure,
@@ -7,6 +7,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "1"
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+$env:DOTNET_NOLOGO = "1"
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $nativePresetRoot = Join-Path $repoRoot "out\build\$Preset"
@@ -22,17 +26,36 @@ function Assert-LastExitCode([string]$stepName) {
 if (-not $SkipNative) {
     if (-not $SkipConfigure) {
         Write-Host "==> Configuring native build ($Preset)"
-        cmake --preset $Preset
-        Assert-LastExitCode "CMake configure"
+        & cmake --preset $Preset --log-level=WARNING 2>&1 | Where-Object {
+            ($_ -match '^--\s') -or ($_ -match '\b(error|warning)\b')
+        }
+        $configureExitCode = $LASTEXITCODE
+        if ($configureExitCode -ne 0) {
+            Write-Host ""
+            Write-Host "==> CMake configure failed -- re-running without filter for full diagnostics:"
+            cmake --preset $Preset
+            throw "CMake configure failed with exit code $configureExitCode."
+        }
     }
 
     Write-Host "==> Building native code ($Configuration)"
-    cmake --build --preset $Preset --config $Configuration
-    Assert-LastExitCode "Native build"
+    cmake --build --preset $Preset --config $Configuration -- /verbosity:quiet /nologo
+    $buildExitCode = $LASTEXITCODE
+    if ($buildExitCode -ne 0) {
+        Write-Host ""
+        Write-Host "==> Native build failed -- re-running without filter for full diagnostics:"
+        cmake --build --preset $Preset --config $Configuration
+        throw "Native build failed with exit code $buildExitCode."
+    }
 
     Write-Host "==> Running native tests ($Configuration)"
-    ctest --test-dir $nativePresetRoot -C $Configuration --output-on-failure
-    Assert-LastExitCode "Native tests"
+    & ctest --test-dir $nativePresetRoot -C $Configuration --output-on-failure 2>&1 | Where-Object {
+        ($_ -notmatch '^\s*Start\s+\d+:') -and
+        ($_ -notmatch '^\s*\d+/\d+\s+Test\s+#\d+:.*\bPassed\b')
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native tests failed with exit code $LASTEXITCODE."
+    }
 }
 
 if (-not $SkipManaged) {
@@ -41,11 +64,11 @@ if (-not $SkipManaged) {
     }
 
     Write-Host "==> Building managed UI tests ($Configuration)"
-    dotnet build $uiTestsProject -c $Configuration
+    dotnet build $uiTestsProject -c $Configuration --nologo --verbosity quiet -tl:off
     Assert-LastExitCode "Managed build"
 
     Write-Host "==> Running managed UI tests ($Configuration)"
-    dotnet test $uiTestsProject --no-build -c $Configuration
+    dotnet test $uiTestsProject --no-build -c $Configuration --nologo -tl:off -- --no-progress
     Assert-LastExitCode "Managed tests"
 }
 

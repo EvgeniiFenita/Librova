@@ -48,12 +48,6 @@ Last assigned id: `#134`
   - Milestone: `1.1`
   - Note: during an active import the left-panel logo + "Your shelf your story" tagline and the Ingest tab header controls ("Ingest", "Import Books", "Drop local…") remain visually bright and interactive; introduce a universal import-lock-out state in the shell that dims and disables every region outside the running import card; the mechanism should be generic enough to cover future long-running jobs without per-widget wiring.
 
-- `#117` investigate why `Run-Tests.ps1` hangs when invoked from an automation/agent context.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `unscheduled`
-  - Note: the script completes normally when run interactively but hangs indefinitely when called by the agent (cmake/ctest/dotnet output appears to stall). Likely cause: output buffering or an interactive prompt (e.g. developer-certificate trust dialog) not visible in automation. Needs a minimal repro and a non-interactive invocation fix or a `--no-interactive` wrapper.
-
 - `#100` add `RAR` archive import support alongside the existing ZIP archive workflow.
   - Status: `Open`
   - Type: `Feature`
@@ -145,12 +139,6 @@ Last assigned id: `#134`
   - Type: `Feature`
   - Milestone: `unscheduled`
   - Note: review the full genre mapping table and identify clusters of codes that resolve to overly similar or redundant display names (e.g. multiple regional sub-genres collapsing to one concept); consolidate them into a smaller, cleaner set of user-visible names without breaking import compatibility — code-to-name resolution must remain stable for all known FB2 codes.
-
-- `#112` reduce native test-run log noise so routine runs show failures and final summary rather than every passing test case.
-  - Status: `Open`
-  - Type: `Bug`
-  - Milestone: `1.1`
-  - Note: the current C++ test invocation logs each individual passing test, which makes routine runs noisy and harder to scan; change the default test runner output to focus on failures and the final aggregate result while still keeping enough detail for debugging failed cases.
 
 ## 4. Done Criteria
 

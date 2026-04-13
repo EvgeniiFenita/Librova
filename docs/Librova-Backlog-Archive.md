@@ -26,7 +26,7 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Milestone: `1.1`
   - Note: lib.rus.ec archives assign a single anthology ISBN to every story inside it; the Strict ISBN check caused 36 false-positive rejections in a real import run. Changed `AppendStrictDuplicateMatches` → `AppendDuplicateMatches` with an explicit severity parameter; SameIsbn now returns `EDuplicateSeverity::Probable`, prompting a user decision instead of auto-rejecting. SameHash remains Strict.
 
-
+- `#124` three FB2 genre codes from lib.rus.ec lack display-name mappings.
   - Status: `Closed`
   - Type: `Bug`
   - Milestone: `1.1`
@@ -163,6 +163,12 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Note: `CoreHostProcess` now escapes launch arguments with Windows-correct `CommandLineToArgvW` rules, and UI-side regression coverage verifies trailing `\`, embedded `"`, and Cyrillic paths through a real parse round-trip.
 
 ### Major
+
+- `#117` investigate why `Run-Tests.ps1` hangs when invoked from an automation/agent context.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `unscheduled`
+  - Note: root cause was OS pipe buffer deadlock — collecting ctest output (365 tests) into a variable fills the ~64 KB pipe buffer and stalls the process; fixed by streaming through a `Where-Object` pipe; added `DOTNET_SKIP_FIRST_TIME_EXPERIENCE`, `DOTNET_CLI_TELEMETRY_OPTOUT`, `DOTNET_NOLOGO` env vars and `--nologo`/`-tl:off` flags to suppress dotnet first-run prompts that block automation.
 
 - `#133` import progress counter resets when transitioning to the next batch source
   - Status: `Closed`
@@ -650,3 +656,9 @@ Consult this file when you need to look up past work, verify what was done, or c
   - Type: `Bug`
   - Milestone: `1.0`
   - Note: added `love_sf` (21 hits), `popular_business` (3), `marketing` (2), `architecture` (1), `sci_philology` (1), `sf_writing` (1) to `Fb2GenreMapper.cpp`; REQUIRE assertions added to `TestFb2GenreMapper.cpp`.
+
+- `#112` reduce native test-run log noise so routine runs show failures and final summary rather than every passing test case.
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.1`
+  - Note: ctest output is now streamed through a `Where-Object` pipe filter that hides individual "Start N:" and "Passed" lines; only failures, Skipped tests, and the final summary remain visible; also added cmake configure and build noise suppression and PS 5.1 compatibility (UTF-8 BOM, ASCII-safe diagnostic messages).
