@@ -519,3 +519,60 @@ TEST_CASE("FB2 parser accepts missing lang node and imports book with empty lang
     REQUIRE(result.Metadata.TitleUtf8 == "No Language Book");
     REQUIRE(result.Metadata.Language.empty());
 }
+
+TEST_CASE("FB2 parser splits comma-concatenated genre node value into multiple genres", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-comma-genres");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "comma-genres.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Comma Genre Test</book-title>
+      <genre>sf_fantasy_city,sf_horror</genre>
+      <author>
+        <first-name>Test</first-name>
+        <last-name>Author</last-name>
+      </author>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const auto result = parser.Parse(fb2Path);
+    REQUIRE(result.Metadata.TitleUtf8 == "Comma Genre Test");
+    REQUIRE(result.Metadata.GenresUtf8 == std::vector<std::string>{"Urban Fantasy", "Horror & Mystic"});
+}
+
+TEST_CASE("FB2 parser preserves unknown token as-is when splitting comma-concatenated genre value", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-comma-unknown-genre");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "comma-unknown-genre.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Mixed Genre Test</book-title>
+      <genre>sf_horror,unknown_community_code</genre>
+      <author>
+        <first-name>Test</first-name>
+        <last-name>Author</last-name>
+      </author>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const auto result = parser.Parse(fb2Path);
+    REQUIRE(result.Metadata.TitleUtf8 == "Mixed Genre Test");
+    // Known code resolves to display name; unknown code is stored as-is (raw).
+    REQUIRE(result.Metadata.GenresUtf8 == std::vector<std::string>{"Horror & Mystic", "unknown_community_code"});
+}

@@ -241,11 +241,24 @@ bool IsCancellationRequested(
 
     if (Librova::Logging::CLogging::IsInitialized())
     {
+        const std::string_view statusLabel = [&]() -> std::string_view {
+            switch (processingResult.Status)
+            {
+            case Librova::Domain::ECoverProcessingStatus::Unsupported: return "unsupported";
+            case Librova::Domain::ECoverProcessingStatus::Failed:      return "failed";
+            case Librova::Domain::ECoverProcessingStatus::Processed:   return "processed-no-output";
+            case Librova::Domain::ECoverProcessingStatus::Unchanged:   return "unchanged-no-output";
+            }
+            return "unknown";
+        }();
+
         Librova::Logging::Warn(
-            "Managed cover optimization skipped for '{}': status='{}' reason='{}'",
+            "Managed cover optimization skipped for '{}': status='{}' reason='{}' input_extension='{}' input_bytes={}",
             Librova::Unicode::PathToUtf8(sourcePath),
-            processingResult.Status == Librova::Domain::ECoverProcessingStatus::Unsupported ? "unsupported" : "failed",
-            processingResult.DiagnosticMessage);
+            statusLabel,
+            processingResult.DiagnosticMessage,
+            sourceCover.Extension,
+            sourceCover.Bytes.size());
     }
 
     return sourceCover;

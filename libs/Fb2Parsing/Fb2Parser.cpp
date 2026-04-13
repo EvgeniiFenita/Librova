@@ -760,17 +760,46 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
         if (MatchesLocalName(childNode, "genre"))
         {
             const std::optional<std::string> rawCode = TryReadNodeText(childNode);
-            if (rawCode.has_value())
+            if (!rawCode.has_value())
+                continue;
+
+            // Some lib.rus.ec files pack multiple codes into one node without a space separator
+            // (e.g. "sf_fantasy_city,sf_horror"). Split on comma and process each token.
+            std::string_view remaining{*rawCode};
+            while (!remaining.empty())
             {
-                const std::string_view resolvedName = CFb2GenreMapper::ResolveGenreName(*rawCode);
-                if (resolvedName == std::string_view{*rawCode} && Librova::Logging::CLogging::IsInitialized())
+                const std::size_t commaPos = remaining.find(',');
+                std::string_view token = (commaPos != std::string_view::npos)
+                    ? remaining.substr(0, commaPos)
+                    : remaining;
+
+                const auto first = token.find_first_not_of(" \t\r\n\v\f");
+                if (first != std::string_view::npos)
                 {
-                    Librova::Logging::Warn(
-                        "FB2 unknown genre code '{}' (no mapping) in file: {}",
-                        *rawCode,
-                        Librova::Unicode::PathToUtf8(filePath));
+                    const auto last = token.find_last_not_of(" \t\r\n\v\f");
+                    token = token.substr(first, last - first + 1);
                 }
-                parsedBook.Metadata.GenresUtf8.push_back(std::string{resolvedName});
+                else
+                {
+                    token = {};
+                }
+
+                if (!token.empty())
+                {
+                    const std::string_view resolvedName = CFb2GenreMapper::ResolveGenreName(token);
+                    if (resolvedName == token && Librova::Logging::CLogging::IsInitialized())
+                    {
+                        Librova::Logging::Warn(
+                            "FB2 unknown genre code '{}' (no mapping) in file: {}",
+                            std::string{token},
+                            Librova::Unicode::PathToUtf8(filePath));
+                    }
+                    parsedBook.Metadata.GenresUtf8.push_back(std::string{resolvedName});
+                }
+
+                if (commaPos == std::string_view::npos)
+                    break;
+                remaining = remaining.substr(commaPos + 1);
             }
         }
     }

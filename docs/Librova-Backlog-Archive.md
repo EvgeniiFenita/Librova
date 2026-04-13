@@ -8,6 +8,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Minor
 
+- `#134` expand FB2 genre mapper with community codes, fix comma-fused genre tags, enrich cover decode diagnostics
+  - Status: `Closed`
+  - Type: `Feature`
+  - Milestone: `1.1`
+  - Note: added ~130 genre mappings (lib.rus.ec Latin and Cyrillic community codes); fixed FB2 parser to comma-split `<genre>` node values before mapper lookup; cover decode failure log now includes HRESULT, input extension, and byte count.
+
 - `#123` add diagnostic fields to duplicate-rejection log lines so actual match values are visible.
   - Status: `Closed`
   - Type: `Feature`

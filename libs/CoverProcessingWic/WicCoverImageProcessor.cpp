@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -234,7 +235,13 @@ void SetEncoderOptions(
             &decoder);
         if (FAILED(decoderResult))
         {
-            throw std::runtime_error("Failed to decode the cover image.");
+            char hrBuf[32];
+            std::snprintf(hrBuf, sizeof(hrBuf), "0x%08X", static_cast<unsigned int>(decoderResult));
+            throw std::runtime_error(
+                std::string("Failed to decode the cover image")
+                + " [HRESULT=" + hrBuf
+                + ", extension=" + request.Cover.Extension
+                + ", bytes=" + std::to_string(request.Cover.Bytes.size()) + "].");
         }
 
         const HRESULT frameResult = decoder->GetFrame(0, &frame);

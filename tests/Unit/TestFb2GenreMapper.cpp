@@ -109,6 +109,42 @@ TEST_CASE("Fb2GenreMapper resolves known FB2 2.1 codes to display names", "[fb2-
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Детская литература")      == "Children's");
 }
 
+TEST_CASE("Fb2GenreMapper resolves lib.rus.ec community codes added from production imports", "[fb2-genre-mapper]")
+{
+    // High-frequency unmapped codes from real lib.rus.ec import runs
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("network_literature")    == "Network Literature");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("fanfiction")            == "Fanfiction");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("religion_budda")        == "Buddhism");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("rel_boddizm")           == "Buddhism");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("histor_military")       == "Military History");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("professional_law")      == "Jurisprudence");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("popadanec")             == "Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("popadancy")             == "Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("nonfiction_law")        == "Jurisprudence");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("foreign_publicism")     == "Publicism");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sci_popular")           == "Popular Science");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sf_litrpg")             == "LitRPG");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("sf_stimpank")           == "Steampunk");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("psy_theraphy")          == "Psychology");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("hronoopera")            == "Time-Travel Fiction");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("fantasy_dark")          == "Dark Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("city_fantasy")          == "Urban Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("folk_tale")             == "Folk Tales");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("adv_history_avant")     == "Alternative History");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("prose_rus_classics")    == "Russian Classic Prose");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("prose_su_classic")      == "Soviet Classic Prose");
+
+    // Cyrillic free-form community tags
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("История")               == "History");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Биографии и мемуары")   == "Biography & Memoirs");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Боевая фантастика")     == "Action Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Фэнтези")               == "Fantasy");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Фентези")               == "Fantasy");
+    // Multi-word Cyrillic tag — must not be shadowed by the shorter "Фэнтези" key
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Фэнтези Юмор")         == "Fantasy & Humor");
+    REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("языкознание")           == "Linguistics");
+}
+
 TEST_CASE("Fb2GenreMapper returns the raw code unchanged for unrecognized input", "[fb2-genre-mapper]")
 {
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("custom_genre")    == "custom_genre");
