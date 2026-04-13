@@ -18,7 +18,7 @@ Priority sections: `Critical` → `Major` → `Minor` → `Low`
 
 `Milestone` is optional. When present, use a release string such as `1.0`, `1.1`, or the literal `unscheduled`.
 
-Last assigned id: `#128`
+Last assigned id: `#129`
 
 ## 2. Priority Meanings
 
@@ -116,6 +116,12 @@ Last assigned id: `#128`
   - Note: the existing cover processor already resizes and applies JPEG encoding with a fixed quality value, but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only, directly addressing the platform isolation goal of task `#62`; JPEG quality and maximum cover dimensions should be surfaced as configurable parameters rather than compile-time constants.
 
 ### Low
+- `#129` compact database after regular book deletions to reclaim FTS5 tombstone space
+  - Status: `Open`
+  - Type: `Feature`
+  - Milestone: `unscheduled`
+  - Note: every `Remove()` call inserts an FTS5 tombstone that is never cleaned up unless `Compact()` is called; regular UI-driven deletions via `LibraryTrashFacade` never trigger compaction, so tombstones accumulate indefinitely (~1–2 KB per deleted book); decide on a strategy (threshold-based, background idle task, or per-batch) and implement it so FTS5 shadow-table space is reclaimed without blocking the UI.
+
 - `#122` audit and consolidate FB2 genre display names to reduce visual clutter in genre filters
   - Status: `Open`
   - Type: `Feature`

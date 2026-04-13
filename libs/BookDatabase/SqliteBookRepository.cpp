@@ -520,6 +520,12 @@ void CSqliteBookRepository::Compact()
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
+    // FTS5 contentless tables accumulate both the original row data and a
+    // tombstone record for every deleted book.  VACUUM alone compacts free
+    // pages but leaves all FTS5 segment data intact.  RebuildAll wipes the
+    // shadow tables and re-inserts only the rows that are still in `books`,
+    // so the subsequent VACUUM can actually reclaim the freed pages.
+    Librova::SearchIndex::CSearchIndexMaintenance::RebuildAll(connection);
     connection.Execute("VACUUM;");
 }
 

@@ -2072,3 +2072,67 @@ TEST_CASE("Sqlite book repository serializes concurrent Add calls on a shared in
 
     CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
+
+TEST_CASE("Sqlite book repository Compact reclaims FTS5 shadow-table space after bulk remove", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-book-repository-compact.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+        // Insert books with substantial Cyrillic text so the FTS5 shadow tables
+        // accumulate real segment data.
+        for (int i = 0; i < 200; ++i)
+        {
+            Librova::Domain::SBook book;
+            book.Metadata.TitleUtf8 = "Тестовая книга о приключениях и странствиях по бескрайним просторам " + std::to_string(i);
+            book.Metadata.AuthorsUtf8 = {"Иван Петров", "Сергей Сидоров"};
+            book.Metadata.Language = "ru";
+            book.Metadata.DescriptionUtf8 = std::string{
+                "Подробное описание книги с большим количеством текста о путешествиях, "
+                "приключениях, открытиях и размышлениях о смысле бытия и жизни вообще. "
+                "Книга содержит множество интересных глав и персонажей. "
+                "Автор уделяет особое внимание деталям и атмосфере повествования. "
+                "Читатель погружается в удивительный мир, полный тайн и загадок. "
+                "Каждая страница приносит новые открытия и заставляет задуматься."
+            } + std::to_string(i);
+            book.Metadata.TagsUtf8 = {"приключения", "фантастика"};
+            book.File.Format = Librova::Domain::EBookFormat::Fb2;
+            book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+            book.File.ManagedPath = std::filesystem::path(u8"Books") / std::to_string(i) / u8"book.fb2";
+            book.File.SizeBytes = 8192;
+            book.File.Sha256Hex = "hash-" + std::to_string(i);
+            book.AddedAtUtc = std::chrono::system_clock::now();
+            static_cast<void>(repository.Add(book));
+        }
+
+        repository.CloseSession();
+    }
+
+    const std::uintmax_t sizeAfterInserts = std::filesystem::file_size(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+        // Remove all books — this inserts FTS5 tombstone records for each book
+        // rather than freeing the segment data immediately.
+        for (int i = 1; i <= 200; ++i)
+        {
+            repository.Remove(Librova::Domain::SBookId{i});
+        }
+
+        repository.Compact();
+        repository.CloseSession();
+    }
+
+    const std::uintmax_t sizeAfterCompact = std::filesystem::file_size(databasePath);
+
+    // The FTS5 shadow tables must have been rebuilt and the freed pages vacuumed
+    // away, so the file must be substantially smaller than after all inserts.
+    REQUIRE(sizeAfterCompact < sizeAfterInserts / 2);
+
+    std::filesystem::remove(databasePath);
+}
