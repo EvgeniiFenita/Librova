@@ -158,6 +158,12 @@ Consult this file when you need to look up past work, verify what was done, or c
 
 ### Major
 
+- `#133` import progress counter resets when transitioning to the next batch source
+  - Status: `Closed`
+  - Type: `Bug`
+  - Milestone: `1.0`
+  - Note: `CScopedStructuredProgressSink` was forwarding per-source-local `importedEntries`/`failedEntries`/`skippedEntries` without adding the prior accumulated values; fixed by adding `priorImportedEntries`, `priorFailedEntries`, `priorSkippedEntries` constructor params and accumulating them in `ReportStructuredProgress`; `LibraryImportFacade` now passes `result.Summary.*Entries` at each source boundary; regression test added (`TestLibraryImportFacade.cpp`).
+
 - `#118` harden FB2 parser against real-world lib.rus.ec quirks: non-numeric sequence numbers, non-integer years, missing lang, expand genre mapper, reduce import log noise.
   - Status: `Closed`
   - Type: `Bug`

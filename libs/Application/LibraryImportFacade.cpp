@@ -352,7 +352,8 @@ SImportResult CLibraryImportFacade::Run(
             const auto zipEntryCount = zipEntryCountIterator == preparedWorkload.PlannedEntriesBySource.end()
                 ? 1U
                 : std::max<std::size_t>(zipEntryCountIterator->second, 1);
-            CScopedStructuredProgressSink zipProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, zipEntryCount);
+            CScopedStructuredProgressSink zipProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, zipEntryCount,
+                result.Summary.ImportedEntries, result.Summary.FailedEntries, result.Summary.SkippedEntries);
             try
             {
                 const auto zipResult = m_zipImportCoordinator.Run({
@@ -486,7 +487,8 @@ SImportResult CLibraryImportFacade::Run(
         const auto entryWorkingDirectory = usePerEntryWorkingDirectory
             ? request.WorkingDirectory / "entries" / std::to_string(processedEntries + 1)
             : request.WorkingDirectory;
-        CScopedStructuredProgressSink singleProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, 1);
+        CScopedStructuredProgressSink singleProgressSink(progressSink, result.Summary.TotalEntries, processedEntries, 1,
+            result.Summary.ImportedEntries, result.Summary.FailedEntries, result.Summary.SkippedEntries);
         const auto singleFileResult = [&]() {
             try
             {

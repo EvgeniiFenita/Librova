@@ -14,6 +14,7 @@
 #include <zip.h>
 
 #include "Application/LibraryImportFacade.hpp"
+#include "Application/StructuredProgressMapper.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
 #include "Logging/Logging.hpp"
@@ -710,6 +711,65 @@ TEST_CASE("Library import facade keeps outer batch totals while ZIP entries are 
     std::filesystem::remove_all(sandbox);
 }
 
+TEST_CASE("Library import facade accumulates imported counter across sources without reset", "[application][import]")
+{
+    // Regression test: before the fix, CScopedStructuredProgressSink forwarded
+    // the per-source-local importedEntries/failedEntries/skippedEntries to the
+    // outer sink without adding the already-accumulated prior values.  When the
+    // second source started it would effectively reset the imported counter.
+    //
+    // Two ZIPs are used intentionally: each ZIP emits per-entry structured
+    // progress snapshots via CZipImportCoordinator, so the outer sink receives
+    // snapshots both DURING zip1 and DURING zip2.  With the old (broken) code
+    // zip2 would restart its local counter at 0, causing a visible drop in the
+    // reported importedEntries (e.g. 2 → 1).  The monotonic-decrease check
+    // below catches exactly that regression.  A single-file stub source does not
+    // emit structured progress events, so it cannot exercise this path.
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{1}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CStructuredProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-accumulated-progress";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    // zip1 with 2 entries, then zip2 with 2 entries — 4 entries total, all Imported.
+    const auto zip1Path = CreateZipFixture(sandbox / "batch1.zip");
+    const auto zip2Path = CreateZipFixture(sandbox / "batch2.zip");
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto result = facade.Run({
+        .SourcePaths = {zip1Path, zip2Path},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.ImportedEntries == 4);
+    REQUIRE_FALSE(progressSink.Snapshots.empty());
+
+    // importedEntries must never decrease across consecutive snapshots.
+    // With the old code zip2 restarted at 0, causing a drop from 2 → 1 on the
+    // first entry of zip2 — this check catches that regression directly.
+    std::size_t maxSeen = 0;
+    for (const auto& snapshot : progressSink.Snapshots)
+    {
+        REQUIRE(snapshot.ImportedEntries >= maxSeen);
+        maxSeen = snapshot.ImportedEntries;
+    }
+
+    // The very last snapshot must agree with the final summary.
+    const auto& last = progressSink.Snapshots.back();
+    REQUIRE(last.ImportedEntries == result.Summary.ImportedEntries);
+
+    std::filesystem::remove_all(sandbox);
+}
+
 TEST_CASE("Library import facade accepts existing directories during source validation without recursive expansion", "[application][import]")
 {
     CStubSingleFileImporter importer;
@@ -984,4 +1044,50 @@ TEST_CASE("Library import facade logs rollback cleanup issues for unsafe managed
 
     std::filesystem::remove_all(sandbox);
     std::filesystem::remove(outsidePath);
+}
+
+TEST_CASE("CScopedStructuredProgressSink accumulates prior imported entries in forwarded report", "[application][progress]")
+{
+    // Direct unit test for the regression: prior imported/failed/skipped entries
+    // must be added in ReportStructuredProgress, not only stored in the constructor.
+    CStructuredProgressSink outer;
+    Librova::Application::CScopedStructuredProgressSink sink(
+        outer,
+        /*totalEntries=*/10,
+        /*processedEntries=*/3,
+        /*contributionEntries=*/2,
+        /*priorImportedEntries=*/5,
+        /*priorFailedEntries=*/1,
+        /*priorSkippedEntries=*/2);
+
+    sink.ReportStructuredProgress(2, 1, 1, 0, 0, 50, "mid");
+
+    REQUIRE(outer.Snapshots.size() == 1);
+    // processedEntries: m_processedEntries(3) + local(1) = 4
+    REQUIRE(outer.Snapshots[0].ProcessedEntries == 4);
+    // importedEntries: prior(5) + local(1) = 6
+    REQUIRE(outer.Snapshots[0].ImportedEntries == 6);
+    // failedEntries: prior(1) + local(0) = 1
+    REQUIRE(outer.Snapshots[0].FailedEntries == 1);
+    // skippedEntries: prior(2) + local(0) = 2
+    REQUIRE(outer.Snapshots[0].SkippedEntries == 2);
+}
+
+TEST_CASE("CScopedStructuredProgressSink with default prior values behaves as before", "[application][progress]")
+{
+    // When priorImportedEntries/failedEntries/skippedEntries default to 0,
+    // behaviour must be identical to the original constructor.
+    CStructuredProgressSink outer;
+    Librova::Application::CScopedStructuredProgressSink sink(
+        outer,
+        /*totalEntries=*/4,
+        /*processedEntries=*/0,
+        /*contributionEntries=*/2);
+
+    sink.ReportStructuredProgress(2, 2, 2, 1, 0, 100, "done");
+
+    REQUIRE(outer.Snapshots.size() == 1);
+    REQUIRE(outer.Snapshots[0].ImportedEntries == 2);
+    REQUIRE(outer.Snapshots[0].FailedEntries == 1);
+    REQUIRE(outer.Snapshots[0].SkippedEntries == 0);
 }

@@ -15,7 +15,10 @@ public:
         Librova::Domain::IProgressSink& innerSink,
         std::size_t totalEntries,
         std::size_t processedEntries,
-        std::size_t contributionEntries);
+        std::size_t contributionEntries,
+        std::size_t priorImportedEntries = 0,
+        std::size_t priorFailedEntries = 0,
+        std::size_t priorSkippedEntries = 0);
 
     void ReportValue(int percent, std::string_view message) override;
     [[nodiscard]] bool IsCancellationRequested() const override;
@@ -35,6 +38,9 @@ private:
     std::size_t m_totalEntries = 0;
     std::size_t m_processedEntries = 0;
     std::size_t m_contributionEntries = 1;
+    std::size_t m_priorImportedEntries = 0;
+    std::size_t m_priorFailedEntries = 0;
+    std::size_t m_priorSkippedEntries = 0;
 };
 
 void ReportStructuredProgressIfSupported(

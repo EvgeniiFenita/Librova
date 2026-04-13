@@ -6,11 +6,17 @@ CScopedStructuredProgressSink::CScopedStructuredProgressSink(
     Librova::Domain::IProgressSink& innerSink,
     const std::size_t totalEntries,
     const std::size_t processedEntries,
-    const std::size_t contributionEntries)
+    const std::size_t contributionEntries,
+    const std::size_t priorImportedEntries,
+    const std::size_t priorFailedEntries,
+    const std::size_t priorSkippedEntries)
     : m_innerSink(innerSink)
     , m_totalEntries(totalEntries)
     , m_processedEntries(processedEntries)
     , m_contributionEntries(std::max<std::size_t>(contributionEntries, 1))
+    , m_priorImportedEntries(priorImportedEntries)
+    , m_priorFailedEntries(priorFailedEntries)
+    , m_priorSkippedEntries(priorSkippedEntries)
 {
 }
 
@@ -38,9 +44,9 @@ void CScopedStructuredProgressSink::ReportStructuredProgress(
         structuredSink->ReportStructuredProgress(
             m_totalEntries,
             m_processedEntries + processedEntries,
-            importedEntries,
-            failedEntries,
-            skippedEntries,
+            m_priorImportedEntries + importedEntries,
+            m_priorFailedEntries + failedEntries,
+            m_priorSkippedEntries + skippedEntries,
             MapPercent(percent),
             message);
         return;
