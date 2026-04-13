@@ -135,11 +135,18 @@
           <TextBlock Classes="BodyMuted"
                      Text="The import pipeline is running. Navigation and other actions stay locked until the import finishes or is cancelled."
                      TextWrapping="Wrap" />
-          <Button Classes="SecondaryAction"
-                  Width="140"
-                  HorizontalAlignment="Left"
-                  Command="{Binding ImportJobs.CancelImportCommand}"
-                  Content="Cancel" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="14"
+                      HorizontalAlignment="Left">
+            <Button Classes="SecondaryAction"
+                    Width="140"
+                    Command="{Binding ImportJobs.CancelImportCommand}"
+                    Content="Cancel" />
+            <TextBlock Classes="BodyMuted"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding ImportJobs.IsCancellationRequested}"
+                       Text="Cancelling…" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

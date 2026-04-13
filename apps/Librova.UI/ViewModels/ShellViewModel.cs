@@ -135,6 +135,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             {
                 _converterValidationCoordinator.ScheduleValidation(_converterSettings.Fb2CngExecutablePath);
                 RaisePropertyChanged(nameof(HasConfiguredConverter));
+                RaisePropertyChanged(nameof(IsConverterConfiguredSuccessfully));
             }
         }
     }
@@ -172,6 +173,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public bool ShowConverterHelperText => _converterSettings.ShowConverterHelperText;
     public bool IsConverterProbeInProgress => _converterSettings.IsConverterProbeInProgress;
     public string ConverterProbeStatusText => _converterSettings.ConverterProbeStatusText;
+    public bool IsConverterConfiguredSuccessfully => _converterSettings.IsConverterConfiguredSuccessfully;
     public bool IsLibrarySectionActive => _sectionState.IsLibrarySectionActive;
     public bool IsImportSectionActive => _sectionState.IsImportSectionActive;
     public bool IsSettingsSectionActive => _sectionState.IsSettingsSectionActive;
@@ -252,6 +254,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         RaisePropertyChanged(nameof(ShowConverterHelperText));
         RaisePropertyChanged(nameof(IsConverterProbeInProgress));
         RaisePropertyChanged(nameof(ConverterProbeStatusText));
+        RaisePropertyChanged(nameof(IsConverterConfiguredSuccessfully));
         SavePreferencesCommand.RaiseCanExecuteChanged();
     }
 

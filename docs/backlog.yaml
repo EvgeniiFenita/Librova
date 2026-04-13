@@ -137,19 +137,6 @@ tasks:
     for a few seconds then advance; the fact display must be hidden once the import completes or is cancelled.
 
     '
-- id: 126
-  summary: disable the Cancel button and show a Cancelling… indicator after the user clicks it during
-    import
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.1'
-  note: 'once a cancellation request is submitted, the Cancel button (or both cancel buttons after #128
-    lands) must become disabled and the progress area must display a visible "Cancelling…" label or spinner
-    so the user has unambiguous feedback that wind-down is in progress and cannot submit duplicate cancel
-    requests.
-
-    '
 - id: 127
   summary: add an Import covers checkbox to the import dialog, checked by default
   status: Open
@@ -160,18 +147,6 @@ tasks:
     batch — no cover file is written to disk and no cover reference is stored in the database; this reduces
     disk usage and import time for users who do not need cover art; the setting applies only to the current
     import session and is not persisted globally.
-
-    '
-- id: 111
-  summary: add clearer visual confirmation in Settings when a converter is configured successfully
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.1'
-  note: 'the converter settings panel currently lacks strong positive feedback after a valid converter
-    path is accepted; add an explicit configured-state affordance such as a bright checkmark, stronger
-    success styling, or a more prominent state label so the user can tell at a glance that conversion
-    is enabled.
 
     '
 - id: 64

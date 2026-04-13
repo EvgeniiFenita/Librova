@@ -36,6 +36,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private CancellationTokenSource? _activeImportCancellation;
     private CancellationTokenSource? _sourceValidationCancellation;
     private bool _isValidatingSources;
+    private bool _isCancellationRequested;
 
     public event ImportCompletedSuccessfullyHandler? ImportCompletedSuccessfully;
     public event Action<bool>? ImportActivityChanged;
@@ -117,6 +118,18 @@ internal sealed class ImportJobsViewModel : ObservableObject
     public bool ShowIdleImportPicker => !IsBusy;
     public bool ShowRunningImportState => IsBusy;
     public bool CanAcceptNewSources => !IsBusy;
+
+    public bool IsCancellationRequested
+    {
+        get => _isCancellationRequested;
+        private set
+        {
+            if (SetProperty(ref _isCancellationRequested, value))
+            {
+                CancelImportCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
     public bool HasImportResult => LastResult is not null;
     public string SelectedSourceLabel => SourcePaths.Count switch
     {
@@ -351,6 +364,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         {
             _activeImportCancellation?.Dispose();
             _activeImportCancellation = null;
+            IsCancellationRequested = false;
             IsBusy = false;
         }
     }
@@ -394,6 +408,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
         {
             return;
         }
+
+        IsCancellationRequested = true;
 
         var jobId = LastJobId.Value;
         var cancellation = _activeImportCancellation ?? new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -685,7 +701,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
 
-    private bool CanCancel() => LastJobId.HasValue && IsBusy;
+    private bool CanCancel() => LastJobId.HasValue && IsBusy && !IsCancellationRequested;
 
     private bool CanRemove() => LastJobId.HasValue && !IsBusy;
 

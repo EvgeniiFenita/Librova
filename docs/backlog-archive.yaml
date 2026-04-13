@@ -1069,3 +1069,20 @@ tasks:
   note: replaced Librova-Backlog.md/Archive.md with backlog.yaml + backlog-archive.yaml; added scripts/backlog.py
     CLI (list/show/add/close/edit/next/validate); rewrote backlog-update skill; updated all docs and skill
     references
+- id: 126
+  summary: disable the Cancel button and show a Cancelling… indicator after the user clicks it during
+    import
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: Added IsCancellationRequested to ImportJobsViewModel; Cancel button disables immediately on click
+    via CanCancel(); Cancelling… label shown next to button in ImportView.axaml.
+- id: 111
+  summary: add clearer visual confirmation in Settings when a converter is configured successfully
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: Added IsConverterConfiguredSuccessfully to ShellConverterSettingsState and ShellViewModel; SettingsView.axaml
+    shows green checkmark and 'Converter configured successfully' label after successful validation.

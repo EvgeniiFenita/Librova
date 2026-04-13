@@ -17,4 +17,7 @@ internal sealed class ShellConverterSettingsState
 
     public bool HasConfiguredConverter =>
         !string.IsNullOrWhiteSpace(Fb2CngExecutablePath);
+
+    public bool IsConverterConfiguredSuccessfully =>
+        HasConfiguredConverter && !IsConverterProbeInProgress && !HasConverterValidationError;
 }
