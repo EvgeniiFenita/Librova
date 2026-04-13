@@ -12,7 +12,7 @@ optional conversion (FB2→EPUB) → staging → commit → database write → m
 
 ## Pre-Start
 
-- [ ] Confirm the task maps to an open backlog item in `docs/Librova-Backlog.md` (use `$backlog-update` skill if adding a new one)
+- [ ] Confirm the task maps to an open backlog item (`python scripts/backlog.py list`); use `$backlog-update` skill if adding a new one
 - [ ] Identify which stage of the pipeline is changing
 
 ---

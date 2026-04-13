@@ -168,5 +168,5 @@ They communicate through:
 ## 6. Related Documents
 
 - [Librova-Architecture](Librova-Architecture.md)
-- [Librova Backlog](Librova-Backlog.md) — single source of truth for all open and planned work
+- [Librova Backlog](backlog.yaml) — single source of truth for all open and planned work; use `python scripts/backlog.py list` to browse
 - [ManualUiTestScenarios](ManualUiTestScenarios.md)

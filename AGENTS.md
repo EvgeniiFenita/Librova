@@ -17,7 +17,7 @@ Repository-level overview lives in `README.md`. Keep it aligned with the current
 Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
-2. `docs/Librova-Backlog.md` — active backlog and task priorities
+2. `docs/backlog.yaml` — active backlog; use `python scripts/backlog.py list` to view
 3. Use `$commit-message` skill for commit format
 4. `docs/engineering/TestStrategy.md` — what tests to add and when
 5. `docs/engineering/TransportInvariants.md` — IPC contract rules
@@ -84,9 +84,9 @@ scripts\ValidateProto.ps1
 - Fix the true cause of a bug whenever it is reasonably reachable in the current task; do not stop at a local patch that only hides downstream symptoms while leaving the source inconsistency in place.
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
-- Map every new task to an open backlog item in `docs/Librova-Backlog.md` before starting.
+- Map every new task to an open backlog item in `docs/backlog.yaml` before starting (use `python scripts/backlog.py list` or `python scripts/backlog.py add …`).
 - For all backlog operations — adding tasks, taking into work, closing, and validating — follow the `$backlog-update` skill.
-- When implementation state and `docs/Librova-Backlog.md` diverge, update the backlog in the same task instead of leaving stale statuses behind.
+- When implementation state and `docs/backlog.yaml` diverge, update the backlog in the same task instead of leaving stale statuses behind.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
@@ -132,7 +132,7 @@ When a task completes, update docs **in the same task** if any of the following 
 |---|---|
 | Product scope or user-visible behavior | `docs/Librova-Product.md` |
 | Architecture decision | `docs/Librova-Architecture.md` |
-| Backlog item closed, added, or reprioritized | `docs/Librova-Backlog.md`; closed items appended to `docs/Librova-Backlog-Archive.md` via `$backlog-update` skill (append-only; do not load archive as upfront context) |
+| Backlog item closed, added, or reprioritized | `docs/backlog.yaml` via `python scripts/backlog.py`; closed items appended to `docs/backlog-archive.yaml` via `$backlog-update` skill (append-only; do not load archive as upfront context) |
 | Repository overview or project-status summary visible from the root | `README.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | no archive checkpoint document is maintained |

@@ -223,4 +223,4 @@ Testing is layered:
 
 Any remaining implementation or hardening work is tracked in:
 
-- [Librova Backlog](Librova-Backlog.md)
+- [Librova Backlog](backlog.yaml)

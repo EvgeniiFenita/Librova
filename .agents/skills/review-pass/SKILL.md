@@ -71,7 +71,7 @@ Verify these files match implemented reality:
 
 - [ ] `docs/Librova-Product.md`
 - [ ] `docs/Librova-Architecture.md`
-- [ ] `docs/Librova-Backlog.md` (open tasks; use `$backlog-update` skill to close any that are done)
+- [ ] `docs/backlog.yaml` (open tasks; run `python scripts/backlog.py list` and use `$backlog-update` skill to close any that are done)
 - [ ] `docs/ManualUiTestScenarios.md` (Russian, UI labels in English as-is)
 - [ ] `AGENTS.md`
 

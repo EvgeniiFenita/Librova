@@ -20,7 +20,7 @@ Copy this template to `.agent/plans/<task-name>.md` and fill in the sections.
 What is in scope. What is explicitly out of scope.
 
 ## Why It Matters
-Why this task closes a real backlog gap (link to the relevant item in `docs/Librova-Backlog.md`).
+Why this task closes a real backlog gap (reference the backlog item id, e.g. `python scripts/backlog.py show <id>`).
 
 ## Steps
 
@@ -42,7 +42,7 @@ Concrete, verifiable criteria. Examples:
 - docs/ updated to match implemented reality
 
 ## Related Files
-- docs/Librova-Backlog.md (item: ...)
+- docs/backlog.yaml (item id: ...)
 - docs/Librova-Architecture.md (section: ...)
 ```
 
@@ -59,7 +59,7 @@ parser output → persistence → transport contracts → browser filter → det
 Out of scope: ratings, shelves, reading lists.
 
 ## Why It Matters
-Closes the open "series and genres" backlog item in docs/Librova-Backlog.md.
+Closes the open "series and genres" backlog item (see `python scripts/backlog.py show <id>`).
 
 ## Steps
 
@@ -85,6 +85,6 @@ Closes the open "series and genres" backlog item in docs/Librova-Backlog.md.
 - Manual UI scenario walked through
 
 ## Related Files
-- docs/Librova-Backlog.md (open item: series and genres)
+- docs/backlog.yaml (open item: series and genres)
 - docs/Librova-Architecture.md (Section 5: Search Model)
 ```

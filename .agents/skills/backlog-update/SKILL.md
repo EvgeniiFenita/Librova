@@ -5,106 +5,88 @@ description: "Guide for all backlog management operations in Librova: adding new
 
 # Backlog Management Playbook
 
-Two files make up the Librova backlog:
+## Storage layout
 
-- `docs/Librova-Backlog.md` — active tasks only: status `Open`, `Needs Reproduction`, or `Blocked`
-- `docs/Librova-Backlog-Archive.md` — all `Closed` tasks, organized by priority section
+Two YAML files make up the Librova backlog:
+
+- `docs/backlog.yaml` — active tasks: status `Open`, `Needs Reproduction`, or `Blocked`
+- `docs/backlog-archive.yaml` — all `Closed` tasks
+
+A CLI tool manages both files. **Never edit the YAML directly.** Always go through `scripts/backlog.py`.
 
 ---
 
-## Task Format
+## Task schema
 
-Every task entry is four required lines plus one optional line:
+```yaml
+id:        <integer>          # assigned automatically by CLI
+summary:   <string>           # one-line description
+status:    Open | Needs Reproduction | Blocked
+type:      Feature | Bug
+priority:  Critical | Major | Minor | Low
+milestone: "1.0" | "1.1" | unscheduled   # optional; omit only when deliberately undefined
+note:      <string>           # context or one-sentence completion summary
+```
+
+**Field order in YAML**: `id` → `summary` → `status` → `type` → `priority` → `milestone` → `note`
+
+---
+
+## CLI reference
+
+All commands are run from the **repository root**:
 
 ```
-- `#<id>` <summary>
-  - Status: `<status>`
-  - Type: `<type>`
-  - Milestone: `<version>`
-  - Note: <note text>
+python scripts/backlog.py <command> [options]
 ```
 
-**Status values**: `Open` · `Needs Reproduction` · `Blocked` · `Closed`  
-**Type values**: `Feature` · `Bug`  
-**Milestone values**: a version string such as `1.0` or `1.1`, or the literal `unscheduled`  
-**Priority sections** (used in both files): `Critical` → `Major` → `Minor` → `Low`
+| Command | Purpose |
+|---------|---------|
+| `list` | Show open backlog, optionally filtered |
+| `show <id>` | Full details for one task (searches archive too) |
+| `add` | Create a new task |
+| `close <id> --note="…"` | Move task to archive with a completion note |
+| `edit <id>` | Update fields on an open task |
+| `next [--milestone=<m>]` | Pick the highest-priority open task |
+| `validate` | Run integrity checks on both files |
 
-`Milestone` is optional. When omitted, the task is treated as `unscheduled`. When present, it must appear between `Type` and `Note`.
+### Common options
 
----
-
-## Choosing the Next Task
-
-When the user says "next task" or "take the next task":
-
-1. Filter to `Open` tasks whose `Milestone` matches the current active release (e.g. `1.0`).
-2. Among those, pick the highest-priority one: `Critical` → `Major` → `Minor` → `Low`.
-3. If no tasks with the current milestone remain, fall back to `unscheduled` tasks in the same priority order.
-4. Never pick tasks milestoned to a future release (e.g. `1.1`) while the current release is still open.
-5. If the top candidate is `Needs Reproduction` or `Blocked`, skip it and take the next qualifying task.
-6. Among equal-priority tasks, prefer the most local and easiest-to-verify one first.
-
----
-
-## 1. Adding a New Task
-
-- [ ] Read `Last assigned id: #N` from `docs/Librova-Backlog.md`.
-- [ ] Use N+1 as the new task id; update `Last assigned id` to N+1 in the same change.
-- [ ] Choose priority: `Critical` / `Major` / `Minor` / `Low` (see Priority Guide below).
-- [ ] Choose type: `Feature` (new capability or improvement) / `Bug` (deviation from expected behavior).
-- [ ] Choose milestone: assign the target release version (`1.0`, `1.1`, …) or `unscheduled` if not yet decided. Omit the field entirely only for tasks where milestone is deliberately undefined.
-- [ ] Insert the entry in the correct priority subsection under `## 3. Open Backlog`.
-- [ ] Write a `Note` that explains context or acceptance criteria concisely.
+```
+--priority=Critical|Major|Minor|Low
+--status=Open|Blocked|Needs\ Reproduction
+--type=Feature|Bug
+--milestone=1.1          # or: unscheduled
+--summary="…"
+--note="…"
+```
 
 ---
 
-## 2. Taking a Task Into Work
+## Choosing the next task
 
-- Do **not** move, duplicate, or rename the task entry yet.
-- Keep it in `Open Backlog` with its current status.
-- If reprioritization is intentional, move it to a different priority section in the same change and update the Note to explain the reason.
+```
+python scripts/backlog.py next --milestone=1.1
+```
 
----
-
-## 3. Closing a Task
-
-**The close operation is EXACTLY three steps, in this order. Do not skip or reorder.**
-
-**Step 1 — Prepare the closed entry** (do this in memory, not yet in any file):
-- Write a one-sentence `Note` summarizing what was actually done (no file-by-file detail).
-- Set `Status` to `Closed`.
-- Keep all other fields (`Type`, `Milestone`) unchanged.
-
-**Step 2 — Append to archive FIRST** (write to `docs/Librova-Backlog-Archive.md`):
-- Append the full closed entry (title + all sub-fields) to the matching priority section (`### Critical` / `### Major` / `### Minor` / `### Low`).
-- Preserve the `Milestone` field.
-
-**Step 3 — Delete from open backlog** (write to `docs/Librova-Backlog.md`):
-- Remove the ENTIRE entry — title line and all sub-field lines — from `docs/Librova-Backlog.md`.
-- ⚠️ **Do NOT just change the status to `Closed` and leave the entry in place. The entry must be physically deleted from this file.**
-- ⚠️ **Do NOT leave the entry in `docs/Librova-Backlog.md` with `Status: Closed`. That is an invalid state.**
-
-**Immediate verification after close:**
-- [ ] `grep "#<id>" docs/Librova-Backlog.md` returns no results.
-- [ ] `grep "#<id>" docs/Librova-Backlog-Archive.md` returns exactly one result.
+When `--milestone` is given the tool prefers tasks matching that milestone, falls back to `unscheduled`, then ignores milestone and sorts purely by priority. Within a priority tier tasks are ordered by id (oldest first). Tasks with status `Blocked` or `Needs Reproduction` are treated as Open by the tool — skip them manually if needed and pick the next one.
 
 ---
 
-## 4. Validation Checklist
+## Adding a new task
 
-After any backlog edit, confirm all of the following:
+```
+python scripts/backlog.py add \
+  --summary="short one-line description" \
+  --type=Feature \
+  --priority=Major \
+  --milestone=1.1 \
+  --note="context or acceptance criteria"
+```
 
-- [ ] Every task has the required fields in the correct order: title line → `Status` → `Type` → `Note`. The optional `Milestone` field, when present, appears between `Type` and `Note`.
-- [ ] No orphan title-only lines without the required sub-fields.
-- [ ] No id appears in both `Librova-Backlog.md` and `Librova-Backlog-Archive.md`.
-- [ ] `Last assigned id` in `Librova-Backlog.md` equals the highest id ever assigned across both files.
-- [ ] `Open Backlog` contains only tasks with status `Open`, `Needs Reproduction`, or `Blocked`.
-- [ ] Archive contains only tasks with status `Closed`.
-- [ ] `Milestone` values, when present, are one of: a version string (e.g. `1.0`, `1.1`) or the literal `unscheduled`.
+The CLI assigns the next id automatically and updates `meta.last_assigned_id`. Do not compute the id manually.
 
----
-
-## 5. Priority Guide
+**Priority guide**
 
 | Priority | When to use |
 |----------|-------------|
@@ -112,3 +94,68 @@ After any backlog edit, confirm all of the following:
 | `Major` | Strong UX or functional defect that noticeably hurts day-to-day use |
 | `Minor` | Local polish or visual consistency work; no broken flow |
 | `Low` | Useful but least urgent polish |
+
+---
+
+## Closing a task
+
+```
+python scripts/backlog.py close <id> --note="one sentence: what was actually done"
+```
+
+The tool performs the three steps in the required order:
+1. Builds the closed entry in memory.
+2. Appends it to `docs/backlog-archive.yaml`.
+3. Removes it from `docs/backlog.yaml`.
+
+Then it verifies the result: the id must be absent from the backlog and present exactly once in the archive. The command exits with a non-zero code if either check fails.
+
+**The note must describe what was done, not what the task said.** One sentence is enough.
+
+---
+
+## Editing an open task
+
+```
+python scripts/backlog.py edit <id> --status=Blocked --note="waiting on X"
+python scripts/backlog.py edit <id> --priority=Critical
+```
+
+Only the fields you pass are changed. All other fields are preserved.
+
+---
+
+## Validation
+
+```
+python scripts/backlog.py validate
+```
+
+Checks performed:
+- Every task has all required fields with valid enum values.
+- No id appears in both files.
+- `meta.last_assigned_id` equals the highest id across both files.
+- Archive contains only `Closed` tasks; backlog contains no `Closed` tasks.
+
+Run this after any manual intervention. The CI pipeline should run it on every push.
+
+---
+
+## Taking a task into work
+
+Do not change status to "In Progress" or similar — there is no such status. Keep the task `Open` and start working. If something blocks you, use:
+
+```
+python scripts/backlog.py edit <id> --status=Blocked --note="reason"
+```
+
+---
+
+## Done criteria
+
+A task may be closed only when:
+
+- The behaviour is actually changed in code.
+- Automated tests are added where practical.
+- Documentation is updated if user-visible behaviour or working rules changed.
+- The user confirms manual verification when the task involves UI or manual-test remarks.

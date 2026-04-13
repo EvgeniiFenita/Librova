@@ -24,7 +24,7 @@ Project documentation:
 
 - `docs/Librova-Product.md`
 - `docs/Librova-Architecture.md`
-- `docs/Librova-Backlog.md`
+- `docs/backlog.yaml` (active tasks; use `python scripts/backlog.py list`)
 
 ## Branch structure
 
