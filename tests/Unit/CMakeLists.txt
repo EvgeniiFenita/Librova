@@ -2,6 +2,7 @@ include(CTest)
 
 if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
+    find_package(Stb REQUIRED)
     include(Catch)
 
     add_executable(LibrovaCoreTests
@@ -58,7 +59,7 @@ if(BUILD_TESTING)
         TestDomainError.cpp
         TestDuplicateMatch.cpp
         TestVersion.cpp
-        TestWicCoverImageProcessor.cpp
+        TestStbCoverImageProcessor.cpp
         TestZipImportCoordinator.cpp
     )
 
@@ -72,7 +73,7 @@ if(BUILD_TESTING)
             LibrovaConverterCommand
             LibrovaConverterConfiguration
             LibrovaConverterRuntime
-            LibrovaCoverProcessingWic
+            LibrovaCoverProcessingStb
             LibrovaDomain
             LibrovaCore
             LibrovaCoreHost
@@ -104,6 +105,7 @@ if(BUILD_TESTING)
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)
+    target_include_directories(LibrovaCoreTests PRIVATE ${Stb_INCLUDE_DIR})
     target_compile_definitions(LibrovaCoreTests PRIVATE
         LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe"
         LIBROVA_TEST_CONFIGURATION="$<CONFIG>"

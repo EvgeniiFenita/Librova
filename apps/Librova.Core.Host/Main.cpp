@@ -19,7 +19,7 @@
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "ConverterRuntime/ExternalBookConverter.hpp"
-#include "CoverProcessingWic/WicCoverImageProcessor.hpp"
+#include "CoverProcessingStb/StbCoverImageProcessor.hpp"
 #include "Core/Version.hpp"
 #include "CoreHost/HostOptions.hpp"
 #include "CoreHost/LibraryBootstrap.hpp"
@@ -305,7 +305,7 @@ int main(int argc, char** argv)
 
         const auto* converterPtr =
             converter.has_value() ? static_cast<const Librova::Domain::IBookConverter*>(&*converter) : nullptr;
-        const Librova::CoverProcessingWic::CWicCoverImageProcessor coverImageProcessor;
+        const Librova::CoverProcessingStb::CStbCoverImageProcessor coverImageProcessor;
 
         const Librova::Importing::CSingleFileImportCoordinator singleFileImporter(
             parserRegistry,

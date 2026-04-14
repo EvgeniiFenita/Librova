@@ -1134,3 +1134,13 @@ tasks:
   milestone: '1.1'
   note: 'IsIsbnMatchCredible: убрана ветка author-only, добавлена двухуровневая проверка (exact title
     + stripped-title-with-author). 3 новых теста. 374/374 проходят.'
+- id: 65
+  summary: convert all managed covers to JPEG at import time and replace the Windows-only WIC backend
+    with a cross-platform library
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: Replaced WIC cover processor with stb (stb_image + stb_image_resize2 + stb_image_write); always
+    outputs JPEG, handles progressive JPEG and RGBA alpha compositing; 8 unit tests added; all 379 tests
+    pass.

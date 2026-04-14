@@ -151,21 +151,6 @@ tasks:
     reverts to its generated placeholder.
 
     '
-- id: 65
-  summary: convert all managed covers to JPEG at import time and replace the Windows-only WIC backend
-    with a cross-platform library
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.1'
-  note: 'the existing cover processor already resizes and applies JPEG encoding with a fixed quality value,
-    but PNG source covers are stored as uncompressed PNG; extend the pipeline to always output JPEG so
-    cover storage is consistently compact; replace the WIC/COM backend with a cross-platform library available
-    through vcpkg (e.g., stb_image + stb_image_write or libjpeg-turbo) so this slice is no longer Windows-only,
-    directly addressing the platform isolation goal of task #62; JPEG quality and maximum cover dimensions
-    should be surfaced as configurable parameters rather than compile-time constants.
-
-    '
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open

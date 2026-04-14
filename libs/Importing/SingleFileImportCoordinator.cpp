@@ -252,11 +252,15 @@ bool IsCancellationRequested(
             return "unknown";
         }();
 
+        const std::string_view reason = processingResult.DiagnosticMessage.empty()
+            ? std::string_view("(no diagnostic message from processor)")
+            : std::string_view(processingResult.DiagnosticMessage);
+
         Librova::Logging::Warn(
             "Managed cover optimization skipped for '{}': status='{}' reason='{}' input_extension='{}' input_bytes={}",
             Librova::Unicode::PathToUtf8(sourcePath),
             statusLabel,
-            processingResult.DiagnosticMessage,
+            reason,
             sourceCover.Extension,
             sourceCover.Bytes.size());
     }

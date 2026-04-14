@@ -14,7 +14,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaBookDatabase
         LibrovaConverterConfiguration
         LibrovaConverterRuntime
-        LibrovaCoverProcessingWic
+        LibrovaCoverProcessingStb
         LibrovaCore
         LibrovaCoreHost
         LibrovaDatabaseRuntime

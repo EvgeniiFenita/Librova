@@ -8,6 +8,7 @@
     "protobuf",
     "pugixml",
     "spdlog",
+    "stb",
     "zlib",
     {
       "name": "sqlite3",
