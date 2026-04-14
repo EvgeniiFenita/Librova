@@ -53,6 +53,12 @@ std::string ReplaceEncodingDeclaration(std::string text)
     replaceIfPresent(R"(encoding='windows-1251')", R"(encoding='utf-8')");
     replaceIfPresent(R"(encoding="cp1251")", R"(encoding="utf-8")");
     replaceIfPresent(R"(encoding='cp1251')", R"(encoding='utf-8')");
+    replaceIfPresent(R"(encoding="utf-16le")", R"(encoding="utf-8")");
+    replaceIfPresent(R"(encoding='utf-16le')", R"(encoding='utf-8')");
+    replaceIfPresent(R"(encoding="utf-16be")", R"(encoding="utf-8")");
+    replaceIfPresent(R"(encoding='utf-16be')", R"(encoding='utf-8')");
+    replaceIfPresent(R"(encoding="utf-16")", R"(encoding="utf-8")");
+    replaceIfPresent(R"(encoding='utf-16')", R"(encoding='utf-8')");
 
     text.replace(0, declarationEnd, declaration);
     return text;
@@ -208,6 +214,30 @@ std::string ReplaceEncodingDeclaration(std::string text)
     }
 
 #if defined(_WIN32)
+    // Step 1b — UTF-16 LE (BOM: FF FE): files from tools that save FB2 in UTF-16.
+    if (text.size() >= 2
+        && static_cast<unsigned char>(text[0]) == 0xFFu
+        && static_cast<unsigned char>(text[1]) == 0xFEu)
+    {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Info("FB2 file is UTF-16 LE — converting to UTF-8: {}", pathUtf8);
+        }
+        return ReplaceEncodingDeclaration(Librova::Unicode::Utf16LeToUtf8(text.data(), text.size()));
+    }
+
+    // Step 1c — UTF-16 BE (BOM: FE FF).
+    if (text.size() >= 2
+        && static_cast<unsigned char>(text[0]) == 0xFEu
+        && static_cast<unsigned char>(text[1]) == 0xFFu)
+    {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Info("FB2 file is UTF-16 BE — converting to UTF-8: {}", pathUtf8);
+        }
+        return ReplaceEncodingDeclaration(Librova::Unicode::Utf16BeToUtf8(text.data(), text.size()));
+    }
+
     const auto lowerPrefix = [](std::string value) {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
             return static_cast<char>(std::tolower(ch));

@@ -175,7 +175,7 @@ internal sealed class ImportJobsService : IImportJobsService
 
                 if (statusChanged || messageChanged || heartbeatDue)
                 {
-                    UiLogging.Information(
+                    UiLogging.Debug(
                         "Import job in progress. JobId={JobId} Status={Status} Percent={Percent} " +
                         "Imported={Imported} Failed={Failed} Skipped={Skipped} Message={Message}",
                         jobId,

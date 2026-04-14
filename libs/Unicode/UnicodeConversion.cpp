@@ -1,5 +1,6 @@
 #include "Unicode/UnicodeConversion.hpp"
 
+#include <cstring>
 #include <stdexcept>
 
 #ifdef _WIN32
@@ -218,6 +219,45 @@ std::wstring Utf8ToWide(const std::string_view value)
     }
 
     return wideValue;
+}
+
+std::string Utf16LeToUtf8(const void* const data, const std::size_t byteCount)
+{
+    const auto* bytes = static_cast<const char*>(data);
+    std::size_t offset = 0;
+    if (byteCount >= 2
+        && static_cast<unsigned char>(bytes[0]) == 0xFFu
+        && static_cast<unsigned char>(bytes[1]) == 0xFEu)
+    {
+        offset = 2;
+    }
+    const std::size_t wcharCount = (byteCount - offset) / sizeof(wchar_t);
+    std::wstring wideData(wcharCount, L'\0');
+    if (wcharCount > 0)
+        std::memcpy(wideData.data(), bytes + offset, wcharCount * sizeof(wchar_t));
+    return WideToUtf8(wideData);
+}
+
+std::string Utf16BeToUtf8(const void* const data, const std::size_t byteCount)
+{
+    const auto* bytes = static_cast<const char*>(data);
+    std::size_t offset = 0;
+    if (byteCount >= 2
+        && static_cast<unsigned char>(bytes[0]) == 0xFEu
+        && static_cast<unsigned char>(bytes[1]) == 0xFFu)
+    {
+        offset = 2;
+    }
+    const std::size_t wcharCount = (byteCount - offset) / 2;
+    std::wstring wideData;
+    wideData.reserve(wcharCount);
+    for (std::size_t i = 0; i < wcharCount; ++i)
+    {
+        const auto hi = static_cast<unsigned char>(bytes[offset + i * 2]);
+        const auto lo = static_cast<unsigned char>(bytes[offset + i * 2 + 1]);
+        wideData += static_cast<wchar_t>((static_cast<unsigned>(hi) << 8u) | lo);
+    }
+    return WideToUtf8(wideData);
 }
 #endif
 

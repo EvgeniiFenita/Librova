@@ -21,6 +21,8 @@ namespace Librova::Unicode {
 #ifdef _WIN32
 [[nodiscard]] std::string WideToUtf8(std::wstring_view value);
 [[nodiscard]] std::wstring Utf8ToWide(std::string_view value);
+[[nodiscard]] std::string Utf16LeToUtf8(const void* data, std::size_t byteCount);
+[[nodiscard]] std::string Utf16BeToUtf8(const void* data, std::size_t byteCount);
 #endif
 
 } // namespace Librova::Unicode

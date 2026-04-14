@@ -439,6 +439,141 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"Шпионский Детектив",        "Espionage"},
     {"языкознание",               "Linguistics"},
     {"Проза",                     "Prose"},
+
+    // Codes seen ≥ 5 times in import logs that had no prior mapping
+    // Prose & Narrative
+    {"story",               "Short Stories"},
+    {"great_story",         "Novella"},
+    {"roman",               "Novel"},
+    {"essay",               "Essays"},
+    {"unfinished",          "Unfinished Works"},
+    {"prose_abs",           "Absurdist Prose"},
+    {"prose_sentimental",   "Sentimental Prose"},
+    {"prose_game",          "Game-Inspired Prose"},
+    {"modern_tale",         "Modern Fairy Tales"},
+    {"notes",               "Notes & Essays"},
+
+    // Poetry, Drama & Theatre
+    {"drama",               "Drama"},
+    {"comedy",              "Comedy"},
+    {"tragedy",             "Tragedy"},
+    {"theatre",             "Theatre"},
+    {"screenplays",         "Screenplays"},
+    {"lyrics",              "Song Lyrics & Poetry"},
+    {"song_poetry",         "Song Poetry"},
+    {"poetry_modern",       "Modern Poetry"},
+    {"folk_songs",          "Folk Songs"},
+
+    // Science Fiction variants
+    {"sf_all",              "Science Fiction"},
+    {"sf_space_opera",      "Space Opera"},
+    {"sf_fantasy_irony",    "Humorous Fantasy"},
+    {"sci-fi",              "Science Fiction"},
+    {"nsf",                 "Science Fiction"},
+    {"fantasy",             "Fantasy"},
+    {"dragon_fantasy",      "Dragon Fantasy"},
+    {"gothic_novel",        "Gothic Fiction"},
+    {"litrpg",              "LitRPG"},
+
+    // Detective & Thriller variants
+    {"det_cozy",            "Cozy Mysteries"},
+    {"det_su",              "Soviet-Era Detectives"},
+    {"det_all",             "Detectives"},
+    {"foreign_detective",   "Foreign Detectives"},
+    {"thriller_legal",      "Legal Thrillers"},
+    {"thriller_medical",    "Medical Thrillers"},
+    {"thriller_techno",     "Techno-Thriller"},
+
+    // Romance variants
+    {"love_hard",           "Erotic Romance"},
+    {"love_all",            "Romance"},
+
+    // Adventure variants
+    {"adv_all",             "Adventure"},
+    {"adv_modern",          "Modern Adventure"},
+    {"adv_story",           "Adventure Stories"},
+
+    // Arts & Visual
+    {"visual_arts",         "Visual Arts"},
+    {"painting",            "Painting & Visual Arts"},
+    {"art_world_culture",   "World Arts & Culture"},
+    {"comics",              "Comics & Graphic Novels"},
+
+    // Science & Education
+    {"sci_pedagogy",        "Pedagogy"},
+    {"sci_cosmos",          "Astronomy & Cosmology"},
+    {"sci_textbook",        "Textbooks"},
+    {"sci_theories",        "Scientific Theories"},
+    {"sci_ecology",         "Ecology"},
+    {"sci_zoo",             "Zoology"},
+    {"sci_botany",          "Botany"},
+    {"sci_radio",           "Radio & Electronics"},
+    {"sci_oriental",        "Oriental Studies"},
+    {"foreign_psychology",  "Psychology"},
+    {"foreign_language",    "Foreign Languages"},
+    {"tbg_higher",          "Higher Education"},
+    {"tbg_secondary",       "Secondary Education"},
+    {"equ_history",         "History"},
+
+    // Travel & Geography
+    {"geo_guides",          "Travel Guides"},
+    {"travel_notes",        "Travel Notes"},
+
+    // Humor
+    {"humor_satire",        "Satire & Humor"},
+    {"humor_all",           "Humor"},
+
+    // Young Adult
+    {"ya",                  "Young Adult"},
+
+    // Literature by period
+    {"literature_20",       "20th Century Literature"},
+
+    // Military
+    {"military",            "Military"},
+    {"military_arts",       "Martial Arts"},
+    {"military_weapon",     "Military Technology"},
+
+    // Religion variants
+    {"religion_islam",      "Islam"},
+    {"religion_catholicism","Catholicism"},
+    {"religion_hinduism",   "Hinduism"},
+    {"religion_protestantism","Protestantism"},
+    {"religion_all",        "Religion"},
+
+    // Non-Fiction umbrella
+    {"nonf_all",            "Non-Fiction"},
+
+    // Business & Finance
+    {"accounting",          "Accounting"},
+    {"small_business",      "Small Business"},
+    {"job_hunting",         "Career & Job Search"},
+
+    // Esotericism
+    {"astrology",           "Astrology"},
+
+    // Home & Foreign
+    {"foreign_home",        "Home & Family"},
+
+    // Historical fiction / sagas
+    {"sagas",               "Sagas"},
+    {"dissident",           "Dissident Literature"},
+
+    // Fanfiction genre tags (community-specific)
+    {"POV",                 "Fanfiction"},
+    {"AU",                  "Fanfiction"},
+    {"PWP",                 "Fanfiction"},
+    {"Первый раз",          "Fanfiction"},
+
+    // Cyrillic community free-form tags (≥ 5 occurrences)
+    {"Попаданцы",           "Isekai / Portal Fantasy"},
+    {"Юмор",                "Humor"},
+    {"Мифические существа", "Mythical Creatures"},
+    {"Мистика",             "Mystic & Supernatural"},
+    {"Романтика",           "Romance"},
+    {"Фантастика",          "Science Fiction"},
+    {"Стёб",                "Parody & Satire"},
+    {"folklore",            "Folklore"},
 };
 // clang-format on
 

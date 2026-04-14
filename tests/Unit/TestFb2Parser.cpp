@@ -576,3 +576,82 @@ TEST_CASE("FB2 parser preserves unknown token as-is when splitting comma-concate
     // Known code resolves to display name; unknown code is stored as-is (raw).
     REQUIRE(result.Metadata.GenresUtf8 == std::vector<std::string>{"Horror & Mystic", "unknown_community_code"});
 }
+
+#ifdef _WIN32
+TEST_CASE("FB2 parser handles UTF-16 LE encoded file", "[fb2-parsing]")
+{
+    // Simulates lib.rus.ec files that begin with 0xFF 0xFE BOM and contain raw UTF-16 LE bytes.
+    // pugixml receives raw UTF-16 and fails with "Could not determine tag type" without this fix.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-utf16le");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "utf16le.fb2";
+
+    const std::wstring wideContent =
+        L"<?xml version=\"1.0\" encoding=\"utf-16\"?>\n"
+        L"<FictionBook>\n"
+        L"  <description>\n"
+        L"    <title-info>\n"
+        L"      <book-title>\u041F\u0438\u043A\u043D\u0438\u043A \u043D\u0430 \u043E\u0431\u043E\u0447\u0438\u043D\u0435</book-title>\n"
+        L"      <author>\n"
+        L"        <first-name>\u0410\u0440\u043A\u0430\u0434\u0438\u0439</first-name>\n"
+        L"        <last-name>\u0421\u0442\u0440\u0443\u0433\u0430\u0446\u043A\u0438\u0439</last-name>\n"
+        L"      </author>\n"
+        L"      <lang>ru</lang>\n"
+        L"    </title-info>\n"
+        L"  </description>\n"
+        L"</FictionBook>";
+
+    std::string bytes;
+    bytes += '\xFF';
+    bytes += '\xFE';
+    const auto* wideBytes = reinterpret_cast<const char*>(wideContent.data());
+    bytes.append(wideBytes, wideContent.size() * sizeof(wchar_t));
+
+    WriteTextFile(fb2Path, bytes);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>{"Аркадий Стругацкий"});
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+
+TEST_CASE("FB2 parser handles UTF-16 BE encoded file", "[fb2-parsing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-utf16be");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "utf16be.fb2";
+
+    const std::wstring wideContent =
+        L"<?xml version=\"1.0\" encoding=\"utf-16be\"?>\n"
+        L"<FictionBook>\n"
+        L"  <description>\n"
+        L"    <title-info>\n"
+        L"      <book-title>\u0410\u043D\u0434\u0440\u043E\u043C\u0435\u0434\u0430</book-title>\n"
+        L"      <author>\n"
+        L"        <first-name>\u0418\u0432\u0430\u043D</first-name>\n"
+        L"        <last-name>\u0415\u0444\u0440\u0435\u043C\u043E\u0432</last-name>\n"
+        L"      </author>\n"
+        L"      <lang>ru</lang>\n"
+        L"    </title-info>\n"
+        L"  </description>\n"
+        L"</FictionBook>";
+
+    std::string bytes;
+    bytes += '\xFE';
+    bytes += '\xFF';
+    for (const wchar_t wc : wideContent)
+    {
+        bytes += static_cast<char>((static_cast<unsigned>(wc) >> 8u) & 0xFFu);
+        bytes += static_cast<char>(static_cast<unsigned>(wc) & 0xFFu);
+    }
+
+    WriteTextFile(fb2Path, bytes);
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(fb2Path);
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Андромеда");
+    REQUIRE(parsedBook.Metadata.AuthorsUtf8 == std::vector<std::string>{"Иван Ефремов"});
+    REQUIRE(parsedBook.Metadata.Language == "ru");
+}
+#endif

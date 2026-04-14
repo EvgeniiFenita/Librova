@@ -1095,3 +1095,26 @@ tasks:
   note: Added generic Lockout CSS class (IsEnabled=False + Opacity=0.4); applied to sidebar branding+nav
     section and ImportView page header; anti-double-dim override for NavItem:disabled inside Lockout;
     UiDesignSystem.md updated.
+- id: 138
+  summary: add UTF-16 LE/BE support to FB2 parser
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Added Utf16LeToUtf8 / Utf16BeToUtf8 in UnicodeConversion.cpp; BOM detection added in ReadTextFile
+    before CP1251 steps; ReplaceEncodingDeclaration handles utf-16/utf-16le/utf-16be; tests added in TestFb2Parser.cpp
+- id: 139
+  summary: reduce ui.log polling noise by moving heartbeat log to Debug level
+  status: Closed
+  type: Bug
+  priority: Minor
+  milestone: '1.1'
+  note: Changed UiLogging.Information to UiLogging.Debug for the Import job in progress heartbeat in ImportJobsService.WaitForCompletionAsync
+- id: 140
+  summary: expand Fb2GenreMapper with 92 high-frequency unmapped genre codes
+  status: Closed
+  type: Bug
+  priority: Minor
+  milestone: '1.1'
+  note: Added 92 genre codes (prose, drama, SF variants, detective, religion, arts, education, Cyrillic
+    community tags, fanfiction tags) to Fb2GenreMapper.cpp with assertions in TestFb2GenreMapper.cpp
