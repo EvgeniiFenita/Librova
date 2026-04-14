@@ -829,28 +829,73 @@ std::vector<std::string> SplitAndNormalizeAuthors(const std::string& authorsStr)
     return result;
 }
 
-// Returns true when an ISBN match is credible — i.e. the candidate shares
-// a title or at least one author with the existing book.
-// Without this guard, anthology ISBNs (shared across all stories in the
-// collection by lib.rus.ec) produce a false positive for every story.
+// Strips bracket annotations such as "[litres]", "[с иллюстрациями]", "[сборник]" from
+// an already-normalized (lowercase, whitespace-collapsed) title, then trims trailing
+// punctuation.  Used to compare the "core" of titles that differ only in source annotations.
+[[nodiscard]] std::string StripTitleAnnotations(const std::string& normalizedTitle)
+{
+    std::string result;
+    result.reserve(normalizedTitle.size());
+    int depth = 0;
+    for (const char ch : normalizedTitle)
+    {
+        if (ch == '[') { ++depth; continue; }
+        if (ch == ']') { if (depth > 0) --depth; continue; }
+        if (depth == 0) result.push_back(ch);
+    }
+    // Trim trailing punctuation and spaces that may have been left adjacent to a bracket.
+    while (!result.empty() && (result.back() == ' ' || result.back() == '.'
+            || result.back() == ',' || result.back() == '!' || result.back() == '?'
+            || result.back() == ':' || result.back() == ';'))
+    {
+        result.pop_back();
+    }
+    // Trim leading spaces.
+    const std::size_t first = result.find_first_not_of(' ');
+    if (first == std::string::npos)
+        return {};
+    if (first > 0)
+        result.erase(0, first);
+    return result;
+}
+
+// Returns true when an ISBN match is credible — i.e. the candidate is the same
+// book or a closely related edition of the existing book.
+//
+// Two-tier check:
+//   1. Exact normalized title match — strong evidence of the same work.
+//   2. Stripped title match (bracket annotations removed) + shared author —
+//      catches edition variants like "[litres]", "[с иллюстрациями]" and minor
+//      trailing punctuation differences while still requiring the same author.
+//
+// Author-only match (no title overlap) is intentionally NOT credible: anthology ISBNs
+// on lib.rus.ec are shared across every story in the collection, so same-author alone
+// would block all 40+ individual Bunin stories when only one is already in the library.
 [[nodiscard]] bool IsIsbnMatchCredible(
     const Librova::Domain::SCandidateBook& candidate,
     const Librova::Domain::SDuplicateMatch& match)
 {
-    const std::string candidateNormalizedTitle = Librova::Domain::NormalizeText(candidate.Metadata.TitleUtf8);
-    const std::string existingNormalizedTitle  = Librova::Domain::NormalizeText(match.ExistingTitle);
+    const std::string candidateNormalized = Librova::Domain::NormalizeText(candidate.Metadata.TitleUtf8);
+    const std::string existingNormalized  = Librova::Domain::NormalizeText(match.ExistingTitle);
 
-    if (candidateNormalizedTitle == existingNormalizedTitle)
+    // Tier 1: exact normalized title.
+    if (candidateNormalized == existingNormalized)
         return true;
 
-    const std::vector<std::string> existingAuthors = SplitAndNormalizeAuthors(match.ExistingAuthors);
-    for (const std::string& author : candidate.Metadata.AuthorsUtf8)
+    // Tier 2: same core title (annotations stripped) + shared author.
+    const std::string candidateStripped = StripTitleAnnotations(candidateNormalized);
+    const std::string existingStripped  = StripTitleAnnotations(existingNormalized);
+
+    if (!candidateStripped.empty() && candidateStripped == existingStripped)
     {
-        if (author.empty())
-            continue;
-        const std::string normalizedAuthor = Librova::Domain::NormalizeText(author);
-        if (!normalizedAuthor.empty())
+        const std::vector<std::string> existingAuthors = SplitAndNormalizeAuthors(match.ExistingAuthors);
+        for (const std::string& author : candidate.Metadata.AuthorsUtf8)
         {
+            if (author.empty())
+                continue;
+            const std::string normalizedAuthor = Librova::Domain::NormalizeText(author);
+            if (normalizedAuthor.empty())
+                continue;
             for (const std::string& existingAuthor : existingAuthors)
             {
                 if (normalizedAuthor == existingAuthor)

@@ -1118,3 +1118,19 @@ tasks:
   milestone: '1.1'
   note: Added 92 genre codes (prose, drama, SF variants, detective, religion, arts, education, Cyrillic
     community tags, fanfiction tags) to Fb2GenreMapper.cpp with assertions in TestFb2GenreMapper.cpp
+- id: 141
+  summary: Analyse SameIsbn duplicate false positives from lib.rus.ec import
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: 'Проанализированы все 1086 SameIsbn-случаев из host.log: 484 корректных дублей, 553 ложных позитива
+    по автору (316 edition-варианты с [litres], 237 антологии), 49 оба отличаются.'
+- id: 142
+  summary: Fix IsIsbnMatchCredible to not block anthology stories by same author
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: 'IsIsbnMatchCredible: убрана ветка author-only, добавлена двухуровневая проверка (exact title
+    + stripped-title-with-author). 3 новых теста. 374/374 проходят.'
