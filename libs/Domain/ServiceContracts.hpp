@@ -5,6 +5,7 @@
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "Domain/Book.hpp"
@@ -18,6 +19,7 @@ struct SParsedBook
     EBookFormat SourceFormat = EBookFormat::Epub;
     std::optional<std::string> CoverExtension;
     std::vector<std::byte> CoverBytes;
+    std::optional<std::string> CoverDiagnosticMessage;
 
     [[nodiscard]] bool HasCover() const noexcept
     {
@@ -175,7 +177,9 @@ public:
     virtual ~IBookParser() = default;
 
     virtual bool CanParse(EBookFormat format) const = 0;
-    virtual SParsedBook Parse(const std::filesystem::path& filePath) const = 0;
+    virtual SParsedBook Parse(
+        const std::filesystem::path& filePath,
+        std::string_view logicalSourceLabel = {}) const = 0;
 };
 
 class IBookConverter

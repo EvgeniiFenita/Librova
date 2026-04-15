@@ -13,6 +13,7 @@ using Xunit;
 
 namespace Librova.UI.Tests;
 
+[Collection(UiLoggingCollection.Name)]
 public sealed class ViewModelsTests
 {
     [Fact]

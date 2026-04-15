@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <optional>
@@ -36,6 +37,7 @@ struct SImportRequest
     std::vector<std::filesystem::path> SourcePaths;
     std::filesystem::path WorkingDirectory;
     std::optional<std::string> Sha256Hex;
+    std::uint64_t JobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
 

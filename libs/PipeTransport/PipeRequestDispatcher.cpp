@@ -1,8 +1,62 @@
 #include "PipeTransport/PipeRequestDispatcher.hpp"
 
+#include <chrono>
 #include <google/protobuf/message_lite.h>
 
+#include "Logging/Logging.hpp"
+
 namespace Librova::PipeTransport {
+
+namespace {
+
+[[nodiscard]] const char* PipeMethodLabel(const EPipeMethod method) noexcept
+{
+    switch (method)
+    {
+    case EPipeMethod::StartImport:
+        return "StartImport";
+    case EPipeMethod::ListBooks:
+        return "ListBooks";
+    case EPipeMethod::GetBookDetails:
+        return "GetBookDetails";
+    case EPipeMethod::ExportBook:
+        return "ExportBook";
+    case EPipeMethod::MoveBookToTrash:
+        return "MoveBookToTrash";
+    case EPipeMethod::GetImportJobSnapshot:
+        return "GetImportJobSnapshot";
+    case EPipeMethod::GetImportJobResult:
+        return "GetImportJobResult";
+    case EPipeMethod::WaitImportJob:
+        return "WaitImportJob";
+    case EPipeMethod::ValidateImportSources:
+        return "ValidateImportSources";
+    case EPipeMethod::CancelImportJob:
+        return "CancelImportJob";
+    case EPipeMethod::RemoveImportJob:
+        return "RemoveImportJob";
+    default:
+        return "Unknown";
+    }
+}
+
+[[nodiscard]] bool LogSuccessfulDispatchAtInfo(
+    const EPipeMethod method,
+    const std::chrono::milliseconds elapsed) noexcept
+{
+    if (elapsed >= std::chrono::milliseconds{500})
+    {
+        return true;
+    }
+
+    return method == EPipeMethod::StartImport
+        || method == EPipeMethod::ValidateImportSources
+        || method == EPipeMethod::GetImportJobResult
+        || method == EPipeMethod::CancelImportJob
+        || method == EPipeMethod::RemoveImportJob;
+}
+
+} // namespace
 
 CPipeRequestDispatcher::CPipeRequestDispatcher(Librova::ProtoServices::CLibraryJobServiceAdapter& adapter)
     : m_adapter(adapter)
@@ -93,9 +147,17 @@ SPipeResponseEnvelope CPipeRequestDispatcher::DispatchTyped(
     const SPipeRequestEnvelope& request,
     TCallback&& callback) const
 {
+    const auto startedAt = std::chrono::steady_clock::now();
     TRequest typedRequest;
     if (!typedRequest.ParseFromString(request.Payload))
     {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Warn(
+                "IPC dispatch rejected. RequestId={} Method={} Status=InvalidRequest",
+                request.RequestId,
+                PipeMethodLabel(request.Method));
+        }
         return {
             .RequestId = request.RequestId,
             .Status = EPipeResponseStatus::InvalidRequest,
@@ -110,6 +172,14 @@ SPipeResponseEnvelope CPipeRequestDispatcher::DispatchTyped(
     }
     catch (const std::exception& exception)
     {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Error(
+                "IPC dispatch failed. RequestId={} Method={} Status=InternalError Reason='{}'",
+                request.RequestId,
+                PipeMethodLabel(request.Method),
+                exception.what());
+        }
         return {
             .RequestId = request.RequestId,
             .Status = EPipeResponseStatus::InternalError,
@@ -120,11 +190,40 @@ SPipeResponseEnvelope CPipeRequestDispatcher::DispatchTyped(
     std::string payload;
     if (!typedResponse.SerializeToString(&payload))
     {
+        if (Librova::Logging::CLogging::IsInitialized())
+        {
+            Librova::Logging::Error(
+                "IPC dispatch failed. RequestId={} Method={} Status=InternalError Reason='response-serialization-failed'",
+                request.RequestId,
+                PipeMethodLabel(request.Method));
+        }
         return {
             .RequestId = request.RequestId,
             .Status = EPipeResponseStatus::InternalError,
             .ErrorMessage = "Failed to serialize protobuf response payload."
         };
+    }
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startedAt);
+        if (LogSuccessfulDispatchAtInfo(request.Method, elapsed))
+        {
+            Librova::Logging::Info(
+                "IPC dispatch completed. RequestId={} Method={} Status=Ok ElapsedMs={}",
+                request.RequestId,
+                PipeMethodLabel(request.Method),
+                elapsed.count());
+        }
+        else
+        {
+            Librova::Logging::Debug(
+                "IPC dispatch completed. RequestId={} Method={} Status=Ok ElapsedMs={}",
+                request.RequestId,
+                PipeMethodLabel(request.Method),
+                elapsed.count());
+        }
     }
 
     return {

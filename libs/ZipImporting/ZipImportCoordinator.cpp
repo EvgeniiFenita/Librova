@@ -102,6 +102,7 @@ namespace {
 }
 
 void LogZipEntryIssueIfInitialized(
+    const std::uint64_t jobId,
     const std::filesystem::path& zipPath,
     const std::filesystem::path& entryPath,
     std::string_view stage,
@@ -118,8 +119,37 @@ void LogZipEntryIssueIfInitialized(
     const auto utf8EntryPath = Librova::Unicode::PathToUtf8(entryPath);
     if (outcome == "failed")
     {
-        Librova::Logging::Error(
-            "ZIP entry failed: archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+        if (jobId != 0)
+        {
+            Librova::Logging::Error(
+                "ZIP entry failed: job={} archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+                jobId,
+                utf8ZipPath,
+                utf8EntryPath,
+                stage,
+                outcome,
+                status,
+                reason);
+        }
+        else
+        {
+            Librova::Logging::Error(
+                "ZIP entry failed: archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+                utf8ZipPath,
+                utf8EntryPath,
+                stage,
+                outcome,
+                status,
+                reason);
+        }
+        return;
+    }
+
+    if (jobId != 0)
+    {
+        Librova::Logging::Warn(
+            "ZIP entry skipped: job={} archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
+            jobId,
             utf8ZipPath,
             utf8EntryPath,
             stage,
@@ -438,7 +468,7 @@ SZipImportResult CZipImportCoordinator::Run(
         throw std::invalid_argument("ZIP import request must contain archive path and working directory.");
     }
 
-    Librova::Importing::CImportPerfTracker ownedPerf;
+    Librova::Importing::CImportPerfTracker ownedPerf(request.JobId);
     auto& perf = request.PerfTracker.has_value() ? request.PerfTracker->get() : ownedPerf;
     const bool shouldLogSummary = !request.PerfTracker.has_value();
 
@@ -456,10 +486,51 @@ SZipImportResult CZipImportCoordinator::Run(
 
     CZipArchive archive(request.ZipPath);
     const zip_uint64_t entryCount = static_cast<zip_uint64_t>(archive.GetEntryCount());
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        if (request.JobId != 0)
+        {
+            Librova::Logging::Info(
+                "zip: scan start job={} archive='{}' raw_entry_count={}",
+                request.JobId,
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                entryCount);
+        }
+        else
+        {
+            Librova::Logging::Info(
+                "zip: scan start archive='{}' raw_entry_count={}",
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                entryCount);
+        }
+    }
+
     const std::size_t totalEntries = [&] {
         auto scanMeasure = perf.MeasureStage(Librova::Importing::CImportPerfTracker::EStage::ZipScan);
         return ::CountPlannedEntries(archive, &progressSink, stopToken);
     }();
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        if (request.JobId != 0)
+        {
+            Librova::Logging::Info(
+                "zip: scan done job={} archive='{}' planned_entries={} workers={}",
+                request.JobId,
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                totalEntries,
+                threadCount);
+        }
+        else
+        {
+            Librova::Logging::Info(
+                "zip: scan done archive='{}' planned_entries={} workers={}",
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                totalEntries,
+                threadCount);
+        }
+    }
     std::size_t reservedIdIndex = 0;
 
     // Progress counters and result declared before Phase 1 so eager collection
@@ -604,6 +675,7 @@ SZipImportResult CZipImportCoordinator::Run(
         {
             const std::string err = "Nested ZIP archives are not supported.";
             LogZipEntryIssueIfInitialized(
+                request.JobId,
                 request.ZipPath, entryPath, "zip-entry-filter",
                 "skipped", "nested-archive-skipped", err);
             AddImmediateEntry({
@@ -619,6 +691,7 @@ SZipImportResult CZipImportCoordinator::Run(
         {
             const std::string err = "Unsafe ZIP entry path.";
             LogZipEntryIssueIfInitialized(
+                request.JobId,
                 request.ZipPath, entryPath, "zip-entry-filter",
                 "skipped", "unsafe-entry-path", err);
             AddImmediateEntry({
@@ -634,6 +707,7 @@ SZipImportResult CZipImportCoordinator::Run(
         {
             const std::string err = "Unsupported ZIP entry format.";
             LogZipEntryIssueIfInitialized(
+                request.JobId,
                 request.ZipPath, entryPath, "zip-entry-filter",
                 "skipped", "unsupported-entry-format", err);
             AddImmediateEntry({
@@ -668,6 +742,7 @@ SZipImportResult CZipImportCoordinator::Run(
             inFlight.release();
             perf.OnBookProcessed(0u, 0u, 1u);
             LogZipEntryIssueIfInitialized(
+                request.JobId,
                 request.ZipPath, entryPath, "extraction", "failed", "extract-error", ex.what());
             AddImmediateEntry({
                 .ArchivePath = entryPath,
@@ -712,6 +787,8 @@ SZipImportResult CZipImportCoordinator::Run(
                         .SourcePath              = extractedPath,
                         .WorkingDirectory        = entryWorkDir,
                         .PreReservedBookId       = reservedBookId,
+                        .LogicalSourceLabel      = Librova::Unicode::PathToUtf8(request.ZipPath) + "::" + Librova::Unicode::PathToUtf8(entryPath),
+                        .ImportJobId             = request.JobId,
                         .AllowProbableDuplicates = request.AllowProbableDuplicates,
                         .ForceEpubConversion     = request.ForceEpubConversion,
                         .PerfTracker             = std::ref(perf),
@@ -725,6 +802,7 @@ SZipImportResult CZipImportCoordinator::Run(
                     CleanupExtractedEntryNoThrow(request.WorkingDirectory, extractedPath);
                     RemovePathNoThrow(entryWorkDir);
                     LogZipEntryIssueIfInitialized(
+                        request.JobId,
                         request.ZipPath, entryPath, "single-file-import",
                         "failed", "exception", ex.what());
                     perf.NoteOutlierIfSlow(Librova::Unicode::PathToUtf8(entryPath), elapsed);
@@ -756,6 +834,7 @@ SZipImportResult CZipImportCoordinator::Run(
                 if (!imported && !cancelled && !IsSkippedSingleFileResult(singleResult))
                 {
                     LogZipEntryIssueIfInitialized(
+                        request.JobId,
                         request.ZipPath, entryPath,
                         GetSingleFileStage(singleResult), "failed",
                         GetSingleFileStatus(singleResult),
@@ -764,6 +843,7 @@ SZipImportResult CZipImportCoordinator::Run(
                 else if (IsSkippedSingleFileResult(singleResult))
                 {
                     LogZipEntryIssueIfInitialized(
+                        request.JobId,
                         request.ZipPath, entryPath,
                         GetSingleFileStage(singleResult), "skipped",
                         GetSingleFileStatus(singleResult),
@@ -815,6 +895,33 @@ SZipImportResult CZipImportCoordinator::Run(
     if (shouldLogSummary)
     {
         perf.LogSummary(std::chrono::steady_clock::now() - runStart);
+    }
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - runStart).count();
+        if (request.JobId != 0)
+        {
+            Librova::Logging::Info(
+                "zip: done job={} archive='{}' imported={} failed={} skipped={} elapsed_ms={}",
+                request.JobId,
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                importedEntries,
+                failedEntries,
+                skippedEntries,
+                elapsedMs);
+        }
+        else
+        {
+            Librova::Logging::Info(
+                "zip: done archive='{}' imported={} failed={} skipped={} elapsed_ms={}",
+                Librova::Unicode::PathToUtf8(request.ZipPath),
+                importedEntries,
+                failedEntries,
+                skippedEntries,
+                elapsedMs);
+        }
     }
 
     return result;

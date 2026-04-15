@@ -30,6 +30,8 @@ struct SSingleFileImportRequest
     std::filesystem::path WorkingDirectory;
     std::optional<std::string> Sha256Hex;
     std::optional<Librova::Domain::SBookId> PreReservedBookId;
+    std::optional<std::string> LogicalSourceLabel;
+    std::uint64_t ImportJobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
     std::optional<std::reference_wrapper<CImportPerfTracker>> PerfTracker; // optional; pass std::ref(perf) for per-stage measurements

@@ -31,7 +31,9 @@ public:
         return format == Librova::Domain::EBookFormat::Epub;
     }
 
-    Librova::Domain::SParsedBook Parse(const std::filesystem::path& filePath) const override
+    Librova::Domain::SParsedBook Parse(
+        const std::filesystem::path& filePath,
+        std::string_view) const override
     {
         return {
             .Metadata = {.TitleUtf8 = filePath.filename().string(), .AuthorsUtf8 = {"Parser Author"}},
@@ -176,7 +178,7 @@ TEST_CASE("Parser and converter ports are usable through fake implementations", 
     const CStubBookConverter converter;
     CRecordingProgressSink progressSink;
 
-    const auto parsed = parser.Parse("book.epub");
+    const auto parsed = parser.Parse("book.epub", {});
     const auto converted = converter.Convert(
         {
             .SourcePath = "book.fb2",

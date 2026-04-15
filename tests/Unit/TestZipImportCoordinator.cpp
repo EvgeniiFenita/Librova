@@ -368,12 +368,19 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
     const auto result = coordinator.Run({
         .ZipPath = zipPath,
         .WorkingDirectory = sandbox.GetPath() / "work",
+        .JobId = 44,
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
     REQUIRE(importer.Calls.size() == 2);
     REQUIRE(importer.Calls[0].SourcePath.filename() == "first.fb2");
     REQUIRE(importer.Calls[1].SourcePath.filename() == "second.fb2");
+    REQUIRE(importer.Calls[0].ImportJobId == 44);
+    REQUIRE(importer.Calls[1].ImportJobId == 44);
+    REQUIRE(importer.Calls[0].LogicalSourceLabel == std::optional<std::string>{
+        Librova::Unicode::PathToUtf8(zipPath) + "::" + Librova::Unicode::PathToUtf8(std::filesystem::path{"folder/first.fb2"})});
+    REQUIRE(importer.Calls[1].LogicalSourceLabel == std::optional<std::string>{
+        Librova::Unicode::PathToUtf8(zipPath) + "::" + Librova::Unicode::PathToUtf8(std::filesystem::path{"second.fb2"})});
     REQUIRE(importer.Calls[0].AllowProbableDuplicates);
     REQUIRE_FALSE(importer.Calls[0].ForceEpubConversion);
 

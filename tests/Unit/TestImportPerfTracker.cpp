@@ -30,7 +30,7 @@ TEST_CASE("Import perf tracker periodic log sorts bottlenecks and includes write
     Librova::Logging::CLogging::InitializeHostLogger(logPath);
 
     {
-        Librova::Importing::CImportPerfTracker tracker;
+        Librova::Importing::CImportPerfTracker tracker{77};
         {
             auto timer = tracker.MeasureStage(Librova::Importing::CImportPerfTracker::EStage::Parse);
             (void)timer;
@@ -58,9 +58,10 @@ TEST_CASE("Import perf tracker periodic log sorts bottlenecks and includes write
 
     const auto logText = ReadTextFile(logPath);
     REQUIRE(logText.find("writer_queue=123") != std::string::npos);
+    REQUIRE(logText.find("[import-perf] job=77") != std::string::npos);
     REQUIRE(logText.find("zip_scan=") != std::string::npos);
     REQUIRE(logText.find("zip_extract=") != std::string::npos);
-    REQUIRE(logText.find("[import-perf] SUMMARY") != std::string::npos);
+    REQUIRE(logText.find("[import-perf] SUMMARY job=77") != std::string::npos);
 
     const auto bottleneckPos = logText.find("bottleneck:");
     REQUIRE(bottleneckPos != std::string::npos);

@@ -1150,8 +1150,25 @@ tasks:
   type: Feature
   priority: Major
   milestone: '1.1'
-  note: 'Implemented the parallel import pipeline using BS::thread_pool: ZIP entries are parallelised in
-    CZipImportCoordinator (extract-then-submit with bounded semaphore), non-ZIP batch files are parallelised
+  note: 'Implemented the parallel import pipeline using BS::thread_pool: ZIP entries are parallelised
+    in CZipImportCoordinator (extract-then-submit with bounded semaphore), non-ZIP batch files are parallelised
     in CLibraryImportFacade::Run() without reordering mixed ZIP/loose sources, main-thread progress now
     advances on worker completion instead of ready-prefix blocking, and run-level telemetry now includes
     zip_scan/zip_extract stages plus writer-queue sampling.'
+- id: 144
+  summary: 'improve import pipeline observability: cover outcome, duplicate detail, conversion, ZIP phases,
+    IPC, noise'
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.1'
+  note: Implemented all logging improvements across SingleFileImportCoordinator, Fb2Parser, ZipImportCoordinator,
+    ImportJobsService, ImportJobsViewModel, NamedPipeClient; all 685 tests pass
+- id: 145
+  summary: close remaining import observability gaps after logging review
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Added import job/source/request correlation, decisive duplicate-cover-conversion logs, and regression
+    coverage.

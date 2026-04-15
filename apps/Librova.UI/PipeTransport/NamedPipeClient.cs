@@ -1,6 +1,8 @@
 using Google.Protobuf;
+using Librova.UI.Logging;
 using System;
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Threading;
@@ -19,6 +21,7 @@ internal sealed class PipeTransportException : IOException
 internal sealed class NamedPipeClient
 {
     internal const int MaxPipeFrameBytes = 8 * 1024 * 1024;
+    private static readonly TimeSpan SlowCallThreshold = TimeSpan.FromMilliseconds(500);
     private static ulong _nextRequestId = 1;
     private readonly string _pipePath;
 
@@ -51,6 +54,10 @@ internal sealed class NamedPipeClient
         }
         catch (TimeoutException)
         {
+            UiLogging.Warning(
+                "IPC timeout. Method={Method} TimeoutMs={TimeoutMs}",
+                method,
+                (int)timeout.TotalMilliseconds);
             throw new PipeTransportException("Timed out waiting for named pipe server.");
         }
 
@@ -60,6 +67,7 @@ internal sealed class NamedPipeClient
             Method = method,
             Payload = request.ToByteArray()
         };
+        var stopwatch = Stopwatch.StartNew();
 
         await WriteFramedMessageAsync(pipe, PipeProtocol.SerializeRequestEnvelope(envelope), timeoutCts.Token)
             .ConfigureAwait(false);
@@ -69,15 +77,45 @@ internal sealed class NamedPipeClient
 
         if (responseEnvelope.RequestId != envelope.RequestId)
         {
+            UiLogging.Warning(
+                "IPC: mismatched response id. Method={Method} RequestId={RequestId} Expected={Expected} Received={Received}",
+                method,
+                envelope.RequestId,
+                envelope.RequestId,
+                responseEnvelope.RequestId);
             throw new PipeTransportException("Received mismatched pipe response id.");
         }
 
         if (responseEnvelope.Status != PipeResponseStatus.Ok)
         {
+            UiLogging.Warning(
+                "IPC: non-OK response. Method={Method} RequestId={RequestId} Status={Status} Error={Error} ElapsedMs={ElapsedMs}",
+                method,
+                envelope.RequestId,
+                responseEnvelope.Status,
+                responseEnvelope.ErrorMessage,
+                stopwatch.ElapsedMilliseconds);
             throw new PipeTransportException(
                 string.IsNullOrWhiteSpace(responseEnvelope.ErrorMessage)
                     ? "Pipe request failed."
                     : responseEnvelope.ErrorMessage);
+        }
+
+        if (ShouldLogSuccessfulCallAtInformation(method, stopwatch.Elapsed))
+        {
+            UiLogging.Information(
+                "IPC call completed. Method={Method} RequestId={RequestId} ElapsedMs={ElapsedMs} Status=Ok",
+                method,
+                envelope.RequestId,
+                stopwatch.ElapsedMilliseconds);
+        }
+        else
+        {
+            UiLogging.Debug(
+                "IPC call completed. Method={Method} RequestId={RequestId} ElapsedMs={ElapsedMs} Status=Ok",
+                method,
+                envelope.RequestId,
+                stopwatch.ElapsedMilliseconds);
         }
 
         return responseParser.ParseFrom(responseEnvelope.Payload);
@@ -151,6 +189,14 @@ internal sealed class NamedPipeClient
 
         return pipePath[prefix.Length..];
     }
+
+    private static bool ShouldLogSuccessfulCallAtInformation(PipeMethod method, TimeSpan elapsed) =>
+        elapsed >= SlowCallThreshold
+        || method is PipeMethod.StartImport
+            or PipeMethod.ValidateImportSources
+            or PipeMethod.GetImportJobResult
+            or PipeMethod.CancelImportJob
+            or PipeMethod.RemoveImportJob;
 
     private static ulong NextRequestId() => System.Threading.Interlocked.Increment(ref _nextRequestId);
 }

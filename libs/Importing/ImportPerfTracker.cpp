@@ -17,6 +17,7 @@ namespace {
 
 void LogPeriodic(
     const CImportPerfTracker::SStageStats* stages,
+    const std::uint64_t jobId,
     const std::uint64_t bookCount,
     const std::uint64_t importedTotal,
     const std::uint64_t duplicateTotal,
@@ -92,19 +93,42 @@ void LogPeriodic(
         bottleneckLine += "%";
     }
 
+    if (jobId != 0)
+    {
+        Librova::Logging::Info(
+            "[import-perf] job={} books={} throughput={:.1f} bk/s | {} | "
+            "bottleneck: {} | writer_queue={} | imported={} dup={} failed={}",
+            jobId,
+            bookCount,
+            throughput,
+            stageLine,
+            bottleneckLine,
+            writerQueueDepth,
+            importedTotal,
+            duplicateTotal,
+            failedTotal);
+        return;
+    }
+
     Librova::Logging::Info(
         "[import-perf] books={} throughput={:.1f} bk/s | {} | "
         "bottleneck: {} | writer_queue={} | imported={} dup={} failed={}",
-        bookCount, throughput, stageLine,
-        bottleneckLine, writerQueueDepth,
-        importedTotal, duplicateTotal, failedTotal);
+        bookCount,
+        throughput,
+        stageLine,
+        bottleneckLine,
+        writerQueueDepth,
+        importedTotal,
+        duplicateTotal,
+        failedTotal);
 }
 
 } // namespace
 
-CImportPerfTracker::CImportPerfTracker() noexcept
+CImportPerfTracker::CImportPerfTracker(const std::uint64_t jobId) noexcept
     : m_lastLogTimeNs(GetNowNs())
     , m_startTime(std::chrono::steady_clock::now())
+    , m_jobId(jobId)
 {
 }
 
@@ -152,16 +176,28 @@ void CImportPerfTracker::OnBookProcessed(
     if (queueDepth >= kWriterQueueWarnThreshold &&
         !m_writerQueueWarnedOnce.exchange(true, std::memory_order_relaxed))
     {
-        Librova::Logging::Warn(
-            "[import-perf] Writer queue depth {} exceeds threshold {} — "
-            "DB writes may be bottlenecking import throughput",
-            queueDepth, kWriterQueueWarnThreshold);
+        if (m_jobId != 0)
+        {
+            Librova::Logging::Warn(
+                "[import-perf] job={} Writer queue depth {} exceeds threshold {} — DB writes may be bottlenecking import throughput",
+                m_jobId,
+                queueDepth,
+                kWriterQueueWarnThreshold);
+        }
+        else
+        {
+            Librova::Logging::Warn(
+                "[import-perf] Writer queue depth {} exceeds threshold {} — DB writes may be bottlenecking import throughput",
+                queueDepth,
+                kWriterQueueWarnThreshold);
+        }
     }
 
     try
     {
         LogPeriodic(
             m_stages.data(),
+            m_jobId,
             bookCount,
             m_importedCount.load(std::memory_order_relaxed),
             m_duplicateCount.load(std::memory_order_relaxed),
@@ -186,9 +222,21 @@ void CImportPerfTracker::NoteOutlierIfSlow(
 
     try
     {
-        Librova::Logging::Warn(
-            "[import-perf] Slow book: {}ms for \"{}\"",
-            elapsed.count(), bookPath);
+        if (m_jobId != 0)
+        {
+            Librova::Logging::Warn(
+                "[import-perf] job={} Slow book: {}ms for \"{}\"",
+                m_jobId,
+                elapsed.count(),
+                bookPath);
+        }
+        else
+        {
+            Librova::Logging::Warn(
+                "[import-perf] Slow book: {}ms for \"{}\"",
+                elapsed.count(),
+                bookPath);
+        }
     }
     catch (...)
     {
@@ -242,12 +290,35 @@ void CImportPerfTracker::LogSummary(
             bottleneckLine += "%";
         }
 
+        if (m_jobId != 0)
+        {
+            Librova::Logging::Info(
+                "[import-perf] SUMMARY job={} total={} imported={} dup={} failed={} | "
+                "elapsed={}m{}s throughput={:.1f} bk/s | "
+                "bottleneck: {}",
+                m_jobId,
+                bookCount,
+                imported,
+                duplicates,
+                failed,
+                elapsedMin,
+                elapsedSecPart,
+                throughput,
+                bottleneckLine);
+            return;
+        }
+
         Librova::Logging::Info(
             "[import-perf] SUMMARY total={} imported={} dup={} failed={} | "
             "elapsed={}m{}s throughput={:.1f} bk/s | "
             "bottleneck: {}",
-            bookCount, imported, duplicates, failed,
-            elapsedMin, elapsedSecPart, throughput,
+            bookCount,
+            imported,
+            duplicates,
+            failed,
+            elapsedMin,
+            elapsedSecPart,
+            throughput,
             bottleneckLine);
     }
     catch (...)

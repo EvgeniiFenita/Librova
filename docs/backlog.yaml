@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 143
+  last_assigned_id: 145
 tasks:
 - id: 130
   summary: replace indeterminate import progress bar with a finite percentage counter

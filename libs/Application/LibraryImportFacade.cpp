@@ -409,7 +409,7 @@ SImportResult CLibraryImportFacade::Run(
         ? ENoSuccessfulImportReason::UnsupportedFormat
         : ENoSuccessfulImportReason::None;
     std::size_t processedEntries = 0;
-    Librova::Importing::CImportPerfTracker perf;
+    Librova::Importing::CImportPerfTracker perf(request.JobId);
     const auto runStart = std::chrono::steady_clock::now();
     bool hadFatalWriterError = false;
 
@@ -528,6 +528,7 @@ SImportResult CLibraryImportFacade::Run(
                     .SourcePath              = sourcePath,
                     .WorkingDirectory        = entryWorkingDirectory,
                     .Sha256Hex               = expandedSources.Candidates.size() == 1 ? request.Sha256Hex : std::nullopt,
+                    .ImportJobId            = request.JobId,
                     .AllowProbableDuplicates = request.AllowProbableDuplicates,
                     .ForceEpubConversion     = request.ForceEpubConversion,
                     .PerfTracker             = std::ref(perf),
@@ -653,6 +654,7 @@ SImportResult CLibraryImportFacade::Run(
                             .SourcePath              = candidatePath,
                             .WorkingDirectory        = entryWorkDir,
                             .PreReservedBookId       = preReservedBookId,
+                            .ImportJobId             = request.JobId,
                             .AllowProbableDuplicates = request.AllowProbableDuplicates,
                             .ForceEpubConversion     = request.ForceEpubConversion,
                             .PerfTracker             = std::ref(perf),
@@ -743,6 +745,7 @@ SImportResult CLibraryImportFacade::Run(
                 const auto zipResult = m_zipImportCoordinator.Run({
                     .ZipPath = sourcePath,
                     .WorkingDirectory = request.WorkingDirectory,
+                    .JobId = request.JobId,
                     .AllowProbableDuplicates = request.AllowProbableDuplicates,
                     .ForceEpubConversion = request.ForceEpubConversion,
                     .ReservedBookIds = m_bookRepository.ReserveIds(reservedZipIdCount),

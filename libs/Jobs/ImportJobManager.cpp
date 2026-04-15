@@ -52,8 +52,10 @@ SImportJobHandle CImportJobManager::Start(const Librova::Application::SImportReq
     }
 
     const auto* jobRunner = &m_jobRunner;
+    auto effectiveRequest = request;
+    effectiveRequest.JobId = jobId;
 
-    record->Worker = std::jthread([jobRunner, record, request](const std::stop_token stopToken) {
+    record->Worker = std::jthread([jobRunner, record, effectiveRequest = std::move(effectiveRequest)](const std::stop_token stopToken) {
         const auto publishSnapshot = [record](const SJobProgressSnapshot& snapshot) {
             {
                 const std::scoped_lock lock(record->Mutex);
@@ -68,7 +70,7 @@ SImportJobHandle CImportJobManager::Start(const Librova::Application::SImportReq
             .Message = "Starting import job"
         });
 
-        SImportJobResult result = jobRunner->Run(request, stopToken, publishSnapshot);
+        SImportJobResult result = jobRunner->Run(effectiveRequest, stopToken, publishSnapshot);
 
         {
             const std::scoped_lock lock(record->Mutex);

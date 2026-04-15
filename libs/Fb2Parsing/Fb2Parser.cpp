@@ -187,17 +187,17 @@ std::string ReplaceEncodingDeclaration(std::string text)
     return text;
 }
 
-[[nodiscard]] std::string ReadTextFile(const std::filesystem::path& filePath)
+[[nodiscard]] std::string ReadTextFile(const std::filesystem::path& filePath, const std::string_view sourceLabel)
 {
     std::ifstream input(filePath, std::ios::binary);
 
     if (!input)
     {
-        throw std::runtime_error("Failed to open FB2 file: " + Librova::Unicode::PathToUtf8(filePath));
+        throw std::runtime_error("Failed to open FB2 file: " + std::string{sourceLabel});
     }
 
     std::string text{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
-    const std::string pathUtf8 = Librova::Unicode::PathToUtf8(filePath);
+    const std::string labelUtf8 = std::string{sourceLabel};
 
     // Step 1 — strip UTF-8 BOM (EF BB BF) so pugixml does not choke on the
     // XML declaration ("Error parsing document declaration" on BOM files).
@@ -209,7 +209,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
         text.erase(0, 3);
         if (Librova::Logging::CLogging::IsInitialized())
         {
-            Librova::Logging::Debug("FB2 UTF-8 BOM stripped: {}", pathUtf8);
+            Librova::Logging::Debug("FB2 UTF-8 BOM stripped: {}", labelUtf8);
         }
     }
 
@@ -221,7 +221,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
     {
         if (Librova::Logging::CLogging::IsInitialized())
         {
-            Librova::Logging::Info("FB2 file is UTF-16 LE — converting to UTF-8: {}", pathUtf8);
+            Librova::Logging::Info("FB2 file is UTF-16 LE — converting to UTF-8: {}", labelUtf8);
         }
         return ReplaceEncodingDeclaration(Librova::Unicode::Utf16LeToUtf8(text.data(), text.size()));
     }
@@ -233,7 +233,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
     {
         if (Librova::Logging::CLogging::IsInitialized())
         {
-            Librova::Logging::Info("FB2 file is UTF-16 BE — converting to UTF-8: {}", pathUtf8);
+            Librova::Logging::Info("FB2 file is UTF-16 BE — converting to UTF-8: {}", labelUtf8);
         }
         return ReplaceEncodingDeclaration(Librova::Unicode::Utf16BeToUtf8(text.data(), text.size()));
     }
@@ -256,7 +256,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
     {
         if (Librova::Logging::CLogging::IsInitialized())
         {
-            Librova::Logging::Debug("FB2 explicit CP1251 declaration — converting to UTF-8: {}", pathUtf8);
+            Librova::Logging::Debug("FB2 explicit CP1251 declaration — converting to UTF-8: {}", labelUtf8);
         }
         const std::string utf8Text = Librova::Unicode::CodePageToUtf8(
             text,
@@ -274,7 +274,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
             Librova::Logging::Warn(
                 "FB2 file is not valid UTF-8 and has no CP1251 declaration — "
                 "applying CP1251 fallback: {}",
-                pathUtf8);
+                labelUtf8);
         }
         const std::string utf8Text = Librova::Unicode::CodePageToUtf8(
             text,
@@ -325,7 +325,10 @@ std::string ReplaceEncodingDeclaration(std::string text)
     return doc;
 }
 
-[[nodiscard]] pugi::xml_document ParseXml(const std::string& text, const std::filesystem::path& filePath)
+[[nodiscard]] pugi::xml_document ParseXml(
+    const std::string& text,
+    const std::filesystem::path& filePath,
+    const std::string_view sourceLabel)
 {
     pugi::xml_document document;
     const pugi::xml_parse_result result = document.load_buffer(text.data(), text.size());
@@ -345,7 +348,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
             Librova::Logging::Warn(
                 "FB2 XML strict parse failed, recovered metadata from <description> block: "
                 "file='{}' error='{}' [size_bytes={}]",
-                Librova::Unicode::PathToUtf8(filePath),
+                sourceLabel,
                 result.description(),
                 TryGetFileSize(filePath));
         }
@@ -353,7 +356,7 @@ std::string ReplaceEncodingDeclaration(std::string text)
     }
 
     throw std::runtime_error(
-        "Failed to parse FB2 XML from " + Librova::Unicode::PathToUtf8(filePath)
+        "Failed to parse FB2 XML from " + std::string{sourceLabel}
         + ": " + result.description()
         + " [size_bytes=" + std::to_string(TryGetFileSize(filePath))
         + ", xml_preview=\"" + CompactPreview(text) + "\"]");
@@ -717,10 +720,15 @@ bool CFb2Parser::CanParse(const Librova::Domain::EBookFormat format) const
     return format == Librova::Domain::EBookFormat::Fb2;
 }
 
-Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CFb2Parser::Parse(
+    const std::filesystem::path& filePath,
+    const std::string_view logicalSourceLabel) const
 {
-    const std::string text = ReadTextFile(filePath);
-    const pugi::xml_document document = ParseXml(text, filePath);
+    const std::string sourceLabel = logicalSourceLabel.empty()
+        ? Librova::Unicode::PathToUtf8(filePath)
+        : std::string{logicalSourceLabel};
+    const std::string text = ReadTextFile(filePath, sourceLabel);
+    const pugi::xml_document document = ParseXml(text, filePath, sourceLabel);
     const pugi::xml_node rootNode = FindFirstChildByLocalName(document, "FictionBook");
     const pugi::xml_node descriptionNode = FindFirstChildByLocalName(rootNode, "description");
     const pugi::xml_node titleInfoNode = FindFirstChildByLocalName(descriptionNode, "title-info");
@@ -750,7 +758,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
         if (Librova::Logging::CLogging::IsInitialized())
         {
             Librova::Logging::Warn("FB2 missing required <lang> node in '{}'; language will be empty.",
-                Librova::Unicode::PathToUtf8(filePath));
+                sourceLabel);
         }
         parsedBook.Metadata.Language = "";
     }
@@ -780,7 +788,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
                 CountAuthorNodes(titleInfoNode),
                 BuildNodePreview(titleInfoNode),
                 BuildNodePreview(FindFirstChildByLocalName(descriptionNode, "document-info")),
-                Librova::Unicode::PathToUtf8(filePath));
+                sourceLabel);
         }
         parsedBook.Metadata.AuthorsUtf8.push_back("Аноним");
     }
@@ -822,7 +830,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
                         Librova::Logging::Warn(
                             "FB2 unknown genre code '{}' (no mapping) in file: {}",
                             std::string{token},
-                            Librova::Unicode::PathToUtf8(filePath));
+                            sourceLabel);
                     }
                     parsedBook.Metadata.GenresUtf8.push_back(std::string{resolvedName});
                 }
@@ -857,7 +865,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
                 Librova::Logging::Warn(
                     "FB2 non-numeric sequence number '{}' skipped in file: {}",
                     sequenceNumber,
-                    Librova::Unicode::PathToUtf8(filePath));
+                    sourceLabel);
             }
         }
     }
@@ -898,7 +906,7 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
                     Librova::Logging::Warn(
                         "FB2 non-integer publish year '{}' skipped in file: {}",
                         *year,
-                        Librova::Unicode::PathToUtf8(filePath));
+                        sourceLabel);
                 }
             }
         }
@@ -918,7 +926,22 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
 
         if (binaryNode)
         {
-            parsedBook.CoverBytes = DecodeBase64(binaryNode.text().as_string());
+            try
+            {
+                parsedBook.CoverBytes = DecodeBase64(binaryNode.text().as_string());
+            }
+            catch (const std::exception& ex)
+            {
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "cover: base64 decode failed binaryId='{}' reason='{}' source='{}'",
+                        *coverBinaryId,
+                        ex.what(),
+                        sourceLabel);
+                }
+                parsedBook.CoverDiagnosticMessage = "base64-decode-failed";
+            }
 
             if (!parsedBook.CoverBytes.empty())
             {
@@ -933,6 +956,40 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(const std::filesystem::path& file
                 {
                     parsedBook.CoverExtension = extension;
                 }
+            }
+        }
+        else
+        {
+            parsedBook.CoverDiagnosticMessage = "referenced-binary-not-found";
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "cover: referenced binary not found binaryId='{}' source='{}'",
+                    *coverBinaryId,
+                    sourceLabel);
+            }
+        }
+
+        if (binaryNode && parsedBook.CoverBytes.empty() && !parsedBook.CoverDiagnosticMessage.has_value())
+        {
+            parsedBook.CoverDiagnosticMessage = "decoded-cover-empty";
+        }
+
+        if (binaryNode && !parsedBook.CoverBytes.empty() && !parsedBook.CoverExtension.has_value())
+        {
+            parsedBook.CoverDiagnosticMessage = "decoded-cover-missing-extension";
+        }
+    }
+    else if (const pugi::xml_node coverPageNode = FindFirstChildByLocalName(titleInfoNode, "coverpage"))
+    {
+        if (FindFirstChildByLocalName(coverPageNode, "image"))
+        {
+            parsedBook.CoverDiagnosticMessage = "cover-reference-missing-binary-id";
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "cover: image node present but binary id missing source='{}'",
+                    sourceLabel);
             }
         }
     }

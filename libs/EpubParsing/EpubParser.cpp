@@ -15,6 +15,7 @@
 #include <pugixml.hpp>
 #include <zip.h>
 
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::EpubParsing {
@@ -441,8 +442,13 @@ bool CEpubParser::CanParse(const Librova::Domain::EBookFormat format) const
     return format == Librova::Domain::EBookFormat::Epub;
 }
 
-Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CEpubParser::Parse(
+    const std::filesystem::path& filePath,
+    const std::string_view logicalSourceLabel) const
 {
+    const std::string sourceLabel = logicalSourceLabel.empty()
+        ? Librova::Unicode::PathToUtf8(filePath)
+        : std::string{logicalSourceLabel};
     CZipArchive archive(filePath);
 
     const pugi::xml_document containerDocument = ParseXml(archive.ReadText("META-INF/container.xml"), "META-INF/container.xml");
@@ -527,8 +533,46 @@ Librova::Domain::SParsedBook CEpubParser::Parse(const std::filesystem::path& fil
     if (coverRelativePath.has_value())
     {
         const std::filesystem::path coverArchivePath = (packagePath.parent_path() / NormalizeArchivePath(*coverRelativePath)).lexically_normal();
-        parsedBook.CoverBytes = archive.ReadBytes(PathToArchiveString(coverArchivePath));
-        parsedBook.CoverExtension = NormalizeExtension(coverArchivePath.extension().string());
+        try
+        {
+            parsedBook.CoverBytes = archive.ReadBytes(PathToArchiveString(coverArchivePath));
+            parsedBook.CoverExtension = NormalizeExtension(coverArchivePath.extension().string());
+
+            if (parsedBook.CoverBytes.empty())
+            {
+                parsedBook.CoverDiagnosticMessage = "cover-entry-empty";
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "cover: EPUB cover entry is empty source='{}' entry='{}'",
+                        sourceLabel,
+                        PathToArchiveString(coverArchivePath));
+                }
+            }
+            else if (!parsedBook.CoverExtension.has_value() || parsedBook.CoverExtension->empty())
+            {
+                parsedBook.CoverDiagnosticMessage = "cover-entry-missing-extension";
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "cover: EPUB cover entry has no usable extension source='{}' entry='{}'",
+                        sourceLabel,
+                        PathToArchiveString(coverArchivePath));
+                }
+            }
+        }
+        catch (const std::exception& ex)
+        {
+            parsedBook.CoverDiagnosticMessage = "cover-entry-read-failed";
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "cover: EPUB cover extraction failed source='{}' entry='{}' reason='{}'",
+                    sourceLabel,
+                    PathToArchiveString(coverArchivePath),
+                    ex.what());
+            }
+        }
     }
 
     return parsedBook;

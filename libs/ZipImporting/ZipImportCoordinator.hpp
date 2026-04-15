@@ -27,6 +27,7 @@ struct SZipImportRequest
 {
     std::filesystem::path ZipPath;
     std::filesystem::path WorkingDirectory;
+    std::uint64_t JobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
     std::vector<Librova::Domain::SBookId> ReservedBookIds;

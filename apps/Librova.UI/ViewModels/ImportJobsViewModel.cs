@@ -708,7 +708,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private void UpdateValidationState()
     {
         var localMsg = BuildLocalSourceValidationMessage(SourcePaths);
-        UiLogging.Information(
+        UiLogging.Debug(
             "UpdateValidationState: paths={PathCount} localMsg={LocalMsg} workDir={WorkDir}",
             SourcePaths.Count,
             localMsg.Length == 0 ? "<ok>" : localMsg,

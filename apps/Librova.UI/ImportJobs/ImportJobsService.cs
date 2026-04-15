@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Librova.UI.Logging;
@@ -41,13 +42,15 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.GetSnapshotAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             var result = ImportJobMapper.FromProto(response);
             UiLogging.Debug(
-                "TryGetSnapshotAsync completed. JobId={JobId} Found={Found} Status={Status}",
+                "TryGetSnapshotAsync completed. JobId={JobId} Found={Found} Status={Status} ElapsedMs={ElapsedMs}",
                 jobId,
                 result is not null,
-                result?.Status.ToString() ?? "<none>");
+                result?.Status.ToString() ?? "<none>",
+                stopwatch.ElapsedMilliseconds);
             return result;
         }
         catch (Exception error)
@@ -64,13 +67,15 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.GetResultAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             var result = ImportJobMapper.FromProto(response);
             UiLogging.Information(
-                "TryGetResultAsync completed. JobId={JobId} Found={Found} Status={Status}",
+                "TryGetResultAsync completed. JobId={JobId} Found={Found} Status={Status} ElapsedMs={ElapsedMs}",
                 jobId,
                 result is not null,
-                result?.Snapshot.Status.ToString() ?? "<none>");
+                result?.Snapshot.Status.ToString() ?? "<none>",
+                stopwatch.ElapsedMilliseconds);
             return result;
         }
         catch (Exception error)
@@ -87,12 +92,14 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.ValidateSourcesAsync(sourcePaths, timeout, cancellationToken).ConfigureAwait(false);
             var blockingMessage = response.HasBlockingMessage ? response.BlockingMessage : string.Empty;
             UiLogging.Information(
-                "ValidateSourcesAsync completed. SourceCount={SourceCount} Blocking={Blocking}",
+                "ValidateSourcesAsync completed. SourceCount={SourceCount} Blocking={Blocking} ElapsedMs={ElapsedMs}",
                 sourcePaths.Count,
-                blockingMessage.Length == 0 ? "<none>" : blockingMessage);
+                blockingMessage.Length == 0 ? "<none>" : blockingMessage,
+                stopwatch.ElapsedMilliseconds);
             return blockingMessage;
         }
         catch (Exception error)
@@ -110,20 +117,23 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.WaitAsync(jobId, timeout, waitTimeout, cancellationToken).ConfigureAwait(false);
             if (response.Completed)
             {
                 UiLogging.Information(
-                    "WaitAsync completed. JobId={JobId} Completed=true WaitTimeoutMs={WaitTimeoutMs}",
+                    "WaitAsync completed. JobId={JobId} Completed=true WaitTimeoutMs={WaitTimeoutMs} ElapsedMs={ElapsedMs}",
                     jobId,
-                    waitTimeout.TotalMilliseconds);
+                    waitTimeout.TotalMilliseconds,
+                    stopwatch.ElapsedMilliseconds);
             }
             else
             {
                 UiLogging.Debug(
-                    "WaitAsync completed. JobId={JobId} Completed=false WaitTimeoutMs={WaitTimeoutMs}",
+                    "WaitAsync completed. JobId={JobId} Completed=false WaitTimeoutMs={WaitTimeoutMs} ElapsedMs={ElapsedMs}",
                     jobId,
-                    waitTimeout.TotalMilliseconds);
+                    waitTimeout.TotalMilliseconds,
+                    stopwatch.ElapsedMilliseconds);
             }
             return response.Completed;
         }
@@ -175,7 +185,7 @@ internal sealed class ImportJobsService : IImportJobsService
 
                 if (statusChanged || messageChanged || heartbeatDue)
                 {
-                    UiLogging.Debug(
+                    UiLogging.Information(
                         "Import job in progress. JobId={JobId} Status={Status} Percent={Percent} " +
                         "Imported={Imported} Failed={Failed} Skipped={Skipped} Message={Message}",
                         jobId,
@@ -202,9 +212,14 @@ internal sealed class ImportJobsService : IImportJobsService
         try
         {
             UiLogging.Warning("Cancelling import job. JobId={JobId} TimeoutMs={TimeoutMs}", jobId, timeout.TotalMilliseconds);
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.CancelAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             var accepted = ImportJobMapper.FromProto(response);
-            UiLogging.Information("CancelAsync completed. JobId={JobId} Accepted={Accepted}", jobId, accepted);
+            UiLogging.Information(
+                "CancelAsync completed. JobId={JobId} Accepted={Accepted} ElapsedMs={ElapsedMs}",
+                jobId,
+                accepted,
+                stopwatch.ElapsedMilliseconds);
             return accepted;
         }
         catch (Exception error)
@@ -222,9 +237,14 @@ internal sealed class ImportJobsService : IImportJobsService
         try
         {
             UiLogging.Information("Removing import job. JobId={JobId} TimeoutMs={TimeoutMs}", jobId, timeout.TotalMilliseconds);
+            var stopwatch = Stopwatch.StartNew();
             var response = await _client.RemoveAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
             var removed = ImportJobMapper.FromProto(response);
-            UiLogging.Information("RemoveAsync completed. JobId={JobId} Removed={Removed}", jobId, removed);
+            UiLogging.Information(
+                "RemoveAsync completed. JobId={JobId} Removed={Removed} ElapsedMs={ElapsedMs}",
+                jobId,
+                removed,
+                stopwatch.ElapsedMilliseconds);
             return removed;
         }
         catch (Exception error)
@@ -241,12 +261,13 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var jobId = await _client.StartImportAsync(
                 ImportJobMapper.ToProto(request),
                 timeout,
                 cancellationToken).ConfigureAwait(false);
 
-            UiLogging.Information("Import job started. JobId={JobId}", jobId);
+            UiLogging.Information("Import job started. JobId={JobId} ElapsedMs={ElapsedMs}", jobId, stopwatch.ElapsedMilliseconds);
             return jobId;
         }
         catch (Exception error)

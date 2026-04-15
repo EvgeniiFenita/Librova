@@ -59,7 +59,9 @@ const Librova::Domain::IBookParser& CBookParserRegistry::GetParser(const Librova
     throw std::runtime_error("No parser is registered for the requested format.");
 }
 
-Librova::Domain::SParsedBook CBookParserRegistry::Parse(const std::filesystem::path& filePath) const
+Librova::Domain::SParsedBook CBookParserRegistry::Parse(
+    const std::filesystem::path& filePath,
+    const std::string_view logicalSourceLabel) const
 {
     const std::optional<Librova::Domain::EBookFormat> format = TryDetectFormat(filePath);
 
@@ -68,7 +70,7 @@ Librova::Domain::SParsedBook CBookParserRegistry::Parse(const std::filesystem::p
         throw std::runtime_error("Unable to detect parser format from file extension.");
     }
 
-    return GetParser(*format).Parse(filePath);
+    return GetParser(*format).Parse(filePath, logicalSourceLabel);
 }
 
 } // namespace Librova::ParserRegistry

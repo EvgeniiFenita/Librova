@@ -22,7 +22,7 @@ namespace Librova::Importing {
 class CImportPerfTracker
 {
 public:
-    CImportPerfTracker() noexcept;
+    explicit CImportPerfTracker(std::uint64_t jobId = 0) noexcept;
 
     enum class EStage : std::size_t
     {
@@ -128,6 +128,11 @@ public:
 
 private:
     [[nodiscard]] static std::int64_t GetNowNs() noexcept;
+    [[nodiscard]] std::uint64_t GetJobId() const noexcept
+    {
+        return m_jobId;
+    }
+
     std::array<SStageStats, kStageCount> m_stages{};
 
     std::atomic<std::uint64_t> m_bookCount{0};
@@ -142,6 +147,7 @@ private:
     std::atomic<bool>          m_writerQueueWarnedOnce{false};
 
     std::chrono::steady_clock::time_point m_startTime;
+    std::uint64_t m_jobId = 0;
 };
 
 } // namespace Librova::Importing
