@@ -15,9 +15,13 @@ add_library(LibrovaApplication STATIC
     StructuredProgressMapper.hpp
 )
 
+find_path(BSHOSHANY_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
+
 target_include_directories(LibrovaApplication
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
+    PRIVATE
+        ${BSHOSHANY_THREAD_POOL_INCLUDE_DIRS}
 )
 
 target_link_libraries(LibrovaApplication

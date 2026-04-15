@@ -114,6 +114,7 @@ private:
     const Librova::ZipImporting::CZipImportCoordinator& m_zipImportCoordinator;
     CImportWorkloadPlanner m_workloadPlanner;
     CImportRollbackService m_rollbackService;
+    Librova::Domain::IBookRepository& m_bookRepository;
     std::filesystem::path m_libraryRoot;
 };
 

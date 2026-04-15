@@ -1,12 +1,14 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <stop_token>
 #include <string>
 #include <vector>
 
 #include "Domain/ServiceContracts.hpp"
+#include "Importing/ImportPerfTracker.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
 
 namespace Librova::ZipImporting {
@@ -27,6 +29,9 @@ struct SZipImportRequest
     std::filesystem::path WorkingDirectory;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
+    std::vector<Librova::Domain::SBookId> ReservedBookIds;
+    std::optional<std::reference_wrapper<Librova::Domain::IBookRepository>> WriterRepository; // optional writer-dispatching repo for parallel writes
+    std::optional<std::reference_wrapper<Librova::Importing::CImportPerfTracker>> PerfTracker;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

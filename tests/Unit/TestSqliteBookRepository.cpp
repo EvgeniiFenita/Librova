@@ -2258,3 +2258,145 @@ TEST_CASE("Sqlite book repository Compact reclaims FTS5 shadow-table space after
 
     std::filesystem::remove(databasePath);
 }
+
+// ---------------------------------------------------------------------------
+// AddBatch tests
+// ---------------------------------------------------------------------------
+
+namespace {
+
+Librova::Domain::IBookRepository::SBatchBookEntry MakeBatchEntry(
+    std::string title, std::string sha, std::string path, bool forceAdd = false)
+{
+    Librova::Domain::IBookRepository::SBatchBookEntry entry;
+    entry.Book.Metadata.TitleUtf8   = std::move(title);
+    entry.Book.Metadata.AuthorsUtf8 = {"Batch Author"};
+    entry.Book.Metadata.Language    = "en";
+    entry.Book.File.Format          = Librova::Domain::EBookFormat::Epub;
+    entry.Book.File.ManagedPath     = std::filesystem::path{path};
+    entry.Book.File.SizeBytes       = 512;
+    entry.Book.File.Sha256Hex       = std::move(sha);
+    entry.Book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    entry.ForceAdd = forceAdd;
+    return entry;
+}
+
+} // namespace
+
+TEST_CASE("Sqlite book repository AddBatch imports all entries and returns valid ids", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-addbatch-all.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
+        MakeBatchEntry("Book A", "sha-a", "Books/b1/a.epub"),
+        MakeBatchEntry("Book B", "sha-b", "Books/b1/b.epub"),
+        MakeBatchEntry("Book C", "sha-c", "Books/b1/c.epub")
+    };
+
+    const auto results = repository.AddBatch(entries);
+
+    REQUIRE(results.size() == 3);
+    REQUIRE(results[0].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(results[1].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(results[2].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(results[0].BookId.has_value());
+    REQUIRE(results[1].BookId.has_value());
+    REQUIRE(results[2].BookId.has_value());
+    REQUIRE(results[0].BookId->Value != results[1].BookId->Value);
+    REQUIRE(results[1].BookId->Value != results[2].BookId->Value);
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository AddBatch rejects SHA duplicate without affecting other entries", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-addbatch-dup.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook preExisting;
+    preExisting.Metadata.TitleUtf8   = "Pre-existing";
+    preExisting.Metadata.AuthorsUtf8 = {"Author"};
+    preExisting.Metadata.Language    = "en";
+    preExisting.File.ManagedPath     = "Books/pre/x.epub";
+    preExisting.File.SizeBytes       = 100;
+    preExisting.File.Sha256Hex       = "existing-sha";
+    preExisting.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto existingId = repository.Add(preExisting);
+
+    const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
+        MakeBatchEntry("Book A", "new-sha-1",    "Books/b2/a.epub"),
+        MakeBatchEntry("Book B", "existing-sha", "Books/b2/b.epub"),
+        MakeBatchEntry("Book C", "new-sha-2",    "Books/b2/c.epub")
+    };
+
+    const auto results = repository.AddBatch(entries);
+
+    REQUIRE(results.size() == 3);
+    REQUIRE(results[0].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(results[1].Status == Librova::Domain::IBookRepository::EBatchAddStatus::RejectedDuplicate);
+    REQUIRE(results[1].ConflictingBookId.has_value());
+    REQUIRE(results[1].ConflictingBookId->Value == existingId.Value);
+    REQUIRE(results[2].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(repository.GetById(*results[0].BookId).has_value());
+    REQUIRE(repository.GetById(*results[2].BookId).has_value());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository AddBatch with empty span returns empty results without error", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-addbatch-empty.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries;
+    const auto results = repository.AddBatch(entries);
+
+    REQUIRE(results.empty());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository AddBatch ForceAdd bypasses duplicate hash check", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-addbatch-forceadd.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    Librova::Domain::SBook original;
+    original.Metadata.TitleUtf8   = "Original";
+    original.Metadata.AuthorsUtf8 = {"Author"};
+    original.Metadata.Language    = "en";
+    original.File.ManagedPath     = "Books/pre/original.epub";
+    original.File.SizeBytes       = 100;
+    original.File.Sha256Hex       = "force-sha";
+    original.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    (void)repository.Add(original);
+
+    const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
+        MakeBatchEntry("Forced Copy", "force-sha", "Books/b3/forced.epub", true)
+    };
+
+    const auto results = repository.AddBatch(entries);
+
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].Status == Librova::Domain::IBookRepository::EBatchAddStatus::Imported);
+    REQUIRE(results[0].BookId.has_value());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}

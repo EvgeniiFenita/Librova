@@ -1144,3 +1144,14 @@ tasks:
   note: Replaced WIC cover processor with stb (stb_image + stb_image_resize2 + stb_image_write); always
     outputs JPEG, handles progressive JPEG and RGBA alpha compositing; 8 unit tests added; all 379 tests
     pass.
+- id: 60
+  summary: introduce concurrent file processing in the import pipeline to reduce wall-clock import time
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.1'
+  note: 'Implemented the parallel import pipeline using BS::thread_pool: ZIP entries are parallelised in
+    CZipImportCoordinator (extract-then-submit with bounded semaphore), non-ZIP batch files are parallelised
+    in CLibraryImportFacade::Run() without reordering mixed ZIP/loose sources, main-thread progress now
+    advances on worker completion instead of ready-prefix blocking, and run-level telemetry now includes
+    zip_scan/zip_extract stages plus writer-queue sampling.'

@@ -4,10 +4,13 @@ add_library(LibrovaZipImporting STATIC
 )
 
 find_package(libzip CONFIG REQUIRED)
+find_path(BSHOSHANY_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 
 target_include_directories(LibrovaZipImporting
     PUBLIC
         ${CMAKE_SOURCE_DIR}/libs
+    PRIVATE
+        ${BSHOSHANY_THREAD_POOL_INCLUDE_DIRS}
 )
 
 target_link_libraries(LibrovaZipImporting

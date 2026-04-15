@@ -367,6 +367,18 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             };
         };
 
+    auto measureStage = [&](CImportPerfTracker::EStage stage) -> std::optional<CImportPerfTracker::CScopedStageTimer> {
+        if (request.PerfTracker.has_value())
+        {
+            return request.PerfTracker->get().MeasureStage(stage);
+        }
+
+        return std::nullopt;
+    };
+
+    Librova::Domain::IBookRepository& repo =
+        request.RepositoryOverride.has_value() ? request.RepositoryOverride->get() : m_bookRepository;
+
     try
     {
         if (IsCancellationRequested(stopToken, progressSink))
@@ -387,13 +399,17 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         progressSink.ReportValue(15, "Parsing source book");
-        const Librova::Domain::SParsedBook parsedBook = m_parserRegistry.Parse(request.SourcePath);
+        const Librova::Domain::SParsedBook parsedBook = [&]{
+            auto _ = measureStage(CImportPerfTracker::EStage::Parse);
+            return m_parserRegistry.Parse(request.SourcePath);
+        }();
 
         std::optional<std::string> effectiveSha256Hex = request.Sha256Hex;
         if (!effectiveSha256Hex.has_value())
         {
             try
             {
+                auto _ = measureStage(CImportPerfTracker::EStage::Hash);
                 effectiveSha256Hex = Librova::Hashing::ComputeFileSha256Hex(request.SourcePath);
             }
             catch (const std::exception& ex)
@@ -408,7 +424,10 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             }
         }
 
-        const auto duplicates = m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, effectiveSha256Hex));
+        const auto duplicates = [&]{
+            auto _ = measureStage(CImportPerfTracker::EStage::FindDuplicates);
+            return m_queryRepository.FindDuplicates(BuildCandidateBook(parsedBook, effectiveSha256Hex));
+        }();
 
         if (IsCancellationRequested(stopToken, progressSink))
         {
@@ -437,7 +456,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             };
         }
 
-        const Librova::Domain::SBookId reservedBookId = m_bookRepository.ReserveId();
+        const Librova::Domain::SBookId reservedBookId =
+            request.PreReservedBookId.value_or(repo.ReserveId());
         progressSink.ReportValue(30, "Planning conversion");
 
         std::vector<std::string> importWarnings;
@@ -466,6 +486,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         if (conversionPlan.Request.has_value())
         {
             progressSink.ReportValue(45, "Running external conversion");
+            auto _ = measureStage(CImportPerfTracker::EStage::Convert);
             conversionResult = m_converter->Convert(*conversionPlan.Request, progressSink, stopToken);
 
             if (conversionResult->HasOutput())
@@ -502,6 +523,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (parsedBook.HasCover())
         {
+            auto _ = measureStage(CImportPerfTracker::EStage::Cover);
             const auto managedCover = ResolveManagedCoverData(parsedBook, m_coverImageProcessor, request.SourcePath);
             temporaryCoverPath = WriteCoverTempFile(
                 request.WorkingDirectory,
@@ -518,13 +540,16 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         progressSink.ReportValue(70, "Preparing managed storage");
         const Librova::Domain::EStorageEncoding storageEncoding =
             DetermineStorageEncoding(conversionOutcome.Format, request.ForceEpubConversion);
-        preparedStorage = m_managedStorage.PrepareImport({
-            .BookId = reservedBookId,
-            .Format = conversionOutcome.Format,
-            .StorageEncoding = storageEncoding,
-            .SourcePath = conversionOutcome.SourcePath,
-            .CoverSourcePath = temporaryCoverPath
-        });
+        {
+            auto _ = measureStage(CImportPerfTracker::EStage::PrepareStorage);
+            preparedStorage = m_managedStorage.PrepareImport({
+                .BookId = reservedBookId,
+                .Format = conversionOutcome.Format,
+                .StorageEncoding = storageEncoding,
+                .SourcePath = conversionOutcome.SourcePath,
+                .CoverSourcePath = temporaryCoverPath
+            });
+        }
 
         if (IsCancellationRequested(stopToken, progressSink))
         {
@@ -549,7 +574,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         try
         {
-            addedBookId = m_bookRepository.Add(book);
+            auto _ = measureStage(CImportPerfTracker::EStage::DbWriteWait);
+            addedBookId = repo.Add(book);
         }
         catch (const Librova::Domain::CDuplicateHashException& duplicateEx)
         {
@@ -559,7 +585,10 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 {
                     importWarnings.emplace_back(GForcedStrictDuplicateWarning);
                 }
-                addedBookId = m_bookRepository.ForceAdd(book);
+                {
+                    auto _ = measureStage(CImportPerfTracker::EStage::DbWriteWait);
+                    addedBookId = repo.ForceAdd(book);
+                }
             }
             else
             {
@@ -619,7 +648,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         {
             try
             {
-                m_bookRepository.Remove(*addedBookId);
+                repo.Remove(*addedBookId);
             }
             catch (...)
             {

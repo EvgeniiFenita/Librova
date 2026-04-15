@@ -1,7 +1,9 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "Domain/Book.hpp"
@@ -36,6 +38,10 @@ public:
 
     virtual SBookId ReserveId() = 0;
 
+    // Reserves a contiguous range of ids for callers that need to plan work
+    // off-thread before the final Add()/ForceAdd() call.
+    virtual std::vector<SBookId> ReserveIds(std::size_t count);
+
     // Inserts the book. Throws CDuplicateHashException if sha256_hex already
     // exists in the catalog (non-empty hash only). Use when duplicates must
     // be rejected or detected late (e.g. concurrent import race).
@@ -48,6 +54,31 @@ public:
     virtual std::optional<SBook> GetById(SBookId id) const = 0;
     virtual void Remove(SBookId id) = 0;
     virtual void Compact() {}
+
+    // --- Batch write API ---
+
+    enum class EBatchAddStatus { Imported, RejectedDuplicate, Failed };
+
+    struct SBatchBookEntry
+    {
+        SBook Book;
+        bool ForceAdd = false;
+    };
+
+    struct SBatchBookResult
+    {
+        EBatchAddStatus        Status = EBatchAddStatus::Failed;
+        std::optional<SBookId> BookId;
+        std::optional<SBookId> ConflictingBookId; // set when Status == RejectedDuplicate
+        std::string            Error;
+    };
+
+    // Inserts multiple books in a single transaction.
+    // Each entry is processed independently: a duplicate or failure on one
+    // item does not roll back the others.
+    // Default implementation falls back to sequential Add()/ForceAdd() calls —
+    // override in CSqliteBookRepository for true single-transaction batching.
+    virtual std::vector<SBatchBookResult> AddBatch(std::span<const SBatchBookEntry> entries);
 };
 
 class IBookQueryRepository

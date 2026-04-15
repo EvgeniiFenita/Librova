@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <optional>
 #include <stdexcept>
@@ -449,6 +450,38 @@ TEST_CASE("Single file import keeps plain storage when forced EPUB conversion is
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE(bookRepository.AddedBook->File.Format == Librova::Domain::EBookFormat::Epub);
     REQUIRE(bookRepository.AddedBook->File.StorageEncoding == Librova::Domain::EStorageEncoding::Plain);
+}
+
+TEST_CASE("Single file import uses repository override when provided", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-repository-override");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository defaultRepository;
+    CStubBookRepository overrideRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        defaultRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .Sha256Hex = std::string{"override-hash"},
+        .RepositoryOverride = std::ref(overrideRepository)
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE_FALSE(defaultRepository.AddedBook.has_value());
+    REQUIRE(overrideRepository.AddedBook.has_value());
+    REQUIRE(overrideRepository.AddedBook->File.Sha256Hex == "override-hash");
 }
 
 TEST_CASE("Single file import fails when forced EPUB conversion is enabled but converter is unavailable", "[importing]")

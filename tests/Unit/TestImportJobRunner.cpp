@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -69,7 +70,10 @@ public:
         std::stop_token) const override
     {
         progressSink.ReportValue(60, "Importing ZIP entry");
-        Calls.push_back(request.SourcePath.filename().string());
+        {
+            std::lock_guard lock(m_mutex);
+            Calls.push_back(request.SourcePath.filename().string());
+        }
 
         if (request.SourcePath.filename() == "second.fb2")
         {
@@ -79,12 +83,14 @@ public:
             };
         }
 
+        std::lock_guard lock(m_mutex);
         return {
             .Status = Librova::Importing::ESingleFileImportStatus::Imported,
             .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
         };
     }
 
+    mutable std::mutex m_mutex;
     mutable std::vector<std::string> Calls;
 };
 
@@ -526,7 +532,9 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
     REQUIRE(result.Snapshot.Message == "Import completed with partial success.");
     REQUIRE_FALSE(result.Error.has_value());
-    REQUIRE(importer.Calls == std::vector<std::string>{"first.fb2", "second.fb2"});
+    auto calls = importer.Calls;
+    std::sort(calls.begin(), calls.end());
+    REQUIRE(calls == std::vector<std::string>{"first.fb2", "second.fb2"});
 }
 
 TEST_CASE("Import job runner fails when ZIP import produces no imported books", "[jobs][import]")

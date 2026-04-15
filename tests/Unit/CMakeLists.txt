@@ -38,6 +38,7 @@ if(BUILD_TESTING)
         TestBookFormat.cpp
         TestBookId.cpp
         TestImportConversionPolicy.cpp
+        TestImportPerfTracker.cpp
         TestImportJobManager.cpp
         TestImportJobRunner.cpp
         TestImportRollbackService.cpp
@@ -60,6 +61,7 @@ if(BUILD_TESTING)
         TestDuplicateMatch.cpp
         TestVersion.cpp
         TestStbCoverImageProcessor.cpp
+        TestWriterDispatchingRepository.cpp
         TestZipImportCoordinator.cpp
     )
 

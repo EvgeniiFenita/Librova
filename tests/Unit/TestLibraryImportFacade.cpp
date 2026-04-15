@@ -1,14 +1,18 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <zip.h>
@@ -18,6 +22,7 @@
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
 #include "Logging/Logging.hpp"
+#include "TestStructuredProgressSink.hpp"
 
 namespace {
 
@@ -88,12 +93,34 @@ public:
         Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
+        const std::scoped_lock lock(m_mutex);
         LastRequest = request;
         return Result;
     }
 
+    mutable std::mutex m_mutex;
     mutable std::optional<Librova::Importing::SSingleFileImportRequest> LastRequest;
     Librova::Importing::SSingleFileImportResult Result;
+};
+
+class COrderedSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const std::scoped_lock lock(m_mutex);
+        Calls.push_back(request.SourcePath.filename().string());
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+        };
+    }
+
+    mutable std::mutex m_mutex;
+    mutable std::vector<std::string> Calls;
 };
 
 struct SImportSandbox
@@ -169,6 +196,18 @@ std::string ReadTextFile(const std::filesystem::path& path)
     return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
+std::size_t CountOccurrences(const std::string& haystack, const std::string_view needle)
+{
+    std::size_t count = 0;
+    std::size_t offset = 0;
+    while ((offset = haystack.find(needle, offset)) != std::string::npos)
+    {
+        ++count;
+        offset += needle.size();
+    }
+    return count;
+}
+
 class CSelectiveSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
@@ -209,16 +248,18 @@ public:
         Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
-        Calls.push_back(request);
         std::filesystem::create_directories(request.WorkingDirectory / "covers");
         std::ofstream(request.WorkingDirectory / "covers" / "cover.jpg").put('c');
 
+        std::lock_guard lock(m_mutex);
+        Calls.push_back(request);
         return {
             .Status = Librova::Importing::ESingleFileImportStatus::Imported,
             .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
         };
     }
 
+    mutable std::mutex m_mutex;
     mutable std::vector<Librova::Importing::SSingleFileImportRequest> Calls;
 };
 
@@ -244,6 +285,54 @@ public:
             .Warnings = {"Probable duplicate."}
         };
     }
+};
+
+class CSlowFirstSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const auto fileName = request.SourcePath.filename().string();
+        if (fileName == "slow.fb2")
+        {
+            std::unique_lock lock(m_mutex);
+            m_cv.wait(lock, [this] { return m_releaseSlow; });
+        }
+        else
+        {
+            const std::scoped_lock lock(m_mutex);
+            ++m_fastCompleted;
+            m_cv.notify_all();
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{++m_nextId}
+        };
+    }
+
+    void WaitForFastCompletions(const std::size_t expectedCount) const
+    {
+        std::unique_lock lock(m_mutex);
+        m_cv.wait(lock, [&] { return m_fastCompleted >= expectedCount; });
+    }
+
+    void ReleaseSlow()
+    {
+        const std::scoped_lock lock(m_mutex);
+        m_releaseSlow = true;
+        m_cv.notify_all();
+    }
+
+private:
+    mutable std::mutex m_mutex;
+    mutable std::condition_variable m_cv;
+    mutable std::size_t m_fastCompleted = 0;
+    mutable bool m_releaseSlow = false;
+    mutable std::int64_t m_nextId = 0;
 };
 
 class CRollbackAwareBookRepository final : public Librova::Domain::IBookRepository
@@ -482,8 +571,14 @@ TEST_CASE("Library import facade cleans per-source working directories after bat
     REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
     REQUIRE(result.Summary.ImportedEntries == 2);
     REQUIRE(importer.Calls.size() == 2);
-    REQUIRE(importer.Calls[0].WorkingDirectory == sandbox / "work" / "entries" / "1");
-    REQUIRE(importer.Calls[1].WorkingDirectory == sandbox / "work" / "entries" / "2");
+
+    std::vector<std::filesystem::path> actualWorkDirs;
+    for (const auto& call : importer.Calls)
+        actualWorkDirs.push_back(call.WorkingDirectory);
+    std::sort(actualWorkDirs.begin(), actualWorkDirs.end());
+    REQUIRE(actualWorkDirs[0] == sandbox / "work" / "entries" / "1");
+    REQUIRE(actualWorkDirs[1] == sandbox / "work" / "entries" / "2");
+
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "work" / "entries" / "1" / "covers"));
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "work" / "entries" / "1"));
     REQUIRE_FALSE(std::filesystem::exists(sandbox / "work" / "entries" / "2" / "covers"));
@@ -1090,4 +1185,355 @@ TEST_CASE("CScopedStructuredProgressSink with default prior values behaves as be
     REQUIRE(outer.Snapshots[0].ImportedEntries == 2);
     REQUIRE(outer.Snapshots[0].FailedEntries == 1);
     REQUIRE(outer.Snapshots[0].SkippedEntries == 0);
+}
+
+// ---------------------------------------------------------------------------
+// Parallel batch tests
+// ---------------------------------------------------------------------------
+
+namespace {
+
+class CAtomicCancellingSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const int call = ++CallCount;
+        if (call == 1)
+        {
+            return {
+                .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+                .ImportedBookId = Librova::Domain::SBookId{11}
+            };
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Cancelled,
+            .Error  = "Cancelled by test."
+        };
+    }
+
+    mutable std::atomic<int> CallCount{0};
+};
+
+// Records all SSingleFileImportRequest objects passed to Run() in a thread-safe manner.
+class CSha256TrackingImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& req,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        {
+            std::lock_guard lock(m_mutex);
+            CapturedSha256.push_back(req.Sha256Hex.value_or("(none)"));
+        }
+        return {
+            .Status         = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{++m_nextId}
+        };
+    }
+
+    mutable std::mutex                 m_mutex;
+    mutable std::atomic<std::int64_t>  m_nextId{0};
+    mutable std::vector<std::string>   CapturedSha256;
+};
+
+} // namespace
+
+TEST_CASE("Library import facade parallel batch reports correct counts on partial failure", "[application][import]")
+{
+    CSelectiveSingleFileImporter importer; // "broken.fb2" -> Failed; others -> Imported
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-partial";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "good1.fb2").put('a');
+    std::ofstream(sandbox / "broken.fb2").put('b');
+    std::ofstream(sandbox / "good2.fb2").put('c');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "good1.fb2", sandbox / "broken.fb2", sandbox / "good2.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.Summary.TotalEntries == 3);
+    REQUIRE(result.Summary.ImportedEntries == 2);
+    REQUIRE(result.Summary.FailedEntries == 1);
+    REQUIRE(result.Summary.SkippedEntries == 0);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade parallel batch reports all skipped when every file is a duplicate", "[application][import]")
+{
+    CDuplicateOnlySingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-alldup";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "dup1.fb2").put('a');
+    std::ofstream(sandbox / "dup2.fb2").put('b');
+    std::ofstream(sandbox / "dup3.fb2").put('c');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "dup1.fb2", sandbox / "dup2.fb2", sandbox / "dup3.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.Summary.TotalEntries == 3);
+    REQUIRE(result.Summary.ImportedEntries == 0);
+    REQUIRE(result.Summary.SkippedEntries == 3);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade parallel batch marks result as cancelled when importer returns Cancelled", "[application][import]")
+{
+    CAtomicCancellingSingleFileImporter importer; // first call -> Imported, rest -> Cancelled
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-cancel";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "a.fb2").put('1');
+    std::ofstream(sandbox / "b.fb2").put('2');
+    std::ofstream(sandbox / "c.fb2").put('3');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "a.fb2", sandbox / "b.fb2", sandbox / "c.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.WasCancelled);
+    REQUIRE(result.Summary.ImportedEntries == 0);
+    REQUIRE(result.Summary.FailedEntries == 0);
+    REQUIRE(result.Summary.SkippedEntries == 2);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade parallel batch rolls back imported book on cancellation", "[application][import]")
+{
+    // First Run() call returns Imported(bookId=11); all subsequent calls return Cancelled.
+    // The facade should detect WasCancelled, trigger rollback, and end with no imported books.
+    CAtomicCancellingSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    auto rollbackRepo = std::make_unique<CRollbackAwareBookRepository>();
+    auto& rollbackRepoRef = *rollbackRepo;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-rollback-test";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "book1.fb2").put('a');
+    std::ofstream(sandbox / "book2.fb2").put('b');
+    std::ofstream(sandbox / "book3.fb2").put('c');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        *rollbackRepo,
+        {.LibraryRoot = sandbox});
+
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "book1.fb2", sandbox / "book2.fb2", sandbox / "book3.fb2"},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.WasCancelled);
+    REQUIRE(result.ImportedBookIds.empty());
+    REQUIRE(rollbackRepoRef.RemovedIds.size() == 1);
+    REQUIRE(rollbackRepoRef.RemovedIds[0].Value == 11);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade does not forward Sha256Hex to individual importers in parallel batch mode", "[application][import]")
+{
+    // In multi-file (batch) mode Sha256Hex is not known per-entry, so the facade must NOT
+    // forward the top-level request.Sha256Hex to individual SSingleFileImportRequest calls.
+    CSha256TrackingImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    CRollbackAwareBookRepository repo;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-sha256-batch-test";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "a.fb2").put('a');
+    std::ofstream(sandbox / "b.fb2").put('b');
+    std::ofstream(sandbox / "c.fb2").put('c');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        repo,
+        {.LibraryRoot = sandbox});
+
+    const auto result = facade.Run({
+        .SourcePaths      = {sandbox / "a.fb2", sandbox / "b.fb2", sandbox / "c.fb2"},
+        .WorkingDirectory = sandbox / "work",
+        .Sha256Hex        = "deadbeef"
+    }, progressSink, {});
+
+    // All three books must have been processed.
+    REQUIRE(result.Summary.TotalEntries == 3);
+
+    // None of the per-entry import calls should have received a Sha256Hex value.
+    for (const auto& captured : importer.CapturedSha256)
+    {
+        REQUIRE(captured == "(none)");
+    }
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade preserves original source order when a standalone file appears before a ZIP source", "[application][import]")
+{
+    COrderedSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-mixed-order";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "standalone.fb2").put('a');
+    const auto zipPath = CreateZipFixture(sandbox / "batch.zip");
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "standalone.fb2", zipPath},
+        .WorkingDirectory = sandbox / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.ImportedEntries == 3);
+    REQUIRE_FALSE(importer.Calls.empty());
+    REQUIRE(importer.Calls.front() == "standalone.fb2");
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade reports progress for completed files before the first batch slot finishes", "[application][import][progress]")
+{
+    if (std::thread::hardware_concurrency() < 2U)
+    {
+        SUCCEED("Parallel batch progress test requires at least two hardware threads.");
+        return;
+    }
+
+    CSlowFirstSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CThreadSafeStructuredProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-slow-first-progress";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "slow.fb2").put('s');
+    std::ofstream(sandbox / "fast1.fb2").put('a');
+    std::ofstream(sandbox / "fast2.fb2").put('b');
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox});
+
+    auto futureResult = std::async(std::launch::async, [&] {
+        return facade.Run({
+            .SourcePaths = {sandbox / "slow.fb2", sandbox / "fast1.fb2", sandbox / "fast2.fb2"},
+            .WorkingDirectory = sandbox / "work"
+        }, progressSink, {});
+    });
+
+    importer.WaitForFastCompletions(2);
+
+    REQUIRE(progressSink.WaitForPartialImportedProgress());
+
+    const auto snapshotsBeforeSlowRelease = progressSink.SnapshotCopy();
+    REQUIRE(std::ranges::any_of(snapshotsBeforeSlowRelease, [](const auto& snapshot) {
+        return snapshot.ImportedEntries >= 1 && snapshot.ProcessedEntries < snapshot.TotalEntries;
+    }));
+
+    importer.ReleaseSlow();
+    const auto result = futureResult.get();
+
+    REQUIRE(result.Summary.ImportedEntries == 3);
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade logs one run-level import perf summary that includes ZIP stages", "[application][import][logging]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-import-perf";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox);
+    std::ofstream(sandbox / "standalone.fb2").put('a');
+    const auto zipPath = CreateZipFixture(sandbox / "batch.zip");
+    const auto logPath = sandbox / "Logs" / "host.log";
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+    {
+        const Librova::Application::CLibraryImportFacade facade(
+            importer,
+            zipCoordinator,
+            GetEmptyBookRepository(),
+            {.LibraryRoot = sandbox});
+        const auto result = facade.Run({
+            .SourcePaths = {sandbox / "standalone.fb2", zipPath},
+            .WorkingDirectory = sandbox / "work"
+        }, progressSink, {});
+
+        REQUIRE(result.Summary.ImportedEntries == 3);
+    }
+
+    Librova::Logging::CLogging::Shutdown();
+
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(CountOccurrences(logText, "[import-perf] SUMMARY") == 1);
+    REQUIRE(logText.find("zip_scan=") != std::string::npos);
+    REQUIRE(logText.find("zip_extract=") != std::string::npos);
+
+    std::filesystem::remove_all(sandbox);
 }

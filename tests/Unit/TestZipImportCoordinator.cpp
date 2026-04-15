@@ -1,17 +1,25 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <future>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <zip.h>
 
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "Logging/Logging.hpp"
+#include "TestStructuredProgressSink.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
@@ -60,6 +68,37 @@ public:
     std::string LastMessage;
 };
 
+class CStubBookRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    [[nodiscard]] Librova::Domain::SBookId ReserveId() override
+    {
+        return Librova::Domain::SBookId{m_nextId.fetch_add(1, std::memory_order_relaxed)};
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId) const override
+    {
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId) override
+    {
+    }
+
+private:
+    mutable std::atomic<std::int64_t> m_nextId{1};
+};
+
 class CStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
 {
 public:
@@ -68,7 +107,12 @@ public:
         Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
-        Calls.push_back(request);
+        std::size_t callIndex = 0;
+        {
+            std::lock_guard lock(m_mutex);
+            Calls.push_back(request);
+            callIndex = Calls.size();
+        }
 
         if (request.SourcePath.filename() == "second.fb2")
         {
@@ -80,10 +124,11 @@ public:
 
         return {
             .Status = Librova::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(callIndex)}
         };
     }
 
+    mutable std::mutex m_mutex;
     mutable std::vector<Librova::Importing::SSingleFileImportRequest> Calls;
 };
 
@@ -95,16 +140,22 @@ public:
         Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
-        Calls.push_back(request);
+        std::size_t callIndex = 0;
+        {
+            std::lock_guard lock(m_mutex);
+            Calls.push_back(request);
+            callIndex = Calls.size();
+        }
         std::filesystem::create_directories(request.WorkingDirectory / "covers");
         std::ofstream(request.WorkingDirectory / "covers" / "cover.jpg").put('c');
 
         return {
             .Status = Librova::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(callIndex)}
         };
     }
 
+    mutable std::mutex m_mutex;
     mutable std::vector<Librova::Importing::SSingleFileImportRequest> Calls;
 };
 
@@ -116,18 +167,72 @@ public:
         Librova::Domain::IProgressSink&,
         std::stop_token) const override
     {
-        Calls.push_back(request);
+        std::size_t callIndex = 0;
+        {
+            std::lock_guard lock(m_mutex);
+            Calls.push_back(request);
+            callIndex = Calls.size();
+        }
         std::filesystem::create_directories(request.WorkingDirectory / "covers");
         std::ofstream(request.WorkingDirectory / "covers" / "cover.jpg").put('c');
         std::filesystem::remove(request.WorkingDirectory / "covers" / "cover.jpg");
 
         return {
             .Status = Librova::Importing::ESingleFileImportStatus::Imported,
-            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(Calls.size())}
+            .ImportedBookId = Librova::Domain::SBookId{static_cast<std::int64_t>(callIndex)}
         };
     }
 
+    mutable std::mutex m_mutex;
     mutable std::vector<Librova::Importing::SSingleFileImportRequest> Calls;
+};
+
+class CSlowFirstZipSingleFileImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest& request,
+        Librova::Domain::IProgressSink&,
+        std::stop_token) const override
+    {
+        const auto fileName = request.SourcePath.filename().string();
+        if (fileName == "first.fb2")
+        {
+            std::unique_lock lock(m_mutex);
+            m_cv.wait(lock, [this] { return m_releaseSlow; });
+        }
+        else
+        {
+            const std::scoped_lock lock(m_mutex);
+            ++m_fastCompleted;
+            m_cv.notify_all();
+        }
+
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{++m_nextId}
+        };
+    }
+
+    void WaitForFastCompletion() const
+    {
+        std::unique_lock lock(m_mutex);
+        m_cv.wait(lock, [this] { return m_fastCompleted >= 1; });
+    }
+
+    void ReleaseSlow()
+    {
+        const std::scoped_lock lock(m_mutex);
+        m_releaseSlow = true;
+        m_cv.notify_all();
+    }
+
+private:
+    mutable std::mutex m_mutex;
+    mutable std::condition_variable m_cv;
+    mutable std::size_t m_fastCompleted = 0;
+    mutable bool m_releaseSlow = false;
+    mutable std::int64_t m_nextId = 0;
 };
 
 void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string& text)
@@ -223,6 +328,27 @@ std::filesystem::path CreateNumericZipFixture(const std::filesystem::path& outpu
     return outputPath;
 }
 
+std::filesystem::path CreateCyrillicZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "папка/книга.fb2", "<fb2/>");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
 std::string ReadTextFile(const std::filesystem::path& path)
 {
     std::ifstream input(path, std::ios::binary);
@@ -290,6 +416,29 @@ TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted e
     REQUIRE(importer.Calls[1].ForceEpubConversion);
 }
 
+TEST_CASE("ZIP import coordinator forwards writer repository override to extracted entries", "[zip-import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-writer-repository");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CStubBookRepository writerRepository;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .WriterRepository = std::ref(writerRepository)
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 4);
+    REQUIRE(importer.Calls.size() == 2);
+    REQUIRE(importer.Calls[0].RepositoryOverride.has_value());
+    REQUIRE(importer.Calls[1].RepositoryOverride.has_value());
+    REQUIRE(&importer.Calls[0].RepositoryOverride->get() == &writerRepository);
+    REQUIRE(&importer.Calls[1].RepositoryOverride->get() == &writerRepository);
+}
+
 TEST_CASE("ZIP import coordinator cleans per-entry working directories after import", "[zip-import]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-entry-cleanup");
@@ -305,9 +454,10 @@ TEST_CASE("ZIP import coordinator cleans per-entry working directories after imp
     }, progressSink, {});
 
     REQUIRE(result.Entries.size() == 4);
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "first" / "covers"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "first"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "second" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1"));
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries"));
 }
 
@@ -327,12 +477,12 @@ TEST_CASE("ZIP import coordinator removes non-empty per-entry working directorie
 
     REQUIRE(result.Entries.size() == 4);
     REQUIRE(importer.Calls.size() == 2);
-    REQUIRE(importer.Calls[0].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "first");
-    REQUIRE(importer.Calls[1].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "second");
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "first" / "covers"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "first"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "second" / "covers"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "second"));
+    REQUIRE(importer.Calls[0].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "0");
+    REQUIRE(importer.Calls[1].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "1");
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1"));
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries"));
 }
 
@@ -352,12 +502,12 @@ TEST_CASE("ZIP import coordinator removes empty cover workspaces for numeric ent
 
     REQUIRE(result.Entries.size() == 2);
     REQUIRE(importer.Calls.size() == 2);
-    REQUIRE(importer.Calls[0].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "689669");
-    REQUIRE(importer.Calls[1].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "689670");
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "689669" / "covers"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "689669"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "689670" / "covers"));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "689670"));
+    REQUIRE(importer.Calls[0].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "0");
+    REQUIRE(importer.Calls[1].WorkingDirectory == sandbox.GetPath() / "work" / "entries" / "1");
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "0"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1" / "covers"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries" / "1"));
     REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries"));
 }
 
@@ -434,4 +584,139 @@ TEST_CASE("ZIP import coordinator logs skipped and failed entries into host log"
     REQUIRE(logText.find("notes.txt") != std::string::npos);
     REQUIRE(logText.find("nested/archive.zip") != std::string::npos);
     REQUIRE(logText.find("Nested ZIP archives are not supported.") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// Cancellation tests
+// ---------------------------------------------------------------------------
+
+namespace {
+
+class CCancellingProgressSink final : public Librova::Domain::IProgressSink
+{
+public:
+    void ReportValue(const int, std::string_view) override {}
+    bool IsCancellationRequested() const override { return true; }
+};
+
+} // namespace
+
+TEST_CASE("ZIP import coordinator stops processing entries when IsCancellationRequested returns true", "[zip-import]")
+{
+    CScopedDirectory sandbox("librova-zip-cancel-sink");
+    const auto zipPath = sandbox.GetPath() / "books.zip";
+
+    {
+        int ec = ZIP_ER_OK;
+        const auto zipPathUtf8 = Librova::Unicode::PathToUtf8(zipPath);
+        zip_t* archive = zip_open(zipPathUtf8.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &ec);
+        REQUIRE(archive != nullptr);
+        const char data[] = "<fb2/>";
+        zip_source_t* src = zip_source_buffer(archive, data, sizeof(data) - 1, 0);
+        zip_file_add(archive, "book.fb2", src, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+        zip_close(archive);
+    }
+
+    CStubSingleFileImporter importer;
+    CCancellingProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(importer.Calls.empty());
+    REQUIRE_FALSE(result.Entries.empty());
+    REQUIRE(result.Entries.back().Status == Librova::ZipImporting::EZipEntryImportStatus::Cancelled);
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "entries"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.GetPath() / "work" / "extracted"));
+}
+
+TEST_CASE("ZIP import coordinator stops processing entries when stop_token is pre-requested", "[zip-import]")
+{
+    CScopedDirectory sandbox("librova-zip-cancel-token");
+    const auto zipPath = sandbox.GetPath() / "books.zip";
+
+    {
+        int ec = ZIP_ER_OK;
+        const auto zipPathUtf8 = Librova::Unicode::PathToUtf8(zipPath);
+        zip_t* archive = zip_open(zipPathUtf8.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &ec);
+        REQUIRE(archive != nullptr);
+        const char data[] = "<fb2/>";
+        zip_source_t* src = zip_source_buffer(archive, data, sizeof(data) - 1, 0);
+        zip_file_add(archive, "book.fb2", src, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+        zip_close(archive);
+    }
+
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    std::stop_source stopSource;
+    stopSource.request_stop();
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, stopSource.get_token());
+
+    REQUIRE(importer.Calls.empty());
+    REQUIRE_FALSE(result.Entries.empty());
+    REQUIRE(result.Entries.back().Status == Librova::ZipImporting::EZipEntryImportStatus::Cancelled);
+}
+
+TEST_CASE("ZIP import coordinator preserves UTF-8 entry names when building filesystem paths", "[zip-import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-cyrillic-entry");
+    const std::filesystem::path zipPath = CreateCyrillicZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 1);
+    REQUIRE(importer.Calls.size() == 1);
+    REQUIRE(importer.Calls[0].SourcePath.filename() == Librova::Unicode::PathFromUtf8("книга.fb2"));
+    REQUIRE(result.Entries[0].ArchivePath == Librova::Unicode::PathFromUtf8("папка\\книга.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator reports progress for completed entries before the first slot finishes", "[zip-import][progress]")
+{
+    if (std::thread::hardware_concurrency() < 2U)
+    {
+        SUCCEED("Parallel ZIP progress test requires at least two hardware threads.");
+        return;
+    }
+
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-slow-first-progress");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    CSlowFirstZipSingleFileImporter importer;
+    CThreadSafeStructuredProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    auto futureResult = std::async(std::launch::async, [&] {
+        return coordinator.Run({
+            .ZipPath = zipPath,
+            .WorkingDirectory = sandbox.GetPath() / "work"
+        }, progressSink, {});
+    });
+
+    importer.WaitForFastCompletion();
+
+    REQUIRE(progressSink.WaitForPartialImportedProgress());
+
+    const auto snapshotsBeforeSlowRelease = progressSink.SnapshotCopy();
+    REQUIRE(std::ranges::any_of(snapshotsBeforeSlowRelease, [](const auto& snapshot) {
+        return snapshot.ImportedEntries >= 1 && snapshot.ProcessedEntries < snapshot.TotalEntries;
+    }));
+
+    importer.ReleaseSlow();
+    const auto result = futureResult.get();
+
+    REQUIRE(result.ImportedCount() == 2);
 }

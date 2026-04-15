@@ -1,5 +1,6 @@
 add_library(LibrovaDomain STATIC
     BookFormat.cpp
+    BookRepository.cpp
     DomainError.cpp
     MetadataNormalization.cpp
     StorageEncoding.cpp

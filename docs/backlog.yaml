@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 142
+  last_assigned_id: 143
 tasks:
 - id: 130
   summary: replace indeterminate import progress bar with a finite percentage counter
@@ -70,21 +70,6 @@ tasks:
     database schema, domain model, proto contracts, browse-request plumbing, and UI shell.
 
     '
-- id: 60
-  summary: introduce concurrent file processing in the import pipeline to reduce wall-clock import time
-  status: Open
-  type: Feature
-  priority: Major
-  milestone: '1.1'
-  note: 'the current import pipeline is fully sequential with no thread pool; introduce bounded task-based
-    dispatch so multiple source files are processed concurrently; SQLite writes must be serialized through
-    a single writer; duplicate detection must guard against concurrent insertion races (aligns with open
-    task #47); the image-processing backend must be initialized per thread if it requires it; cancellation
-    via the existing stop-token mechanism must propagate to all in-flight tasks; ZIP entry extraction
-    may remain sequential while extracted entries feed the parallel pool; progress counters must be updated
-    atomically and the UI aggregate summary must remain accurate under concurrent execution.
-
-    '
 - id: 61
   summary: audit and harden browse, search, and filter query performance at library scales of hundreds
     of thousands of books
@@ -151,6 +136,17 @@ tasks:
     reverts to its generated placeholder.
 
     '
+- id: 143
+  summary: 'CExternalBookConverter: batch mode via fbc directory/archive syntax'
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: 'fbc supports ''fbc convert archive.zip/ outDir/'' — one process for N books. Prerequisite: IBookConverter
+    needs SupportsGroupConversion()+ConvertGroup() extension points. Challenge: mixed-format archives
+    require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
+    Eliminates per-book CreateProcess overhead for EPUB conversion. Deferred from #60 to avoid complexity
+    in the parallel import slice.'
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open

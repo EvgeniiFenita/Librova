@@ -450,6 +450,47 @@ Librova::Domain::SBookId CSqliteBookRepository::ReserveId()
     return Librova::Domain::SBookId{nextId};
 }
 
+std::vector<Librova::Domain::SBookId> CSqliteBookRepository::ReserveIds(const std::size_t count)
+{
+    std::vector<Librova::Domain::SBookId> reservedIds;
+    reservedIds.reserve(count);
+
+    if (count == 0)
+    {
+        return reservedIds;
+    }
+
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
+    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteStatement selectStatement(
+        connection.GetNativeHandle(),
+        "SELECT next_id FROM book_id_sequence WHERE singleton = 1;");
+
+    if (!selectStatement.Step())
+    {
+        throw std::runtime_error("Failed to read next reserved book id.");
+    }
+
+    const std::int64_t nextId = selectStatement.GetColumnInt64(0);
+
+    Librova::Sqlite::CSqliteStatement updateStatement(
+        connection.GetNativeHandle(),
+        "UPDATE book_id_sequence SET next_id = ? WHERE singleton = 1;");
+    updateStatement.BindInt64(1, nextId + static_cast<std::int64_t>(count));
+    static_cast<void>(updateStatement.Step());
+
+    transaction.Commit();
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        reservedIds.push_back(Librova::Domain::SBookId{
+            nextId + static_cast<std::int64_t>(i)});
+    }
+
+    return reservedIds;
+}
+
 std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Librova::Domain::SBookId id) const
 {
     const std::scoped_lock lock(m_operationMutex);
@@ -527,6 +568,77 @@ void CSqliteBookRepository::Compact()
     // so the subsequent VACUUM can actually reclaim the freed pages.
     Librova::SearchIndex::CSearchIndexMaintenance::RebuildAll(connection);
     connection.Execute("VACUUM;");
+}
+
+std::vector<Librova::Domain::IBookRepository::SBatchBookResult>
+CSqliteBookRepository::AddBatch(std::span<const SBatchBookEntry> entries)
+{
+    std::vector<SBatchBookResult> results;
+    results.reserve(entries.size());
+
+    if (entries.empty())
+    {
+        return results;
+    }
+
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
+    CSqliteTransaction transaction(connection);
+
+    for (std::size_t i = 0; i < entries.size(); ++i)
+    {
+        const auto& entry = entries[i];
+        // Safe: savepoint names are derived only from the local loop index.
+        const std::string savepoint = std::format("sp_batch_{}", i);
+
+        try
+        {
+            connection.Execute(std::format("SAVEPOINT {};", savepoint));
+
+            if (!entry.ForceAdd && !entry.Book.File.Sha256Hex.empty())
+            {
+                Librova::Sqlite::CSqliteStatement hashCheck(
+                    connection.GetNativeHandle(),
+                    "SELECT id FROM books WHERE sha256_hex = ? LIMIT 1;");
+                hashCheck.BindText(1, entry.Book.File.Sha256Hex);
+
+                if (hashCheck.Step())
+                {
+                    throw Librova::Domain::CDuplicateHashException{
+                        Librova::Domain::SBookId{hashCheck.GetColumnInt64(0)}};
+                }
+            }
+
+            const std::int64_t rawId = DoAddBook(connection, entry.Book);
+            connection.Execute(std::format("RELEASE {};", savepoint));
+
+            results.push_back({
+                .Status = EBatchAddStatus::Imported,
+                .BookId = Librova::Domain::SBookId{rawId}
+            });
+        }
+        catch (const Librova::Domain::CDuplicateHashException& ex)
+        {
+            connection.Execute(std::format("ROLLBACK TO {};", savepoint));
+            connection.Execute(std::format("RELEASE {};", savepoint));
+            results.push_back({
+                .Status            = EBatchAddStatus::RejectedDuplicate,
+                .ConflictingBookId = ex.ExistingBookId()
+            });
+        }
+        catch (const std::exception& ex)
+        {
+            connection.Execute(std::format("ROLLBACK TO {};", savepoint));
+            connection.Execute(std::format("RELEASE {};", savepoint));
+            results.push_back({
+                .Status = EBatchAddStatus::Failed,
+                .Error  = ex.what()
+            });
+        }
+    }
+
+    transaction.Commit();
+    return results;
 }
 
 } // namespace Librova::BookDatabase

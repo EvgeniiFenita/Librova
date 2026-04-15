@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <stop_token>
 #include <string>
@@ -9,6 +10,7 @@
 #include "Domain/BookRepository.hpp"
 #include "Domain/ServiceContracts.hpp"
 #include "ImportConversion/ImportConversionPolicy.hpp"
+#include "Importing/ImportPerfTracker.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
 
 namespace Librova::Importing {
@@ -27,8 +29,11 @@ struct SSingleFileImportRequest
     std::filesystem::path SourcePath;
     std::filesystem::path WorkingDirectory;
     std::optional<std::string> Sha256Hex;
+    std::optional<Librova::Domain::SBookId> PreReservedBookId;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
+    std::optional<std::reference_wrapper<CImportPerfTracker>> PerfTracker; // optional; pass std::ref(perf) for per-stage measurements
+    std::optional<std::reference_wrapper<Librova::Domain::IBookRepository>> RepositoryOverride; // optional; overrides m_bookRepository for writes
 
     [[nodiscard]] bool IsValid() const noexcept
     {

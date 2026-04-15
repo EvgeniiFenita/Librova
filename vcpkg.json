@@ -3,6 +3,7 @@
   "version-string": "1.0.0",
   "builtin-baseline": "b5d1a94fb7f88fd835e360fd23a45a09ceedbf48",
   "dependencies": [
+    "bshoshany-thread-pool",
     "catch2",
     "libzip",
     "protobuf",
