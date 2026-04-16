@@ -151,10 +151,10 @@ internal sealed class ImportJobsService : IImportJobsService
         Action<ImportJobSnapshotModel>? onProgress,
         CancellationToken cancellationToken)
     {
-        ImportJobStatusModel? lastHeartbeatStatus = null;
-        string? lastHeartbeatMessage = null;
-        var lastHeartbeatAt = DateTimeOffset.MinValue;
-        var heartbeatInterval = TimeSpan.FromSeconds(10);
+        ImportJobStatusModel? lastLoggedStatus = null;
+        string? lastLoggedMessage = null;
+        ulong lastLoggedImported = ulong.MaxValue, lastLoggedFailed = ulong.MaxValue, lastLoggedSkipped = ulong.MaxValue;
+        int lastLoggedPercent = -1;
 
         while (true)
         {
@@ -178,12 +178,14 @@ internal sealed class ImportJobsService : IImportJobsService
             {
                 onProgress?.Invoke(snapshot);
 
-                var now = DateTimeOffset.UtcNow;
-                var statusChanged = snapshot.Status != lastHeartbeatStatus;
-                var messageChanged = !string.IsNullOrEmpty(snapshot.Message) && snapshot.Message != lastHeartbeatMessage;
-                var heartbeatDue = (now - lastHeartbeatAt) >= heartbeatInterval;
+                var statusChanged = snapshot.Status != lastLoggedStatus;
+                var messageChanged = !string.IsNullOrEmpty(snapshot.Message) && snapshot.Message != lastLoggedMessage;
+                var countersChanged = snapshot.ImportedEntries != lastLoggedImported
+                    || snapshot.FailedEntries != lastLoggedFailed
+                    || snapshot.SkippedEntries != lastLoggedSkipped
+                    || (int)snapshot.Percent != lastLoggedPercent;
 
-                if (statusChanged || messageChanged || heartbeatDue)
+                if (statusChanged || messageChanged || countersChanged)
                 {
                     UiLogging.Information(
                         "Import job in progress. JobId={JobId} Status={Status} Percent={Percent} " +
@@ -196,9 +198,12 @@ internal sealed class ImportJobsService : IImportJobsService
                         snapshot.SkippedEntries,
                         snapshot.Message.Length == 0 ? "<none>" : snapshot.Message);
 
-                    lastHeartbeatStatus = snapshot.Status;
-                    lastHeartbeatMessage = snapshot.Message;
-                    lastHeartbeatAt = now;
+                    lastLoggedStatus = snapshot.Status;
+                    lastLoggedMessage = snapshot.Message;
+                    lastLoggedImported = snapshot.ImportedEntries;
+                    lastLoggedFailed = snapshot.FailedEntries;
+                    lastLoggedSkipped = snapshot.SkippedEntries;
+                    lastLoggedPercent = (int)snapshot.Percent;
                 }
             }
         }

@@ -147,7 +147,7 @@ void LogZipEntryIssueIfInitialized(
 
     if (jobId != 0)
     {
-        Librova::Logging::Warn(
+        Librova::Logging::Info(
             "ZIP entry skipped: job={} archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
             jobId,
             utf8ZipPath,
@@ -159,7 +159,7 @@ void LogZipEntryIssueIfInitialized(
         return;
     }
 
-    Librova::Logging::Warn(
+    Librova::Logging::Info(
         "ZIP entry skipped: archive='{}' entry='{}' stage='{}' outcome='{}' status='{}' reason='{}'",
         utf8ZipPath,
         utf8EntryPath,

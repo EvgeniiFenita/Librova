@@ -87,8 +87,7 @@ void LogDuplicateCandidateDetails(
     const Librova::Importing::SSingleFileImportRequest& request,
     const Librova::Domain::SBookMetadata& metadata,
     const std::optional<std::string>& sha256Hex,
-    const std::vector<Librova::Domain::SDuplicateMatch>& matches,
-    const bool warningLevel)
+    const std::vector<Librova::Domain::SDuplicateMatch>& matches)
 {
     if (!Librova::Logging::CLogging::IsInitialized())
     {
@@ -114,69 +113,34 @@ void LogDuplicateCandidateDetails(
             break;
         }
 
-        if (warningLevel)
+        if (request.ImportJobId != 0)
         {
-            if (request.ImportJobId != 0)
-            {
-                Librova::Logging::Warn(
-                    "Duplicate candidate fields: job={} source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                    request.ImportJobId,
-                    sourceLabel,
-                    metadata.TitleUtf8,
-                    authorsStr,
-                    DuplicateSeverityLabel(match.Severity),
-                    DuplicateReasonLabel(match.Reason),
-                    matchDetail,
-                    match.ExistingBookId.Value,
-                    match.ExistingTitle,
-                    match.ExistingAuthors);
-            }
-            else
-            {
-                Librova::Logging::Warn(
-                    "Duplicate candidate fields: source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                    sourceLabel,
-                    metadata.TitleUtf8,
-                    authorsStr,
-                    DuplicateSeverityLabel(match.Severity),
-                    DuplicateReasonLabel(match.Reason),
-                    matchDetail,
-                    match.ExistingBookId.Value,
-                    match.ExistingTitle,
-                    match.ExistingAuthors);
-            }
+            Librova::Logging::Debug(
+                "Duplicate candidate fields: job={} source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
+                request.ImportJobId,
+                sourceLabel,
+                metadata.TitleUtf8,
+                authorsStr,
+                DuplicateSeverityLabel(match.Severity),
+                DuplicateReasonLabel(match.Reason),
+                matchDetail,
+                match.ExistingBookId.Value,
+                match.ExistingTitle,
+                match.ExistingAuthors);
         }
         else
         {
-            if (request.ImportJobId != 0)
-            {
-                Librova::Logging::Info(
-                    "Duplicate candidate fields: job={} source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                    request.ImportJobId,
-                    sourceLabel,
-                    metadata.TitleUtf8,
-                    authorsStr,
-                    DuplicateSeverityLabel(match.Severity),
-                    DuplicateReasonLabel(match.Reason),
-                    matchDetail,
-                    match.ExistingBookId.Value,
-                    match.ExistingTitle,
-                    match.ExistingAuthors);
-            }
-            else
-            {
-                Librova::Logging::Info(
-                    "Duplicate candidate fields: source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                    sourceLabel,
-                    metadata.TitleUtf8,
-                    authorsStr,
-                    DuplicateSeverityLabel(match.Severity),
-                    DuplicateReasonLabel(match.Reason),
-                    matchDetail,
-                    match.ExistingBookId.Value,
-                    match.ExistingTitle,
-                    match.ExistingAuthors);
-            }
+            Librova::Logging::Debug(
+                "Duplicate candidate fields: source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
+                sourceLabel,
+                metadata.TitleUtf8,
+                authorsStr,
+                DuplicateSeverityLabel(match.Severity),
+                DuplicateReasonLabel(match.Reason),
+                matchDetail,
+                match.ExistingBookId.Value,
+                match.ExistingTitle,
+                match.ExistingAuthors);
         }
     }
 }
@@ -184,8 +148,7 @@ void LogDuplicateCandidateDetails(
 void LogDuplicateDecision(
     const Librova::Importing::SSingleFileImportRequest& request,
     const std::vector<Librova::Domain::SDuplicateMatch>& matches,
-    std::string_view outcome,
-    const bool warningLevel)
+    std::string_view outcome)
 {
     if (!Librova::Logging::CLogging::IsInitialized())
     {
@@ -201,57 +164,28 @@ void LogDuplicateDecision(
     const std::string sourceLabel = GetLogicalSourceLabel(request);
     const auto additionalMatches = matches.size() > 0 ? matches.size() - 1 : 0;
 
-    if (warningLevel)
+    if (request.ImportJobId != 0)
     {
-        if (request.ImportJobId != 0)
-        {
-            Librova::Logging::Warn(
-                "duplicate: decision job={} source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-                request.ImportJobId,
-                sourceLabel,
-                outcome,
-                DuplicateSeverityLabel(decisiveMatch->Severity),
-                DuplicateReasonLabel(decisiveMatch->Reason),
-                decisiveMatch->ExistingBookId.Value,
-                additionalMatches);
-        }
-        else
-        {
-            Librova::Logging::Warn(
-                "duplicate: decision source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-                sourceLabel,
-                outcome,
-                DuplicateSeverityLabel(decisiveMatch->Severity),
-                DuplicateReasonLabel(decisiveMatch->Reason),
-                decisiveMatch->ExistingBookId.Value,
-                additionalMatches);
-        }
+        Librova::Logging::Info(
+            "duplicate: decision job={} source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
+            request.ImportJobId,
+            sourceLabel,
+            outcome,
+            DuplicateSeverityLabel(decisiveMatch->Severity),
+            DuplicateReasonLabel(decisiveMatch->Reason),
+            decisiveMatch->ExistingBookId.Value,
+            additionalMatches);
     }
     else
     {
-        if (request.ImportJobId != 0)
-        {
-            Librova::Logging::Info(
-                "duplicate: decision job={} source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-                request.ImportJobId,
-                sourceLabel,
-                outcome,
-                DuplicateSeverityLabel(decisiveMatch->Severity),
-                DuplicateReasonLabel(decisiveMatch->Reason),
-                decisiveMatch->ExistingBookId.Value,
-                additionalMatches);
-        }
-        else
-        {
-            Librova::Logging::Info(
-                "duplicate: decision source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-                sourceLabel,
-                outcome,
-                DuplicateSeverityLabel(decisiveMatch->Severity),
-                DuplicateReasonLabel(decisiveMatch->Reason),
-                decisiveMatch->ExistingBookId.Value,
-                additionalMatches);
-        }
+        Librova::Logging::Info(
+            "duplicate: decision source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
+            sourceLabel,
+            outcome,
+            DuplicateSeverityLabel(decisiveMatch->Severity),
+            DuplicateReasonLabel(decisiveMatch->Reason),
+            decisiveMatch->ExistingBookId.Value,
+            additionalMatches);
     }
 }
 
@@ -297,7 +231,7 @@ void LogCoverOutcome(
 
     if (request.ImportJobId != 0)
     {
-        Librova::Logging::Info(
+        Librova::Logging::Debug(
             "cover: final job={} source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
             request.ImportJobId,
             sourceLabel,
@@ -308,7 +242,7 @@ void LogCoverOutcome(
     }
     else
     {
-        Librova::Logging::Info(
+        Librova::Logging::Debug(
             "cover: final source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
             sourceLabel,
             outcome,
@@ -515,7 +449,7 @@ struct SResolvedManagedCoverData
         {
             if (Librova::Logging::CLogging::IsInitialized())
             {
-                Librova::Logging::Info(
+                Librova::Logging::Debug(
                     "cover: stored source='{}' status='{}' ext='{}' dimensions={}x{} bytes={}",
                     sourceLabel,
                     processingResult.Status == Librova::Domain::ECoverProcessingStatus::Processed ? "processed" : "unchanged",
@@ -740,8 +674,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (HasStrictDuplicate(duplicates) && !request.AllowProbableDuplicates)
         {
-            LogDuplicateDecision(request, duplicates, "rejected", true);
-            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates, true);
+            LogDuplicateDecision(request, duplicates, "rejected");
+            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates);
             return {
                 .Status = ESingleFileImportStatus::RejectedDuplicate,
                 .StoredFormat = parsedBook.SourceFormat,
@@ -752,8 +686,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (HasProbableDuplicate(duplicates) && !request.AllowProbableDuplicates)
         {
-            LogDuplicateDecision(request, duplicates, "rejected", true);
-            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates, true);
+            LogDuplicateDecision(request, duplicates, "rejected");
+            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates);
             return {
                 .Status = ESingleFileImportStatus::RejectedDuplicate,
                 .StoredFormat = parsedBook.SourceFormat,
@@ -780,8 +714,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (!duplicates.empty() && request.AllowProbableDuplicates)
         {
-            LogDuplicateDecision(request, duplicates, "allowed-override", false);
-            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates, false);
+            LogDuplicateDecision(request, duplicates, "allowed-override");
+            LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates);
         }
 
         const std::filesystem::path convertedDestinationPath =
@@ -984,8 +918,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                         .Reason = Librova::Domain::EDuplicateReason::SameHash,
                         .ExistingBookId = duplicateEx.ExistingBookId()
                     }},
-                    "rejected-write-time-hash-collision",
-                    true);
+                    "rejected-write-time-hash-collision");
 
                 return {
                     .Status = ESingleFileImportStatus::RejectedDuplicate,

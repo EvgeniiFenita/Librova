@@ -1208,3 +1208,12 @@ tasks:
     dir creation, single Build() call in PrepareImport, PRAGMA cache_size=32MB, cached dedup connection
     with CloseSession(), WAL autocheckpoint=4000, and FTS5 post-import optimize; all 418 native + 273
     managed tests pass.'
+- id: 148
+  summary: reduce import log flood to aggregate state-change diagnostics
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: 'Moved cover: final/stored and Duplicate candidate fields per-item logs to Debug; duplicate: decision
+    rejected downgraded from Warn to Info; ZIP entry skipped downgraded from Warn to Info; UI heartbeat
+    interval raised 10s→30s with full counter comparison to suppress post-cancel log flood.'

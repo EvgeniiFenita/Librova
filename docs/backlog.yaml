@@ -112,19 +112,6 @@ tasks:
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
     '
-- id: 148
-  summary: reduce import log flood to aggregate state-change diagnostics
-  status: Open
-  type: Bug
-  priority: Major
-  milestone: '1.1'
-  note: 'current log volume is dominated by success-path and polling noise rather than real failures:
-    host.log reached 363962 lines with 276068 info and 87765 warning lines, including 182112 cover: final
-    lines, 92250 cover: stored lines, 22147 duplicate: decision lines, 22475 Duplicate candidate fields
-    lines, and 22147 ZIP entry skipped duplicate warnings; ui.log reached 5564 lines, of which 5530 were
-    Import job in progress and 829 post-cancel rows were byte-for-byte unchanged for 140 minutes; move
-    per-item success logs to Debug, aggregate duplicate and parser-recovery warnings, and log UI progress
-    only on meaningful state or counter changes.'
 - id: 149
   summary: fix intermittent cover file move failures during import
   status: Open
