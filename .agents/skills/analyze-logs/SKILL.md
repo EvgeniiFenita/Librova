@@ -65,6 +65,7 @@ Select-String -Path $log -Pattern "\[debug\]"               | Measure-Object | S
 | `[warning]` lines | proportional to format quirks |
 | `[error]` lines | only for genuine failures |
 
+
 ---
 
 ## 3. Reconstruct Import Speed / Degradation
@@ -129,6 +130,14 @@ Select-String -Path $hostLog -Pattern "zip: done job=" |
 ```
 
 The final `[import-perf] SUMMARY` is especially valuable — it can directly name bottlenecks such as `storage`, `dedup`, `db_wait`, `parse`, `zip_extract`, `cover`, `convert`.
+
+**Healthy perf-summary benchmark (lib.rus.ec FB2 ZIPs):**
+- `throughput` ≥ 100 bk/s — acceptable; ≥ 150 bk/s — good
+- `storage` 40–50% — normal for parallel writer path
+- `parse` 20–30% — normal for FB2 with XML recovery
+- `db_wait` 10–20% — normal; above 30% → investigate writer queue saturation
+- `writer_queue=0` — no backpressure; any non-zero value → possible saturation
+- `cover` < 5% — normal for lib.rus.ec (few covers); higher values for well-formatted archives with many embedded covers
 
 ---
 
@@ -210,10 +219,10 @@ Select-String -Path $log -Pattern "\[warning\]" | Group-Object {
 | `non-integer year` | Normal for "March 2004" style — already handled |
 | `missing lang` | Normal for some files — already handled |
 | `CP1251 fallback` | Expected for misdeclared Russian files — no action |
-| `body XML recovery` | Expected for lib.rus.ec `<...>` / `<:>` body tokens — no action |
+| `body XML recovery` | Expected for lib.rus.ec `<...>` / `<:>` body tokens — no action; ~7.5% rate is normal |
 | `author fallback` | Usually metadata-quality issue only; keep as data-quality signal |
-| `cover missing binary id` / `cover final not stored` | Cover-quality problem; investigate if rate is high |
-| `unknown genre` | **Act**: add code to mapper (see §3) |
+| `cover missing binary id` / `cover final not stored` | Cover-quality problem; ~0.7% rate normal for lib.rus.ec; investigate if > 5% |
+| `unknown genre` | **Act**: add code to mapper (see §5) |
 | `other` (new pattern) | Investigate — may be a new quirk to handle |
 
 ---

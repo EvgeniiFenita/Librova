@@ -225,7 +225,7 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
 
     if (Librova::Logging::CLogging::IsInitialized())
     {
-        Librova::Logging::Warn(
+        Librova::Logging::Info(
             "Cancellation rollback started. Rolling back {} imported book(s).", total);
     }
 
@@ -380,7 +380,7 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
     {
         if (rollbackResult.RemainingBookIds.empty())
         {
-            Librova::Logging::Warn(
+            Librova::Logging::Info(
                 "Cancellation rollback complete. Rolled back {} book(s).", total);
         }
         else
