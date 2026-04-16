@@ -1228,3 +1228,11 @@ tasks:
     per-book rollback loop with batch delete (single transaction) + per-book file cleanup; added VACUUM
     progress handler via sqlite3_progress_handler; wired all hooks in LibraryImportFacade so UI receives
     live status transitions during post-cancel phases instead of freezing on Running for 140 min.
+- id: 152
+  summary: normalize imported covers with byte-budget fallback ladder
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Imported covers now always pass through canonical JPEG normalization with a 456x684 primary bound,
+    120 KiB byte-budget fallback ladder, updated regressions, and architecture documentation.

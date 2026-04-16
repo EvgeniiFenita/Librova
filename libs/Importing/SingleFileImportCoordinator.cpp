@@ -303,8 +303,11 @@ void LogConversionOutcome(
     }
 }
 
-constexpr std::uint32_t GManagedCoverMaxWidth = 512;
-constexpr std::uint32_t GManagedCoverMaxHeight = 768;
+constexpr std::uint32_t GManagedCoverMaxWidth = 456;
+constexpr std::uint32_t GManagedCoverMaxHeight = 684;
+constexpr std::uint32_t GManagedCoverFallbackMaxWidth = 400;
+constexpr std::uint32_t GManagedCoverFallbackMaxHeight = 600;
+constexpr std::uint32_t GManagedCoverTargetMaxBytes = 120u * 1024u;
 
 void EnsureDirectory(const std::filesystem::path& path)
 {
@@ -437,6 +440,9 @@ struct SResolvedManagedCoverData
         .Cover = sourceCover,
         .MaxWidth = GManagedCoverMaxWidth,
         .MaxHeight = GManagedCoverMaxHeight,
+        .FallbackMaxWidth = GManagedCoverFallbackMaxWidth,
+        .FallbackMaxHeight = GManagedCoverFallbackMaxHeight,
+        .TargetMaxBytes = GManagedCoverTargetMaxBytes,
         .PreserveSmallerImages = true,
         .AllowFormatConversion = false
     });

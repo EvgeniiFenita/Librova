@@ -25,16 +25,18 @@
 
 #include "CoverProcessingStb/StbCoverImageProcessor.hpp"
 
+#include <array>
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace {
 
-constexpr int GJpegQuality = 85;
+constexpr std::array<int, 3> GJpegQualityLadder = {85, 78, 72};
 
 [[nodiscard]] std::pair<std::uint32_t, std::uint32_t> CalculateTargetSize(
     const std::uint32_t srcW, const std::uint32_t srcH,
@@ -88,6 +90,75 @@ void AppendToVector(void* ctx, void* data, int size)
         rgb[i * 3 + 2] = static_cast<stbi_uc>((b * a + 255u * (255u - a)) / 255u);
     }
     return rgb;
+}
+
+struct SEncodedJpeg
+{
+    std::vector<std::byte> Bytes;
+    int Quality = 0;
+};
+
+[[nodiscard]] std::optional<SEncodedJpeg> TryEncodeJpeg(
+    const stbi_uc* rgb,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const int quality)
+{
+    std::vector<std::byte> jpegBytes;
+    jpegBytes.reserve(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
+    const int ok = stbi_write_jpg_to_func(
+        AppendToVector,
+        &jpegBytes,
+        static_cast<int>(width),
+        static_cast<int>(height),
+        3,
+        rgb,
+        quality);
+
+    if (ok == 0 || jpegBytes.empty())
+    {
+        return std::nullopt;
+    }
+
+    return SEncodedJpeg{
+        .Bytes = std::move(jpegBytes),
+        .Quality = quality
+    };
+}
+
+[[nodiscard]] std::vector<stbi_uc> BuildRgbBuffer(
+    const stbi_uc* rawPixels,
+    const int srcW,
+    const int srcH,
+    const std::uint32_t dstW,
+    const std::uint32_t dstH)
+{
+    if (static_cast<std::uint32_t>(srcW) == dstW && static_cast<std::uint32_t>(srcH) == dstH)
+    {
+        return CompositeOnWhiteAndPackRgb(
+            rawPixels,
+            static_cast<std::size_t>(dstW) * static_cast<std::size_t>(dstH));
+    }
+
+    const auto resizedRgba = ResizeRgba(rawPixels, srcW, srcH, static_cast<int>(dstW), static_cast<int>(dstH));
+    return CompositeOnWhiteAndPackRgb(
+        resizedRgba.data(),
+        static_cast<std::size_t>(dstW) * static_cast<std::size_t>(dstH));
+}
+
+[[nodiscard]] std::pair<std::uint32_t, std::uint32_t> ResolveOutputSize(
+    const std::uint32_t srcW,
+    const std::uint32_t srcH,
+    const std::uint32_t maxW,
+    const std::uint32_t maxH,
+    const bool preserveSmallerImages)
+{
+    if (preserveSmallerImages && srcW <= maxW && srcH <= maxH)
+    {
+        return {srcW, srcH};
+    }
+
+    return CalculateTargetSize(srcW, srcH, maxW, maxH);
 }
 
 } // namespace
@@ -159,66 +230,87 @@ Librova::Domain::SCoverProcessingResult CStbCoverImageProcessor::ProcessForManag
     const auto w = static_cast<std::uint32_t>(srcW);
     const auto h = static_cast<std::uint32_t>(srcH);
 
-    const bool fitsInBounds = (w <= request.MaxWidth && h <= request.MaxHeight);
+    const auto [primaryWidth, primaryHeight] = ResolveOutputSize(
+        w,
+        h,
+        request.MaxWidth,
+        request.MaxHeight,
+        request.PreserveSmallerImages);
+    const auto primaryRgb = BuildRgbBuffer(rawPixels, srcW, srcH, primaryWidth, primaryHeight);
 
-    // Fast path: source bytes are genuinely JPEG (magic bytes FF D8 FF) and
-    // already within bounds — return them as-is to avoid a lossy re-encode.
-    // We check the actual bytes rather than the extension field because the
-    // extension may be wrong (e.g. a PNG embedded with content-type image/jpeg).
-    const auto& coverBytes = request.Cover.Bytes;
-    const bool isActuallyJpeg = coverBytes.size() >= 3
-        && coverBytes[0] == std::byte{0xFF}
-        && coverBytes[1] == std::byte{0xD8}
-        && coverBytes[2] == std::byte{0xFF};
+    std::optional<std::vector<stbi_uc>> fallbackRgb;
+    std::uint32_t fallbackWidth = 0;
+    std::uint32_t fallbackHeight = 0;
 
-    if (isActuallyJpeg && request.PreserveSmallerImages && fitsInBounds)
+    if (request.FallbackMaxWidth > 0 && request.FallbackMaxHeight > 0)
     {
-        return {
-            .Status      = Librova::Domain::ECoverProcessingStatus::Unchanged,
-            .Cover       = request.Cover,
-            .PixelWidth  = w,
-            .PixelHeight = h,
-            .WasResized  = false
+        std::tie(fallbackWidth, fallbackHeight) = ResolveOutputSize(
+            w,
+            h,
+            request.FallbackMaxWidth,
+            request.FallbackMaxHeight,
+            request.PreserveSmallerImages);
+
+        if (fallbackWidth != primaryWidth || fallbackHeight != primaryHeight)
+        {
+            fallbackRgb = BuildRgbBuffer(rawPixels, srcW, srcH, fallbackWidth, fallbackHeight);
+        }
+    }
+
+    std::optional<SEncodedJpeg> lastAttempt;
+    std::uint32_t lastWidth = primaryWidth;
+    std::uint32_t lastHeight = primaryHeight;
+
+    const auto tryCandidate =
+        [&](const std::vector<stbi_uc>& rgb,
+            const std::uint32_t candidateWidth,
+            const std::uint32_t candidateHeight) -> std::optional<Librova::Domain::SCoverProcessingResult> {
+            for (const int quality : GJpegQualityLadder)
+            {
+                lastAttempt = TryEncodeJpeg(rgb.data(), candidateWidth, candidateHeight, quality);
+                lastWidth = candidateWidth;
+                lastHeight = candidateHeight;
+
+                if (!lastAttempt.has_value())
+                {
+                    return std::nullopt;
+                }
+
+                if (request.TargetMaxBytes == 0 || lastAttempt->Bytes.size() <= request.TargetMaxBytes)
+                {
+                    return Librova::Domain::SCoverProcessingResult{
+                        .Status      = Librova::Domain::ECoverProcessingStatus::Processed,
+                        .Cover       = {.Extension = "jpg", .Bytes = std::move(lastAttempt->Bytes)},
+                        .PixelWidth  = candidateWidth,
+                        .PixelHeight = candidateHeight,
+                        .WasResized  = candidateWidth != w || candidateHeight != h,
+                        .DiagnosticMessage = "quality=" + std::to_string(quality)
+                    };
+                }
+            }
+
+            return std::nullopt;
         };
-    }
 
-    // Determine output dimensions.
-    auto dstW = w;
-    auto dstH = h;
-    bool wasResized = false;
-    if (!fitsInBounds)
+    if (const auto processed = tryCandidate(primaryRgb, primaryWidth, primaryHeight))
     {
-        std::tie(dstW, dstH) = CalculateTargetSize(w, h, request.MaxWidth, request.MaxHeight);
-        wasResized = true;
+        return *processed;
     }
 
-    // Resize RGBA → RGBA if needed.
-    std::vector<stbi_uc> resizedBuf;
-    const stbi_uc* encodeInput = rawPixels;
-    if (wasResized)
+    if (fallbackRgb.has_value())
     {
-        resizedBuf  = ResizeRgba(rawPixels, srcW, srcH, static_cast<int>(dstW), static_cast<int>(dstH));
-        encodeInput = resizedBuf.data();
+        if (const auto processed = tryCandidate(*fallbackRgb, fallbackWidth, fallbackHeight))
+        {
+            return *processed;
+        }
     }
 
-    // Composite alpha on white and pack to RGB for JPEG encoding.
-    const std::size_t pixelCount = static_cast<std::size_t>(dstW) * static_cast<std::size_t>(dstH);
-    const auto rgbBuf = CompositeOnWhiteAndPackRgb(encodeInput, pixelCount);
-
-    // Encode to JPEG into an in-memory buffer.
-    std::vector<std::byte> jpegBytes;
-    jpegBytes.reserve(pixelCount); // rough initial reservation
-    const int ok = stbi_write_jpg_to_func(
-        AppendToVector, &jpegBytes,
-        static_cast<int>(dstW), static_cast<int>(dstH),
-        3, rgbBuf.data(), GJpegQuality);
-
-    if (ok == 0 || jpegBytes.empty())
+    if (!lastAttempt.has_value())
     {
         return {
             .Status = Librova::Domain::ECoverProcessingStatus::Failed,
             .DiagnosticMessage = "JPEG encoding failed for "
-                + std::to_string(dstW) + "x" + std::to_string(dstH)
+                + std::to_string(lastWidth) + "x" + std::to_string(lastHeight)
                 + " image (source " + std::to_string(srcW) + "x" + std::to_string(srcH)
                 + ", channels=" + std::to_string(srcChans) + ")."
         };
@@ -226,10 +318,12 @@ Librova::Domain::SCoverProcessingResult CStbCoverImageProcessor::ProcessForManag
 
     return {
         .Status      = Librova::Domain::ECoverProcessingStatus::Processed,
-        .Cover       = {.Extension = "jpg", .Bytes = std::move(jpegBytes)},
-        .PixelWidth  = dstW,
-        .PixelHeight = dstH,
-        .WasResized  = wasResized
+        .Cover       = {.Extension = "jpg", .Bytes = std::move(lastAttempt->Bytes)},
+        .PixelWidth  = lastWidth,
+        .PixelHeight = lastHeight,
+        .WasResized  = lastWidth != w || lastHeight != h,
+        .DiagnosticMessage = "final-fallback-over-byte-budget quality=" + std::to_string(lastAttempt->Quality)
+            + " target_bytes=" + std::to_string(request.TargetMaxBytes)
     };
 }
 

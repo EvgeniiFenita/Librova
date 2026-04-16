@@ -422,6 +422,8 @@ Destructor calls Drain() if not already called.
 | `zip_extract` | Main-thread ZIP extraction into the temp workspace |
 | `sema_wait` | Time the **main thread** was blocked on `inFlight.acquire()` — measures extraction back-pressure |
 
+Managed cover normalization is canonicalized during import rather than preserving source JPEG bytes verbatim. The current policy re-encodes every extracted cover to JPEG, keeps the primary bound at `456x684` (3x the library-card cover slot), targets `<= 120 KiB` per stored cover, and falls back through JPEG quality `85 -> 78 -> 72` before a secondary `400x600` pass with the same lower-quality tail. The final `400x600 @ q72` step is a deterministic terminal fallback: if a pathological image still exceeds the byte budget, Librova stores that final result and logs the over-budget outcome instead of looping or preserving the original oversized bytes.
+
 `sema_wait` is excluded from bottleneck percentages because it is the main thread's coordination overhead, not worker CPU time.
 
 `CLibraryImportFacade` creates one run-level tracker and passes it through the entire import run, including ZIP sources. When a ZIP import is executed standalone without an outer tracker, `CZipImportCoordinator` creates its own local tracker and still emits a summary.

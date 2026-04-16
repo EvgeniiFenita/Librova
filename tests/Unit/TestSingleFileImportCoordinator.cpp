@@ -624,8 +624,11 @@ TEST_CASE("Single file import stores optimized cover bytes returned by the cover
 
     REQUIRE(result.IsSuccess());
     REQUIRE(coverImageProcessor.LastRequest.has_value());
-    REQUIRE(coverImageProcessor.LastRequest->MaxWidth == 512);
-    REQUIRE(coverImageProcessor.LastRequest->MaxHeight == 768);
+    REQUIRE(coverImageProcessor.LastRequest->MaxWidth == 456);
+    REQUIRE(coverImageProcessor.LastRequest->MaxHeight == 684);
+    REQUIRE(coverImageProcessor.LastRequest->FallbackMaxWidth == 400);
+    REQUIRE(coverImageProcessor.LastRequest->FallbackMaxHeight == 600);
+    REQUIRE(coverImageProcessor.LastRequest->TargetMaxBytes == 120u * 1024u);
     REQUIRE(managedStorage.LastPreparedStorage.has_value());
     REQUIRE(managedStorage.LastPreparedStorage->FinalCoverPath.has_value());
     REQUIRE(ReadBinaryFile(*managedStorage.LastPreparedStorage->FinalCoverPath) == std::vector<std::byte>({

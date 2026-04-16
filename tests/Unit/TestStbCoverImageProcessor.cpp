@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -82,6 +83,34 @@ namespace {
     return result;
 }
 
+[[nodiscard]] std::vector<std::byte> CreateNoisyPngBytes(int width, int height)
+{
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 3u);
+    std::uint32_t state = 0xC0FFEEu;
+    for (auto& pixel : pixels)
+    {
+        state = state * 1664525u + 1013904223u;
+        pixel = static_cast<std::uint8_t>((state >> 16) & 0xFFu);
+    }
+
+    std::vector<std::byte> result;
+    stbi_write_png_to_func(
+        [](void* ctx, void* data, int size) {
+            auto& buf = *static_cast<std::vector<std::byte>*>(ctx);
+            buf.insert(
+                buf.end(),
+                static_cast<const std::byte*>(data),
+                static_cast<const std::byte*>(data) + size);
+        },
+        &result,
+        width,
+        height,
+        3,
+        pixels.data(),
+        0);
+    return result;
+}
+
 // Returns true iff the bytes start with the JPEG SOI marker (FF D8 FF).
 [[nodiscard]] bool StartsWithJpegMagic(const std::vector<std::byte>& bytes) noexcept
 {
@@ -119,11 +148,12 @@ TEST_CASE("Stb cover processor leaves small JPEG unchanged", "[cover-processing]
         .PreserveSmallerImages = true
     });
 
-    REQUIRE(result.Status == Librova::Domain::ECoverProcessingStatus::Unchanged);
+    REQUIRE(result.Status == Librova::Domain::ECoverProcessingStatus::Processed);
     REQUIRE(result.PixelWidth  == 32);
     REQUIRE(result.PixelHeight == 48);
     REQUIRE_FALSE(result.WasResized);
-    REQUIRE(result.Cover.Bytes == jpegBytes);
+    REQUIRE(StartsWithJpegMagic(result.Cover.Bytes));
+    REQUIRE(result.Cover.Bytes != jpegBytes);
 }
 
 TEST_CASE("Stb cover processor converts small PNG to JPEG", "[cover-processing]")
@@ -306,4 +336,51 @@ TEST_CASE("Stb cover processor re-encodes PNG bytes even when extension says jpg
     REQUIRE(result.Cover.Extension == "jpg");
     REQUIRE(StartsWithJpegMagic(result.Cover.Bytes));
     REQUIRE(result.Cover.Bytes != pngBytes); // output differs from PNG input
+}
+
+TEST_CASE("Stb cover processor applies byte-budget fallback ladder for noisy covers", "[cover-processing]")
+{
+    const Librova::CoverProcessingStb::CStbCoverImageProcessor proc;
+    const auto noisyPngBytes = CreateNoisyPngBytes(456, 684);
+
+    const auto result = proc.ProcessForManagedStorage({
+        .Cover = {.Extension = "png", .Bytes = noisyPngBytes},
+        .MaxWidth = 456,
+        .MaxHeight = 684,
+        .FallbackMaxWidth = 400,
+        .FallbackMaxHeight = 600,
+        .TargetMaxBytes = 120u * 1024u,
+        .PreserveSmallerImages = true
+    });
+
+    REQUIRE(result.Status == Librova::Domain::ECoverProcessingStatus::Processed);
+    REQUIRE(result.PixelWidth <= 456);
+    REQUIRE(result.PixelHeight <= 684);
+    REQUIRE(result.Cover.Extension == "jpg");
+    REQUIRE(StartsWithJpegMagic(result.Cover.Bytes));
+    REQUIRE(result.Cover.Bytes.size() <= 120u * 1024u);
+}
+
+TEST_CASE("Stb cover processor exits deterministically at the final fallback when byte budget is impossible", "[cover-processing]")
+{
+    const Librova::CoverProcessingStb::CStbCoverImageProcessor proc;
+    const auto noisyPngBytes = CreateNoisyPngBytes(456, 684);
+
+    const auto result = proc.ProcessForManagedStorage({
+        .Cover = {.Extension = "png", .Bytes = noisyPngBytes},
+        .MaxWidth = 456,
+        .MaxHeight = 684,
+        .FallbackMaxWidth = 400,
+        .FallbackMaxHeight = 600,
+        .TargetMaxBytes = 1,
+        .PreserveSmallerImages = true
+    });
+
+    REQUIRE(result.Status == Librova::Domain::ECoverProcessingStatus::Processed);
+    REQUIRE(result.PixelWidth == 400);
+    REQUIRE(result.PixelHeight == 600);
+    REQUIRE(result.Cover.Extension == "jpg");
+    REQUIRE(StartsWithJpegMagic(result.Cover.Bytes));
+    REQUIRE(result.Cover.Bytes.size() > 1);
+    REQUIRE(std::string_view{result.DiagnosticMessage}.find("final-fallback-over-byte-budget") != std::string_view::npos);
 }

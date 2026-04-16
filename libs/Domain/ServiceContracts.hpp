@@ -93,12 +93,18 @@ struct SCoverProcessingRequest
     SCoverData Cover;
     std::uint32_t MaxWidth = 0;
     std::uint32_t MaxHeight = 0;
+    std::uint32_t FallbackMaxWidth = 0;
+    std::uint32_t FallbackMaxHeight = 0;
+    std::uint32_t TargetMaxBytes = 0;
     bool PreserveSmallerImages = true;
     bool AllowFormatConversion = false;
 
     [[nodiscard]] bool IsValid() const noexcept
     {
-        return !Cover.IsEmpty() && MaxWidth > 0 && MaxHeight > 0;
+        const bool hasValidPrimaryBounds = MaxWidth > 0 && MaxHeight > 0;
+        const bool hasNoFallbackBounds = FallbackMaxWidth == 0 && FallbackMaxHeight == 0;
+        const bool hasValidFallbackBounds = FallbackMaxWidth > 0 && FallbackMaxHeight > 0;
+        return !Cover.IsEmpty() && hasValidPrimaryBounds && (hasNoFallbackBounds || hasValidFallbackBounds);
     }
 };
 
