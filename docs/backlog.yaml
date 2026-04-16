@@ -148,18 +148,6 @@ tasks:
     124420.fb2 at 2026-04-15 23:43:55 and 158359.fb2 at 2026-04-16 01:12:26); investigate file-handle
     ownership, temp cleanup ordering, and destination collisions in the cover storage path, then add a
     regression test so cover finalization cannot fail a book after metadata parsing has already succeeded.
-- id: 150
-  summary: expand and normalize FB2 genre mapping for dirty real-world codes
-  status: Open
-  type: Bug
-  priority: Major
-  milestone: '1.1'
-  note: the 2026-04-15/16 import run produced 171 unknown-genre warnings across 64 unique codes; the highest-volume
-    misses were Православие (48), paper_work (21), global_economy (6), real_estate (6), religion_judaism
-    (5), Христианство (4), and economics_ref (4), while suspicious malformed values such as 105, fictionbook.cs,
-    st, N/K, sci_history История, and accountingР‘СѓС…СѓС‡РµС‚ also appeared; extend the mapper for the
-    clean high-frequency codes, add tests for each new mapping, and introduce normalization/garbage handling
-    so localized aliases, mixed-language labels, and mojibake do not keep generating warning noise.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
@@ -220,17 +208,5 @@ tasks:
     regular UI-driven deletions via LibraryTrashFacade never trigger compaction, so tombstones accumulate
     indefinitely (~1–2 KB per deleted book); decide on a strategy (threshold-based, background idle task,
     or per-batch) and implement it so FTS5 shadow-table space is reclaimed without blocking the UI.
-
-    '
-- id: 122
-  summary: audit and consolidate FB2 genre display names to reduce visual clutter in genre filters
-  status: Open
-  type: Feature
-  priority: Low
-  milestone: unscheduled
-  note: 'review the full genre mapping table and identify clusters of codes that resolve to overly similar
-    or redundant display names (e.g. multiple regional sub-genres collapsing to one concept); consolidate
-    them into a smaller, cleaner set of user-visible names without breaking import compatibility — code-to-name
-    resolution must remain stable for all known FB2 codes.
 
     '

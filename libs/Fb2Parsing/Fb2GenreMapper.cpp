@@ -191,25 +191,28 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"prose_military",      "Military Prose"},
     {"prose_root",          "Prose"},
     {"proce",               "Prose"},
-    {"biogr_travel",           "Travel Biography"},
-    {"biogr_professionals",    "Professional Biographies"},
-    {"biogr_historical",       "Historical Biographies"},
-    {"biogr_arts",             "Arts & Culture Biographies"},
-    {"biogr_leaders",          "Leadership Biographies"},
+    // All biogr_* codes collapse to a single genre filter entry (#122)
+    {"biogr_travel",           "Biography & Memoirs"},
+    {"biogr_professionals",    "Biography & Memoirs"},
+    {"biogr_historical",       "Biography & Memoirs"},
+    {"biogr_arts",             "Biography & Memoirs"},
+    {"biogr_leaders",          "Biography & Memoirs"},
     {"entert_humor",           "Entertainment & Humor"},
     {"magician_book",          "Magic"},
-    {"travel_polar",           "Polar Travel"},
-    {"travel_europe",          "Travel: Europe"},
-    {"travel_asia",            "Travel: Asia"},
-    {"travel_ex_ussr",         "Travel: Former USSR"},
+    // Regional travel variants → single "Travel" filter entry; guidebooks stay distinct (#122)
+    {"travel_polar",           "Travel"},
+    {"travel_europe",          "Travel"},
+    {"travel_asia",            "Travel"},
+    {"travel_ex_ussr",         "Travel"},
     {"travel_guidebook_series","Travel Guides"},
-    {"history_russia",         "Russian History"},
-    {"history_europe",         "European History"},
-    {"history_world",          "World History"},
-    {"history_asia",           "Asian History"},
-    {"history_middle_east",    "Middle East History"},
+    // Regional history variants → "History"; military history is thematically distinct (#122)
+    {"history_russia",         "History"},
+    {"history_europe",         "History"},
+    {"history_world",          "History"},
+    {"history_asia",           "History"},
+    {"history_middle_east",    "History"},
     {"history_military_science","Military History"},
-    {"history_usa",            "US History"},
+    {"history_usa",            "History"},
     {"science_psy",            "Psychology"},
     {"science_biolog",         "Biology"},
     {"literature_adv",         "Adventure Literature"},
@@ -344,9 +347,9 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"sf_irony",                  "Humorous SF"},
     {"sf_mystic",                 "Mystic SF"},
     {"sf_stimpank",               "Steampunk"},
-    {"biz_beogr",                 "Business Biography"},
+    {"biz_beogr",                 "Biography & Memoirs"},  // business biographies → same filter entry (#122)
     {"biz_life",                  "Business & Lifestyle"},
-    {"biogr_sports",              "Sports Biography"},
+    {"biogr_sports",              "Biography & Memoirs"},  // sports biographies → same filter entry (#122)
     {"science_earth",             "Earth Sciences"},
     {"science_medicine",          "Medicine"},
     {"science_archaeology",       "Archaeology"},
@@ -376,8 +379,8 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"literature_erotica",        "Erotica"},
     {"literature_books",          "Literature"},
     {"literature_antology",       "Anthology"},
-    {"literature_19",             "19th Century Literature"},
-    {"literature_18",             "18th Century Literature"},
+    {"literature_19",             "Literature"},  // century sub-genres → single filter entry (#122)
+    {"literature_18",             "Literature"},
     {"literature_sea",            "Maritime Fiction"},
     {"literature_usa",            "American Literature"},
     {"literature_women",          "Women's Fiction"},
@@ -526,8 +529,8 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     // Young Adult
     {"ya",                  "Young Adult"},
 
-    // Literature by period
-    {"literature_20",       "20th Century Literature"},
+    // Literature by period — century suffixes add clutter; all collapse to "Literature" (#122)
+    {"literature_20",       "Literature"},
 
     // Military
     {"military",            "Military"},
@@ -574,6 +577,22 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
     {"Фантастика",          "Science Fiction"},
     {"Стёб",                "Parody & Satire"},
     {"folklore",            "Folklore"},
+
+    // High-frequency codes from 2026-04 production import run (task #150)
+    // Cyrillic religion aliases
+    {"Православие",         "Orthodox Christianity"},   // 48 occurrences
+    {"Христианство",        "Christianity"},            // 4 occurrences
+
+    // Business & economics
+    {"paper_work",          "Office & Administration"}, // 21 occurrences
+    {"global_economy",      "Economics"},               // 6 occurrences
+    {"economics_ref",       "Economics"},               // 4 occurrences
+
+    // Real estate / property
+    {"real_estate",         "Real Estate"},             // 6 occurrences
+
+    // Religion variants
+    {"religion_judaism",    "Judaism"},                 // 5 occurrences
 };
 // clang-format on
 
@@ -581,10 +600,49 @@ const std::unordered_map<std::string_view, std::string_view> GGenreNames{
 
 std::string_view CFb2GenreMapper::ResolveGenreName(const std::string_view fb2Code) noexcept
 {
-    const auto it = GGenreNames.find(fb2Code);
-    if (it == GGenreNames.end())
-        return fb2Code;
-    return it->second;
+    // Fast path: exact match
+    if (const auto it = GGenreNames.find(fb2Code); it != GGenreNames.end())
+        return it->second;
+
+    // Normalization: trim leading/trailing ASCII whitespace
+    const auto ltrim = fb2Code.find_first_not_of(" \t\r\n");
+    if (ltrim == std::string_view::npos)
+        return {}; // all-whitespace → treat as empty
+
+    const auto rtrim = fb2Code.find_last_not_of(" \t\r\n");
+    const std::string_view trimmed = fb2Code.substr(ltrim, rtrim - ltrim + 1);
+    if (trimmed.size() != fb2Code.size())
+    {
+        if (const auto it = GGenreNames.find(trimmed); it != GGenreNames.end())
+            return it->second;
+    }
+
+    // Normalization: mixed-language label "ascii_code CyrillicWord" — try prefix before first space.
+    // Handles real-world values such as "sci_history История".
+    if (const auto spacePos = trimmed.find(' '); spacePos != std::string_view::npos)
+    {
+        const std::string_view prefix = trimmed.substr(0, spacePos);
+        if (!prefix.empty())
+        {
+            if (const auto it = GGenreNames.find(prefix); it != GGenreNames.end())
+                return it->second;
+        }
+    }
+
+    // Normalization: ASCII code with appended non-ASCII bytes (mojibake suffix).
+    // Handles values such as "accountingВухучет" where the real code is "accounting".
+    // Find first byte ≥ 0x80 (start of any multi-byte UTF-8 sequence).
+    std::size_t nonAsciiPos = 0;
+    while (nonAsciiPos < trimmed.size() && static_cast<unsigned char>(trimmed[nonAsciiPos]) < 0x80)
+        ++nonAsciiPos;
+    if (nonAsciiPos > 0 && nonAsciiPos < trimmed.size())
+    {
+        const std::string_view asciiPrefix = trimmed.substr(0, nonAsciiPos);
+        if (const auto it = GGenreNames.find(asciiPrefix); it != GGenreNames.end())
+            return it->second;
+    }
+
+    return fb2Code;
 }
 
 } // namespace Librova::Fb2Parsing

@@ -119,21 +119,21 @@
                  IsLightDismissEnabled="True"
                  Placement="Bottom">
             <Border Classes="FilterPopup" Width="420">
-              <Border.Resources>
-                <!-- Scoped checkbox fill: slightly darker than popup bg so the box is visible -->
-                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUnchecked"              Color="#221A0E" />
-                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUncheckedPointerOver"   Color="#2A2012" />
-                <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUncheckedPressed"       Color="#1C160C" />
-              </Border.Resources>
               <StackPanel Spacing="0">
                 <!-- LANGUAGES section -->
                 <TextBlock Classes="FilterSectionHeader" Text="LANGUAGES" />
-                <ScrollViewer MaxHeight="110" Margin="0,0,0,12">
+                <ScrollViewer MaxHeight="100" Margin="0,0,0,12">
                   <ItemsControl ItemsSource="{Binding LibraryBrowser.LanguageFacets}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="viewModels:FilterFacetItem">
-                        <CheckBox Content="{Binding Value}"
-                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                        <ToggleButton Classes="GenreChip"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      Content="{Binding Value}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -148,21 +148,18 @@
                          PlaceholderText="Search genres…"
                          Text="{Binding LibraryBrowser.GenreSearchText, Mode=TwoWay}"
                          Margin="0,0,0,6" />
-                <ScrollViewer MaxHeight="140" Margin="0,0,0,12">
+                <ScrollViewer MaxHeight="200" Margin="0,0,0,12">
                   <ItemsControl ItemsSource="{Binding LibraryBrowser.FilteredGenreFacets}">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
-                        <UniformGrid Columns="2" />
+                        <WrapPanel Orientation="Horizontal" />
                       </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="viewModels:FilterFacetItem">
-                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                  Margin="0,1,6,1">
-                          <TextBlock Text="{Binding Value}"
-                                     TextTrimming="CharacterEllipsis"
-                                     ToolTip.Tip="{Binding Value}" />
-                        </CheckBox>
+                        <ToggleButton Classes="GenreChip"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      Content="{Binding Value}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

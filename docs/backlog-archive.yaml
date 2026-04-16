@@ -1180,3 +1180,21 @@ tasks:
   milestone: '1.1'
   note: Cancellation rollback now preserves the top-level Books/Covers/Temp directories, removes only
     cancelled book artifacts, and adds regression coverage for immediate re-import after cancel.
+- id: 150
+  summary: expand and normalize FB2 genre mapping for dirty real-world codes
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Added 7 high-frequency codes (Православие, paper_work, global_economy, real_estate, religion_judaism,
+    Христианство, economics_ref); added normalization in ResolveGenreName for mixed-language labels, mojibake
+    ASCII-prefix, and whitespace trimming; all new paths covered by tests.
+- id: 122
+  summary: audit and consolidate FB2 genre display names to reduce visual clutter in genre filters
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: unscheduled
+  note: Consolidated biogr_* variants to Biography & Memoirs, regional travel codes to Travel, regional
+    history codes to History, century literature codes to Literature; travel_guidebook_series and history_military_science
+    kept distinct; tests updated.
