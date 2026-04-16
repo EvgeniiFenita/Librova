@@ -1001,7 +1001,10 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
 
         progressSink.ReportValue(95, "Committing managed files");
-        m_managedStorage.CommitImport(*preparedStorage);
+        {
+            auto _ = measureStage(CImportPerfTracker::EStage::CommitStorage);
+            m_managedStorage.CommitImport(*preparedStorage);
+        }
 
         RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
         RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));

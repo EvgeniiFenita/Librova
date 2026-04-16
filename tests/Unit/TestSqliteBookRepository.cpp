@@ -890,7 +890,7 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
     REQUIRE(probableMatches.front().ExistingBookId.Value == storedId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the full normalized author set", "[book-database]")
@@ -938,7 +938,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     REQUIRE(probableMatches.front().ExistingBookId.Value == matchingBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the normalized title as well as the author set", "[book-database]")
@@ -972,7 +972,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
 
     REQUIRE(probableMatches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection keeps duplicate-author candidate semantics unchanged", "[book-database]")
@@ -1006,7 +1006,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection keeps dupli
 
     REQUIRE(probableMatches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository returns all probable duplicate matches for the same normalized title and authors", "[book-database]")
@@ -1056,7 +1056,7 @@ TEST_CASE("Sqlite book query repository returns all probable duplicate matches f
     };
     REQUIRE(duplicateIds == std::unordered_set<std::int64_t>{firstBookId.Value, secondBookId.Value});
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository probable duplicate detection stays case-insensitive for extended Cyrillic", "[book-database]")
@@ -1093,7 +1093,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection stays case-
     REQUIRE(probableMatches.front().ExistingBookId.Value == storedBookId.Value);
     REQUIRE(probableMatches.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when series differ", "[book-database]")
@@ -1129,7 +1129,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when publishers differ", "[book-database]")
@@ -1165,7 +1165,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when ISBNs differ", "[book-database]")
@@ -1201,7 +1201,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository still finds a match when same ISBN but publisher differs", "[book-database]")
@@ -1245,7 +1245,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but p
     REQUIRE(matches.front().Reason == Librova::Domain::EDuplicateReason::SameIsbn);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository still finds a match when same ISBN but series differs", "[book-database]")
@@ -1289,7 +1289,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but s
     REQUIRE(matches.front().Reason == Librova::Domain::EDuplicateReason::SameIsbn);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISBN but completely different title and author", "[book-database]")
@@ -1328,7 +1328,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository flags as duplicate when same ISBN and same author but different title", "[book-database]")
@@ -1370,7 +1370,7 @@ TEST_CASE("Sqlite book query repository flags as duplicate when same ISBN and sa
     REQUIRE(matches.front().Reason == Librova::Domain::EDuplicateReason::SameIsbn);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISBN and same author but completely different title (anthology false positive)", "[book-database]")
@@ -1411,7 +1411,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository flags annotation-variant title as duplicate when same ISBN and author (edition variant)", "[book-database]")
@@ -1453,7 +1453,7 @@ TEST_CASE("Sqlite book query repository flags annotation-variant title as duplic
     REQUIRE(matches.front().Reason == Librova::Domain::EDuplicateReason::SameIsbn);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISBN and annotation-stripped title matches but different author", "[book-database]")
@@ -1491,7 +1491,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISBN and author name is prefix of existing author", "[book-database]")
@@ -1530,7 +1530,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 
     REQUIRE(matches.empty());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository still finds by title-author when ISBN match was rejected as not credible", "[book-database]")
@@ -1616,7 +1616,7 @@ TEST_CASE("Sqlite book query repository still finds by title-author when ISBN ma
     REQUIRE(matchesFallthrough.front().Reason == Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors);
     REQUIRE(matchesFallthrough.front().ExistingBookId.Value == secondId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository flags as probable duplicate when same-title-author book has no distinguishing metadata", "[book-database]")
@@ -1652,7 +1652,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when same-ti
     REQUIRE(matches.front().Severity == Librova::Domain::EDuplicateSeverity::Probable);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository flags as probable duplicate when one side lacks series and the other has it", "[book-database]")
@@ -1690,7 +1690,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when one sid
     REQUIRE(matches.front().Severity == Librova::Domain::EDuplicateSeverity::Probable);
     REQUIRE(matches.front().ExistingBookId.Value == existingId.Value);
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after normalization", "[book-database]")

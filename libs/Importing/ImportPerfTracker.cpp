@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Logging/Logging.hpp"
+#include "Unicode/UnicodeConversion.hpp"
 
 namespace Librova::Importing {
 
@@ -320,6 +321,106 @@ void CImportPerfTracker::LogSummary(
             elapsedSecPart,
             throughput,
             bottleneckLine);
+    }
+    catch (...)
+    {
+    }
+}
+
+CImportPerfTracker::SStageSnapshot CImportPerfTracker::SnapshotStages() const noexcept
+{
+    SStageSnapshot snap;
+    for (std::size_t i = 0; i < kStageCount; ++i)
+    {
+        snap.StageNs[i]     = m_stages[i].TotalNs.load(std::memory_order_relaxed);
+        snap.StageCounts[i] = m_stages[i].Count.load(std::memory_order_relaxed);
+    }
+    snap.BookCount = m_bookCount.load(std::memory_order_relaxed);
+    snap.Imported  = m_importedCount.load(std::memory_order_relaxed);
+    snap.Duplicate = m_duplicateCount.load(std::memory_order_relaxed);
+    snap.Failed    = m_failedCount.load(std::memory_order_relaxed);
+    return snap;
+}
+
+void CImportPerfTracker::LogArchiveSummary(
+    const std::filesystem::path& archivePath,
+    const SStageSnapshot& before,
+    const std::uint64_t jobId) noexcept
+{
+    try
+    {
+        // Compute per-archive deltas
+        const std::uint64_t books    = m_bookCount.load(std::memory_order_relaxed) - before.BookCount;
+        const std::uint64_t imported = m_importedCount.load(std::memory_order_relaxed)  - before.Imported;
+        const std::uint64_t dup      = m_duplicateCount.load(std::memory_order_relaxed) - before.Duplicate;
+        const std::uint64_t failed   = m_failedCount.load(std::memory_order_relaxed)    - before.Failed;
+
+        if (books == 0)
+        {
+            return;
+        }
+
+        std::uint64_t deltaNs[kStageCount]{};
+        std::uint64_t deltaCount[kStageCount]{};
+        std::uint64_t workerTotalMs = 0;
+
+        for (std::size_t i = 0; i < kStageCount; ++i)
+        {
+            deltaNs[i]    = m_stages[i].TotalNs.load(std::memory_order_relaxed) - before.StageNs[i];
+            deltaCount[i] = m_stages[i].Count.load(std::memory_order_relaxed)   - before.StageCounts[i];
+            if (i != static_cast<std::size_t>(EStage::SemaphoreWait))
+            {
+                workerTotalMs += NsToMs(deltaNs[i]);
+            }
+        }
+
+        // avg ms per stage for this archive
+        std::string stageLine;
+        for (std::size_t i = 0; i < kStageCount; ++i)
+        {
+            const std::uint64_t avgMs = deltaCount[i] > 0 ? NsToMs(deltaNs[i]) / deltaCount[i] : 0;
+            if (i > 0) stageLine += " | ";
+            stageLine += std::string(kStageNames[i]);
+            stageLine += "=";
+            stageLine += std::to_string(avgMs);
+            stageLine += "ms";
+        }
+
+        // bottleneck %
+        struct SEntry { std::size_t Idx; std::uint64_t TotalMs; };
+        std::array<SEntry, kStageCount> entries{};
+        for (std::size_t i = 0; i < kStageCount; ++i)
+            entries[i] = {i, NsToMs(deltaNs[i])};
+        std::sort(entries.begin(), entries.end(),
+            [](const SEntry& a, const SEntry& b) { return a.TotalMs > b.TotalMs; });
+
+        std::string bottleneckLine;
+        for (const auto& e : entries)
+        {
+            if (e.Idx == static_cast<std::size_t>(EStage::SemaphoreWait)) continue;
+            const std::uint32_t pct = workerTotalMs > 0
+                ? static_cast<std::uint32_t>(e.TotalMs * 100 / workerTotalMs) : 0;
+            if (!bottleneckLine.empty()) bottleneckLine += " ";
+            bottleneckLine += std::string(kStageNames[e.Idx]);
+            bottleneckLine += "=";
+            bottleneckLine += std::to_string(pct);
+            bottleneckLine += "%";
+        }
+
+        const std::string archiveUtf8 = Librova::Unicode::PathToUtf8(archivePath);
+
+        if (jobId != 0)
+        {
+            Librova::Logging::Info(
+                "[import-perf] archive job={} archive='{}' books={} imported={} dup={} failed={} | {} | bottleneck: {}",
+                jobId, archiveUtf8, books, imported, dup, failed, stageLine, bottleneckLine);
+        }
+        else
+        {
+            Librova::Logging::Info(
+                "[import-perf] archive archive='{}' books={} imported={} dup={} failed={} | {} | bottleneck: {}",
+                archiveUtf8, books, imported, dup, failed, stageLine, bottleneckLine);
+        }
     }
     catch (...)
     {

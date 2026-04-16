@@ -1,18 +1,6 @@
 meta:
   last_assigned_id: 151
 tasks:
-- id: 146
-  summary: profile and optimize late-phase import slowdown in large ZIP imports
-  status: Open
-  type: Bug
-  priority: Critical
-  milestone: '1.1'
-  note: 'analysis of Z:\lib\Logs\host.log and ui.log from the 2026-04-15/16 large import run showed sustained
-    throughput degradation: 736.2 imported/min at 20:00, 404.8 at 21:00, 287.8 at 22:00, 208.8 at 00:00,
-    and 133.4 at 08:00; the first 10 archives averaged 405.5 processed/min while the last 10 averaged
-    159.4; the final native perf summary at 09:07:12 reported storage=52%, dedup=13%, db_wait=9%, parse=8%,
-    zip_extract=8%, cover=5%, convert=0%; profile storage and dedup on late-phase archives, add per-archive
-    stage timings, and optimize the hotspots so throughput does not collapse as the managed library grows.'
 - id: 147
   summary: make large-import cancellation rollback observable and bounded
   status: Open

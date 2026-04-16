@@ -46,6 +46,7 @@ CSqliteConnection::CSqliteConnection(const std::filesystem::path& databasePath)
     m_connection.reset(rawConnection);
     Execute("PRAGMA foreign_keys = ON;");
     Execute("PRAGMA busy_timeout = 5000;");
+    Execute("PRAGMA cache_size = -32768;"); // 32 MB page cache
 }
 
 void CSqliteConnection::Execute(const std::string_view sql) const

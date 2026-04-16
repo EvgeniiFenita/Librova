@@ -1,11 +1,13 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <vector>
 
 #include "Domain/BookRepository.hpp"
+#include "Sqlite/SqliteConnection.hpp"
 
 namespace Librova::BookDatabase {
 
@@ -21,6 +23,9 @@ public:
     [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const override;
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const override;
     [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override;
+
+    // Closes the cached dedup connection. Call before deleting the database file.
+    void CloseSession();
 
 private:
     struct SCoverDirectorySnapshot
@@ -40,6 +45,8 @@ private:
     std::filesystem::path m_databasePath;
     mutable std::mutex m_statisticsCacheMutex;
     mutable std::optional<SStatisticsCache> m_statisticsCache;
+    mutable std::mutex m_findDupConnectionMutex;
+    mutable std::unique_ptr<Librova::Sqlite::CSqliteConnection> m_findDupConnection;
 };
 
 } // namespace Librova::BookDatabase

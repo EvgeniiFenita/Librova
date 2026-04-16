@@ -25,6 +25,7 @@ public:
     [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId id) const override;
     void Remove(Librova::Domain::SBookId id) override;
     void Compact() override;
+    void OptimizeSearchIndex() override;
 
     // Batch write: one transaction for all entries, per-item SAVEPOINT isolation.
     [[nodiscard]] std::vector<SBatchBookResult>

@@ -1198,3 +1198,13 @@ tasks:
   note: Consolidated biogr_* variants to Biography & Memoirs, regional travel codes to Travel, regional
     history codes to History, century literature codes to Literature; travel_guidebook_series and history_military_science
     kept distinct; tests updated.
+- id: 146
+  summary: profile and optimize late-phase import slowdown in large ZIP imports
+  status: Closed
+  type: Bug
+  priority: Critical
+  milestone: '1.1'
+  note: 'Fixed 8 root causes: added CommitStorage perf stage, per-archive timing logs, once_flag for root
+    dir creation, single Build() call in PrepareImport, PRAGMA cache_size=32MB, cached dedup connection
+    with CloseSession(), WAL autocheckpoint=4000, and FTS5 post-import optimize; all 418 native + 273
+    managed tests pass.'

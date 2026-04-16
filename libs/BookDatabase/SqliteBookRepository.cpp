@@ -384,6 +384,7 @@ Librova::Sqlite::CSqliteConnection& CSqliteBookRepository::GetOrCreateConnection
     if (m_connection == nullptr)
     {
         m_connection = std::make_unique<Librova::Sqlite::CSqliteConnection>(m_databasePath);
+        m_connection->Execute("PRAGMA wal_autocheckpoint = 4000;"); // checkpoint every ~16 MB WAL
     }
 
     return *m_connection;
@@ -568,6 +569,15 @@ void CSqliteBookRepository::Compact()
     // so the subsequent VACUUM can actually reclaim the freed pages.
     Librova::SearchIndex::CSearchIndexMaintenance::RebuildAll(connection);
     connection.Execute("VACUUM;");
+}
+
+void CSqliteBookRepository::OptimizeSearchIndex()
+{
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
+    // Merge all FTS5 segments into a single segment for faster subsequent queries.
+    // Run after a bulk import to eliminate the overhead of many small segments.
+    connection.Execute("INSERT INTO search_index(search_index) VALUES('optimize');");
 }
 
 std::vector<Librova::Domain::IBookRepository::SBatchBookResult>

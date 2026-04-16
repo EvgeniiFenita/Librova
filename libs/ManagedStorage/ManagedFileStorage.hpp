@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <mutex>
 
 #include "Domain/ServiceContracts.hpp"
 
@@ -17,6 +18,7 @@ public:
 
 private:
     std::filesystem::path m_libraryRoot;
+    mutable std::once_flag m_rootDirsEnsuredOnce;
 };
 
 } // namespace Librova::ManagedStorage

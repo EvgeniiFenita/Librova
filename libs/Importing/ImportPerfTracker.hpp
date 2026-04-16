@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <string_view>
 #include <utility>
 
@@ -36,6 +37,7 @@ public:
         ZipScan,
         ZipExtract,
         SemaphoreWait,
+        CommitStorage,
         kCount
     };
 
@@ -44,7 +46,7 @@ public:
     static constexpr std::string_view kStageNames[kStageCount] = {
         "parse", "hash", "dedup", "convert",
         "cover", "storage", "db_wait", "zip_scan",
-        "zip_extract", "sema_wait"
+        "zip_extract", "sema_wait", "commit_storage"
     };
 
     // RAII stage timer — adds elapsed time to the stage accumulator on destruction.
@@ -113,6 +115,27 @@ public:
 
     // Emits a final summary log. Call once after all workers are done.
     void LogSummary(std::chrono::steady_clock::duration totalDuration) noexcept;
+
+    // Captures a snapshot of current cumulative stage totals and book counters.
+    // Used with LogArchiveSummary to produce per-archive delta logs.
+    struct SStageSnapshot
+    {
+        std::uint64_t StageNs[kStageCount]{};
+        std::uint64_t StageCounts[kStageCount]{};
+        std::uint64_t BookCount = 0;
+        std::uint64_t Imported  = 0;
+        std::uint64_t Duplicate = 0;
+        std::uint64_t Failed    = 0;
+    };
+
+    [[nodiscard]] SStageSnapshot SnapshotStages() const noexcept;
+
+    // Logs a per-archive performance summary: stage avg_ms and bottleneck % computed
+    // as deltas from the given snapshot. Call at the end of each archive's Run().
+    void LogArchiveSummary(
+        const std::filesystem::path& archivePath,
+        const SStageSnapshot& before,
+        std::uint64_t jobId) noexcept;
 
     static constexpr std::uint64_t kLogEveryN             = 500;
     static constexpr auto          kLogEveryT              = std::chrono::seconds(30);

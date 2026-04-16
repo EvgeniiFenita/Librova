@@ -1111,6 +1111,12 @@ CSqliteBookQueryRepository::CSqliteBookQueryRepository(std::filesystem::path dat
 {
 }
 
+void CSqliteBookQueryRepository::CloseSession()
+{
+    const std::scoped_lock lock(m_findDupConnectionMutex);
+    m_findDupConnection.reset();
+}
+
 std::vector<Librova::Domain::SBook> CSqliteBookQueryRepository::Search(const Librova::Domain::SSearchQuery& query) const
 {
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
@@ -1296,7 +1302,12 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 {
     std::vector<Librova::Domain::SDuplicateMatch> matches;
     std::unordered_set<std::int64_t> seenIds;
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const std::scoped_lock lock(m_findDupConnectionMutex);
+    if (!m_findDupConnection)
+    {
+        m_findDupConnection = std::make_unique<Librova::Sqlite::CSqliteConnection>(m_databasePath);
+    }
+    auto& connection = *m_findDupConnection;
 
     if (candidate.HasHash())
     {

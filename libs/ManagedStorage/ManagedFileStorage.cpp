@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <exception>
+#include <format>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -190,14 +192,17 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
     }
 
     const Librova::StoragePlanning::SLibraryLayoutPaths layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
-    const std::filesystem::path stagingDirectory = Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(m_libraryRoot, plan.BookId);
+    const std::string bookFolderName = Librova::StoragePlanning::CManagedLibraryLayout::GetBookFolderName(plan.BookId);
+    const std::filesystem::path stagingDirectory = layout.TempDirectory / bookFolderName;
     const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
     const std::filesystem::path finalBookPath =
-        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(m_libraryRoot, plan.BookId, plan.Format, plan.StorageEncoding);
+        layout.BooksDirectory / bookFolderName / Librova::Domain::GetManagedFileName(plan.Format, plan.StorageEncoding);
 
-    EnsureDirectory(layout.BooksDirectory);
-    EnsureDirectory(layout.CoversDirectory);
-    EnsureDirectory(layout.TempDirectory);
+    std::call_once(m_rootDirsEnsuredOnce, [&] {
+        EnsureDirectory(layout.BooksDirectory);
+        EnsureDirectory(layout.CoversDirectory);
+        EnsureDirectory(layout.TempDirectory);
+    });
 
     RemovePathNoThrow(stagingDirectory);
     EnsureDirectory(stagingDirectory);
@@ -222,8 +227,11 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
 
             CopyFile(*plan.CoverSourcePath, stagedCoverPath);
 
+            if (extension.empty())
+                throw std::invalid_argument("Cover extension must not be empty.");
+            const std::string normalizedExt = extension.front() == '.' ? extension.substr(1) : extension;
             const std::filesystem::path finalCoverPath =
-                Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, extension);
+                layout.CoversDirectory / std::format("{}.{}", bookFolderName, normalizedExt);
 
             preparedStorage.StagedCoverPath = stagedCoverPath;
             preparedStorage.FinalCoverPath = finalCoverPath;

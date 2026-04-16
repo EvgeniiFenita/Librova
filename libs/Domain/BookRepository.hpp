@@ -54,6 +54,9 @@ public:
     virtual std::optional<SBook> GetById(SBookId id) const = 0;
     virtual void Remove(SBookId id) = 0;
     virtual void Compact() {}
+    // Merges accumulated FTS5 index segments for faster search after bulk import.
+    // Default is a no-op; override in SQLite repository.
+    virtual void OptimizeSearchIndex() {}
 
     // --- Batch write API ---
 

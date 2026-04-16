@@ -478,6 +478,7 @@ SZipImportResult CZipImportCoordinator::Run(
         std::max(1u, std::min(8u, hwThreads > 1u ? hwThreads - 1u : 1u)));
 
     const auto runStart = std::chrono::steady_clock::now();
+    const auto archivePerfSnapshot = perf.SnapshotStages();
 
     // inFlight and pool MUST be declared after perf so they are destroyed first.
     // Pool dtor blocks until all submitted workers complete; workers hold &perf.
@@ -896,6 +897,8 @@ SZipImportResult CZipImportCoordinator::Run(
     {
         perf.LogSummary(std::chrono::steady_clock::now() - runStart);
     }
+
+    perf.LogArchiveSummary(request.ZipPath, archivePerfSnapshot, request.JobId);
 
     if (Librova::Logging::CLogging::IsInitialized())
     {

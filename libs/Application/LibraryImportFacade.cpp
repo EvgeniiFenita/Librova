@@ -911,7 +911,7 @@ SImportResult CLibraryImportFacade::Run(
     hadFatalWriterError = hadFatalWriterError || writerRepo.HasFatalError();
     perf.LogSummary(std::chrono::steady_clock::now() - runStart);
 
-    result.WasCancelled = result.WasCancelled || stopToken.stop_requested() || progressSink.IsCancellationRequested();
+    result.WasCancelled= result.WasCancelled || stopToken.stop_requested() || progressSink.IsCancellationRequested();
     if ((result.WasCancelled || hadFatalWriterError) && !result.ImportedBookIds.empty())
     {
         const auto rollbackResult = m_rollbackService.RollbackImportedBooks(result.ImportedBookIds);
@@ -919,6 +919,11 @@ SImportResult CLibraryImportFacade::Run(
         result.ImportedBookIds = rollbackResult.RemainingBookIds;
         result.Summary.ImportedEntries = result.ImportedBookIds.size();
         result.HasRollbackCleanupResidue = rollbackResult.HasCleanupResidue;
+    }
+    else if (!result.ImportedBookIds.empty())
+    {
+        try { m_bookRepository.OptimizeSearchIndex(); }
+        catch (...) {}
     }
 
     CleanupWorkingDirectoryNoThrow(m_libraryRoot, request.WorkingDirectory);
