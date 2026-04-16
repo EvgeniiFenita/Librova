@@ -493,8 +493,28 @@ public sealed class StrongIntegrationTests
             Assert.Empty(page.Items);
             Assert.Equal(0UL, page.TotalCount);
 
+            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Books")));
+            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Covers")));
+            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Temp")));
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Books")));
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Covers")));
+            Assert.Empty(Directory.GetDirectories(Path.Combine(options.LibraryRoot, "Books")));
+
+            await ImportBookAsync(
+                session.ImportJobs,
+                sandboxRoot,
+                "post-cancel-reimport.fb2",
+                "Post Cancel Reimport",
+                "Boris",
+                "Strugatsky",
+                cancellation.Token);
+
+            page = await session.LibraryCatalog.ListBooksAsync(
+                new BookListRequestModel(),
+                TimeSpan.FromSeconds(5),
+                cancellation.Token);
+            var restoredBook = Assert.Single(page.Items);
+            Assert.Equal("Post Cancel Reimport", restoredBook.Title);
         }
         finally
         {

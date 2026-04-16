@@ -87,9 +87,31 @@ TEST_CASE("Rollback does not remove top-level Books directory when it becomes em
     repository.CloseSession();
 }
 
-TEST_CASE("Rollback removes empty intermediate subdirectory but preserves Books", "[rollback]")
+TEST_CASE("Rollback removes the empty managed directory of a cancelled book", "[rollback]")
 {
-    auto sandbox = CreateRollbackSandbox("cleanup-subdir");
+    auto sandbox = CreateRollbackSandbox("remove-empty-book-dir");
+    Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
+
+    const auto managedFilePath = std::filesystem::path(u8"Books") / u8"0000000001" / u8"book.fb2";
+    WriteFile(sandbox.Root / managedFilePath);
+
+    const auto bookId = repository.Add(BuildBook(managedFilePath));
+    REQUIRE(bookId.IsValid());
+
+    Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
+    const auto result = rollback.RollbackImportedBooks({bookId});
+
+    REQUIRE(result.RemainingBookIds.empty());
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / managedFilePath));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / "Books" / "0000000001"));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Books"));
+
+    repository.CloseSession();
+}
+
+TEST_CASE("Rollback removes only cancelled book files and leaves parent directories intact", "[rollback]")
+{
+    auto sandbox = CreateRollbackSandbox("preserve-parent-subdir");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
 
     const auto subDir = std::filesystem::path(u8"Books") / u8"SomeAuthor";
@@ -104,7 +126,7 @@ TEST_CASE("Rollback removes empty intermediate subdirectory but preserves Books"
 
     REQUIRE(result.RemainingBookIds.empty());
     REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / managedFilePath));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / subDir));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / subDir));
     REQUIRE(std::filesystem::is_directory(sandbox.Root / "Books"));
 
     repository.CloseSession();

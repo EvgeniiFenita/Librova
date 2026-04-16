@@ -164,6 +164,37 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath));
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath.parent_path()));
     REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath.parent_path()));
+    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Books"));
+    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Temp"));
+}
+
+TEST_CASE("Managed file storage rollback preserves top-level Covers directory when it becomes empty", "[managed-storage]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-preserve-covers");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+    const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
+
+    WriteTextFile(sourceBookPath, "book-content");
+    WriteTextFile(sourceCoverPath, "cover-content");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {35},
+        .Format = Librova::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath,
+        .CoverSourcePath = sourceCoverPath
+    });
+
+    REQUIRE(prepared.FinalCoverPath.has_value());
+
+    storage.RollbackImport(prepared);
+
+    REQUIRE_FALSE(std::filesystem::exists(*prepared.FinalCoverPath));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.StagedCoverPath->parent_path()));
+    REQUIRE(std::filesystem::is_directory(prepared.FinalCoverPath->parent_path()));
+    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Covers"));
+    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Temp"));
 }
 
 TEST_CASE("Managed file storage restores staging state when commit fails after moving the book", "[managed-storage]")
@@ -229,6 +260,8 @@ TEST_CASE("Managed file storage rollback removes final paths left by a partial c
     REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
     REQUIRE_FALSE(std::filesystem::exists(*prepared.FinalCoverPath));
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath.parent_path()));
+    REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath.parent_path()));
+    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Books"));
 }
 
 TEST_CASE("Managed file storage PrepareImport produces forward-slash relative paths with Cyrillic library root", "[managed-storage]")

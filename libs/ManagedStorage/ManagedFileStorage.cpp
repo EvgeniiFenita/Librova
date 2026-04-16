@@ -50,6 +50,17 @@ void RemovePathNoThrow(const std::filesystem::path& path) noexcept
     }
 }
 
+void RemoveEmptyDirectoryNoThrow(const std::filesystem::path& path) noexcept
+{
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove(path, errorCode);
+}
+
 void LogRestoreFailureIfInitialized(
     std::string_view label,
     const std::filesystem::path& sourcePath,
@@ -162,19 +173,6 @@ std::filesystem::path BuildStagedCoverPath(
     }
 
     return stagingDirectory / std::filesystem::path{"cover"}.replace_extension(extension);
-}
-
-void CleanupEmptyParentDirectory(const std::filesystem::path& path) noexcept
-{
-    const std::filesystem::path parentPath = path.parent_path();
-
-    if (parentPath.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove(parentPath, errorCode);
 }
 
 } // namespace
@@ -342,6 +340,9 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
 
 void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept
 {
+    const std::filesystem::path stagingDirectory = preparedStorage.StagedBookPath.parent_path();
+    const std::filesystem::path managedBookDirectory = preparedStorage.FinalBookPath.parent_path();
+
     RemovePathNoThrow(preparedStorage.StagedBookPath);
     RemovePathNoThrow(preparedStorage.FinalBookPath);
 
@@ -355,18 +356,8 @@ void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage
         RemovePathNoThrow(*preparedStorage.FinalCoverPath);
     }
 
-    CleanupEmptyParentDirectory(preparedStorage.StagedBookPath);
-    CleanupEmptyParentDirectory(preparedStorage.FinalBookPath);
-
-    if (preparedStorage.StagedCoverPath.has_value())
-    {
-        CleanupEmptyParentDirectory(*preparedStorage.StagedCoverPath);
-    }
-
-    if (preparedStorage.FinalCoverPath.has_value())
-    {
-        CleanupEmptyParentDirectory(*preparedStorage.FinalCoverPath);
-    }
+    RemoveEmptyDirectoryNoThrow(stagingDirectory);
+    RemoveEmptyDirectoryNoThrow(managedBookDirectory);
 }
 
 } // namespace Librova::ManagedStorage

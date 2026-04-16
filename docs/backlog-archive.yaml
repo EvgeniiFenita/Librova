@@ -1172,3 +1172,11 @@ tasks:
   milestone: '1.1'
   note: Added import job/source/request correlation, decisive duplicate-cover-conversion logs, and regression
     coverage.
+- id: 151
+  summary: preserve the managed Books directory after import cancellation rollback
+  status: Closed
+  type: Bug
+  priority: Critical
+  milestone: '1.1'
+  note: Cancellation rollback now preserves the top-level Books/Covers/Temp directories, removes only
+    cancelled book artifacts, and adds regression coverage for immediate re-import after cancel.

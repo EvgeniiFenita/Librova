@@ -5,6 +5,7 @@
 
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
+#include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
@@ -41,25 +42,6 @@ namespace {
         "Managed rollback path does not exist.",
         "Managed rollback path is unsafe.",
         "Managed rollback path could not be canonicalized.");
-}
-
-void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::filesystem::path& stopRoot) noexcept
-{
-    std::error_code errorCode;
-    auto current = path.parent_path();
-    const auto normalizedStopRoot = stopRoot.lexically_normal();
-
-    while (!current.empty()
-        && current.lexically_normal() != normalizedStopRoot
-        && current.parent_path().lexically_normal() != normalizedStopRoot)
-    {
-        if (!std::filesystem::remove(current, errorCode) || errorCode)
-        {
-            break;
-        }
-
-        current = current.parent_path();
-    }
 }
 
 void LogRollbackCleanupIssueIfInitialized(
@@ -136,8 +118,6 @@ void LogRollbackCleanupIssueIfInitialized(
                 + "' on disk because "
                 + reason;
         }
-
-        CleanupEmptyParentsNoThrow(*resolvedPath, root);
         return std::nullopt;
     }
     catch (const std::exception& error)
@@ -173,6 +153,48 @@ void LogRollbackFailureIfInitialized(
         "Import cancellation rollback failed for book {}. Error='{}'.",
         bookId.Value,
         error.what());
+}
+
+[[nodiscard]] std::optional<std::string> CleanupCancelledBookDirectoryNoThrow(
+    const std::filesystem::path& libraryRoot,
+    const Librova::Domain::SBookId bookId) noexcept
+{
+    try
+    {
+        const auto managedBookDirectory =
+            Librova::StoragePlanning::CManagedLibraryLayout::GetBookDirectory(libraryRoot, bookId);
+
+        if (!std::filesystem::exists(managedBookDirectory))
+        {
+            return std::nullopt;
+        }
+
+        std::error_code errorCode;
+        std::filesystem::remove(managedBookDirectory, errorCode);
+        if (errorCode)
+        {
+            return "Cancellation rollback left managed book directory '"
+                + Librova::Unicode::PathToUtf8(managedBookDirectory)
+                + "' on disk because filesystem remove failed: "
+                + errorCode.message();
+        }
+
+        if (std::filesystem::exists(managedBookDirectory))
+        {
+            return "Cancellation rollback left managed book directory '"
+                + Librova::Unicode::PathToUtf8(managedBookDirectory)
+                + "' on disk because the directory was not empty.";
+        }
+
+        return std::nullopt;
+    }
+    catch (const std::exception& error)
+    {
+        return "Cancellation rollback left managed book directory cleanup incomplete for book "
+            + std::to_string(bookId.Value)
+            + ": "
+            + error.what();
+    }
 }
 
 } // namespace
@@ -241,6 +263,12 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
             if (book->File.HasManagedPath())
             {
                 if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, book->File.ManagedPath); cleanupWarning.has_value())
+                {
+                    rollbackResult.HasCleanupResidue = true;
+                    rollbackResult.Warnings.push_back(*cleanupWarning);
+                }
+
+                if (const auto cleanupWarning = CleanupCancelledBookDirectoryNoThrow(m_libraryRoot, *iterator); cleanupWarning.has_value())
                 {
                     rollbackResult.HasCleanupResidue = true;
                     rollbackResult.Warnings.push_back(*cleanupWarning);
