@@ -1,6 +1,30 @@
 meta:
-  last_assigned_id: 145
+  last_assigned_id: 150
 tasks:
+- id: 146
+  summary: profile and optimize late-phase import slowdown in large ZIP imports
+  status: Open
+  type: Bug
+  priority: Critical
+  milestone: '1.1'
+  note: 'analysis of Z:\lib\Logs\host.log and ui.log from the 2026-04-15/16 large import run showed sustained
+    throughput degradation: 736.2 imported/min at 20:00, 404.8 at 21:00, 287.8 at 22:00, 208.8 at 00:00,
+    and 133.4 at 08:00; the first 10 archives averaged 405.5 processed/min while the last 10 averaged
+    159.4; the final native perf summary at 09:07:12 reported storage=52%, dedup=13%, db_wait=9%, parse=8%,
+    zip_extract=8%, cover=5%, convert=0%; profile storage and dedup on late-phase archives, add per-archive
+    stage timings, and optimize the hotspots so throughput does not collapse as the managed library grows.'
+- id: 147
+  summary: make large-import cancellation rollback observable and bounded
+  status: Open
+  type: Bug
+  priority: Critical
+  milestone: '1.1'
+  note: in the same run CancelImportJob was accepted at 2026-04-16 09:07:11.248, import counters froze
+    by 09:07:12 at Imported=184957 Failed=63 Skipped=22147, but the job did not finish as Cancelled until
+    11:27:25 after rollback and database compaction; add explicit state transitions (Cancelling, RollingBack,
+    Compacting), rollback start/progress/end markers, and optimize the rollback/finalization path so cancellation
+    of a large job completes in predictable time instead of spending ~140 minutes in an unobservable post-cancel
+    phase.
 - id: 130
   summary: replace indeterminate import progress bar with a finite percentage counter
   status: Open
@@ -97,6 +121,42 @@ tasks:
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
     '
+- id: 148
+  summary: reduce import log flood to aggregate state-change diagnostics
+  status: Open
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: 'current log volume is dominated by success-path and polling noise rather than real failures:
+    host.log reached 363962 lines with 276068 info and 87765 warning lines, including 182112 cover: final
+    lines, 92250 cover: stored lines, 22147 duplicate: decision lines, 22475 Duplicate candidate fields
+    lines, and 22147 ZIP entry skipped duplicate warnings; ui.log reached 5564 lines, of which 5530 were
+    Import job in progress and 829 post-cancel rows were byte-for-byte unchanged for 140 minutes; move
+    per-item success logs to Debug, aggregate duplicate and parser-recovery warnings, and log UI progress
+    only on meaningful state or counter changes.'
+- id: 149
+  summary: fix intermittent cover file move failures during import
+  status: Open
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: the analyzed import run logged 4 per-book failures where cover persistence aborted the whole book
+    import with Failed to move file from Z:/lib/Temp/.../cover.jpg to Z:/lib/Covers/...jpg (for example
+    124420.fb2 at 2026-04-15 23:43:55 and 158359.fb2 at 2026-04-16 01:12:26); investigate file-handle
+    ownership, temp cleanup ordering, and destination collisions in the cover storage path, then add a
+    regression test so cover finalization cannot fail a book after metadata parsing has already succeeded.
+- id: 150
+  summary: expand and normalize FB2 genre mapping for dirty real-world codes
+  status: Open
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: the 2026-04-15/16 import run produced 171 unknown-genre warnings across 64 unique codes; the highest-volume
+    misses were Православие (48), paper_work (21), global_economy (6), real_estate (6), religion_judaism
+    (5), Христианство (4), and economics_ref (4), while suspicious malformed values such as 105, fictionbook.cs,
+    st, N/K, sci_history История, and accountingР‘СѓС…СѓС‡РµС‚ also appeared; extend the mapper for the
+    clean high-frequency codes, add tests for each new mapping, and introduce normalization/garbage handling
+    so localized aliases, mixed-language labels, and mojibake do not keep generating warning noise.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
