@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <memory>
@@ -24,8 +25,9 @@ public:
     [[nodiscard]] Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override;
     [[nodiscard]] std::optional<Librova::Domain::SBook> GetById(Librova::Domain::SBookId id) const override;
     void Remove(Librova::Domain::SBookId id) override;
-    void Compact() override;
+    void Compact(const std::function<void()>& onProgressTick = nullptr) override;
     void OptimizeSearchIndex() override;
+    void RemoveBatch(std::span<const Librova::Domain::SBookId> ids) override;
 
     // Batch write: one transaction for all entries, per-item SAVEPOINT isolation.
     [[nodiscard]] std::vector<SBatchBookResult>

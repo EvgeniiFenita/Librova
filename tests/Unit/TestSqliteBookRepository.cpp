@@ -1,10 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <thread>
 #include <unordered_set>
 
@@ -2399,4 +2401,107 @@ TEST_CASE("Sqlite book repository AddBatch ForceAdd bypasses duplicate hash chec
     REQUIRE(results[0].BookId.has_value());
 
     CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+// ---------------------------------------------------------------------------
+// RemoveBatch tests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Sqlite book repository RemoveBatch deletes all specified books atomically", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-removebatch.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    auto makeBook = [](std::string sha, std::string path) {
+        Librova::Domain::SBook book;
+        book.Metadata.TitleUtf8   = "RemoveBatch Book";
+        book.Metadata.AuthorsUtf8 = {"Author"};
+        book.Metadata.Language    = "en";
+        book.File.ManagedPath     = std::filesystem::path{path};
+        book.File.SizeBytes       = 100;
+        book.File.Sha256Hex       = std::move(sha);
+        book.AddedAtUtc = std::chrono::sys_days{std::chrono::January / 1 / 2026};
+        return book;
+    };
+
+    const auto id1 = repository.Add(makeBook("sha-rb-1", "Books/rb1/b.epub"));
+    const auto id2 = repository.Add(makeBook("sha-rb-2", "Books/rb2/b.epub"));
+    const auto id3 = repository.Add(makeBook("sha-rb-3", "Books/rb3/b.epub"));
+
+    REQUIRE(id1.IsValid());
+    REQUIRE(id2.IsValid());
+    REQUIRE(id3.IsValid());
+
+    const std::array<Librova::Domain::SBookId, 3> ids = {id1, id2, id3};
+    repository.RemoveBatch(ids);
+
+    REQUIRE_FALSE(repository.GetById(id1).has_value());
+    REQUIRE_FALSE(repository.GetById(id2).has_value());
+    REQUIRE_FALSE(repository.GetById(id3).has_value());
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository RemoveBatch with empty span is a no-op", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-removebatch-empty.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+    // Should not throw.
+    repository.RemoveBatch(std::span<const Librova::Domain::SBookId>{});
+
+    CloseRepositoriesAndRemoveDatabase(databasePath, repository);
+}
+
+TEST_CASE("Sqlite book repository Compact progress callback fires at least once for non-trivial work", "[book-database]")
+{
+    const std::filesystem::path databasePath =
+        std::filesystem::temp_directory_path() / "librova-compact-progress.db";
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+
+        // Add books and keep them in the library so that after RebuildAll the
+        // FTS5 index still has substantial live data.  VACUUM must then copy
+        // all those pages, accumulating enough VM opcodes to fire the handler.
+        for (int i = 0; i < 200; ++i)
+        {
+            Librova::Domain::SBook book;
+            book.Metadata.TitleUtf8 = "Тестовая книга с длинным заголовком для наполнения FTS5 " + std::to_string(i);
+            book.Metadata.AuthorsUtf8 = {"Тест Автор"};
+            book.Metadata.Language = "ru";
+            book.Metadata.DescriptionUtf8 = std::string{
+                "Описание книги для наполнения FTS5 индекса достаточным объёмом данных "
+                "чтобы VACUUM выполнял реальную работу и триггерил progress handler. "
+            } + std::to_string(i);
+            book.File.Format = Librova::Domain::EBookFormat::Fb2;
+            book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
+            book.File.ManagedPath = std::filesystem::path(u8"Books") / std::to_string(i) / u8"book.fb2";
+            book.File.SizeBytes = 8192;
+            book.File.Sha256Hex = "compact-progress-" + std::to_string(i);
+            book.AddedAtUtc = std::chrono::system_clock::now();
+            static_cast<void>(repository.Add(book));
+        }
+
+        int tickCount = 0;
+        repository.Compact([&tickCount]() noexcept { ++tickCount; });
+
+        // With 200 books of live FTS5 data, VACUUM copies enough pages to
+        // accumulate 1 000+ VM opcodes and fire the handler at least once.
+        REQUIRE(tickCount > 0);
+
+        repository.CloseSession();
+    }
+
+    std::filesystem::remove(databasePath);
 }

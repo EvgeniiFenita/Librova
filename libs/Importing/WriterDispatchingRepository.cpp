@@ -72,9 +72,9 @@ void CWriterDispatchingRepository::Remove(const Librova::Domain::SBookId id)
     m_realRepository.Remove(id);
 }
 
-void CWriterDispatchingRepository::Compact()
+void CWriterDispatchingRepository::Compact(const std::function<void()>& onProgressTick)
 {
-    m_realRepository.Compact();
+    m_realRepository.Compact(onProgressTick);
 }
 
 Librova::Domain::SBookId CWriterDispatchingRepository::Add(const Librova::Domain::SBook& book)

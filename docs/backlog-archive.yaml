@@ -1217,3 +1217,14 @@ tasks:
   note: 'Moved cover: final/stored and Duplicate candidate fields per-item logs to Debug; duplicate: decision
     rejected downgraded from Warn to Info; ZIP entry skipped downgraded from Warn to Info; UI heartbeat
     interval raised 10s→30s with full counter comparison to suppress post-cancel log flood.'
+- id: 147
+  summary: make large-import cancellation rollback observable and bounded
+  status: Closed
+  type: Bug
+  priority: Critical
+  milestone: '1.1'
+  note: Added Cancelling/RollingBack/Compacting status values through proto, C++, C# layers; implemented
+    BeginRollback/ReportRollbackProgress/BeginCompacting progress hooks in CJobProgressSink; replaced
+    per-book rollback loop with batch delete (single transaction) + per-book file cleanup; added VACUUM
+    progress handler via sqlite3_progress_handler; wired all hooks in LibraryImportFacade so UI receives
+    live status transitions during post-cancel phases instead of freezing on Running for 140 min.

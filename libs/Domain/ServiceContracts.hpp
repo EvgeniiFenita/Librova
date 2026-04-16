@@ -154,6 +154,13 @@ public:
 
     virtual void ReportValue(int percent, std::string_view message) = 0;
     virtual bool IsCancellationRequested() const = 0;
+
+    // Post-cancel lifecycle hooks. Called by the import facade to report
+    // rollback and compaction phases. Default implementations are no-ops so
+    // existing IProgressSink consumers require no changes.
+    virtual void BeginRollback(std::size_t totalToRollback) noexcept {}
+    virtual void ReportRollbackProgress(std::size_t rolledBack, std::size_t total) noexcept {}
+    virtual void BeginCompacting() noexcept {}
 };
 
 class IStructuredImportProgressSink

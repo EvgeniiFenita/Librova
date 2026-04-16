@@ -154,3 +154,46 @@ TEST_CASE("Rollback removes empty cover subdir but preserves Covers top-level di
 
     repository.CloseSession();
 }
+
+TEST_CASE("Rollback service invokes progress callback after each batch and at completion", "[rollback]")
+{
+    auto sandbox = CreateRollbackSandbox("progress-callback");
+    Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
+
+    std::vector<Librova::Domain::SBookId> bookIds;
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto managedFilePath =
+            std::filesystem::path(u8"Books") / ("book-" + std::to_string(i) + ".fb2");
+        WriteFile(sandbox.Root / managedFilePath);
+
+        Librova::Domain::SBook book = BuildBook(managedFilePath);
+        book.File.Sha256Hex = "sha-" + std::to_string(i);
+        const auto id = repository.Add(book);
+        REQUIRE(id.IsValid());
+        bookIds.push_back(id);
+    }
+
+    std::size_t lastRolledBack = 0;
+    std::size_t lastTotal = 0;
+    int callbackCount = 0;
+
+    Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
+    const auto result = rollback.RollbackImportedBooks(
+        bookIds,
+        [&](std::size_t rolledBack, std::size_t total)
+        {
+            lastRolledBack = rolledBack;
+            lastTotal = total;
+            ++callbackCount;
+        });
+
+    REQUIRE(result.RemainingBookIds.empty());
+    // Callback must be invoked at least once (completion call).
+    REQUIRE(callbackCount > 0);
+    // Final call must report all books rolled back.
+    REQUIRE(lastRolledBack == 3);
+    REQUIRE(lastTotal == 3);
+
+    repository.CloseSession();
+}

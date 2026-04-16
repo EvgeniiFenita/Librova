@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <system_error>
+#include <unordered_set>
 
 #include "Logging/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
@@ -210,9 +211,37 @@ CImportRollbackService::CImportRollbackService(
 }
 
 SRollbackResult CImportRollbackService::RollbackImportedBooks(
-    const std::vector<Librova::Domain::SBookId>& importedBookIds) const
+    const std::vector<Librova::Domain::SBookId>& importedBookIds,
+    TRollbackProgressCallback progressCallback) const
 {
     SRollbackResult rollbackResult;
+
+    if (importedBookIds.empty())
+    {
+        return rollbackResult;
+    }
+
+    const std::size_t total = importedBookIds.size();
+
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        Librova::Logging::Warn(
+            "Cancellation rollback started. Rolling back {} imported book(s).", total);
+    }
+
+    // Phase 1: collect managed file paths for each book before mass-deletion.
+    // We need the paths to clean up files after the DB rows are gone.
+    struct SBookPaths
+    {
+        Librova::Domain::SBookId Id;
+        std::optional<std::filesystem::path> CoverPath;
+        std::optional<std::filesystem::path> BookFilePath;
+        bool HasManagedFile = false;
+    };
+
+    std::vector<SBookPaths> bookPaths;
+    bookPaths.reserve(total);
+    std::vector<Librova::Domain::SBookId> unreachableIds;
 
     for (auto iterator = importedBookIds.rbegin(); iterator != importedBookIds.rend(); ++iterator)
     {
@@ -223,7 +252,8 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         }
         catch (const std::exception& error)
         {
-            rollbackResult.RemainingBookIds.push_back(*iterator);
+            unreachableIds.push_back(*iterator);
+            // Message must contain "catalog lookup failed" — tested by integration tests.
             rollbackResult.Warnings.push_back(
                 "Cancellation rollback left book "
                 + std::to_string(iterator->Value)
@@ -233,48 +263,117 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
             continue;
         }
 
+        SBookPaths paths{.Id = *iterator};
+        if (book.has_value())
+        {
+            paths.CoverPath = book->CoverPath;
+            paths.HasManagedFile = book->File.HasManagedPath();
+            if (paths.HasManagedFile)
+            {
+                paths.BookFilePath = book->File.ManagedPath;
+            }
+        }
+        bookPaths.push_back(std::move(paths));
+    }
+
+    // Phase 2: batch-delete reachable books in one transaction (no per-book FTS5).
+    // Track which IDs fail removal — their files must NOT be deleted in Phase 3.
+    std::unordered_set<std::int64_t> removalFailedIds;
+
+    std::vector<Librova::Domain::SBookId> reachableIds;
+    reachableIds.reserve(bookPaths.size());
+    for (const auto& bp : bookPaths)
+    {
+        reachableIds.push_back(bp.Id);
+    }
+
+    if (!reachableIds.empty())
+    {
         try
         {
-            m_bookRepository.Remove(*iterator);
+            m_bookRepository.RemoveBatch(reachableIds);
         }
         catch (const std::exception& error)
         {
-            rollbackResult.RemainingBookIds.push_back(*iterator);
-            rollbackResult.Warnings.push_back(
-                "Cancellation rollback left book "
-                + std::to_string(iterator->Value)
-                + " in the library because catalog removal failed: "
-                + error.what());
-            LogRollbackFailureIfInitialized(*iterator, error);
-            continue;
-        }
+            // Batch delete failed — fall back to per-book Remove so we salvage
+            // as many deletions as possible and collect accurate residue info.
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "Cancellation rollback: batch delete failed ({}), falling back to per-book removal.",
+                    error.what());
+            }
 
-        if (book.has_value())
+            for (const auto& bp : bookPaths)
+            {
+                try
+                {
+                    m_bookRepository.Remove(bp.Id);
+                }
+                catch (const std::exception& removeError)
+                {
+                    // Message must contain "catalog removal failed" — tested by integration tests.
+                    removalFailedIds.insert(bp.Id.Value);
+                    rollbackResult.Warnings.push_back(
+                        "Cancellation rollback left book "
+                        + std::to_string(bp.Id.Value)
+                        + " in the library because catalog removal failed: "
+                        + removeError.what());
+                    LogRollbackFailureIfInitialized(bp.Id, removeError);
+                }
+            }
+        }
+    }
+
+    // Phase 3: clean up managed files on disk, reporting progress.
+    // Skip file cleanup for books whose DB row could not be removed — they are
+    // still in the library and their files must remain intact.
+    std::size_t rolledBack = 0;
+    for (const auto& bp : bookPaths)
+    {
+        const bool removalFailed = removalFailedIds.contains(bp.Id.Value);
+        if (removalFailed)
         {
-            if (book->CoverPath.has_value())
+            rollbackResult.RemainingBookIds.push_back(bp.Id);
+        }
+        else
+        {
+            if (bp.CoverPath.has_value())
             {
-                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *book->CoverPath); cleanupWarning.has_value())
+                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *bp.CoverPath); cleanupWarning.has_value())
                 {
                     rollbackResult.HasCleanupResidue = true;
                     rollbackResult.Warnings.push_back(*cleanupWarning);
                 }
             }
 
-            if (book->File.HasManagedPath())
+            if (bp.HasManagedFile && bp.BookFilePath.has_value())
             {
-                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, book->File.ManagedPath); cleanupWarning.has_value())
+                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *bp.BookFilePath); cleanupWarning.has_value())
                 {
                     rollbackResult.HasCleanupResidue = true;
                     rollbackResult.Warnings.push_back(*cleanupWarning);
                 }
 
-                if (const auto cleanupWarning = CleanupCancelledBookDirectoryNoThrow(m_libraryRoot, *iterator); cleanupWarning.has_value())
+                if (const auto cleanupWarning = CleanupCancelledBookDirectoryNoThrow(m_libraryRoot, bp.Id); cleanupWarning.has_value())
                 {
                     rollbackResult.HasCleanupResidue = true;
                     rollbackResult.Warnings.push_back(*cleanupWarning);
                 }
             }
         }
+
+        ++rolledBack;
+        if (progressCallback && (rolledBack % kProgressReportInterval == 0 || rolledBack == bookPaths.size()))
+        {
+            progressCallback(rolledBack, total);
+        }
+    }
+
+    // Propagate unreachable ids as remaining so callers know about the residue.
+    for (const auto& id : unreachableIds)
+    {
+        rollbackResult.RemainingBookIds.push_back(id);
     }
 
     if (Librova::Logging::CLogging::IsInitialized())
@@ -282,41 +381,20 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         if (rollbackResult.RemainingBookIds.empty())
         {
             Librova::Logging::Warn(
-                "Rolled back {} previously imported book(s) after cancellation.",
-                importedBookIds.size());
+                "Cancellation rollback complete. Rolled back {} book(s).", total);
         }
         else
         {
             Librova::Logging::Warn(
-                "Cancellation rollback left {} of {} imported book(s) in the library after catalog-removal failures.",
+                "Cancellation rollback complete with residue. {} of {} book(s) could not be fully removed.",
                 rollbackResult.RemainingBookIds.size(),
-                importedBookIds.size());
+                total);
         }
 
         if (rollbackResult.HasCleanupResidue)
         {
             Librova::Logging::Warn(
                 "Cancellation rollback left managed artifacts on disk for at least one imported book.");
-        }
-    }
-
-    if (rollbackResult.RemainingBookIds.empty())
-    {
-        try
-        {
-            m_bookRepository.Compact();
-            if (Librova::Logging::CLogging::IsInitialized())
-            {
-                Librova::Logging::Info("Database compacted after cancellation rollback.");
-            }
-        }
-        catch (const std::exception& error)
-        {
-            if (Librova::Logging::CLogging::IsInitialized())
-            {
-                Librova::Logging::Warn(
-                    "Database compaction after cancellation rollback failed: '{}'.", error.what());
-            }
         }
     }
 

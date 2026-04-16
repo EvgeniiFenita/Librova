@@ -9,7 +9,11 @@ internal enum ImportJobStatusModel
     Running,
     Completed,
     Failed,
-    Cancelled
+    Cancelled,
+    // Post-cancel phases: job is still executing cleanup, not yet terminal.
+    Cancelling,
+    RollingBack,
+    Compacting
 }
 
 internal enum ImportModeModel

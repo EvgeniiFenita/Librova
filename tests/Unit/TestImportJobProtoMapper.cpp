@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <string>
 
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
@@ -107,4 +108,28 @@ TEST_CASE("Import job proto mapper populates optional snapshot and result respon
     REQUIRE(resultResponse.has_result());
     REQUIRE(resultResponse.result().snapshot().job_id() == 9);
     REQUIRE_FALSE(emptyResultResponse.has_result());
+}
+
+TEST_CASE("Import job proto mapper round-trips Cancelling, RollingBack, and Compacting statuses", "[proto-mapping]")
+{
+    using EStatus = Librova::ApplicationJobs::EImportJobStatus;
+
+    const std::array cancellationStatuses = {
+        EStatus::Cancelling,
+        EStatus::RollingBack,
+        EStatus::Compacting
+    };
+
+    for (const auto status : cancellationStatuses)
+    {
+        Librova::ApplicationJobs::SImportJobSnapshot snapshot;
+        snapshot.JobId = 42;
+        snapshot.Status = status;
+
+        const auto proto = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(snapshot);
+        const auto restored = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(proto);
+
+        REQUIRE(restored.Status == status);
+        REQUIRE_FALSE(restored.IsTerminal());
+    }
 }

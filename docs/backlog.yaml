@@ -1,21 +1,6 @@
 meta:
   last_assigned_id: 151
 tasks:
-- id: 147
-  summary: make large-import cancellation rollback observable and bounded
-  status: Open
-  type: Bug
-  priority: Critical
-  milestone: '1.1'
-  note: 'in the same run CancelImportJob was accepted at 2026-04-16 09:07:11.248, import counters froze
-    by 09:07:12 at Imported=184957 Failed=63 Skipped=22147, but the job did not finish as Cancelled until
-    11:27:25 after rollback and database compaction; extend the task so cancellation no longer looks stalled
-    once the import loop stops: expose explicit state transitions (Cancelling, RollingBack, Compacting),
-    keep progress live during rollback instead of freezing the last import counters, and show concrete
-    remaining work (for example rollback completed / rollback remaining, plus a terminal compaction phase
-    when only database shrink is left). Add rollback start/progress/end markers in logs and UI snapshots,
-    and optimize the rollback/finalization path so cancellation of a large job completes in predictable
-    time instead of spending ~140 minutes in an unobservable post-cancel phase.'
 - id: 130
   summary: replace indeterminate import progress bar with a finite percentage counter
   status: Open

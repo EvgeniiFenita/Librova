@@ -22,6 +22,7 @@ public:
     void BindNull(int parameterIndex) const;
 
     [[nodiscard]] bool Step() const;
+    void Reset() const;
     [[nodiscard]] int GetColumnInt(int columnIndex) const;
     [[nodiscard]] std::int64_t GetColumnInt64(int columnIndex) const;
     [[nodiscard]] double GetColumnDouble(int columnIndex) const;

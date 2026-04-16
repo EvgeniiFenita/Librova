@@ -80,6 +80,38 @@ void CImportJobRunner::CJobProgressSink::Fail(std::string_view message)
     PublishSnapshot();
 }
 
+void CImportJobRunner::CJobProgressSink::BeginRollback(const std::size_t totalToRollback) noexcept
+{
+    m_snapshot.Status = EJobStatus::Cancelling;
+    m_snapshot.TotalEntries = totalToRollback;
+    m_snapshot.ProcessedEntries = 0;
+    m_snapshot.Message = "Cancelling: preparing rollback of "
+        + std::to_string(totalToRollback) + " book(s)";
+    PublishSnapshot();
+}
+
+void CImportJobRunner::CJobProgressSink::ReportRollbackProgress(
+    const std::size_t rolledBack,
+    const std::size_t total) noexcept
+{
+    m_snapshot.Status = EJobStatus::RollingBack;
+    m_snapshot.TotalEntries = total;
+    m_snapshot.ProcessedEntries = rolledBack;
+    m_snapshot.Percent = total > 0
+        ? static_cast<int>((rolledBack * 100) / total)
+        : 0;
+    m_snapshot.Message = "Rolling back: "
+        + std::to_string(rolledBack) + " / " + std::to_string(total) + " book(s)";
+    PublishSnapshot();
+}
+
+void CImportJobRunner::CJobProgressSink::BeginCompacting() noexcept
+{
+    m_snapshot.Status = EJobStatus::Compacting;
+    m_snapshot.Message = "Compacting database...";
+    PublishSnapshot();
+}
+
 void CImportJobRunner::CJobProgressSink::PublishSnapshot() const
 {
     if (m_progressCallback)

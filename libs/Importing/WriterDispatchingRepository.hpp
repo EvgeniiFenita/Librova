@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <future>
 #include <mutex>
 #include <optional>
@@ -48,7 +49,7 @@ public:
     [[nodiscard]] std::optional<Librova::Domain::SBook>
         GetById(Librova::Domain::SBookId id) const override;
     void Remove(Librova::Domain::SBookId id) override;
-    void Compact() override;
+    void Compact(const std::function<void()>& onProgressTick = nullptr) override;
 
     // Write ops go through the writer queue:
     Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override;

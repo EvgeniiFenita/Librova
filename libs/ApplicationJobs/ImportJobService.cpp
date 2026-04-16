@@ -53,6 +53,12 @@ EImportJobStatus CImportJobService::MapStatus(const Librova::Jobs::EJobStatus st
         return EImportJobStatus::Failed;
     case Librova::Jobs::EJobStatus::Cancelled:
         return EImportJobStatus::Cancelled;
+    case Librova::Jobs::EJobStatus::Cancelling:
+        return EImportJobStatus::Cancelling;
+    case Librova::Jobs::EJobStatus::RollingBack:
+        return EImportJobStatus::RollingBack;
+    case Librova::Jobs::EJobStatus::Compacting:
+        return EImportJobStatus::Compacting;
     }
 
     return EImportJobStatus::Failed;

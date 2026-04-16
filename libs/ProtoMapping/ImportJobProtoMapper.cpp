@@ -241,6 +241,12 @@ Librova::ApplicationJobs::EImportJobStatus CImportJobProtoMapper::FromProto(
         return Librova::ApplicationJobs::EImportJobStatus::Failed;
     case librova::v1::IMPORT_JOB_STATUS_CANCELLED:
         return Librova::ApplicationJobs::EImportJobStatus::Cancelled;
+    case librova::v1::IMPORT_JOB_STATUS_CANCELLING:
+        return Librova::ApplicationJobs::EImportJobStatus::Cancelling;
+    case librova::v1::IMPORT_JOB_STATUS_ROLLING_BACK:
+        return Librova::ApplicationJobs::EImportJobStatus::RollingBack;
+    case librova::v1::IMPORT_JOB_STATUS_COMPACTING:
+        return Librova::ApplicationJobs::EImportJobStatus::Compacting;
     case librova::v1::IMPORT_JOB_STATUS_UNSPECIFIED:
         break;
     }
@@ -311,6 +317,12 @@ librova::v1::ImportJobStatus CImportJobProtoMapper::ToProto(
         return librova::v1::IMPORT_JOB_STATUS_FAILED;
     case Librova::ApplicationJobs::EImportJobStatus::Cancelled:
         return librova::v1::IMPORT_JOB_STATUS_CANCELLED;
+    case Librova::ApplicationJobs::EImportJobStatus::Cancelling:
+        return librova::v1::IMPORT_JOB_STATUS_CANCELLING;
+    case Librova::ApplicationJobs::EImportJobStatus::RollingBack:
+        return librova::v1::IMPORT_JOB_STATUS_ROLLING_BACK;
+    case Librova::ApplicationJobs::EImportJobStatus::Compacting:
+        return librova::v1::IMPORT_JOB_STATUS_COMPACTING;
     }
 
     return librova::v1::IMPORT_JOB_STATUS_UNSPECIFIED;

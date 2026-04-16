@@ -18,7 +18,11 @@ enum class EJobStatus
     Running,
     Completed,
     Failed,
-    Cancelled
+    Cancelled,
+    // Post-cancel phases — not terminal; job is still executing cleanup.
+    Cancelling,
+    RollingBack,
+    Compacting
 };
 
 struct SJobProgressSnapshot
@@ -82,6 +86,9 @@ private:
             int percent,
             std::string_view message) override;
         bool IsCancellationRequested() const override;
+        void BeginRollback(std::size_t totalToRollback) noexcept override;
+        void ReportRollbackProgress(std::size_t rolledBack, std::size_t total) noexcept override;
+        void BeginCompacting() noexcept override;
 
         [[nodiscard]] const SJobProgressSnapshot& GetSnapshot() const noexcept;
         void SetWarnings(std::vector<std::string> warnings);

@@ -243,3 +243,17 @@ TEST_CASE("Import job service removes completed jobs through application-facing 
     REQUIRE_FALSE(service.TryGetResult(jobId).has_value());
     std::filesystem::remove_all(sandbox.Root);
 }
+
+TEST_CASE("Import job service treats Cancelling, RollingBack, and Compacting as non-terminal statuses",
+    "[application-jobs]")
+{
+    using EStatus = Librova::ApplicationJobs::EImportJobStatus;
+
+    REQUIRE_FALSE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Cancelling}.IsTerminal());
+    REQUIRE_FALSE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::RollingBack}.IsTerminal());
+    REQUIRE_FALSE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Compacting}.IsTerminal());
+
+    REQUIRE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Completed}.IsTerminal());
+    REQUIRE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Failed}.IsTerminal());
+    REQUIRE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Cancelled}.IsTerminal());
+}

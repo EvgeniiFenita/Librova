@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <sqlite3.h>
+
 #include "BookDatabase/SqliteGenreHelpers.hpp"
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
@@ -558,7 +560,7 @@ void CSqliteBookRepository::Remove(const Librova::Domain::SBookId id)
     transaction.Commit();
 }
 
-void CSqliteBookRepository::Compact()
+void CSqliteBookRepository::Compact(const std::function<void()>& onProgressTick)
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
@@ -568,7 +570,61 @@ void CSqliteBookRepository::Compact()
     // shadow tables and re-inserts only the rows that are still in `books`,
     // so the subsequent VACUUM can actually reclaim the freed pages.
     Librova::SearchIndex::CSearchIndexMaintenance::RebuildAll(connection);
-    connection.Execute("VACUUM;");
+
+    if (onProgressTick)
+    {
+        // Install a SQLite progress handler so the caller receives periodic
+        // "alive" ticks during VACUUM (which can take minutes for large DBs).
+        // The handler fires every 1 000 VM opcodes; returning 0 lets VACUUM continue.
+        sqlite3_progress_handler(
+            connection.GetNativeHandle(),
+            1000,
+            [](void* userData) noexcept -> int {
+                const auto* tick = static_cast<const std::function<void()>*>(userData);
+                try { (*tick)(); } catch (...) {}
+                return 0; // 0 = continue
+            },
+            const_cast<std::function<void()>*>(&onProgressTick));
+    }
+
+    try
+    {
+        connection.Execute("VACUUM;");
+    }
+    catch (...)
+    {
+        sqlite3_progress_handler(connection.GetNativeHandle(), 0, nullptr, nullptr);
+        throw;
+    }
+
+    sqlite3_progress_handler(connection.GetNativeHandle(), 0, nullptr, nullptr);
+}
+
+void CSqliteBookRepository::RemoveBatch(std::span<const Librova::Domain::SBookId> ids)
+{
+    if (ids.empty())
+    {
+        return;
+    }
+
+    const std::scoped_lock lock(m_operationMutex);
+    auto& connection = GetOrCreateConnection();
+    CSqliteTransaction transaction(connection);
+
+    // Delete books without per-book FTS5 maintenance. The caller is responsible
+    // for calling Compact() to rebuild the search index afterwards.
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "DELETE FROM books WHERE id = ?;");
+
+    for (const auto& id : ids)
+    {
+        statement.BindInt64(1, id.Value);
+        static_cast<void>(statement.Step());
+        statement.Reset();
+    }
+
+    transaction.Commit();
 }
 
 void CSqliteBookRepository::OptimizeSearchIndex()

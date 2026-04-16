@@ -44,6 +44,10 @@ enum ImportJobStatus {
   IMPORT_JOB_STATUS_COMPLETED = 3;
   IMPORT_JOB_STATUS_FAILED = 4;
   IMPORT_JOB_STATUS_CANCELLED = 5;
+  // Post-cancel phases: import loop stopped, rollback and compaction in progress.
+  IMPORT_JOB_STATUS_CANCELLING = 6;
+  IMPORT_JOB_STATUS_ROLLING_BACK = 7;
+  IMPORT_JOB_STATUS_COMPACTING = 8;
 }
 
 enum ErrorCode {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <span>
 #include <stdexcept>
@@ -53,10 +54,16 @@ public:
 
     virtual std::optional<SBook> GetById(SBookId id) const = 0;
     virtual void Remove(SBookId id) = 0;
-    virtual void Compact() {}
+    virtual void Compact(const std::function<void()>& onProgressTick = nullptr) {}
     // Merges accumulated FTS5 index segments for faster search after bulk import.
     // Default is a no-op; override in SQLite repository.
     virtual void OptimizeSearchIndex() {}
+
+    // Removes all listed book ids in a single database transaction without
+    // per-book FTS5 maintenance. Callers must invoke Compact() afterwards to
+    // rebuild the search index and reclaim space.
+    // Default implementation falls back to sequential Remove() calls.
+    virtual void RemoveBatch(std::span<const SBookId> ids);
 
     // --- Batch write API ---
 

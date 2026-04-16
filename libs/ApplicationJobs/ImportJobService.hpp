@@ -20,7 +20,11 @@ enum class EImportJobStatus
     Running,
     Completed,
     Failed,
-    Cancelled
+    Cancelled,
+    // Post-cancel phases — not terminal; job is still executing cleanup.
+    Cancelling,
+    RollingBack,
+    Compacting
 };
 
 struct SImportJobSnapshot

@@ -101,6 +101,12 @@ bool CSqliteStatement::Step() const
     throw std::runtime_error("Failed to step sqlite statement.");
 }
 
+void CSqliteStatement::Reset() const
+{
+    sqlite3_reset(m_statement.get());
+    sqlite3_clear_bindings(m_statement.get());
+}
+
 int CSqliteStatement::GetColumnInt(const int columnIndex) const
 {
     return sqlite3_column_int(m_statement.get(), columnIndex);

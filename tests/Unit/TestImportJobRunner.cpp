@@ -198,7 +198,7 @@ public:
         m_books.erase(id.Value);
     }
 
-    void Compact() override
+    void Compact(const std::function<void()>& /*onProgressTick*/ = nullptr) override
     {
         ++CompactCallCount;
     }
@@ -676,4 +676,50 @@ TEST_CASE("Import job runner publishes structured batch progress snapshots", "[j
     REQUIRE(result.Snapshot.ImportedEntries == 2);
     REQUIRE(result.Snapshot.FailedEntries == 0);
     REQUIRE(result.Snapshot.SkippedEntries == 0);
+}
+
+TEST_CASE("Import job runner publishes Cancelling and RollingBack status transitions during rollback",
+    "[jobs][import][rollback]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-status-transitions");
+    std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
+    std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
+
+    CImporterThatCancelsAfterFirstSuccess importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CRollbackAwareBookRepository repository;
+    Librova::Application::CLibraryImportFacade facade(importer, zipCoordinator, repository,
+        {.LibraryRoot = sandbox.GetPath()});
+    Librova::Jobs::CImportJobRunner runner(facade);
+
+    std::vector<Librova::Jobs::EJobStatus> observedStatuses;
+    const auto result = runner.Run(
+        {
+            .SourcePaths = {sandbox.GetPath() / "first.fb2", sandbox.GetPath() / "second.fb2"},
+            .WorkingDirectory = sandbox.GetPath() / "work"
+        },
+        {},
+        [&observedStatuses](const Librova::Jobs::SJobProgressSnapshot& snapshot)
+        {
+            observedStatuses.push_back(snapshot.Status);
+        });
+
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
+
+    const auto hasCancelling = std::find(
+        observedStatuses.begin(), observedStatuses.end(), Librova::Jobs::EJobStatus::Cancelling)
+        != observedStatuses.end();
+    const auto hasRollingBack = std::find(
+        observedStatuses.begin(), observedStatuses.end(), Librova::Jobs::EJobStatus::RollingBack)
+        != observedStatuses.end();
+
+    REQUIRE(hasCancelling);
+    REQUIRE(hasRollingBack);
+
+    // Cancelling must appear before RollingBack in the sequence.
+    const auto cancellingPos = std::find(
+        observedStatuses.begin(), observedStatuses.end(), Librova::Jobs::EJobStatus::Cancelling);
+    const auto rollingBackPos = std::find(
+        observedStatuses.begin(), observedStatuses.end(), Librova::Jobs::EJobStatus::RollingBack);
+    REQUIRE(cancellingPos < rollingBackPos);
 }

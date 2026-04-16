@@ -53,4 +53,12 @@ IBookRepository::AddBatch(std::span<const SBatchBookEntry> entries)
     return results;
 }
 
+void IBookRepository::RemoveBatch(std::span<const SBookId> ids)
+{
+    for (const auto& id : ids)
+    {
+        Remove(id);
+    }
+}
+
 } // namespace Librova::Domain

@@ -79,6 +79,9 @@ internal static class ImportJobMapper
                 ImportJobStatus.Completed => ImportJobStatusModel.Completed,
                 ImportJobStatus.Failed => ImportJobStatusModel.Failed,
                 ImportJobStatus.Cancelled => ImportJobStatusModel.Cancelled,
+                ImportJobStatus.Cancelling => ImportJobStatusModel.Cancelling,
+                ImportJobStatus.RollingBack => ImportJobStatusModel.RollingBack,
+                ImportJobStatus.Compacting => ImportJobStatusModel.Compacting,
                 _ => throw CreateUnexpectedEnumValueException(snapshot.Status, "import job snapshot status")
             },
             Percent = snapshot.Percent,

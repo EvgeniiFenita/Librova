@@ -914,11 +914,37 @@ SImportResult CLibraryImportFacade::Run(
     result.WasCancelled= result.WasCancelled || stopToken.stop_requested() || progressSink.IsCancellationRequested();
     if ((result.WasCancelled || hadFatalWriterError) && !result.ImportedBookIds.empty())
     {
-        const auto rollbackResult = m_rollbackService.RollbackImportedBooks(result.ImportedBookIds);
+        progressSink.BeginRollback(result.ImportedBookIds.size());
+
+        const auto rollbackResult = m_rollbackService.RollbackImportedBooks(
+            result.ImportedBookIds,
+            [&progressSink](const std::size_t rolledBack, const std::size_t total)
+            {
+                progressSink.ReportRollbackProgress(rolledBack, total);
+            });
+
         MergeWarnings(result.Summary.Warnings, rollbackResult.Warnings);
         result.ImportedBookIds = rollbackResult.RemainingBookIds;
         result.Summary.ImportedEntries = result.ImportedBookIds.size();
         result.HasRollbackCleanupResidue = rollbackResult.HasCleanupResidue;
+
+        progressSink.BeginCompacting();
+        try
+        {
+            m_bookRepository.Compact([&progressSink]() { progressSink.BeginCompacting(); });
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Info("Database compacted after cancellation rollback.");
+            }
+        }
+        catch (const std::exception& compactError)
+        {
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "Database compaction after cancellation rollback failed: '{}'.", compactError.what());
+            }
+        }
     }
     else if (!result.ImportedBookIds.empty())
     {
