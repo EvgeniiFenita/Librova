@@ -19,7 +19,7 @@
 - для обычного запуска создается `%LOCALAPPDATA%\Librova\ui-preferences.json`.
 - для portable package создается `PortableData\ui-preferences.json`.
 - в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Temp`, `Logs`, `Trash`.
-- UI startup entries оказываются в `Logs\ui.log` внутри выбранной библиотеки.
+- после штатного закрытия или следующего успешного старта retained UI log оказывается в `Logs\ui.log` внутри выбранной библиотеки.
 8. Повтори `-FirstRun`, но в setup переключись на `Open Existing` и выбери уже созданную существующую библиотеку Librova.
 Ожидаемое поведение:
 - кнопка действия меняет текст на `Open Library`;
@@ -58,6 +58,7 @@
 5. Введи валидную папку и нажми `Retry With This Library`.
 Ожидаемое поведение:
 - приложение успешно стартует без ручной чистки файлов.
+- после следующего успешного старта retained library log снова находится в `LibraryRoot\Logs`.
 - исправленный library root сохраняется для следующего запуска.
 
 ## 3. Startup Error Recovery: Corrupted Library

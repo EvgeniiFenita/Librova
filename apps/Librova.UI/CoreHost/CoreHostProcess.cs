@@ -120,6 +120,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         var builder = new StringBuilder();
         builder.Append("--pipe ").Append(Quote(options.PipePath));
         builder.Append(" --library-root ").Append(Quote(options.LibraryRoot));
+        if (!string.IsNullOrWhiteSpace(options.HostLogFilePath))
+        {
+            builder.Append(" --log-file ").Append(Quote(options.HostLogFilePath));
+        }
         if (!string.IsNullOrWhiteSpace(options.ShutdownEventName))
         {
             builder.Append(" --shutdown-event ").Append(Quote(options.ShutdownEventName));

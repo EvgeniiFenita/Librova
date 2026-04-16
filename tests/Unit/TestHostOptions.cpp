@@ -35,6 +35,18 @@ TEST_CASE("Host options parse explicit library creation mode", "[core-host]")
     REQUIRE(options.LibraryOpenMode == Librova::CoreHost::ELibraryOpenMode::CreateNew);
 }
 
+TEST_CASE("Host options parse explicit host log file path", "[core-host]")
+{
+    const auto options = Librova::CoreHost::CHostOptions::Parse({
+        "--pipe", R"(\\.\pipe\Librova.Test)",
+        "--library-root", "C:/Librova",
+        "--log-file", "C:/RuntimeLogs/host.log"
+    });
+
+    REQUIRE(options.LogFilePath.has_value());
+    REQUIRE(*options.LogFilePath == std::filesystem::path{"C:/RuntimeLogs/host.log"});
+}
+
 TEST_CASE("Host options parse UTF-8 encoded Unicode paths", "[core-host]")
 {
     const auto utf8PipePathBytes = std::filesystem::path(u8R"(\\.\pipe\Librova.Тест)").generic_u8string();

@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Librova.UI.Runtime;
 
@@ -16,6 +18,23 @@ internal static class RuntimeEnvironment
 
     public static string GetUiLogFilePathForLibrary(string libraryRoot) =>
         Path.Combine(libraryRoot, "Logs", "ui.log");
+
+    public static string GetHostLogFilePathForLibrary(string libraryRoot) =>
+        Path.Combine(libraryRoot, "Logs", "host.log");
+
+    public static string GetUiRuntimeLogFilePathForLibrary(string libraryRoot) =>
+        GetRuntimeLogFilePathForLibrary(
+            libraryRoot,
+            "ui.log",
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
+
+    public static string GetHostRuntimeLogFilePathForLibrary(string libraryRoot) =>
+        GetRuntimeLogFilePathForLibrary(
+            libraryRoot,
+            "host.log",
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
 
     public static string GetDefaultUiLogFilePath() =>
         GetPathFromEnvironment(UiLogFileEnvVar)
@@ -133,6 +152,18 @@ internal static class RuntimeEnvironment
             baseDirectory,
             hostExecutableOverride);
 
+    internal static string GetUiRuntimeLogFilePathForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride) =>
+        GetRuntimeLogFilePathForLibrary(libraryRoot, "ui.log", baseDirectory, hostExecutableOverride);
+
+    internal static string GetHostRuntimeLogFilePathForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride) =>
+        GetRuntimeLogFilePathForLibrary(libraryRoot, "host.log", baseDirectory, hostExecutableOverride);
+
     internal static string GetDefaultUiStateFilePath(string baseDirectory, string? hostExecutableOverride) =>
         GetDefaultPortableAwarePath(
             "ui-shell-state.json",
@@ -171,11 +202,37 @@ internal static class RuntimeEnvironment
             relativePortablePath);
     }
 
+    private static string GetRuntimeLogFilePathForLibrary(
+        string libraryRoot,
+        string fileName,
+        string baseDirectory,
+        string? hostExecutableOverride)
+    {
+        var runtimeLogsRoot = GetDefaultPortableAwarePath(
+            "RuntimeLogs",
+            GetLocalAppDataPath("RuntimeLogs"),
+            baseDirectory,
+            hostExecutableOverride);
+
+        return Path.Combine(
+            runtimeLogsRoot,
+            GetStableLibraryRuntimeKey(libraryRoot),
+            fileName);
+    }
+
     private static string GetLocalAppDataPath(string relativePath) =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Librova",
             relativePath);
+
+    private static string GetStableLibraryRuntimeKey(string libraryRoot)
+    {
+        var normalizedRoot = Path.GetFullPath(libraryRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot.ToUpperInvariant()));
+        return Convert.ToHexString(hash.AsSpan(0, 8));
+    }
 
     private static string? GetPathFromEnvironment(string variableName)
     {

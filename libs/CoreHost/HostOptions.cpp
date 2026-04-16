@@ -89,6 +89,17 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--log-file")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --log-file.");
+            }
+
+            options.LogFilePath = Librova::Unicode::PathFromUtf8(arguments[++index]);
+            continue;
+        }
+
         if (argument == "--shutdown-event")
         {
             if (!HasValue(arguments, index))

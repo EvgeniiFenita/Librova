@@ -8,6 +8,7 @@ internal sealed class CoreHostLaunchOptions
     public required string ExecutablePath { get; init; }
     public required string PipePath { get; init; }
     public required string LibraryRoot { get; init; }
+    public string? HostLogFilePath { get; init; }
     public string? ShutdownEventName { get; init; }
     public UiLibraryOpenMode LibraryOpenMode { get; init; } = UiLibraryOpenMode.OpenExisting;
     public int? ParentProcessId { get; init; }
@@ -47,6 +48,11 @@ internal sealed class CoreHostLaunchOptions
         if (!Path.IsPathFullyQualified(LibraryRoot))
         {
             throw new InvalidOperationException("Library root path must be absolute.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(HostLogFilePath) && !Path.IsPathFullyQualified(HostLogFilePath))
+        {
+            throw new InvalidOperationException("Host log file path must be absolute when provided.");
         }
 
         if (!Enum.IsDefined(LibraryOpenMode))

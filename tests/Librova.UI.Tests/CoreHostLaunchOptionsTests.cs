@@ -14,6 +14,7 @@ public sealed class CoreHostLaunchOptionsTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            HostLogFilePath = @"C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log",
             LibraryOpenMode = UiLibraryOpenMode.OpenExisting,
             ConverterMode = UiConverterMode.Disabled
         };
@@ -67,6 +68,22 @@ public sealed class CoreHostLaunchOptionsTests
     }
 
     [Fact]
+    public void Validate_RejectsRelativeHostLogFilePath()
+    {
+        var options = new CoreHostLaunchOptions
+        {
+            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+            PipePath = @"\\.\pipe\Librova.Test",
+            LibraryRoot = @"C:\Libraries\Librova",
+            HostLogFilePath = @"RuntimeLogs\host.log",
+            ConverterMode = UiConverterMode.Disabled
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Contains("host log file path", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Validate_RejectsBuiltInConverterWithRelativeExecutable()
     {
         var options = new CoreHostLaunchOptions
@@ -116,6 +133,7 @@ public sealed class CoreHostLaunchOptionsTests
         Assert.StartsWith(@"Local\Librova.UI.Shutdown.", options.ShutdownEventName, StringComparison.Ordinal);
         Assert.Equal(UiConverterMode.BuiltInFb2Cng, options.ConverterMode);
         Assert.Equal(@"D:\Tools\fbc.exe", options.Fb2CngExecutablePath);
+        Assert.False(string.IsNullOrWhiteSpace(options.HostLogFilePath));
     }
 
     private sealed class FakePreferencesStore : IUiPreferencesStore

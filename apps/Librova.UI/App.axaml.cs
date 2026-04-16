@@ -162,10 +162,11 @@ internal sealed partial class App : Application
 
         try
         {
+            RuntimeLogSynchronization.SyncPendingRuntimeLogs(hostOptions.LibraryRoot);
             UiLogging.Information("Starting Avalonia desktop shell.");
             var session = await ShellBootstrap.StartSessionAsync(hostOptions, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            UiLogging.Reinitialize(RuntimeEnvironment.GetUiLogFilePathForLibrary(hostOptions.LibraryRoot));
+            UiLogging.Reinitialize(RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(hostOptions.LibraryRoot));
             _shellApplication = ShellApplication.Create(
                 session,
                 pathSelectionService,
@@ -255,10 +256,12 @@ internal sealed partial class App : Application
 
         var previousApplication = _shellApplication;
         _shellApplication = null;
+        var previousLibraryRoot = previousApplication?.Shell.LibraryRoot;
         if (previousApplication is not null)
         {
             await previousApplication.DisposeAsync();
         }
+        FinalizeLibraryLogging(previousLibraryRoot);
 
         await StartShellWithLibraryRootAsync(
             mainWindow,
@@ -302,10 +305,12 @@ internal sealed partial class App : Application
         // we transition directly from the old Running ViewModel to the new one.
         var previousApplication = _shellApplication;
         _shellApplication = null;
+        var previousLibraryRoot = previousApplication?.Shell.LibraryRoot;
         if (previousApplication is not null)
         {
             await previousApplication.DisposeAsync();
         }
+        FinalizeLibraryLogging(previousLibraryRoot);
 
         var effectivePreferences = UiPreferencesSnapshotBuilder.WithPreferredLibraryRoot(
             preferencesStore.TryLoad(),
@@ -335,6 +340,7 @@ internal sealed partial class App : Application
         UiLogging.Information("Shutting down Avalonia desktop shell.");
         _startupCancellation?.Cancel();
         var application = _shellApplication;
+        var libraryRoot = application?.Shell.LibraryRoot;
         var startupTask = _startupTask;
         _shellApplication = null;
         _startupTask = null;
@@ -359,6 +365,7 @@ internal sealed partial class App : Application
         }
         finally
         {
+            FinalizeLibraryLogging(libraryRoot);
             _startupCancellation?.Dispose();
             _startupCancellation = null;
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -367,5 +374,17 @@ internal sealed partial class App : Application
                 Dispatcher.UIThread.Post(() => desktop.Shutdown());
             }
         }
+    }
+
+    private static void FinalizeLibraryLogging(string? libraryRoot)
+    {
+        UiLogging.Shutdown();
+
+        if (string.IsNullOrWhiteSpace(libraryRoot))
+        {
+            return;
+        }
+
+        RuntimeLogSynchronization.SyncPendingRuntimeLogs(libraryRoot);
     }
 }

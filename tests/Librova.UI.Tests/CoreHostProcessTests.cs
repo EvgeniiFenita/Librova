@@ -14,6 +14,7 @@ public sealed class CoreHostProcessTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
+            HostLogFilePath = @"C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log",
             ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
             ParentProcessId = 12345,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
@@ -26,6 +27,8 @@ public sealed class CoreHostProcessTests
         Assert.Contains("--shutdown-event", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""Local\Librova.UI.Tests.Shutdown""", arguments, StringComparison.Ordinal);
         Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
+        Assert.Contains("--log-file", arguments, StringComparison.Ordinal);
+        Assert.Contains(@"""C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-config", arguments, StringComparison.Ordinal);
@@ -40,6 +43,7 @@ public sealed class CoreHostProcessTests
             ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
             PipePath = @"\\.\pipe\Librova ""quoted"" pipe\",
             LibraryRoot = @"C:\Книги\Новая папка\",
+            HostLogFilePath = @"C:\Логи\runtime ""host""\",
             ShutdownEventName = @"Local\Librova ""shutdown""\",
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\conv ""special""\",
@@ -53,14 +57,16 @@ public sealed class CoreHostProcessTests
         Assert.Equal(options.PipePath, parsedArguments[1]);
         Assert.Equal("--library-root", parsedArguments[2]);
         Assert.Equal(options.LibraryRoot, parsedArguments[3]);
-        Assert.Equal("--shutdown-event", parsedArguments[4]);
-        Assert.Equal(options.ShutdownEventName, parsedArguments[5]);
-        Assert.Equal("--library-mode", parsedArguments[6]);
-        Assert.Equal("open", parsedArguments[7]);
-        Assert.Equal("--fb2cng-exe", parsedArguments[8]);
-        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[9]);
-        Assert.Equal("--fb2cng-config", parsedArguments[10]);
-        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[11]);
+        Assert.Equal("--log-file", parsedArguments[4]);
+        Assert.Equal(options.HostLogFilePath, parsedArguments[5]);
+        Assert.Equal("--shutdown-event", parsedArguments[6]);
+        Assert.Equal(options.ShutdownEventName, parsedArguments[7]);
+        Assert.Equal("--library-mode", parsedArguments[8]);
+        Assert.Equal("open", parsedArguments[9]);
+        Assert.Equal("--fb2cng-exe", parsedArguments[10]);
+        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[11]);
+        Assert.Equal("--fb2cng-config", parsedArguments[12]);
+        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[13]);
     }
 
     [Fact]

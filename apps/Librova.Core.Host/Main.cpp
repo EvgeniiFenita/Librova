@@ -93,9 +93,14 @@ namespace {
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).DatabaseDirectory / "librova.db";
 }
 
-[[nodiscard]] std::filesystem::path GetLogFilePath(const std::filesystem::path& libraryRoot)
+[[nodiscard]] std::filesystem::path GetLogFilePath(const Librova::CoreHost::SHostOptions& options)
 {
-    return Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).LogsDirectory / "host.log";
+    if (options.LogFilePath.has_value())
+    {
+        return *options.LogFilePath;
+    }
+
+    return Librova::StoragePlanning::CManagedLibraryLayout::Build(options.LibraryRoot).LogsDirectory / "host.log";
 }
 
 void PrintUsage()
@@ -259,7 +264,7 @@ int main(int argc, char** argv)
         }
 
         Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot, options.LibraryOpenMode);
-        Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options.LibraryRoot));
+        Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options));
         Librova::Logging::Info(
             "Starting Librova.Core.Host for library root '{}'.",
             Librova::Unicode::PathToUtf8(options.LibraryRoot));

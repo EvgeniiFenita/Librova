@@ -37,9 +37,9 @@ On first launch, the user chooses whether to create a new managed library or ope
 - temporary import files;
 - trash.
 
-Once a library is active, both UI and native host logs are kept under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders.
+Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and sync the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup.
 
-For the portable packaged distribution, bootstrap-only UI files that exist before any library is opened stay beside the application under `PortableData/`, including the pre-library UI log, saved UI preferences, and UI shell state. Once a library is active, the running session still moves to `LibraryRoot/Logs` for both UI and native host logs.
+For the portable packaged distribution, bootstrap-only UI files that exist before any library is opened stay beside the application under `PortableData/`, including the pre-library UI log, saved UI preferences, UI shell state, and any portable runtime log staging used before those logs are synced back into the active library.
 
 When that portable packaged distribution and its managed library are moved together to another machine or drive letter, Librova should still reopen the same library on the next launch by resolving the saved library location relative to the application directory rather than depending only on the previous absolute drive path.
 

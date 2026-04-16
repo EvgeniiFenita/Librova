@@ -31,6 +31,56 @@ public sealed class RuntimeEnvironmentTests
     }
 
     [Fact]
+    public void RuntimeEnvironment_GetRuntimeLogFilePathsForLibrary_UseLocalAppDataOutsidePortableMode()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "library");
+        var expectedRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Librova",
+            "RuntimeLogs");
+
+        var uiPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+        var hostPath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+
+        Assert.StartsWith(expectedRoot, uiPath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRoot, hostPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(Path.Combine("ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(Path.Combine("host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetDirectoryName(uiPath), Path.GetDirectoryName(hostPath));
+    }
+
+    [Fact]
+    public void RuntimeEnvironment_GetRuntimeLogFilePathsForLibrary_UsePortableDataInPortableMode()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(sandboxRoot);
+        File.WriteAllText(Path.Combine(sandboxRoot, "LibrovaCoreHostApp.exe"), string.Empty);
+
+        try
+        {
+            var uiPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+            var hostPath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+
+            Assert.StartsWith(
+                Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                uiPath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(
+                Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                hostPath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(Path.Combine("ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(Path.Combine("host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
     public void ShellStateStore_CreateDefault_UsesEnvironmentOverride()
     {
         var expected = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}", "ui-shell-state.json");
@@ -303,6 +353,9 @@ public sealed class RuntimeEnvironmentTests
 
                 Assert.Equal(expectedLibraryRoot, options.LibraryRoot);
                 Assert.Equal(expectedExecutable, options.ExecutablePath);
+                Assert.Equal(
+                    RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(expectedLibraryRoot),
+                    options.HostLogFilePath);
             });
         });
     }
@@ -374,6 +427,10 @@ public sealed class RuntimeEnvironmentTests
                         var options = CoreHostDevelopmentDefaults.Create(baseDirectory: sandboxRoot);
                         Assert.Equal(portableLibraryRoot, options.LibraryRoot);
                         Assert.Equal(packagedHostPath, options.ExecutablePath);
+                        Assert.StartsWith(
+                            Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                            options.HostLogFilePath,
+                            StringComparison.OrdinalIgnoreCase);
                     });
                 });
             });

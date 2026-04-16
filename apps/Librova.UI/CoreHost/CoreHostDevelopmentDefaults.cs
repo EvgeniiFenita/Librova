@@ -53,6 +53,10 @@ internal static class CoreHostDevelopmentDefaults
             ExecutablePath = executablePath,
             PipePath = pipePath,
             LibraryRoot = libraryRoot,
+            HostLogFilePath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(
+                libraryRoot,
+                baseDirectory ?? AppContext.BaseDirectory,
+                RuntimeEnvironment.GetCoreHostExecutableOverride()),
             ShutdownEventName = $@"Local\Librova.UI.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
             LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,

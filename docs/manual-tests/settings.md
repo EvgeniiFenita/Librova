@@ -100,7 +100,7 @@
 - UI log содержит startup, command и error-relevant entries.
 - host log содержит host/runtime-side operational entries.
 - логи полезны для диагностики и не зашумлены частым polling.
-- при уже открытой библиотеке оба runtime log-файла лежат в `LibraryRoot\Logs`.
+- retained `ui.log` и `host.log` оказываются в `LibraryRoot\Logs` после штатного shutdown или следующего успешного старта.
 4. Выполни batch, directory или `.zip` import, где есть хотя бы один skipped или failed source/entry.
 Ожидаемое поведение:
 - `host.log` содержит отдельные записи с конкретными именами проблемных файлов или ZIP entry, а не только общий итоговый summary;

@@ -18,7 +18,7 @@
 - обычный запуск: `%LOCALAPPDATA%\Librova\Logs\ui.log`
 - portable package: `PortableData\Logs\ui.log`
 
-После успешного выбора или открытия библиотеки UI пишет уже в `LibraryRoot\Logs\ui.log`.
+После успешного выбора или открытия библиотеки active session может писать runtime log локально или в `PortableData`, но retained `ui.log` и `host.log` синхронизируются обратно в `LibraryRoot\Logs`.
 
 ## Реестр сценариев
 
