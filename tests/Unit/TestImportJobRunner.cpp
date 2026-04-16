@@ -163,6 +163,29 @@ public:
     mutable int CallCount = 0;
 };
 
+class CDelayedSuccessfulImporter final : public Librova::Importing::ISingleFileImporter
+{
+public:
+    [[nodiscard]] Librova::Importing::SSingleFileImportResult Run(
+        const Librova::Importing::SSingleFileImportRequest&,
+        Librova::Domain::IProgressSink& progressSink,
+        std::stop_token) const override
+    {
+        progressSink.ReportValue(40, "Importing source file");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        const std::scoped_lock lock(m_mutex);
+        ++CallCount;
+        return {
+            .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+            .ImportedBookId = Librova::Domain::SBookId{CallCount}
+        };
+    }
+
+    mutable std::mutex m_mutex;
+    mutable std::int64_t CallCount = 0;
+};
+
 class CRollbackAwareBookRepository final : public Librova::Domain::IBookRepository
 {
 public:
@@ -638,11 +661,13 @@ TEST_CASE("Import job runner publishes structured batch progress snapshots", "[j
         {.LibraryRoot = std::filesystem::temp_directory_path()});
     Librova::Jobs::CImportJobRunner runner(facade);
     std::vector<Librova::Jobs::SJobProgressSnapshot> snapshots;
+    std::mutex snapshotsMutex;
 
     const auto result = runner.Run({
         .SourcePaths = {firstSourcePath, secondSourcePath},
         .WorkingDirectory = sandbox.GetPath() / "work"
-    }, {}, [&snapshots](const Librova::Jobs::SJobProgressSnapshot& snapshot) {
+    }, {}, [&snapshots, &snapshotsMutex](const Librova::Jobs::SJobProgressSnapshot& snapshot) {
+        const std::scoped_lock lock(snapshotsMutex);
         snapshots.push_back(snapshot);
     });
 
@@ -678,6 +703,58 @@ TEST_CASE("Import job runner publishes structured batch progress snapshots", "[j
     REQUIRE(result.Snapshot.SkippedEntries == 0);
 }
 
+TEST_CASE("Import job runner keeps running imported counters monotonic during parallel batch progress", "[jobs][import]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-monotonic-progress");
+    std::vector<std::filesystem::path> sourcePaths;
+    for (int i = 0; i < 8; ++i)
+    {
+        const auto path = sandbox.GetPath() / ("book-" + std::to_string(i) + ".fb2");
+        std::ofstream(path).put('a');
+        sourcePaths.push_back(path);
+    }
+
+    CDelayedSuccessfulImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    Librova::Jobs::CImportJobRunner runner(facade);
+
+    std::vector<Librova::Jobs::SJobProgressSnapshot> snapshots;
+    std::mutex snapshotsMutex;
+
+    const auto result = runner.Run(
+        {
+            .SourcePaths = sourcePaths,
+            .WorkingDirectory = sandbox.GetPath() / "work"
+        },
+        {},
+        [&snapshots, &snapshotsMutex](const Librova::Jobs::SJobProgressSnapshot& snapshot)
+        {
+            const std::scoped_lock lock(snapshotsMutex);
+            snapshots.push_back(snapshot);
+        });
+
+    REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Completed);
+    REQUIRE(result.ImportResult.has_value());
+    REQUIRE(result.ImportResult->Summary.ImportedEntries == sourcePaths.size());
+
+    std::size_t lastImported = 0;
+    for (const auto& snapshot : snapshots)
+    {
+        if (snapshot.Status != Librova::Jobs::EJobStatus::Running)
+        {
+            continue;
+        }
+
+        REQUIRE(snapshot.ImportedEntries >= lastImported);
+        lastImported = snapshot.ImportedEntries;
+    }
+}
+
 TEST_CASE("Import job runner publishes Cancelling and RollingBack status transitions during rollback",
     "[jobs][import][rollback]")
 {
@@ -693,14 +770,16 @@ TEST_CASE("Import job runner publishes Cancelling and RollingBack status transit
     Librova::Jobs::CImportJobRunner runner(facade);
 
     std::vector<Librova::Jobs::EJobStatus> observedStatuses;
+    std::mutex observedStatusesMutex;
     const auto result = runner.Run(
         {
             .SourcePaths = {sandbox.GetPath() / "first.fb2", sandbox.GetPath() / "second.fb2"},
             .WorkingDirectory = sandbox.GetPath() / "work"
         },
         {},
-        [&observedStatuses](const Librova::Jobs::SJobProgressSnapshot& snapshot)
+        [&observedStatuses, &observedStatusesMutex](const Librova::Jobs::SJobProgressSnapshot& snapshot)
         {
+            const std::scoped_lock lock(observedStatusesMutex);
             observedStatuses.push_back(snapshot.Status);
         });
 

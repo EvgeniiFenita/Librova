@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -21,18 +22,18 @@ using TRollbackProgressCallback = std::function<void(std::size_t rolledBack, std
 class CImportRollbackService final
 {
 public:
+    static constexpr auto kProgressReportInterval = std::chrono::milliseconds{250};
+
     CImportRollbackService(
         Librova::Domain::IBookRepository& bookRepository,
         std::filesystem::path libraryRoot);
 
-    // progressCallback is called every kProgressReportInterval books during
-    // the rollback loop and once more on completion. May be nullptr.
+    // progressCallback is called at least every kProgressReportInterval while
+    // rollback work is making forward progress, and once more on completion.
+    // May be nullptr.
     [[nodiscard]] SRollbackResult RollbackImportedBooks(
         const std::vector<Librova::Domain::SBookId>& importedBookIds,
         TRollbackProgressCallback progressCallback = nullptr) const;
-
-private:
-    static constexpr std::size_t kProgressReportInterval = 500;
 
     Librova::Domain::IBookRepository& m_bookRepository;
     std::filesystem::path m_libraryRoot;

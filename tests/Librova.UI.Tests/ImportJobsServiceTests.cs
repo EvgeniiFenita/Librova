@@ -8,6 +8,33 @@ namespace Librova.UI.Tests;
 public sealed partial class ImportJobsServiceTests
 {
     [Fact]
+    public async Task Service_UsesAdaptiveWaitTimeouts_ForRollbackAndCompactionPhases()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var client = new AdaptiveWaitImportJobClient();
+        var service = new ImportJobsService(client);
+
+        var result = await service.WaitForCompletionAsync(
+            77UL,
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromMilliseconds(250),
+            _ => { },
+            cancellation.Token);
+
+        Assert.NotNull(result);
+        Assert.Equal(ImportJobStatusModel.Cancelled, result.Snapshot.Status);
+        Assert.Equal(
+            [
+                TimeSpan.FromMilliseconds(250),
+                TimeSpan.FromMilliseconds(250),
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(2)
+            ],
+            client.WaitTimeouts);
+    }
+
+    [Fact]
     public async Task Service_PerformsEndToEndImportFlowWithoutGeneratedProtoTypes()
     {
         var sandboxRoot = Path.Combine(
@@ -472,5 +499,86 @@ public sealed partial class ImportJobsServiceTests
         var entry = archive.CreateEntry(entryPath);
         using var writer = new StreamWriter(entry.Open());
         writer.Write(text);
+    }
+
+    private sealed class AdaptiveWaitImportJobClient : ImportJobClient
+    {
+        private int _waitCallCount;
+
+        public AdaptiveWaitImportJobClient()
+            : base(@"\\.\pipe\Librova.UI.Tests.AdaptiveWaitImportJobs")
+        {
+        }
+
+        public List<TimeSpan> WaitTimeouts { get; } = [];
+
+        public override Task<Librova.V1.WaitImportJobResponse> WaitAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            CancellationToken cancellationToken)
+        {
+            WaitTimeouts.Add(waitTimeout);
+            _waitCallCount++;
+
+            return Task.FromResult(new Librova.V1.WaitImportJobResponse
+            {
+                Completed = _waitCallCount >= 5
+            });
+        }
+
+        public override Task<Librova.V1.GetImportJobSnapshotResponse> GetSnapshotAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var status = _waitCallCount switch
+            {
+                1 => Librova.V1.ImportJobStatus.Running,
+                2 => Librova.V1.ImportJobStatus.RollingBack,
+                3 => Librova.V1.ImportJobStatus.Compacting,
+                _ => Librova.V1.ImportJobStatus.Compacting
+            };
+
+            return Task.FromResult(new Librova.V1.GetImportJobSnapshotResponse
+            {
+                Snapshot = new Librova.V1.ImportJobSnapshot
+                {
+                    JobId = jobId,
+                    Status = status,
+                    Percent = 50,
+                    Message = status.ToString()
+                }
+            });
+        }
+
+        public override Task<Librova.V1.GetImportJobResultResponse> GetResultAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new Librova.V1.GetImportJobResultResponse
+            {
+                Result = new Librova.V1.ImportJobResult
+                {
+                    Snapshot = new Librova.V1.ImportJobSnapshot
+                    {
+                        JobId = jobId,
+                        Status = Librova.V1.ImportJobStatus.Cancelled,
+                        Percent = 100,
+                        Message = "Import was cancelled."
+                    },
+                    Summary = new Librova.V1.ImportSummary
+                    {
+                        Mode = Librova.V1.ImportMode.Batch
+                    },
+                    Error = new Librova.V1.DomainError
+                    {
+                        Code = Librova.V1.ErrorCode.Cancellation,
+                        Message = "Import was cancelled."
+                    }
+                }
+            });
+        }
     }
 }

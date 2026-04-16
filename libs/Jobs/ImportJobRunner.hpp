@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <stop_token>
 #include <string>
@@ -90,7 +91,7 @@ private:
         void ReportRollbackProgress(std::size_t rolledBack, std::size_t total) noexcept override;
         void BeginCompacting() noexcept override;
 
-        [[nodiscard]] const SJobProgressSnapshot& GetSnapshot() const noexcept;
+        [[nodiscard]] SJobProgressSnapshot GetSnapshot() const;
         void SetWarnings(std::vector<std::string> warnings);
         void Complete(std::string_view message);
         void Cancel(std::string_view message);
@@ -101,6 +102,7 @@ private:
 
         std::stop_token m_stopToken;
         TProgressCallback m_progressCallback;
+        mutable std::mutex m_snapshotMutex;
         SJobProgressSnapshot m_snapshot{
             .Status = EJobStatus::Running
         };

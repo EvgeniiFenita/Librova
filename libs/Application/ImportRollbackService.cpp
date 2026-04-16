@@ -1,5 +1,7 @@
 #include "Application/ImportRollbackService.hpp"
 
+#include <algorithm>
+#include <array>
 #include <optional>
 #include <system_error>
 #include <unordered_set>
@@ -10,6 +12,153 @@
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
+
+[[nodiscard]] std::uint64_t NsToMs(const std::uint64_t ns) noexcept
+{
+    return ns / 1'000'000ULL;
+}
+
+enum class ERollbackPhase : std::size_t
+{
+    Lookup = 0,
+    BatchDelete,
+    FallbackDelete,
+    CoverCleanup,
+    BookCleanup,
+    DirectoryCleanup,
+    kCount
+};
+
+static constexpr std::size_t kRollbackPhaseCount = static_cast<std::size_t>(ERollbackPhase::kCount);
+
+static constexpr std::string_view kRollbackPhaseNames[kRollbackPhaseCount] = {
+    "lookup",
+    "batch_delete",
+    "fallback_delete",
+    "cover_cleanup",
+    "book_cleanup",
+    "directory_cleanup"
+};
+
+struct SRollbackPerfStats
+{
+    std::uint64_t PhaseNs[kRollbackPhaseCount]{};
+    std::uint64_t ReachableBookCount = 0;
+    std::uint64_t UnreachableBookCount = 0;
+    std::uint64_t RemovalFailedCount = 0;
+    bool BatchDeleteUsed = false;
+    bool FallbackDeleteUsed = false;
+};
+
+class CScopedRollbackPhaseTimer final
+{
+public:
+    CScopedRollbackPhaseTimer(SRollbackPerfStats& stats, const ERollbackPhase phase) noexcept
+        : m_stats(stats)
+        , m_phase(static_cast<std::size_t>(phase))
+        , m_start(std::chrono::steady_clock::now())
+    {
+    }
+
+    ~CScopedRollbackPhaseTimer() noexcept
+    {
+        const auto elapsed = std::chrono::steady_clock::now() - m_start;
+        m_stats.PhaseNs[m_phase] += static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count());
+    }
+
+    CScopedRollbackPhaseTimer(const CScopedRollbackPhaseTimer&) = delete;
+    CScopedRollbackPhaseTimer& operator=(const CScopedRollbackPhaseTimer&) = delete;
+
+private:
+    SRollbackPerfStats& m_stats;
+    std::size_t m_phase = 0;
+    std::chrono::steady_clock::time_point m_start;
+};
+
+void LogRollbackPerfSummaryIfInitialized(
+    const std::size_t total,
+    const SRollbackPerfStats& stats,
+    const std::chrono::steady_clock::duration totalDuration) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    try
+    {
+        struct SEntry
+        {
+            std::size_t Idx = 0;
+            std::uint64_t TotalMs = 0;
+        };
+
+        std::array<SEntry, kRollbackPhaseCount> entries{};
+        std::uint64_t workerTotalMs = 0;
+        std::string phaseLine;
+
+        for (std::size_t i = 0; i < kRollbackPhaseCount; ++i)
+        {
+            const auto totalMs = NsToMs(stats.PhaseNs[i]);
+            entries[i] = {.Idx = i, .TotalMs = totalMs};
+            workerTotalMs += totalMs;
+
+            if (!phaseLine.empty())
+            {
+                phaseLine += " | ";
+            }
+
+            phaseLine += std::string(kRollbackPhaseNames[i]);
+            phaseLine += "=";
+            phaseLine += std::to_string(totalMs);
+            phaseLine += "ms";
+        }
+
+        std::sort(entries.begin(), entries.end(), [](const SEntry& left, const SEntry& right) {
+            return left.TotalMs > right.TotalMs;
+        });
+
+        std::string bottleneckLine;
+        for (const auto& entry : entries)
+        {
+            const auto pct = workerTotalMs > 0
+                ? static_cast<std::uint32_t>(entry.TotalMs * 100 / workerTotalMs)
+                : 0U;
+
+            if (!bottleneckLine.empty())
+            {
+                bottleneckLine += " ";
+            }
+
+            bottleneckLine += std::string(kRollbackPhaseNames[entry.Idx]);
+            bottleneckLine += "=";
+            bottleneckLine += std::to_string(pct);
+            bottleneckLine += "%";
+        }
+
+        const auto elapsedSec = std::chrono::duration<double>(totalDuration).count();
+        const auto elapsedMin = static_cast<std::uint64_t>(elapsedSec) / 60;
+        const auto elapsedSecPart = static_cast<std::uint64_t>(elapsedSec) % 60;
+
+        Librova::Logging::Info(
+            "[rollback-perf] SUMMARY total={} reachable={} unreachable={} removal_failed={} "
+            "batch_delete_used={} fallback_delete_used={} | elapsed={}m{}s | {} | bottleneck: {}",
+            total,
+            stats.ReachableBookCount,
+            stats.UnreachableBookCount,
+            stats.RemovalFailedCount,
+            stats.BatchDeleteUsed,
+            stats.FallbackDeleteUsed,
+            elapsedMin,
+            elapsedSecPart,
+            phaseLine,
+            bottleneckLine);
+    }
+    catch (...)
+    {
+    }
+}
 
 [[nodiscard]] std::optional<std::filesystem::path> TryResolveManagedPathWithinRoot(
     const std::filesystem::path& root,
@@ -215,6 +364,9 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
     TRollbackProgressCallback progressCallback) const
 {
     SRollbackResult rollbackResult;
+    auto lastProgressReportAt = std::chrono::steady_clock::now();
+    const auto rollbackStartedAt = std::chrono::steady_clock::now();
+    SRollbackPerfStats perfStats;
 
     if (importedBookIds.empty())
     {
@@ -248,11 +400,15 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         std::optional<Librova::Domain::SBook> book;
         try
         {
-            book = m_bookRepository.GetById(*iterator);
+            {
+                const auto lookupTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::Lookup);
+                book = m_bookRepository.GetById(*iterator);
+            }
         }
         catch (const std::exception& error)
         {
             unreachableIds.push_back(*iterator);
+            ++perfStats.UnreachableBookCount;
             // Message must contain "catalog lookup failed" — tested by integration tests.
             rollbackResult.Warnings.push_back(
                 "Cancellation rollback left book "
@@ -273,6 +429,7 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
                 paths.BookFilePath = book->File.ManagedPath;
             }
         }
+        ++perfStats.ReachableBookCount;
         bookPaths.push_back(std::move(paths));
     }
 
@@ -291,6 +448,8 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
     {
         try
         {
+            perfStats.BatchDeleteUsed = true;
+            const auto deleteTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::BatchDelete);
             m_bookRepository.RemoveBatch(reachableIds);
         }
         catch (const std::exception& error)
@@ -308,12 +467,15 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
             {
                 try
                 {
+                    perfStats.FallbackDeleteUsed = true;
+                    const auto deleteTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::FallbackDelete);
                     m_bookRepository.Remove(bp.Id);
                 }
                 catch (const std::exception& removeError)
                 {
                     // Message must contain "catalog removal failed" — tested by integration tests.
                     removalFailedIds.insert(bp.Id.Value);
+                    ++perfStats.RemovalFailedCount;
                     rollbackResult.Warnings.push_back(
                         "Cancellation rollback left book "
                         + std::to_string(bp.Id.Value)
@@ -340,6 +502,7 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         {
             if (bp.CoverPath.has_value())
             {
+                const auto cleanupTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::CoverCleanup);
                 if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *bp.CoverPath); cleanupWarning.has_value())
                 {
                     rollbackResult.HasCleanupResidue = true;
@@ -349,24 +512,39 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
 
             if (bp.HasManagedFile && bp.BookFilePath.has_value())
             {
-                if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *bp.BookFilePath); cleanupWarning.has_value())
                 {
-                    rollbackResult.HasCleanupResidue = true;
-                    rollbackResult.Warnings.push_back(*cleanupWarning);
+                    const auto cleanupTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::BookCleanup);
+                    if (const auto cleanupWarning = CleanupManagedPathNoThrow(m_libraryRoot, *bp.BookFilePath); cleanupWarning.has_value())
+                    {
+                        rollbackResult.HasCleanupResidue = true;
+                        rollbackResult.Warnings.push_back(*cleanupWarning);
+                    }
                 }
 
-                if (const auto cleanupWarning = CleanupCancelledBookDirectoryNoThrow(m_libraryRoot, bp.Id); cleanupWarning.has_value())
                 {
-                    rollbackResult.HasCleanupResidue = true;
-                    rollbackResult.Warnings.push_back(*cleanupWarning);
+                    const auto cleanupTimer = CScopedRollbackPhaseTimer(perfStats, ERollbackPhase::DirectoryCleanup);
+                    if (const auto cleanupWarning = CleanupCancelledBookDirectoryNoThrow(m_libraryRoot, bp.Id); cleanupWarning.has_value())
+                    {
+                        rollbackResult.HasCleanupResidue = true;
+                        rollbackResult.Warnings.push_back(*cleanupWarning);
+                    }
                 }
             }
         }
 
         ++rolledBack;
-        if (progressCallback && (rolledBack % kProgressReportInterval == 0 || rolledBack == bookPaths.size()))
+        if (progressCallback)
         {
-            progressCallback(rolledBack, total);
+            const auto now = std::chrono::steady_clock::now();
+            const bool isComplete = rolledBack == bookPaths.size();
+            const bool reportDue = rolledBack == 1
+                || (now - lastProgressReportAt) >= kProgressReportInterval;
+
+            if (isComplete || reportDue)
+            {
+                progressCallback(rolledBack, total);
+                lastProgressReportAt = now;
+            }
         }
     }
 
@@ -375,6 +553,11 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
     {
         rollbackResult.RemainingBookIds.push_back(id);
     }
+
+    LogRollbackPerfSummaryIfInitialized(
+        total,
+        perfStats,
+        std::chrono::steady_clock::now() - rollbackStartedAt);
 
     if (Librova::Logging::CLogging::IsInitialized())
     {

@@ -9,6 +9,9 @@ namespace Librova.UI.ImportJobs;
 
 internal sealed class ImportJobsService : IImportJobsService
 {
+    private static readonly TimeSpan RollingBackWaitTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan CompactingWaitTimeout = TimeSpan.FromSeconds(2);
+
     private readonly ImportJobClient _client;
 
     public ImportJobsService(string pipePath)
@@ -155,12 +158,13 @@ internal sealed class ImportJobsService : IImportJobsService
         string? lastLoggedMessage = null;
         ulong lastLoggedImported = ulong.MaxValue, lastLoggedFailed = ulong.MaxValue, lastLoggedSkipped = ulong.MaxValue;
         int lastLoggedPercent = -1;
+        var currentWaitTimeout = waitTimeout;
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var completed = await WaitAsync(jobId, timeout, waitTimeout, cancellationToken).ConfigureAwait(false);
+            var completed = await WaitAsync(jobId, timeout, currentWaitTimeout, cancellationToken).ConfigureAwait(false);
             if (completed)
             {
                 var result = await TryGetResultAsync(jobId, timeout, cancellationToken).ConfigureAwait(false);
@@ -177,6 +181,7 @@ internal sealed class ImportJobsService : IImportJobsService
             if (snapshot is not null)
             {
                 onProgress?.Invoke(snapshot);
+                currentWaitTimeout = GetWaitTimeoutForStatus(snapshot.Status, waitTimeout);
 
                 var statusChanged = snapshot.Status != lastLoggedStatus;
                 var messageChanged = !string.IsNullOrEmpty(snapshot.Message) && snapshot.Message != lastLoggedMessage;
@@ -208,6 +213,14 @@ internal sealed class ImportJobsService : IImportJobsService
             }
         }
     }
+
+    internal static TimeSpan GetWaitTimeoutForStatus(ImportJobStatusModel status, TimeSpan defaultWaitTimeout) =>
+        status switch
+        {
+            ImportJobStatusModel.RollingBack => RollingBackWaitTimeout,
+            ImportJobStatusModel.Compacting => CompactingWaitTimeout,
+            _ => defaultWaitTimeout
+        };
 
     public async Task<bool> CancelAsync(
         ulong jobId,

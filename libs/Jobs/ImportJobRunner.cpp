@@ -16,9 +16,12 @@ CImportJobRunner::CJobProgressSink::CJobProgressSink(
 
 void CImportJobRunner::CJobProgressSink::ReportValue(const int percent, std::string_view message)
 {
-    m_snapshot.Status = EJobStatus::Running;
-    m_snapshot.Percent = percent;
-    m_snapshot.Message.assign(message);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Running;
+        m_snapshot.Percent = percent;
+        m_snapshot.Message.assign(message);
+    }
     PublishSnapshot();
 }
 
@@ -31,14 +34,17 @@ void CImportJobRunner::CJobProgressSink::ReportStructuredProgress(
     const int percent,
     std::string_view message)
 {
-    m_snapshot.Status = EJobStatus::Running;
-    m_snapshot.TotalEntries = totalEntries;
-    m_snapshot.ProcessedEntries = processedEntries;
-    m_snapshot.ImportedEntries = importedEntries;
-    m_snapshot.FailedEntries = failedEntries;
-    m_snapshot.SkippedEntries = skippedEntries;
-    m_snapshot.Percent = percent;
-    m_snapshot.Message.assign(message);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Running;
+        m_snapshot.TotalEntries = totalEntries;
+        m_snapshot.ProcessedEntries = processedEntries;
+        m_snapshot.ImportedEntries = importedEntries;
+        m_snapshot.FailedEntries = failedEntries;
+        m_snapshot.SkippedEntries = skippedEntries;
+        m_snapshot.Percent = percent;
+        m_snapshot.Message.assign(message);
+    }
     PublishSnapshot();
 }
 
@@ -47,46 +53,62 @@ bool CImportJobRunner::CJobProgressSink::IsCancellationRequested() const
     return m_stopToken.stop_requested();
 }
 
-const SJobProgressSnapshot& CImportJobRunner::CJobProgressSink::GetSnapshot() const noexcept
+SJobProgressSnapshot CImportJobRunner::CJobProgressSink::GetSnapshot() const
 {
+    const std::scoped_lock lock(m_snapshotMutex);
     return m_snapshot;
 }
 
 void CImportJobRunner::CJobProgressSink::SetWarnings(std::vector<std::string> warnings)
 {
-    m_snapshot.Warnings = std::move(warnings);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Warnings = std::move(warnings);
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Complete(std::string_view message)
 {
-    m_snapshot.Status = EJobStatus::Completed;
-    m_snapshot.Percent = 100;
-    m_snapshot.Message.assign(message);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Completed;
+        m_snapshot.Percent = 100;
+        m_snapshot.Message.assign(message);
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Cancel(std::string_view message)
 {
-    m_snapshot.Status = EJobStatus::Cancelled;
-    m_snapshot.Message.assign(message);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Cancelled;
+        m_snapshot.Message.assign(message);
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::Fail(std::string_view message)
 {
-    m_snapshot.Status = EJobStatus::Failed;
-    m_snapshot.Message.assign(message);
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Failed;
+        m_snapshot.Message.assign(message);
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::BeginRollback(const std::size_t totalToRollback) noexcept
 {
-    m_snapshot.Status = EJobStatus::Cancelling;
-    m_snapshot.TotalEntries = totalToRollback;
-    m_snapshot.ProcessedEntries = 0;
-    m_snapshot.Message = "Cancelling: preparing rollback of "
-        + std::to_string(totalToRollback) + " book(s)";
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Cancelling;
+        m_snapshot.TotalEntries = totalToRollback;
+        m_snapshot.ProcessedEntries = 0;
+        m_snapshot.Message = "Cancelling: preparing rollback of "
+            + std::to_string(totalToRollback) + " book(s)";
+    }
     PublishSnapshot();
 }
 
@@ -94,31 +116,43 @@ void CImportJobRunner::CJobProgressSink::ReportRollbackProgress(
     const std::size_t rolledBack,
     const std::size_t total) noexcept
 {
-    m_snapshot.Status = EJobStatus::RollingBack;
-    m_snapshot.TotalEntries = total;
-    m_snapshot.ProcessedEntries = rolledBack;
-    m_snapshot.Percent = total > 0
-        ? static_cast<int>((rolledBack * 100) / total)
-        : 0;
-    m_snapshot.Message = "Rolling back: "
-        + std::to_string(rolledBack) + " / " + std::to_string(total) + " book(s)";
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::RollingBack;
+        m_snapshot.TotalEntries = total;
+        m_snapshot.ProcessedEntries = rolledBack;
+        m_snapshot.Percent = total > 0
+            ? static_cast<int>((rolledBack * 100) / total)
+            : 0;
+        m_snapshot.Message = "Rolling back: "
+            + std::to_string(rolledBack) + " / " + std::to_string(total) + " book(s)";
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::BeginCompacting() noexcept
 {
-    m_snapshot.Status = EJobStatus::Compacting;
-    m_snapshot.Message = "Compacting database...";
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        m_snapshot.Status = EJobStatus::Compacting;
+        m_snapshot.Message = "Compacting database...";
+    }
     PublishSnapshot();
 }
 
 void CImportJobRunner::CJobProgressSink::PublishSnapshot() const
 {
+    SJobProgressSnapshot snapshotCopy;
+    {
+        const std::scoped_lock lock(m_snapshotMutex);
+        snapshotCopy = m_snapshot;
+    }
+
     if (m_progressCallback)
     {
         try
         {
-            m_progressCallback(m_snapshot);
+            m_progressCallback(snapshotCopy);
         }
         catch (...)
         {

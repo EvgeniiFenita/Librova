@@ -3,6 +3,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,7 @@
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
+#include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
@@ -44,6 +46,12 @@ void WriteFile(const std::filesystem::path& path)
 {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream(path).put('x');
+}
+
+std::string ReadTextFile(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
 Librova::Domain::SBook BuildBook(
@@ -155,7 +163,7 @@ TEST_CASE("Rollback removes empty cover subdir but preserves Covers top-level di
     repository.CloseSession();
 }
 
-TEST_CASE("Rollback service invokes progress callback after each batch and at completion", "[rollback]")
+TEST_CASE("Rollback service invokes progress callback at rollback start and on completion", "[rollback]")
 {
     auto sandbox = CreateRollbackSandbox("progress-callback");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
@@ -177,6 +185,7 @@ TEST_CASE("Rollback service invokes progress callback after each batch and at co
     std::size_t lastRolledBack = 0;
     std::size_t lastTotal = 0;
     int callbackCount = 0;
+    std::vector<std::size_t> reportedProgress;
 
     Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
     const auto result = rollback.RollbackImportedBooks(
@@ -186,14 +195,59 @@ TEST_CASE("Rollback service invokes progress callback after each batch and at co
             lastRolledBack = rolledBack;
             lastTotal = total;
             ++callbackCount;
+            reportedProgress.push_back(rolledBack);
         });
 
     REQUIRE(result.RemainingBookIds.empty());
-    // Callback must be invoked at least once (completion call).
-    REQUIRE(callbackCount > 0);
+    // Callback must publish immediate forward progress and completion.
+    REQUIRE(callbackCount >= 2);
+    REQUIRE(reportedProgress.front() == 1);
     // Final call must report all books rolled back.
     REQUIRE(lastRolledBack == 3);
     REQUIRE(lastTotal == 3);
 
     repository.CloseSession();
+}
+
+TEST_CASE("Rollback service writes phase timing summary into host log", "[rollback][logging]")
+{
+    auto sandbox = CreateRollbackSandbox("perf-summary");
+    const auto logPath = sandbox.Root / "Logs" / "host.log";
+    std::filesystem::create_directories(logPath.parent_path());
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+
+    {
+        Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
+
+        std::vector<Librova::Domain::SBookId> bookIds;
+        for (int i = 0; i < 2; ++i)
+        {
+            const auto managedFilePath =
+                std::filesystem::path(u8"Books") / ("000000000" + std::to_string(i + 1)) / u8"book.fb2";
+            WriteFile(sandbox.Root / managedFilePath);
+
+            Librova::Domain::SBook book = BuildBook(managedFilePath);
+            book.File.Sha256Hex = "perf-sha-" + std::to_string(i);
+            const auto id = repository.Add(book);
+            REQUIRE(id.IsValid());
+            bookIds.push_back(id);
+        }
+
+        Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
+        const auto result = rollback.RollbackImportedBooks(bookIds);
+        REQUIRE(result.RemainingBookIds.empty());
+
+        repository.CloseSession();
+    }
+
+    Librova::Logging::CLogging::Shutdown();
+
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(logText.find("[rollback-perf] SUMMARY total=2") != std::string::npos);
+    REQUIRE(logText.find("lookup=") != std::string::npos);
+    REQUIRE(logText.find("batch_delete=") != std::string::npos);
+    REQUIRE(logText.find("cover_cleanup=") != std::string::npos);
+    REQUIRE(logText.find("book_cleanup=") != std::string::npos);
+    REQUIRE(logText.find("directory_cleanup=") != std::string::npos);
+    REQUIRE(logText.find("bottleneck:") != std::string::npos);
 }
