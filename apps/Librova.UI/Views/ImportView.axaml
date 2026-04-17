@@ -119,7 +119,8 @@
             <TextBlock Classes="SectionTitle"
                        Text="Import In Progress" />
           </StackPanel>
-          <ProgressBar IsIndeterminate="True"
+          <ProgressBar Value="{Binding ImportJobs.ProgressValue}"
+                       Maximum="100"
                        Height="4"
                        CornerRadius="2"
                        Foreground="{DynamicResource AppAccentBrush}"

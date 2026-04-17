@@ -1264,3 +1264,12 @@ tasks:
   milestone: '1.1'
   note: Fixed the review findings batch by hardening drag-drop validation, backlog CLI console encoding,
     import diagnostics/logging behavior, and covering the regressions with native and managed tests.
+- id: 130
+  summary: replace indeterminate import progress bar with a finite percentage counter
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.1'
+  note: 'ProgressBar switched to deterministic mode: IsProgressIndeterminate and ProgressValue properties
+    added to ImportJobsViewModel, bound in ImportView.axaml; indeterminate during pre-scan, percentage-driven
+    once TotalEntries is known.'

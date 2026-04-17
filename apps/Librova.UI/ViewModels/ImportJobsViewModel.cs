@@ -31,6 +31,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private ImportJobResultModel? _lastResult;
     private string _progressSummaryText = "Progress details will appear here.";
     private string _resultSummaryText = "No completed job yet.";
+    private double _progressValue;
+
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
     private CancellationTokenSource? _activeImportCancellation;
@@ -232,6 +234,13 @@ internal sealed class ImportJobsViewModel : ObservableObject
         private set => SetProperty(ref _progressSummaryText, value);
     }
 
+    public double ProgressValue
+    {
+        get => _progressValue;
+        private set => SetProperty(ref _progressValue, value);
+    }
+
+
     public string WarningsText
     {
         get => _warningsText;
@@ -328,6 +337,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         IsBusy = true;
         StatusText = "Starting import...";
         ProgressSummaryText = "Preparing import workload...";
+        ProgressValue = 0;
         LastResult = null;
         _activeImportCancellation?.Dispose();
         _activeImportCancellation = new CancellationTokenSource();
@@ -587,6 +597,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             ? snapshot.Status.ToString()
             : snapshot.Message;
         ProgressSummaryText = FormatProgressSummary(snapshot);
+        ProgressValue = snapshot.TotalEntries == 0 ? 0 : Math.Clamp(snapshot.Percent, 0, 100);
     }
 
     private void ApplyTerminalResult(ImportJobResultModel result)
@@ -596,6 +607,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             ? result.Snapshot.Status.ToString()
             : result.Snapshot.Message;
         ProgressSummaryText = FormatProgressSummary(result.Snapshot);
+        ProgressValue = result.Snapshot.Status == ImportJobStatusModel.Completed ? 100 : Math.Clamp(result.Snapshot.Percent, 0, 100);
     }
 
     private static string FormatProgressSummary(ImportJobSnapshotModel snapshot)

@@ -1,19 +1,6 @@
 meta:
   last_assigned_id: 154
 tasks:
-- id: 130
-  summary: replace indeterminate import progress bar with a finite percentage counter
-  status: Open
-  type: Feature
-  priority: Major
-  milestone: '1.1'
-  note: 'the import pipeline knows the total source-file count at job start; replace the infinite spinner/indeterminate
-    bar with a deterministic progress bar and a live "N / Total — X%" label so the user can see how far
-    along the job is; the counter must update in real time and be accurate for single-file, directory,
-    and ZIP batch imports; the indeterminate animation may still be used briefly during the pre-scan phase
-    before the total is known.
-
-    '
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
   status: Open
