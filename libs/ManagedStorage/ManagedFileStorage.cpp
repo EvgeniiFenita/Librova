@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Logging/Logging.hpp"
+#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
@@ -50,17 +51,6 @@ void RemovePathNoThrow(const std::filesystem::path& path) noexcept
         {
         }
     }
-}
-
-void RemoveEmptyDirectoryNoThrow(const std::filesystem::path& path) noexcept
-{
-    if (path.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove(path, errorCode);
 }
 
 void LogRestoreFailureIfInitialized(
@@ -202,12 +192,14 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
     const std::string bookFolderName = Librova::StoragePlanning::CManagedLibraryLayout::GetBookFolderName(plan.BookId);
     const std::filesystem::path stagingDirectory = m_stagingRoot / bookFolderName;
     const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
-    const std::filesystem::path finalBookPath =
-        layout.BooksDirectory / bookFolderName / Librova::Domain::GetManagedFileName(plan.Format, plan.StorageEncoding);
+    const std::filesystem::path finalBookPath = Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
+        m_libraryRoot,
+        plan.BookId,
+        plan.Format,
+        plan.StorageEncoding);
 
     std::call_once(m_rootDirsEnsuredOnce, [&] {
-        EnsureDirectory(layout.BooksDirectory);
-        EnsureDirectory(layout.CoversDirectory);
+        EnsureDirectory(layout.ObjectsDirectory);
         EnsureDirectory(m_stagingRoot);
     });
 
@@ -238,7 +230,7 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
                 throw std::invalid_argument("Cover extension must not be empty.");
             const std::string normalizedExt = extension.front() == '.' ? extension.substr(1) : extension;
             const std::filesystem::path finalCoverPath =
-                layout.CoversDirectory / std::format("{}.{}", bookFolderName, normalizedExt);
+                Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(m_libraryRoot, plan.BookId, normalizedExt);
 
             preparedStorage.StagedCoverPath = stagedCoverPath;
             preparedStorage.FinalCoverPath = finalCoverPath;
@@ -356,7 +348,8 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
 void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage& preparedStorage) noexcept
 {
     const std::filesystem::path stagingDirectory = preparedStorage.StagedBookPath.parent_path();
-    const std::filesystem::path managedBookDirectory = preparedStorage.FinalBookPath.parent_path();
+    const std::filesystem::path managedObjectDirectory = preparedStorage.FinalBookPath.parent_path();
+    const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
 
     RemovePathNoThrow(preparedStorage.StagedBookPath);
     RemovePathNoThrow(preparedStorage.FinalBookPath);
@@ -371,8 +364,8 @@ void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage
         RemovePathNoThrow(*preparedStorage.FinalCoverPath);
     }
 
-    RemoveEmptyDirectoryNoThrow(stagingDirectory);
-    RemoveEmptyDirectoryNoThrow(managedBookDirectory);
+    (void)Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(stagingDirectory, m_stagingRoot);
+    (void)Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(managedObjectDirectory, layout.ObjectsDirectory);
 }
 
 } // namespace Librova::ManagedStorage

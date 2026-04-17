@@ -87,3 +87,4 @@ public sealed class PipeProtocolTests
         Assert.Contains("Unknown pipe method", error.Message, StringComparison.Ordinal);
     }
 }
+

@@ -18,7 +18,7 @@
 - startup screen переходит в loading state, затем открывается основной shell приложения.
 - для обычного запуска создается `%LOCALAPPDATA%\Librova\ui-preferences.json`.
 - для portable package создается `PortableData\ui-preferences.json`.
-- в выбранной папке появляется managed library structure: `Database`, `Books`, `Covers`, `Logs`, `Trash`.
+- в выбранной папке появляется managed library structure: `Database`, `Objects`, `Logs`, `Trash`.
 - в библиотеке не создается runtime `Temp`; временные import/converter/runtime path живут в local runtime workspace или в `PortableData\Runtime`.
 - после штатного закрытия или следующего успешного старта retained UI log оказывается в `Logs\ui.log` внутри выбранной библиотеки.
 8. Повтори `-FirstRun`, но в setup переключись на `Open Existing` и выбери уже созданную существующую библиотеку Librova.

@@ -118,3 +118,4 @@ TEST_CASE("Pipe protocol recognizes move-book-to-trash method in request framing
     REQUIRE(parsed.Value->Method == Librova::PipeTransport::EPipeMethod::MoveBookToTrash);
     REQUIRE(parsed.Value->Payload == "trash");
 }
+

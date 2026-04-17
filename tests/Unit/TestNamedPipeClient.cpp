@@ -406,3 +406,4 @@ TEST_CASE("Named pipe client performs typed ValidateImportSources call through h
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(root);
 }
+

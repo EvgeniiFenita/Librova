@@ -11,3 +11,4 @@ public sealed class UiLoggingCollection : ICollectionFixture<UiLoggingFixture>
 public sealed class UiLoggingFixture
 {
 }
+

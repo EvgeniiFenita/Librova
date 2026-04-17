@@ -384,3 +384,4 @@ TEST_CASE("Stb cover processor exits deterministically at the final fallback whe
     REQUIRE(result.Cover.Bytes.size() > 1);
     REQUIRE(std::string_view{result.DiagnosticMessage}.find("final-fallback-over-byte-budget") != std::string_view::npos);
 }
+

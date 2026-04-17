@@ -157,3 +157,4 @@ public sealed class FirstRunSetupPolicyTests
         }
     }
 }
+

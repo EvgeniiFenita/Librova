@@ -11,3 +11,4 @@ public sealed class EnvironmentVariableCollection : ICollectionFixture<Environme
 public sealed class EnvironmentVariableFixture
 {
 }
+

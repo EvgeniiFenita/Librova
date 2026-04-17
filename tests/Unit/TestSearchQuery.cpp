@@ -42,3 +42,4 @@ TEST_CASE("Search query keeps MVP defaults for pagination", "[domain][query]")
     REQUIRE(query.Offset == 0);
     REQUIRE(query.Limit == 50);
 }
+

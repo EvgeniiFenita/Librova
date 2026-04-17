@@ -47,14 +47,14 @@ TEST_CASE("Managed path safety resolves managed file under library root", "[mana
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-resolve");
     const auto libraryRoot = sandbox.GetPath() / "Library";
-    const auto sourcePath = libraryRoot / "Books/0000000001/book.epub";
+    const auto sourcePath = libraryRoot / "Objects/5a/68/0000000001.book.epub";
 
     std::filesystem::create_directories(sourcePath.parent_path());
     std::ofstream(sourcePath, std::ios::binary) << "epub";
 
     const auto resolvedPath = Librova::ManagedPaths::ResolveExistingPathWithinRoot(
         libraryRoot,
-        "Books/0000000001/book.epub",
+        "Objects/5a/68/0000000001.book.epub",
         "missing",
         "unsafe",
         "canonicalize");
@@ -67,11 +67,11 @@ TEST_CASE("Managed path safety returns empty for a missing managed file under li
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-missing");
     const auto libraryRoot = sandbox.GetPath() / "Library";
 
-    std::filesystem::create_directories(libraryRoot / "Books/0000000003");
+    std::filesystem::create_directories(libraryRoot / "Objects/34/65");
 
     const auto resolvedPath = Librova::ManagedPaths::TryResolvePathWithinRoot(
         libraryRoot,
-        "Books/0000000003/book.epub",
+        "Objects/34/65/0000000003.book.epub",
         "unsafe",
         "canonicalize");
 
@@ -83,7 +83,7 @@ TEST_CASE("Managed path safety rejects symlinked path escaping library root", "[
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-paths-symlink");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto outsideRoot = sandbox.GetPath() / "Outside";
-    const auto linkPath = libraryRoot / "Books/0000000002";
+    const auto linkPath = libraryRoot / "Objects/c7/66";
 
     std::filesystem::create_directories(outsideRoot);
     std::filesystem::create_directories(linkPath.parent_path());
@@ -97,7 +97,7 @@ TEST_CASE("Managed path safety rejects symlinked path escaping library root", "[
     REQUIRE_THROWS_WITH(
         Librova::ManagedPaths::ResolveExistingPathWithinRoot(
             libraryRoot,
-            "Books/0000000002/book.epub",
+            "Objects/c7/66/0000000002.book.epub",
             "missing",
             "unsafe",
             "canonicalize"),
@@ -130,3 +130,5 @@ TEST_CASE("Managed path safety removes a symlink under the library root without 
     REQUIRE_FALSE(std::filesystem::exists(linkPath));
     REQUIRE(std::filesystem::exists(outsideRoot / "outside.tmp"));
 }
+
+

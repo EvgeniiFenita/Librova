@@ -70,3 +70,4 @@ public sealed class UiPreferencesSnapshotBuilderTests
         Assert.True(updated.PreferredSortDescending);
     }
 }
+

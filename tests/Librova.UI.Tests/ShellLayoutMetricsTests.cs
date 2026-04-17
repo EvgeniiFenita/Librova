@@ -41,3 +41,4 @@ public sealed class ShellLayoutMetricsTests
         Assert.True(ShellLayoutMetrics.MinimumWindowHeight > 960);
     }
 }
+

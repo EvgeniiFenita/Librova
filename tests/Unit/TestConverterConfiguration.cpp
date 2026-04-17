@@ -48,3 +48,4 @@ TEST_CASE("Invalid enabled converter configuration is rejected", "[converter-con
     REQUIRE_FALSE(configuration.IsValid());
     REQUIRE_FALSE(Librova::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
 }
+

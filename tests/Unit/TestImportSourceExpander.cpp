@@ -50,3 +50,4 @@ TEST_CASE("Import source expander reports missing sources as warnings", "[import
     REQUIRE(expanded.Warnings.size() == 1);
     REQUIRE(expanded.Warnings.front().find("does not exist") != std::string::npos);
 }
+

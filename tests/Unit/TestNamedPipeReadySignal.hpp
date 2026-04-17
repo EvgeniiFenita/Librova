@@ -51,3 +51,4 @@ private:
     std::exception_ptr m_failure;
     bool m_completed = false;
 };
+

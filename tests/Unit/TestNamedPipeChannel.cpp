@@ -219,3 +219,4 @@ TEST_CASE("Named pipe channel timeout write cancels pending overlapped wait inst
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
 }
+

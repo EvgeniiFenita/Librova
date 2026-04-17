@@ -36,3 +36,4 @@ TEST_CASE("Domain error exposes infrastructure failure categories", "[domain][er
     REQUIRE(storageError.IsInfrastructureFailure());
     REQUIRE_FALSE(storageError.IsUserResolvable());
 }
+

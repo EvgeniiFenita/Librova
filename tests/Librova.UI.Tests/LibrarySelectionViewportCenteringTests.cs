@@ -70,3 +70,4 @@ public sealed class LibrarySelectionViewportCenteringTests
         Assert.Equal(414, offset, precision: 6);
     }
 }
+

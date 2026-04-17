@@ -180,3 +180,4 @@ TEST_CASE("Host options allow help and version without required runtime argument
     REQUIRE(versionOptions.PipePath.empty());
     REQUIRE(versionOptions.LibraryRoot.empty());
 }
+

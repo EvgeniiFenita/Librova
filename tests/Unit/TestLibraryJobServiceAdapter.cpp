@@ -489,7 +489,7 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
     book.Metadata.Language = "en";
     book.Metadata.TagsUtf8 = {"classic"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000201/book.epub";
+    book.File.ManagedPath = "Objects/44/82/0000000201.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "catalog-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -523,7 +523,7 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
     REQUIRE(response.statistics().total_managed_book_size_bytes() == 512);
     REQUIRE(response.items(0).title() == "Roadside Picnic");
     REQUIRE(response.items(0).authors_size() == 1);
-    REQUIRE(response.items(0).managed_file_name() == "book.epub");
+    REQUIRE(response.items(0).managed_file_name() == "0000000201.book.epub");
 
     CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
 }
@@ -532,7 +532,7 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000202");
+    std::filesystem::create_directories(sandbox / "Library/Objects/fd/86");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-export.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -545,12 +545,12 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000202/book.epub";
+    book.File.ManagedPath = "Objects/fd/86/0000000202.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "export-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000202/book.epub", std::ios::binary) << "epub-export";
+    std::ofstream(sandbox / "Library/Objects/fd/86/0000000202.book.epub", std::ios::binary) << "epub-export";
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -593,7 +593,7 @@ TEST_CASE("Library job service adapter returns aggregate statistics inside ListB
     firstBook.Metadata.AuthorsUtf8 = {"Author One"};
     firstBook.Metadata.Language = "en";
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000205/alpha.epub";
+    firstBook.File.ManagedPath = "Objects/f8/7b/0000000205.book.epub";
     firstBook.File.SizeBytes = 1024;
     firstBook.File.Sha256Hex = "stats-adapter-hash-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -601,7 +601,7 @@ TEST_CASE("Library job service adapter returns aggregate statistics inside ListB
 
     Librova::Domain::SBook secondBook = firstBook;
     secondBook.Metadata.TitleUtf8 = "Beta";
-    secondBook.File.ManagedPath = "Books/0000000206/beta.epub";
+    secondBook.File.ManagedPath = "Objects/b1/80/0000000206.book.epub";
     secondBook.File.SizeBytes = 2048;
     secondBook.File.Sha256Hex = "stats-adapter-hash-2";
     secondBook.AddedAtUtc += std::chrono::hours{1};
@@ -712,7 +712,7 @@ TEST_CASE("Library job service adapter logs genre alongside language for ListBoo
     book.Metadata.Language = "en";
     book.Metadata.GenresUtf8 = {"sci-fi"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.ManagedPath = "Objects/3f/1f/0000000301.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "list-books-logging-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -768,7 +768,7 @@ TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when co
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converted";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000204");
+    std::filesystem::create_directories(sandbox / "Library/Objects/8b/7d");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-export-converted.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -781,12 +781,12 @@ TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when co
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Fb2;
-    book.File.ManagedPath = "Books/0000000204/book.fb2";
+    book.File.ManagedPath = "Objects/8b/7d/0000000204.book.fb2";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "export-converted-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000204/book.fb2", std::ios::binary) << "fb2-export";
+    std::ofstream(sandbox / "Library/Objects/8b/7d/0000000204.book.fb2", std::ios::binary) << "fb2-export";
 
     class CStubBookConverter final : public Librova::Domain::IBookConverter
     {
@@ -885,7 +885,7 @@ TEST_CASE("Library job service adapter exposes structured converter unavailable 
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-unavailable";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000207");
+    std::filesystem::create_directories(sandbox / "Library/Objects/1e/7f");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-export-converter-unavailable.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -898,12 +898,12 @@ TEST_CASE("Library job service adapter exposes structured converter unavailable 
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Fb2;
-    book.File.ManagedPath = "Books/0000000207/book.fb2";
+    book.File.ManagedPath = "Objects/1e/7f/0000000207.book.fb2";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "export-converter-unavailable-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000207/book.fb2", std::ios::binary) << "fb2-export";
+    std::ofstream(sandbox / "Library/Objects/1e/7f/0000000207.book.fb2", std::ios::binary) << "fb2-export";
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -938,7 +938,7 @@ TEST_CASE("Library job service adapter exposes structured converter failed error
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-failed";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000208");
+    std::filesystem::create_directories(sandbox / "Library/Objects/3f/77");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-export-converter-failed.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -951,12 +951,12 @@ TEST_CASE("Library job service adapter exposes structured converter failed error
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Fb2;
-    book.File.ManagedPath = "Books/0000000208/book.fb2";
+    book.File.ManagedPath = "Objects/3f/77/0000000208.book.fb2";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "export-converter-failed-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000208/book.fb2", std::ios::binary) << "fb2-export";
+    std::ofstream(sandbox / "Library/Objects/3f/77/0000000208.book.fb2", std::ios::binary) << "fb2-export";
 
     class CFailingBookConverter final : public Librova::Domain::IBookConverter
     {
@@ -1014,7 +1014,7 @@ TEST_CASE("Library job service adapter exposes structured cancellation error for
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-cancelled";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000209");
+    std::filesystem::create_directories(sandbox / "Library/Objects/ac/75");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-export-converter-cancelled.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -1027,12 +1027,12 @@ TEST_CASE("Library job service adapter exposes structured cancellation error for
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Fb2;
-    book.File.ManagedPath = "Books/0000000209/book.fb2";
+    book.File.ManagedPath = "Objects/ac/75/0000000209.book.fb2";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "export-converter-cancelled-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000209/book.fb2", std::ios::binary) << "fb2-export";
+    std::ofstream(sandbox / "Library/Objects/ac/75/0000000209.book.fb2", std::ios::binary) << "fb2-export";
 
     class CCancelledBookConverter final : public Librova::Domain::IBookConverter
     {
@@ -1089,7 +1089,7 @@ TEST_CASE("Library job service adapter moves managed book to trash over protobuf
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-trash";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000203");
+    std::filesystem::create_directories(sandbox / "Library/Objects/6a/85");
 
     const std::filesystem::path databasePath = sandbox / "librova-proto-service-trash.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -1102,12 +1102,12 @@ TEST_CASE("Library job service adapter moves managed book to trash over protobuf
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000203/book.epub";
+    book.File.ManagedPath = "Objects/6a/85/0000000203.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "trash-adapter-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000203/book.epub", std::ios::binary) << "epub-trash";
+    std::ofstream(sandbox / "Library/Objects/6a/85/0000000203.book.epub", std::ios::binary) << "epub-trash";
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -1134,7 +1134,7 @@ TEST_CASE("Library job service adapter moves managed book to trash over protobuf
     REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_MANAGED_TRASH);
     REQUIRE_FALSE(response.has_orphaned_files());
     REQUIRE_FALSE(writeRepository.GetById(bookId).has_value());
-    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000203/book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Objects/6a/85/0000000203.book.epub"));
 
     CloseRepositoryAndRemoveAll(sandbox, writeRepository);
 }

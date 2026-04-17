@@ -6,8 +6,23 @@ namespace Librova.UI.LibraryCatalog;
 
 internal static class LibraryCatalogMapper
 {
+    private const uint Fnv1aOffsetBasis32 = 2166136261;
+    private const uint Fnv1aPrime32 = 16777619;
+
     private static InvalidOperationException CreateContractViolationException(string context) =>
         new($"Received incomplete catalog transport payload while mapping {context}.");
+
+    private static uint ComputeBookShardHash(string bookIdText)
+    {
+        uint hash = Fnv1aOffsetBasis32;
+        foreach (var ch in bookIdText)
+        {
+            hash ^= ch;
+            hash *= Fnv1aPrime32;
+        }
+
+        return hash;
+    }
 
     private static string? BuildCoverResourcePath(long bookId, string? extension)
     {
@@ -16,10 +31,14 @@ internal static class LibraryCatalogMapper
             return null;
         }
 
+        var bookIdText = bookId.ToString("0000000000");
+        var shardHash = ComputeBookShardHash(bookIdText);
+        var bucket1 = $"{shardHash & 0xff:x2}";
+        var bucket2 = $"{(shardHash >> 8) & 0xff:x2}";
         var normalizedExtension = extension.StartsWith('.')
             ? extension[1..]
             : extension;
-        return $"Covers/{bookId:0000000000}.{normalizedExtension}";
+        return $"Objects/{bucket1}/{bucket2}/{bookIdText}.cover.{normalizedExtension}";
     }
 
     private static InvalidOperationException CreateUnexpectedEnumValueException<TEnum>(TEnum value, string context)

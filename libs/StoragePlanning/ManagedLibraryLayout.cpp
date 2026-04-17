@@ -1,5 +1,6 @@
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
+#include <cstdint>
 #include <format>
 #include <stdexcept>
 
@@ -7,13 +8,36 @@
 
 namespace Librova::StoragePlanning {
 
+namespace {
+
+constexpr std::uint32_t Fnv1aOffsetBasis32 = 2166136261u;
+constexpr std::uint32_t Fnv1aPrime32 = 16777619u;
+
+std::uint32_t ComputeBookShardHash(std::string_view bookFolderName)
+{
+    std::uint32_t hash = Fnv1aOffsetBasis32;
+    for (const unsigned char ch : bookFolderName)
+    {
+        hash ^= ch;
+        hash *= Fnv1aPrime32;
+    }
+
+    return hash;
+}
+
+std::string FormatShardBucket(const std::uint32_t hash, const std::uint32_t shift)
+{
+    return std::format("{:02x}", static_cast<unsigned>((hash >> shift) & 0xffu));
+}
+
+} // namespace
+
 SLibraryLayoutPaths CManagedLibraryLayout::Build(const std::filesystem::path& libraryRoot)
 {
     return {
         .Root = libraryRoot,
         .DatabaseDirectory = libraryRoot / "Database",
-        .BooksDirectory = libraryRoot / "Books",
-        .CoversDirectory = libraryRoot / "Covers",
+        .ObjectsDirectory = libraryRoot / "Objects",
         .TrashDirectory = libraryRoot / "Trash",
         .LogsDirectory = libraryRoot / "Logs"
     };
@@ -29,11 +53,15 @@ std::string CManagedLibraryLayout::GetBookFolderName(const Librova::Domain::SBoo
     return std::format("{:010}", bookId.Value);
 }
 
-std::filesystem::path CManagedLibraryLayout::GetBookDirectory(
+std::filesystem::path CManagedLibraryLayout::GetObjectShardDirectory(
     const std::filesystem::path& libraryRoot,
     const Librova::Domain::SBookId bookId)
 {
-    return Build(libraryRoot).BooksDirectory / GetBookFolderName(bookId);
+    const std::string bookFolderName = GetBookFolderName(bookId);
+    const std::uint32_t hash = ComputeBookShardHash(bookFolderName);
+    return Build(libraryRoot).ObjectsDirectory
+        / FormatShardBucket(hash, 0)
+        / FormatShardBucket(hash, 8);
 }
 
 std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
@@ -41,7 +69,9 @@ std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
     const Librova::Domain::SBookId bookId,
     const Librova::Domain::EBookFormat format)
 {
-    return GetBookDirectory(libraryRoot, bookId) / Librova::Domain::GetManagedFileName(format);
+    const std::string bookFolderName = GetBookFolderName(bookId);
+    return GetObjectShardDirectory(libraryRoot, bookId)
+        / std::format("{}.{}", bookFolderName, Librova::Domain::GetManagedFileName(format));
 }
 
 std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
@@ -50,7 +80,9 @@ std::filesystem::path CManagedLibraryLayout::GetManagedBookPath(
     const Librova::Domain::EBookFormat format,
     const Librova::Domain::EStorageEncoding storageEncoding)
 {
-    return GetBookDirectory(libraryRoot, bookId) / Librova::Domain::GetManagedFileName(format, storageEncoding);
+    const std::string bookFolderName = GetBookFolderName(bookId);
+    return GetObjectShardDirectory(libraryRoot, bookId)
+        / std::format("{}.{}", bookFolderName, Librova::Domain::GetManagedFileName(format, storageEncoding));
 }
 
 std::filesystem::path CManagedLibraryLayout::GetCoverPath(
@@ -67,7 +99,9 @@ std::filesystem::path CManagedLibraryLayout::GetCoverPath(
         ? std::string{extension.substr(1)}
         : std::string{extension};
 
-    return Build(libraryRoot).CoversDirectory / std::format("{}.{}", GetBookFolderName(bookId), normalizedExtension);
+    const std::string bookFolderName = GetBookFolderName(bookId);
+    return GetObjectShardDirectory(libraryRoot, bookId)
+        / std::format("{}.cover.{}", bookFolderName, normalizedExtension);
 }
 
 } // namespace Librova::StoragePlanning

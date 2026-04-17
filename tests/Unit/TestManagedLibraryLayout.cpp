@@ -8,8 +8,7 @@ TEST_CASE("Managed library layout builds stable root directories", "[storage-pla
     const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build("D:/Library");
 
     REQUIRE(layout.DatabaseDirectory == std::filesystem::path{"D:/Library/Database"});
-    REQUIRE(layout.BooksDirectory == std::filesystem::path{"D:/Library/Books"});
-    REQUIRE(layout.CoversDirectory == std::filesystem::path{"D:/Library/Covers"});
+    REQUIRE(layout.ObjectsDirectory == std::filesystem::path{"D:/Library/Objects"});
     REQUIRE(layout.TrashDirectory == std::filesystem::path{"D:/Library/Trash"});
     REQUIRE(layout.LogsDirectory == std::filesystem::path{"D:/Library/Logs"});
 }
@@ -27,11 +26,17 @@ TEST_CASE("Managed library layout uses zero-padded stable book folders", "[stora
 TEST_CASE("Managed library layout builds managed book and cover paths", "[storage-planning]")
 {
     REQUIRE(
+        Librova::StoragePlanning::CManagedLibraryLayout::GetObjectShardDirectory(
+            "D:/Library",
+            {7}) ==
+        std::filesystem::path{"D:/Library/Objects/e8/5e"});
+
+    REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
             "D:/Library",
             {7},
             Librova::Domain::EBookFormat::Epub) ==
-        std::filesystem::path{"D:/Library/Books/0000000007/book.epub"});
+        std::filesystem::path{"D:/Library/Objects/e8/5e/0000000007.book.epub"});
 
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
@@ -39,7 +44,7 @@ TEST_CASE("Managed library layout builds managed book and cover paths", "[storag
             {7},
             Librova::Domain::EBookFormat::Fb2,
             Librova::Domain::EStorageEncoding::Compressed) ==
-        std::filesystem::path{"D:/Library/Books/0000000007/book.fb2.gz"});
+        std::filesystem::path{"D:/Library/Objects/e8/5e/0000000007.book.fb2.gz"});
 
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
@@ -47,9 +52,23 @@ TEST_CASE("Managed library layout builds managed book and cover paths", "[storag
             {7},
             Librova::Domain::EBookFormat::Fb2,
             Librova::Domain::EStorageEncoding::Plain) ==
-        std::filesystem::path{"D:/Library/Books/0000000007/book.fb2"});
+        std::filesystem::path{"D:/Library/Objects/e8/5e/0000000007.book.fb2"});
 
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath("D:/Library", {7}, ".jpg") ==
-        std::filesystem::path{"D:/Library/Covers/0000000007.jpg"});
+        std::filesystem::path{"D:/Library/Objects/e8/5e/0000000007.cover.jpg"});
+
+    REQUIRE(
+        Librova::StoragePlanning::CManagedLibraryLayout::GetObjectShardDirectory(
+            "D:/Library",
+            {123456}) ==
+        std::filesystem::path{"D:/Library/Objects/3a/35"});
+
+    REQUIRE(
+        Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
+            "D:/Library",
+            {123456},
+            Librova::Domain::EBookFormat::Epub) ==
+        std::filesystem::path{"D:/Library/Objects/3a/35/0000123456.book.epub"});
 }
+

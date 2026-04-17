@@ -655,3 +655,4 @@ TEST_CASE("FB2 parser handles UTF-16 BE encoded file", "[fb2-parsing]")
     REQUIRE(parsedBook.Metadata.Language == "ru");
 }
 #endif
+

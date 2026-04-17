@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 
+#include <array>
 #include <stdexcept>
 #include <system_error>
 
@@ -79,6 +80,20 @@ namespace {
     }
 
     return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+}
+
+void RemoveKnownWindowsServiceFilesNoThrow(const std::filesystem::path& directoryPath) noexcept
+{
+    static constexpr std::array<std::wstring_view, 2> kServiceFiles = {
+        L"Thumbs.db",
+        L"desktop.ini"
+    };
+
+    for (const auto fileName : kServiceFiles)
+    {
+        std::error_code errorCode;
+        std::filesystem::remove(directoryPath / std::filesystem::path{fileName}, errorCode);
+    }
 }
 
 } // namespace
@@ -231,6 +246,78 @@ void RemovePathRecursivelyWithinRoot(
         throw std::runtime_error(
             "Failed to remove managed path '" + Librova::Unicode::PathToUtf8(resolvedPath) + "'.");
     }
+}
+
+std::optional<SDirectoryCleanupResidue> CleanupEmptyDirectoriesUpTo(
+    const std::filesystem::path& startDirectory,
+    const std::filesystem::path& stopDirectoryExclusive) noexcept
+{
+    if (startDirectory.empty() || stopDirectoryExclusive.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto normalizedStopDirectory = stopDirectoryExclusive.lexically_normal();
+    auto currentDirectory = startDirectory.lexically_normal();
+
+    while (!currentDirectory.empty() && currentDirectory != normalizedStopDirectory)
+    {
+        try
+        {
+            RemoveKnownWindowsServiceFilesNoThrow(currentDirectory);
+
+            std::error_code existsError;
+            if (!std::filesystem::exists(currentDirectory, existsError))
+            {
+                if (existsError)
+                {
+                    return SDirectoryCleanupResidue{
+                        .Path = currentDirectory,
+                        .Reason = "Filesystem exists check failed: " + existsError.message()
+                    };
+                }
+
+                currentDirectory = currentDirectory.parent_path();
+                continue;
+            }
+
+            std::error_code removeError;
+            const bool removed = std::filesystem::remove(currentDirectory, removeError);
+            if (removeError)
+            {
+                return SDirectoryCleanupResidue{
+                    .Path = currentDirectory,
+                    .Reason = "Filesystem remove failed: " + removeError.message()
+                };
+            }
+
+            if (!removed)
+            {
+                return SDirectoryCleanupResidue{
+                    .Path = currentDirectory,
+                    .Reason = "Directory is not empty."
+                };
+            }
+
+            currentDirectory = currentDirectory.parent_path();
+        }
+        catch (const std::exception& error)
+        {
+            return SDirectoryCleanupResidue{
+                .Path = currentDirectory,
+                .Reason = error.what()
+            };
+        }
+        catch (...)
+        {
+            return SDirectoryCleanupResidue{
+                .Path = currentDirectory,
+                .Reason = "Cleanup threw a non-standard exception."
+            };
+        }
+    }
+
+    return std::nullopt;
 }
 
 } // namespace Librova::ManagedPaths

@@ -53,3 +53,4 @@ TEST_CASE("Database schema script contains required indexes", "[database-schema]
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_authors_author_id") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_tags_tag_id") != std::string_view::npos);
 }
+

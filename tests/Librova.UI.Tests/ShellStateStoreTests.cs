@@ -33,3 +33,4 @@ public sealed class ShellStateStoreTests
         Assert.Null(store.TryLoad());
     }
 }
+

@@ -85,3 +85,4 @@ TEST_CASE("SHA-256 throws for non-existent file", "[hashing]")
     const auto path = std::filesystem::temp_directory_path() / "librova-hash-test-missing-xyz.bin";
     REQUIRE_THROWS_AS(Librova::Hashing::ComputeFileSha256Hex(path), std::runtime_error);
 }
+

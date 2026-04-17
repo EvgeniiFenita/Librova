@@ -89,3 +89,4 @@ public sealed class UiPreferencesStoreTests
         Assert.Null(result);
     }
 }
+

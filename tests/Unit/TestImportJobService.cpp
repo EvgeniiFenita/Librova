@@ -257,3 +257,4 @@ TEST_CASE("Import job service treats Cancelling, RollingBack, and Compacting as 
     REQUIRE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Failed}.IsTerminal());
     REQUIRE(Librova::ApplicationJobs::SImportJobSnapshot{.Status = EStatus::Cancelled}.IsTerminal());
 }
+

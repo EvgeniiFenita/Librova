@@ -727,3 +727,4 @@ TEST_CASE("ZIP import coordinator reports progress for completed entries before 
 
     REQUIRE(result.ImportedCount() == 2);
 }
+

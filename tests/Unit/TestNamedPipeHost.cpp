@@ -406,3 +406,4 @@ TEST_CASE("Named pipe host serves a protobuf ValidateImportSources request end-t
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(root);
 }
+

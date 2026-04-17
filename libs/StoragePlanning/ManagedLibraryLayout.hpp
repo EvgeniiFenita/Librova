@@ -13,8 +13,7 @@ struct SLibraryLayoutPaths
 {
     std::filesystem::path Root;
     std::filesystem::path DatabaseDirectory;
-    std::filesystem::path BooksDirectory;
-    std::filesystem::path CoversDirectory;
+    std::filesystem::path ObjectsDirectory;
     std::filesystem::path TrashDirectory;
     std::filesystem::path LogsDirectory;
 };
@@ -24,7 +23,7 @@ class CManagedLibraryLayout
 public:
     [[nodiscard]] static SLibraryLayoutPaths Build(const std::filesystem::path& libraryRoot);
     [[nodiscard]] static std::string GetBookFolderName(Librova::Domain::SBookId bookId);
-    [[nodiscard]] static std::filesystem::path GetBookDirectory(
+    [[nodiscard]] static std::filesystem::path GetObjectShardDirectory(
         const std::filesystem::path& libraryRoot,
         Librova::Domain::SBookId bookId);
     [[nodiscard]] static std::filesystem::path GetManagedBookPath(

@@ -226,7 +226,7 @@ public sealed class ViewModelsTests
             await viewModel.StartImportAsync();
 
             Assert.Equal(
-                "Import was cancelled. Some managed files could not be removed during rollback.",
+                "Import was cancelled. Some managed files or directories could not be removed during rollback.",
                 viewModel.StatusText);
             Assert.Contains("left managed artifact", viewModel.WarningsText, StringComparison.Ordinal);
             Assert.Contains("Cancellation", viewModel.ErrorText, StringComparison.Ordinal);
@@ -927,12 +927,12 @@ public sealed class ViewModelsTests
     public async Task LibraryBrowserViewModel_LoadsCoverImageThroughLoaderAgainstLibraryRoot()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
-        var coversRoot = Path.Combine(sandboxRoot, "Covers");
+        var coversRoot = Path.Combine(sandboxRoot, "Objects", "5a", "68");
         Directory.CreateDirectory(coversRoot);
 
         try
         {
-            var coverPath = Path.Combine(coversRoot, "0000000001.png");
+            var coverPath = Path.Combine(coversRoot, "0000000001.cover.png");
             await File.WriteAllTextAsync(coverPath, "cover-path-marker");
 
             var service = new CoverAwareLibraryCatalogService();
@@ -976,7 +976,7 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000007/book.epub"
+                ManagedPath = "Objects/e8/5e/0000000007.book.epub"
             }
         };
 
@@ -1003,10 +1003,10 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
                 Language = "en",
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000011/book.fb2",
+                ManagedPath = "Objects/f7/59/0000000011.book.fb2",
                 Storage = new BookStorageInfoModel
                 {
-                    ManagedRelativePath = "Books/0000000011/book.fb2",
+                    ManagedRelativePath = "Objects/f7/59/0000000011.book.fb2",
                     HasContentHash = true
                 }
             }
@@ -1046,12 +1046,12 @@ public sealed class ViewModelsTests
     public async Task LibraryBrowserViewModel_UsesNeutralBackgroundWhenRealCoverIsLoaded()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
-        var coversRoot = Path.Combine(sandboxRoot, "Covers");
+        var coversRoot = Path.Combine(sandboxRoot, "Objects", "5a", "68");
         Directory.CreateDirectory(coversRoot);
 
         try
         {
-            await File.WriteAllTextAsync(Path.Combine(coversRoot, "0000000001.png"), "stub-cover-file");
+            await File.WriteAllTextAsync(Path.Combine(coversRoot, "0000000001.cover.png"), "stub-cover-file");
 
             var loader = new StubCoverImageLoader();
             var viewModel = new LibraryBrowserViewModel(
@@ -1768,9 +1768,9 @@ public sealed class ViewModelsTests
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
         Directory.CreateDirectory(sandboxRoot);
         var libraryRoot = Path.Combine(sandboxRoot, "Library");
-        Directory.CreateDirectory(Path.Combine(libraryRoot, "Covers"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Objects", "8f", "1f"));
         var logPath = Path.Combine(sandboxRoot, "ui.log");
-        var coverPath = "Covers/failing-cover.png";
+        var coverPath = "Objects/8f/1f/9999999999.cover.png";
         File.WriteAllText(Path.Combine(libraryRoot, coverPath), "stub-cover");
 
         try
@@ -2501,7 +2501,7 @@ public sealed class ViewModelsTests
                 {
                     JobId = jobId,
                     Status = ImportJobStatusModel.Cancelled,
-                    Message = "Import was cancelled. Some managed files could not be removed during rollback.",
+                    Message = "Import was cancelled. Some managed files or directories could not be removed during rollback.",
                     Percent = 50,
                     TotalEntries = 2,
                     ProcessedEntries = 2,
@@ -2518,13 +2518,13 @@ public sealed class ViewModelsTests
                     SkippedEntries = 0,
                     Warnings =
                     [
-                        "Cancellation rollback left managed artifact 'C:/Library/Books/0000000011/book.epub' on disk because Path could not be resolved safely within the library root."
+                        "Cancellation rollback left managed artifact 'C:/Library/Objects/f7/59/0000000011.book.epub' on disk because Path could not be resolved safely within the library root."
                     ]
                 },
                 Error = new DomainErrorModel
                 {
                     Code = ImportErrorCodeModel.Cancellation,
-                    Message = "Import was cancelled. Some managed files could not be removed during rollback."
+                    Message = "Import was cancelled. Some managed files or directories could not be removed during rollback."
                 }
             });
 
@@ -2658,7 +2658,7 @@ public sealed class ViewModelsTests
                         Authors = ["Arkady Strugatsky"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/book.epub",
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -2681,11 +2681,11 @@ public sealed class ViewModelsTests
                 Description = "Aliens land only in one city.",
                 Identifier = "details-id",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/book.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.epub",
                 SizeBytes = 4096,
                 Storage = new BookStorageInfoModel
                 {
-                    ManagedRelativePath = "Books/0000000001/book.epub",
+                    ManagedRelativePath = "Objects/5a/68/0000000001.book.epub",
                     HasContentHash = true
                 },
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -2758,7 +2758,7 @@ public sealed class ViewModelsTests
                         Authors = ["Arkady Strugatsky"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/book.epub",
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -2774,11 +2774,11 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/book.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.epub",
                 SizeBytes = 4096,
                 Storage = new BookStorageInfoModel
                 {
-                    ManagedRelativePath = "Books/0000000001/book.epub",
+                    ManagedRelativePath = "Objects/5a/68/0000000001.book.epub",
                     HasContentHash = true
                 },
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -2930,7 +2930,7 @@ public sealed class ViewModelsTests
                 Language = "en",
                 Tags = ["sci-fi"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/roadside.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.roadside.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new BookListItemModel
@@ -2941,7 +2941,7 @@ public sealed class ViewModelsTests
                 Language = "ru",
                 Tags = ["adventure"],
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000002/monday.fb2",
+                ManagedPath = "Objects/c7/66/0000000002.book.monday.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3022,7 +3022,7 @@ public sealed class ViewModelsTests
                 Language = "en",
                 Tags = ["adventure"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000001001/en.epub",
+                ManagedPath = "Objects/ef/e2/0000001001.book.en.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new BookListItemModel
@@ -3033,7 +3033,7 @@ public sealed class ViewModelsTests
                 Language = "ru",
                 Tags = ["classic"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000001002/ru.epub",
+                ManagedPath = "Objects/82/e4/0000001002.book.ru.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3100,8 +3100,8 @@ public sealed class ViewModelsTests
                         Authors = ["Author"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/book.epub",
-                        CoverPath = "Covers/0000000001.png",
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
+                        CoverPath = "Objects/5a/68/0000000001.cover.png",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3115,13 +3115,13 @@ public sealed class ViewModelsTests
                 Authors = ["Author"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/book.epub",
-                CoverPath = "Covers/0000000001.png",
+                ManagedPath = "Objects/5a/68/0000000001.book.epub",
+                CoverPath = "Objects/5a/68/0000000001.cover.png",
                 SizeBytes = 1024,
                 Storage = new BookStorageInfoModel
                 {
-                    ManagedRelativePath = "Books/0000000001/book.epub",
-                    CoverRelativePath = "Covers/0000000001.png",
+                    ManagedRelativePath = "Objects/5a/68/0000000001.book.epub",
+                    CoverRelativePath = "Objects/5a/68/0000000001.cover.png",
                     HasContentHash = true
                 },
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3160,7 +3160,7 @@ public sealed class ViewModelsTests
                         Authors = ["Arkady Strugatsky"],
                         Language = "en",
                         Format = BookFormatModel.Fb2,
-                        ManagedPath = "Books/0000000001/book.fb2.gz",
+                        ManagedPath = "Objects/5a/68/0000000001.book.fb2.gz",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3206,7 +3206,7 @@ public sealed class ViewModelsTests
                         Authors = ["Arkady*Boris|Strugatsky"],
                         Language = "en",
                         Format = BookFormatModel.Fb2,
-                        ManagedPath = "Books/0000000041/book.fb2",
+                        ManagedPath = "Objects/b6/7e/0000000041.book.fb2",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3220,11 +3220,11 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady*Boris|Strugatsky"],
                 Language = "en",
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000041/book.fb2",
+                ManagedPath = "Objects/b6/7e/0000000041.book.fb2",
                 SizeBytes = 512,
                 Storage = new BookStorageInfoModel
                 {
-                    ManagedRelativePath = "Books/0000000041/book.fb2",
+                    ManagedRelativePath = "Objects/b6/7e/0000000041.book.fb2",
                     HasContentHash = true
                 },
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3267,7 +3267,7 @@ public sealed class ViewModelsTests
                         Authors = ["Author"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/book.epub",
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
                         CoverPath = coverPath,
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
@@ -3331,7 +3331,7 @@ public sealed class ViewModelsTests
                         Authors = ["Arkady Strugatsky"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/book.epub",
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3375,7 +3375,7 @@ public sealed class ViewModelsTests
                             Authors = ["Author One"],
                             Language = "en",
                             Format = BookFormatModel.Epub,
-                            ManagedPath = "Books/0000000001/alpha.epub",
+                            ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                             AddedAtUtc = DateTimeOffset.UtcNow
                         },
                         new BookListItemModel
@@ -3385,7 +3385,7 @@ public sealed class ViewModelsTests
                             Authors = ["Author Two"],
                             Language = "en",
                             Format = BookFormatModel.Epub,
-                            ManagedPath = "Books/0000000002/beta.epub",
+                            ManagedPath = "Objects/c7/66/0000000002.book.beta.epub",
                             AddedAtUtc = DateTimeOffset.UtcNow
                         }
                     ]
@@ -3405,7 +3405,7 @@ public sealed class ViewModelsTests
                         Authors = ["Author Three"],
                         Language = "en",
                         Format = BookFormatModel.Fb2,
-                        ManagedPath = "Books/0000000003/gamma.fb2",
+                        ManagedPath = "Objects/34/65/0000000003.book.gamma.fb2",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3451,7 +3451,7 @@ public sealed class ViewModelsTests
                         Authors = ["Author One"],
                         Language = "en",
                         Format = BookFormatModel.Epub,
-                        ManagedPath = "Books/0000000001/alpha.epub",
+                        ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     },
                     new BookListItemModel
@@ -3461,7 +3461,7 @@ public sealed class ViewModelsTests
                         Authors = ["Author Two"],
                         Language = "en",
                         Format = BookFormatModel.Fb2,
-                        ManagedPath = "Books/0000000002/beta.fb2",
+                        ManagedPath = "Objects/c7/66/0000000002.book.beta.fb2",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
@@ -3506,7 +3506,7 @@ public sealed class ViewModelsTests
                             Authors = ["Author One"],
                             Language = "en",
                             Format = BookFormatModel.Epub,
-                            ManagedPath = "Books/0000000001/alpha.epub",
+                            ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                             AddedAtUtc = DateTimeOffset.UtcNow
                         },
                         new BookListItemModel
@@ -3516,7 +3516,7 @@ public sealed class ViewModelsTests
                             Authors = ["Author Two"],
                             Language = "en",
                             Format = BookFormatModel.Epub,
-                            ManagedPath = "Books/0000000002/beta.epub",
+                            ManagedPath = "Objects/c7/66/0000000002.book.beta.epub",
                             AddedAtUtc = DateTimeOffset.UtcNow
                         }
                     ]
@@ -3552,7 +3552,7 @@ public sealed class ViewModelsTests
                 Language = "en",
                 Tags = ["adventure"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/alpha.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3563,7 +3563,7 @@ public sealed class ViewModelsTests
                 Language = "en",
                 Tags = ["sci-fi"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000002/beta.epub",
+                ManagedPath = "Objects/c7/66/0000000002.book.beta.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3574,7 +3574,7 @@ public sealed class ViewModelsTests
                 Language = "ru",
                 Tags = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000003/gamma.fb2",
+                ManagedPath = "Objects/34/65/0000000003.book.gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3621,7 +3621,7 @@ public sealed class ViewModelsTests
                 Language = "en",
                 Tags = ["adventure"],
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/alpha.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3632,7 +3632,7 @@ public sealed class ViewModelsTests
                 Language = "ru",
                 Tags = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000002/gamma.fb2",
+                ManagedPath = "Objects/c7/66/0000000002.book.gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3688,7 +3688,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author One"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/alpha.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3698,7 +3698,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author Two"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000002/beta.epub",
+                ManagedPath = "Objects/c7/66/0000000002.book.beta.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3708,7 +3708,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author Three"],
                 Language = "en",
                 Format = BookFormatModel.Fb2,
-                ManagedPath = "Books/0000000003/gamma.fb2",
+                ManagedPath = "Objects/34/65/0000000003.book.gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
             },
             new()
@@ -3718,7 +3718,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author Four"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000004/delta.epub",
+                ManagedPath = "Objects/a1/63/0000000004.book.delta.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3775,7 +3775,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/orphan.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.orphan.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3817,7 +3817,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author"],
                 Language = "en",
                 Format = BookFormatModel.Epub,
-                ManagedPath = "Books/0000000001/orphan.epub",
+                ManagedPath = "Objects/5a/68/0000000001.book.orphan.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
             }
         ];
@@ -3871,7 +3871,7 @@ public sealed class ViewModelsTests
                         Authors = ["Slow Author"],
                         Language = "en",
                         Format = BookFormatModel.Fb2,
-                        ManagedPath = "Books/0000000001/book.fb2",
+                        ManagedPath = "Objects/5a/68/0000000001.book.fb2",
                         AddedAtUtc = DateTimeOffset.UtcNow
                     }
                 ]

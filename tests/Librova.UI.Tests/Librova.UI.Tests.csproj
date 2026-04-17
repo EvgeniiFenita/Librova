@@ -21,3 +21,4 @@
     <ProjectReference Include="..\..\apps\Librova.UI\Librova.UI.csproj" />
   </ItemGroup>
 </Project>
+

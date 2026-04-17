@@ -29,3 +29,4 @@ TEST_CASE("Book format parsing accepts canonical MVP values", "[domain][book-for
     REQUIRE(Librova::Domain::TryParseBookFormat("EPUB") == Librova::Domain::EBookFormat::Epub);
     REQUIRE_FALSE(Librova::Domain::TryParseBookFormat("zip").has_value());
 }
+

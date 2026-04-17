@@ -133,3 +133,4 @@ TEST_CASE("Import job proto mapper round-trips Cancelling, RollingBack, and Comp
         REQUIRE_FALSE(restored.IsTerminal());
     }
 }
+

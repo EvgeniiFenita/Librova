@@ -311,36 +311,31 @@ void LogRollbackFailureIfInitialized(
 {
     try
     {
+        const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
         const auto managedBookDirectory =
-            Librova::StoragePlanning::CManagedLibraryLayout::GetBookDirectory(libraryRoot, bookId);
+            Librova::StoragePlanning::CManagedLibraryLayout::GetObjectShardDirectory(libraryRoot, bookId);
 
         if (!std::filesystem::exists(managedBookDirectory))
         {
             return std::nullopt;
         }
 
-        std::error_code errorCode;
-        std::filesystem::remove(managedBookDirectory, errorCode);
-        if (errorCode)
+        if (const auto residue = Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(
+                managedBookDirectory,
+                layout.ObjectsDirectory);
+            residue.has_value())
         {
-            return "Cancellation rollback left managed book directory '"
-                + Librova::Unicode::PathToUtf8(managedBookDirectory)
-                + "' on disk because filesystem remove failed: "
-                + errorCode.message();
-        }
-
-        if (std::filesystem::exists(managedBookDirectory))
-        {
-            return "Cancellation rollback left managed book directory '"
-                + Librova::Unicode::PathToUtf8(managedBookDirectory)
-                + "' on disk because the directory was not empty.";
+            return "Cancellation rollback left managed object shard directory '"
+                + Librova::Unicode::PathToUtf8(residue->Path)
+                + "' on disk because "
+                + residue->Reason;
         }
 
         return std::nullopt;
     }
     catch (const std::exception& error)
     {
-        return "Cancellation rollback left managed book directory cleanup incomplete for book "
+        return "Cancellation rollback left managed object shard directory cleanup incomplete for book "
             + std::to_string(bookId.Value)
             + ": "
             + error.what();
@@ -577,7 +572,7 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
         if (rollbackResult.HasCleanupResidue)
         {
             Librova::Logging::Warn(
-                "Cancellation rollback left managed artifacts on disk for at least one imported book.");
+                "Cancellation rollback left managed files or directories on disk for at least one imported book.");
         }
     }
 

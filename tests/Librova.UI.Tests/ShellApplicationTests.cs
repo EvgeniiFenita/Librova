@@ -90,7 +90,7 @@ public sealed class ShellApplicationTests
                     Authors = ["Arkady Strugatsky"],
                     Language = "en",
                     Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000001/book.epub",
+                    ManagedPath = "Objects/5a/68/0000000001.book.epub",
                     AddedAtUtc = DateTimeOffset.UtcNow
                 }
             ]
@@ -132,7 +132,7 @@ public sealed class ShellApplicationTests
                     Authors = ["Author"],
                     Language = "en",
                     Format = BookFormatModel.Epub,
-                    ManagedPath = "Books/0000000007/fresh.epub",
+                    ManagedPath = "Objects/e8/5e/0000000007.book.epub",
                     AddedAtUtc = DateTimeOffset.UtcNow
                 }
             ]);
@@ -617,8 +617,7 @@ public sealed class ShellApplicationTests
     {
         var selectedPath = Path.Combine(Path.GetTempPath(), "librova-ui-tests", "open-library", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Database"));
-        Directory.CreateDirectory(Path.Combine(selectedPath, "Books"));
-        Directory.CreateDirectory(Path.Combine(selectedPath, "Covers"));
+        Directory.CreateDirectory(Path.Combine(selectedPath, "Objects"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Logs"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Trash"));
         File.WriteAllText(Path.Combine(selectedPath, "Database", "librova.db"), "sqlite-placeholder");
@@ -1208,3 +1207,4 @@ public sealed class ShellApplicationTests
         return path;
     }
 }
+

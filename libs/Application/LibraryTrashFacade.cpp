@@ -94,49 +94,6 @@ void LogRecycleBinFallback(
     }
 }
 
-void CleanupEmptyDirectoriesUpToRoot(const std::filesystem::path& path, const std::filesystem::path& rootPath) noexcept
-{
-    if (path.empty() || rootPath.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    const auto normalizedRoot = std::filesystem::weakly_canonical(rootPath, errorCode);
-    if (errorCode)
-    {
-        return;
-    }
-
-    auto currentPath = path.parent_path();
-    while (!currentPath.empty())
-    {
-        const auto normalizedCurrent = std::filesystem::weakly_canonical(currentPath, errorCode);
-        if (errorCode)
-        {
-            return;
-        }
-
-        if (normalizedCurrent == normalizedRoot)
-        {
-            return;
-        }
-
-        std::filesystem::remove(currentPath, errorCode);
-        if (errorCode)
-        {
-            return;
-        }
-
-        if (std::filesystem::exists(currentPath))
-        {
-            return;
-        }
-
-        currentPath = currentPath.parent_path();
-    }
-}
-
 } // namespace
 
 CLibraryTrashFacade::CLibraryTrashFacade(
@@ -221,9 +178,10 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     {
         m_recycleBinService->MoveToRecycleBin(stagedPaths);
         const auto trashRoot = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot).TrashDirectory;
+        const auto trashObjectsRoot = trashRoot / "Objects";
         for (const auto& stagedPath : stagedPaths)
         {
-            CleanupEmptyDirectoriesUpToRoot(stagedPath, trashRoot);
+            (void)Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(stagedPath.parent_path(), trashObjectsRoot);
         }
 
         return STrashedBookResult{

@@ -417,8 +417,7 @@ public sealed class FirstRunSetupViewModelTests
     private static void CreateManagedLibraryRoot(string libraryRoot)
     {
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Database"));
-        Directory.CreateDirectory(Path.Combine(libraryRoot, "Books"));
-        Directory.CreateDirectory(Path.Combine(libraryRoot, "Covers"));
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Objects"));
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Logs"));
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Trash"));
         File.WriteAllText(Path.Combine(libraryRoot, "Database", "librova.db"), string.Empty);
@@ -441,3 +440,4 @@ public sealed class FirstRunSetupViewModelTests
         }
     }
 }
+

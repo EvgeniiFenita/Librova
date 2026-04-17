@@ -85,3 +85,4 @@ TEST_CASE("Schema migrator rejects database with incompatible older schema versi
     std::filesystem::remove(databasePath);
 }
 
+

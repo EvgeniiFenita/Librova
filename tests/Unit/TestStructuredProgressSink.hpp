@@ -78,3 +78,4 @@ private:
     mutable std::condition_variable m_cv;
     std::vector<SSnapshot> m_snapshots;
 };
+

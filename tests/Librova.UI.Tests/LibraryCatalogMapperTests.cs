@@ -1,4 +1,4 @@
-﻿using Librova.UI.LibraryCatalog;
+using Librova.UI.LibraryCatalog;
 using Librova.V1;
 using System;
 using Xunit;
@@ -137,9 +137,26 @@ public sealed class LibraryCatalogMapperTests
         Assert.True(listItem.HasCoverResource);
 
         Assert.Equal("safe-roadside.epub", details.Storage.ManagedRelativePath);
-        Assert.Equal("Covers/0000000012.jpg", details.Storage.CoverRelativePath);
+        Assert.Equal("Objects/8a/5b/0000000012.cover.jpg", details.Storage.CoverRelativePath);
         Assert.True(details.HasContentHash);
         Assert.Equal("safe-roadside.epub", details.ManagedFileName);
+    }
+
+    [Fact]
+    public void Mapper_DerivesCoverShardPathFromStableBookIdHash()
+    {
+        var details = LibraryCatalogMapper.FromProto(new BookDetails
+        {
+            BookId = 123456,
+            Title = "Bucketed",
+            Language = "en",
+            Format = BookFormat.Epub,
+            ManagedFileName = "bucketed.epub",
+            CoverResourceAvailable = true,
+            CoverFileExtension = "png"
+        });
+
+        Assert.Equal("Objects/3a/35/0000123456.cover.png", details.Storage.CoverRelativePath);
     }
 
     [Fact]
@@ -266,3 +283,4 @@ public sealed class LibraryCatalogMapperTests
         Assert.Empty(proto.Genres);
     }
 }
+

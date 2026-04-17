@@ -65,16 +65,20 @@ In production, the connection is held until the host process terminates and is n
 One managed library root contains:
 
 - `Database`
-- `Books`
-- `Covers`
+- `Objects`
 - `Logs`
 - `Trash`
 
-Managed paths are stable and `BookId`-based.
+Managed object paths are stable and `BookId`-based. New libraries use a sharded object layout:
+
+- `Objects/<aa>/<bb>/<BookId>.book.<ext>` for managed book bytes
+- `Objects/<aa>/<bb>/<BookId>.cover.<ext>` for extracted covers
+
+where `<BookId>` is zero-padded to 10 digits and `<aa>/<bb>` are the lower two bytes of a stable `FNV-1a 32-bit` hash of that padded id, rendered as lowercase hexadecimal, so object placement remains deterministic while distributing evenly from the first imported books.
 
 Hot runtime workspace is intentionally separate from the managed library root. Import workspaces, converter working directories, managed-storage staging, and active-session runtime logs live in a portable-aware local runtime area and are synchronized back to retained library locations only where needed.
 
-Managed file bytes may use an internal storage encoding that is independent from the logical book format. In the current implementation, fallback-managed `FB2` files are stored compressed inside `Books/`, while browse, export, delete, and duplicate behavior continue to treat them as ordinary `FB2` books.
+Managed file bytes may use an internal storage encoding that is independent from the logical book format. In the current implementation, fallback-managed `FB2` files are stored compressed as `.book.fb2.gz` objects under `Objects/`, while browse, export, delete, and duplicate behavior continue to treat them as ordinary `FB2` books.
 
 The `Trash` directory remains part of the implemented baseline as rollback-safe staging for delete operations.
 

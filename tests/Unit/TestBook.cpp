@@ -23,7 +23,7 @@ TEST_CASE("Book file info reports managed path and hash presence", "[domain][boo
     REQUIRE_FALSE(fileInfo.HasManagedPath());
     REQUIRE_FALSE(fileInfo.HasHash());
 
-    fileInfo.ManagedPath = "Books/0000000001/book.epub";
+    fileInfo.ManagedPath = "Objects/5a/68/0000000001.book.epub";
     fileInfo.Sha256Hex = "abc123";
 
     REQUIRE(fileInfo.HasManagedPath());
@@ -38,8 +38,9 @@ TEST_CASE("Book aggregate exposes identity and cover state", "[domain][book]")
     REQUIRE_FALSE(book.HasCover());
 
     book.Id = {7};
-    book.CoverPath = "Covers/0000000007.jpg";
+    book.CoverPath = "Objects/e8/5e/0000000007.cover.jpg";
 
     REQUIRE(book.HasIdentity());
     REQUIRE(book.HasCover());
 }
+

@@ -86,3 +86,4 @@ TEST_CASE("Parser registry rejects unsupported extensions", "[parser-registry]")
     const Librova::ParserRegistry::CBookParserRegistry registry;
     REQUIRE_THROWS(registry.Parse("book.zip"));
 }
+

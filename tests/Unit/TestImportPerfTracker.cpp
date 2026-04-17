@@ -100,3 +100,4 @@ TEST_CASE("Import perf tracker does not emit periodic log before thresholds are 
 
     std::filesystem::remove_all(sandbox);
 }
+

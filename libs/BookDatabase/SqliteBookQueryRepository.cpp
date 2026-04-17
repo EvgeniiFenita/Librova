@@ -946,39 +946,34 @@ struct SCoverDirectorySnapshot
 
 std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path);
 
-[[nodiscard]] SCoverDirectorySnapshot GetCoverDirectorySnapshotOrEmpty(const std::filesystem::path& root)
+[[nodiscard]] SCoverDirectorySnapshot GetCoverDirectorySnapshotOrEmpty(
+    const std::filesystem::path& libraryRoot,
+    const Librova::Sqlite::CSqliteConnection& connection)
 {
     SCoverDirectorySnapshot snapshot{};
-    snapshot.LatestWriteTime = GetLastWriteTimeOrMin(root);
+    const std::filesystem::path objectsRoot = libraryRoot / "Objects";
+    snapshot.LatestWriteTime = GetLastWriteTimeOrMin(objectsRoot);
 
-    std::error_code errorCode;
-    if (!std::filesystem::exists(root, errorCode))
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT cover_path "
+        "FROM books "
+        "WHERE cover_path IS NOT NULL AND cover_path <> '';");
+
+    while (statement.Step())
     {
-        return snapshot;
-    }
+        const std::filesystem::path coverRelativePath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(0));
+        const std::filesystem::path coverPath = libraryRoot / coverRelativePath;
 
-    std::filesystem::recursive_directory_iterator iterator(
-        root,
-        std::filesystem::directory_options::skip_permission_denied,
-        errorCode);
-    std::filesystem::recursive_directory_iterator end;
-
-    if (errorCode)
-    {
-        return snapshot;
-    }
-
-    while (iterator != end)
-    {
-        if (iterator->is_regular_file(errorCode))
+        std::error_code errorCode;
+        if (!std::filesystem::is_regular_file(coverPath, errorCode))
         {
-            ++snapshot.FileCount;
-            snapshot.TotalSizeBytes += GetFileSizeOrZero(iterator->path());
-            snapshot.LatestWriteTime = std::max(snapshot.LatestWriteTime, GetLastWriteTimeOrMin(iterator->path()));
+            continue;
         }
 
-        errorCode.clear();
-        iterator.increment(errorCode);
+        ++snapshot.FileCount;
+        snapshot.TotalSizeBytes += GetFileSizeOrZero(coverPath);
+        snapshot.LatestWriteTime = std::max(snapshot.LatestWriteTime, GetLastWriteTimeOrMin(coverPath));
     }
 
     return snapshot;
@@ -1383,9 +1378,9 @@ std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDu
 Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryRepository::GetLibraryStatistics() const
 {
     const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
-    const std::filesystem::path coversRoot = libraryRoot / "Covers";
     const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
-    const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(coversRoot);
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(libraryRoot, connection);
 
     {
         const std::scoped_lock cacheLock(m_statisticsCacheMutex);
@@ -1399,7 +1394,6 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
         }
     }
 
-    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     Librova::Sqlite::CSqliteStatement statement(
         connection.GetNativeHandle(),
         "SELECT COUNT(*), COALESCE(SUM(file_size_bytes), 0) FROM books;");

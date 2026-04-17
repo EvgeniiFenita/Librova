@@ -77,14 +77,14 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
             {"Аркадий Стругацкий", "Борис Стругацкий"},
             "ru",
             Librova::Domain::EBookFormat::Epub,
-            "Books/0000001001/book.epub",
+            "Objects/ef/e2/0000001001.book.epub",
             "catalog-hash-1",
             std::chrono::sys_days{std::chrono::March / 30 / 2026});
         firstBook.Metadata.TagsUtf8 = {"classic", "sci-fi"};
         firstBook.Metadata.SeriesUtf8 = std::string{"Миры"};
         firstBook.Metadata.SeriesIndex = 1.0;
         firstBook.Metadata.Year = 1972;
-        firstBook.CoverPath = std::filesystem::path("Covers/0000001001.jpg");
+        firstBook.CoverPath = std::filesystem::path("Objects/ef/e2/0000001001.cover.jpg");
         static_cast<void>(writeRepository.Add(firstBook));
 
         Librova::Domain::SBook secondBook = MakeBook(
@@ -92,7 +92,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
             {"Arkady Strugatsky"},
             "en",
             Librova::Domain::EBookFormat::Fb2,
-            "Books/0000001002/book.fb2",
+            "Objects/82/e4/0000001002.book.fb2",
             "catalog-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
         secondBook.Metadata.GenresUtf8 = {"translated", "zone"};
@@ -118,7 +118,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
         REQUIRE(result.Items.front().AuthorsUtf8 == std::vector<std::string>({"Arkady Strugatsky"}));
         REQUIRE(result.Items.front().Language == "en");
         REQUIRE(result.Items.front().Format == Librova::Domain::EBookFormat::Fb2);
-        REQUIRE(result.Items.front().ManagedPath == std::filesystem::path("Books/0000001002/book.fb2"));
+        REQUIRE(result.Items.front().ManagedPath == std::filesystem::path("Objects/82/e4/0000001002.book.fb2"));
         REQUIRE_FALSE(result.Items.front().CoverPath.has_value());
     }
 
@@ -140,7 +140,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         {"Author One"},
         "en",
         Librova::Domain::EBookFormat::Epub,
-        "Books/0000001101/alpha.epub",
+        "Objects/f4/45/0000001101.book.alpha.epub",
         "catalog-page-1",
         std::chrono::sys_days{std::chrono::March / 30 / 2026});
     firstBook.Metadata.GenresUtf8 = {"selected"};
@@ -151,7 +151,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         {"Author Two"},
         "en",
         Librova::Domain::EBookFormat::Epub,
-        "Books/0000001102/beta.epub",
+        "Objects/ad/4a/0000001102.book.beta.epub",
         "catalog-page-2",
         std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
     secondBook.Metadata.GenresUtf8 = {"selected"};
@@ -162,7 +162,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
         {"Author Three"},
         "ru",
         Librova::Domain::EBookFormat::Epub,
-        "Books/0000001103/gamma.epub",
+        "Objects/1a/49/0000001103.book.gamma.epub",
         "catalog-page-3",
         std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
     thirdBook.Metadata.GenresUtf8 = {"selected"};
@@ -201,15 +201,15 @@ TEST_CASE("Library catalog facade sorts by title descending when direction is De
 
     static_cast<void>(writeRepository.Add(MakeBook(
         "Alpha", {"Author A"}, "en",
-        Librova::Domain::EBookFormat::Epub, "Books/0000002001/alpha.epub",
+        Librova::Domain::EBookFormat::Epub, "Objects/9c/c6/0000002001.book.alpha.epub",
         "dir-hash-1", std::chrono::sys_days{std::chrono::March / 30 / 2026})));
     static_cast<void>(writeRepository.Add(MakeBook(
         "Beta", {"Author B"}, "en",
-        Librova::Domain::EBookFormat::Epub, "Books/0000002002/beta.epub",
+        Librova::Domain::EBookFormat::Epub, "Objects/55/cb/0000002002.book.beta.epub",
         "dir-hash-2", std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1})));
     static_cast<void>(writeRepository.Add(MakeBook(
         "Gamma", {"Author C"}, "en",
-        Librova::Domain::EBookFormat::Epub, "Books/0000002003/gamma.epub",
+        Librova::Domain::EBookFormat::Epub, "Objects/c2/c9/0000002003.book.gamma.epub",
         "dir-hash-3", std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2})));
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
@@ -306,7 +306,7 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
         {"Arkady Strugatsky", "Boris Strugatsky"},
         "en",
         Librova::Domain::EBookFormat::Fb2,
-        "Books/0000001201/book.fb2",
+        "Objects/85/ff/0000001201.book.fb2",
         "details-hash-1",
         std::chrono::sys_days{std::chrono::March / 30 / 2026});
     book.Metadata.PublisherUtf8 = std::string{"Macmillan"};
@@ -315,7 +315,7 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
     book.Metadata.DescriptionUtf8 = std::string{"Aliens land only in one city."};
     book.Metadata.Identifier = std::string{"details-id-1"};
     book.Metadata.TagsUtf8 = {"classic", "first-contact"};
-    book.CoverPath = std::filesystem::path("Covers/0000001201.jpg");
+    book.CoverPath = std::filesystem::path("Objects/85/ff/0000001201.cover.jpg");
     const auto addedId = writeRepository.Add(book);
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
@@ -329,7 +329,7 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
         REQUIRE(details->DescriptionUtf8 == std::optional<std::string>{"Aliens land only in one city."});
         REQUIRE(details->Identifier == std::optional<std::string>{"details-id-1"});
         REQUIRE(details->Sha256Hex == "details-hash-1");
-        REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Covers/0000001201.jpg")});
+        REQUIRE(details->CoverPath == std::optional<std::filesystem::path>{std::filesystem::path("Objects/85/ff/0000001201.cover.jpg")});
     }
 
     std::filesystem::remove(databasePath);
@@ -341,7 +341,7 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
     std::filesystem::remove_all(libraryRoot);
     std::filesystem::create_directories(databasePath.parent_path());
-    std::filesystem::create_directories(libraryRoot / "Covers");
+    std::filesystem::create_directories(libraryRoot / "Objects/8a/62");
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
     {
@@ -353,11 +353,11 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
         {"Author One"},
         "en",
         Librova::Domain::EBookFormat::Epub,
-        "Books/0000001301/alpha.epub",
+        "Objects/8a/62/0000001301.book.epub",
         "stats-hash-1",
         std::chrono::sys_days{std::chrono::March / 30 / 2026});
     firstBook.File.SizeBytes = 1024;
-    firstBook.CoverPath = std::filesystem::path("Covers/0000001301.png");
+    firstBook.CoverPath = std::filesystem::path("Objects/8a/62/0000001301.cover.png");
     static_cast<void>(writeRepository.Add(firstBook));
 
     Librova::Domain::SBook secondBook = MakeBook(
@@ -365,17 +365,17 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
         {"Author Two"},
         "en",
         Librova::Domain::EBookFormat::Fb2,
-        "Books/0000001302/beta.fb2",
+        "Objects/f7/60/0000001302.book.fb2",
         "stats-hash-2",
         std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
     secondBook.File.SizeBytes = 2048;
     static_cast<void>(writeRepository.Add(secondBook));
 
-        std::ofstream(libraryRoot / "Covers/0000001301.png", std::ios::binary) << "cover-bytes";
+        std::ofstream(libraryRoot / "Objects/8a/62/0000001301.cover.png", std::ios::binary) << "cover-bytes";
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
         const auto statistics = facade.GetLibraryStatistics();
-        const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(libraryRoot / "Covers/0000001301.png"));
+        const auto coverSize = static_cast<std::uint64_t>(std::filesystem::file_size(libraryRoot / "Objects/8a/62/0000001301.cover.png"));
         const auto databaseSize = static_cast<std::uint64_t>(std::filesystem::file_size(databasePath));
 
         REQUIRE(statistics.BookCount == 2);
@@ -397,13 +397,13 @@ TEST_CASE("Library catalog facade filters books by multiple languages", "[applic
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
         static_cast<void>(writeRepository.Add(MakeBook("English Book", {"Author A"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002101/en.epub", "ml-hash-1",
+            Librova::Domain::EBookFormat::Epub, "Objects/77/cc/0000002101.book.en.epub", "ml-hash-1",
             std::chrono::sys_days{std::chrono::March / 30 / 2026})));
         static_cast<void>(writeRepository.Add(MakeBook("Russian Book", {"Author B"}, "ru",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002102/ru.epub", "ml-hash-2",
+            Librova::Domain::EBookFormat::Epub, "Objects/0a/ce/0000002102.book.ru.epub", "ml-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1})));
         static_cast<void>(writeRepository.Add(MakeBook("German Book", {"Author C"}, "de",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002103/de.epub", "ml-hash-3",
+            Librova::Domain::EBookFormat::Epub, "Objects/9d/cf/0000002103.book.de.epub", "ml-hash-3",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2})));
 
         const Librova::Application::CLibraryCatalogFacade facade(queryRepository, writeRepository);
@@ -433,19 +433,19 @@ TEST_CASE("Library catalog facade filters books by multiple genres with OR seman
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
 
         Librova::Domain::SBook scifiBook = MakeBook("Sci-Fi Book", {"Author X"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002201/scifi.epub", "mg-hash-1",
+            Librova::Domain::EBookFormat::Epub, "Objects/12/95/0000002201.book.scifi.epub", "mg-hash-1",
             std::chrono::sys_days{std::chrono::March / 30 / 2026});
         scifiBook.Metadata.GenresUtf8 = {"sci-fi"};
         static_cast<void>(writeRepository.Add(scifiBook));
 
         Librova::Domain::SBook classicBook = MakeBook("Classic Book", {"Author Y"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002202/classic.epub", "mg-hash-2",
+            Librova::Domain::EBookFormat::Epub, "Objects/7f/93/0000002202.book.classic.epub", "mg-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
         classicBook.Metadata.GenresUtf8 = {"classic"};
         static_cast<void>(writeRepository.Add(classicBook));
 
         Librova::Domain::SBook otherBook = MakeBook("Other Book", {"Author Z"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002203/other.epub", "mg-hash-3",
+            Librova::Domain::EBookFormat::Epub, "Objects/ec/91/0000002203.book.other.epub", "mg-hash-3",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
         otherBook.Metadata.GenresUtf8 = {"thriller"};
         static_cast<void>(writeRepository.Add(otherBook));
@@ -478,7 +478,7 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
         // Book A: genre "sci-fi", tag "award-winner" -> matches genre+tag filter
         Librova::Domain::SBook bookA = MakeBook("Book A", {"Author A"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002501/a.epub", "gt-hash-1",
+            Librova::Domain::EBookFormat::Epub, "Objects/6b/4c/0000002501.book.a.epub", "gt-hash-1",
             std::chrono::sys_days{std::chrono::March / 30 / 2026});
         bookA.Metadata.GenresUtf8 = {"sci-fi"};
         bookA.Metadata.TagsUtf8 = {"award-winner"};
@@ -486,7 +486,7 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
         // Book B: genre "sci-fi", wrong tag -> should NOT match
         Librova::Domain::SBook bookB = MakeBook("Book B", {"Author B"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002502/b.epub", "gt-hash-2",
+            Librova::Domain::EBookFormat::Epub, "Objects/fe/4d/0000002502.book.b.epub", "gt-hash-2",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1});
         bookB.Metadata.GenresUtf8 = {"sci-fi"};
         bookB.Metadata.TagsUtf8 = {"bestseller"};
@@ -494,7 +494,7 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
         // Book C: matching tag, wrong genre -> should NOT match
         Librova::Domain::SBook bookC = MakeBook("Book C", {"Author C"}, "en",
-            Librova::Domain::EBookFormat::Epub, "Books/0000002503/c.epub", "gt-hash-3",
+            Librova::Domain::EBookFormat::Epub, "Objects/91/4f/0000002503.book.c.epub", "gt-hash-3",
             std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2});
         bookC.Metadata.GenresUtf8 = {"thriller"};
         bookC.Metadata.TagsUtf8 = {"award-winner"};
@@ -515,3 +515,5 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
     std::filesystem::remove(databasePath);
 }
+
+

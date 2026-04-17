@@ -169,7 +169,7 @@ std::optional<Librova::Domain::SDomainError> CImportJobRunner::TryMapError(
     const Librova::Application::SImportResult& importResult)
 {
     const auto cancellationMessage = importResult.HasRollbackCleanupResidue
-        ? "Import was cancelled. Some managed files could not be removed during rollback."
+        ? "Import was cancelled. Some managed files or directories could not be removed during rollback."
         : "Import was cancelled.";
 
     if (importResult.WasCancelled)

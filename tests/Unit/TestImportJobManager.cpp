@@ -265,3 +265,4 @@ TEST_CASE("Import job manager does not remove running jobs", "[jobs][manager]")
     REQUIRE(manager.Wait(handle.Id, std::chrono::seconds(1)));
     std::filesystem::remove_all(sandbox.Root);
 }
+

@@ -25,8 +25,7 @@ void ValidateExistingLibraryRoot(const std::filesystem::path& libraryRoot)
 
     const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
     EnsureDirectoryExists(layout.DatabaseDirectory, "Database");
-    EnsureDirectoryExists(layout.BooksDirectory, "Books");
-    EnsureDirectoryExists(layout.CoversDirectory, "Covers");
+    EnsureDirectoryExists(layout.ObjectsDirectory, "Objects");
     EnsureDirectoryExists(layout.LogsDirectory, "Logs");
     EnsureDirectoryExists(layout.TrashDirectory, "Trash");
 
@@ -56,8 +55,7 @@ void PrepareNewLibraryRoot(const std::filesystem::path& libraryRoot)
     const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
     std::filesystem::create_directories(layout.Root);
     std::filesystem::create_directories(layout.DatabaseDirectory);
-    std::filesystem::create_directories(layout.BooksDirectory);
-    std::filesystem::create_directories(layout.CoversDirectory);
+    std::filesystem::create_directories(layout.ObjectsDirectory);
     std::filesystem::create_directories(layout.TrashDirectory);
     std::filesystem::create_directories(layout.LogsDirectory);
 }

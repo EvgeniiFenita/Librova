@@ -494,7 +494,7 @@ TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled 
     REQUIRE(result.Snapshot.Status == Librova::Jobs::EJobStatus::Cancelled);
     REQUIRE(result.Error.has_value());
     REQUIRE(result.Error->Code == Librova::Domain::EDomainErrorCode::Cancellation);
-    REQUIRE(result.Snapshot.Message == "Import was cancelled. Some managed files could not be removed during rollback.");
+    REQUIRE(result.Snapshot.Message == "Import was cancelled. Some managed files or directories could not be removed during rollback.");
     REQUIRE(result.ImportResult.has_value());
     REQUIRE(result.ImportResult->HasRollbackCleanupResidue);
     REQUIRE(std::ranges::any_of(result.ImportResult->Summary.Warnings, [](const auto& warning) {
@@ -802,3 +802,4 @@ TEST_CASE("Import job runner publishes Cancelling and RollingBack status transit
         observedStatuses.begin(), observedStatuses.end(), Librova::Jobs::EJobStatus::RollingBack);
     REQUIRE(cancellingPos < rollingBackPos);
 }
+

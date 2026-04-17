@@ -8,6 +8,9 @@ namespace Librova.UI.Tests;
 
 public sealed class LibraryCatalogClientTests
 {
+    private const uint Fnv1aOffsetBasis32 = 2166136261;
+    private const uint Fnv1aPrime32 = 16777619;
+
     [Fact]
     public async Task LibraryCatalogClient_ListsImportedBooksThroughNativeHost()
     {
@@ -285,11 +288,10 @@ public sealed class LibraryCatalogClientTests
                 }),
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
-            var coversRoot = Path.Combine(options.LibraryRoot, "Covers");
+            var coversRoot = Path.Combine(options.LibraryRoot, "Objects", "99", "99");
             Directory.CreateDirectory(coversRoot);
-            var coverPath = Path.Combine(coversRoot, "manual-cover.png");
+            var coverPath = Path.Combine(coversRoot, "9999999999.cover.png");
             await File.WriteAllTextAsync(coverPath, "stub-cover-file");
-            var coverSizeBytes = (ulong)new FileInfo(coverPath).Length;
             var refreshedResponse = await client.ListBooksAsync(
                 LibraryCatalogMapper.ToProto(new BookListRequestModel
                 {
@@ -309,8 +311,9 @@ public sealed class LibraryCatalogClientTests
             Assert.NotNull(listResponse.Statistics);
             Assert.Equal(2UL, listResponse.Statistics.BookCount);
             Assert.True(databaseSizeBytes > 0);
+            // Orphan object files that are not referenced by cover_path in the catalog must not affect library statistics.
             Assert.Equal(
-                expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes,
+                expectedManagedBookSizeBytes + databaseSizeBytes,
                 refreshedResponse.Statistics.TotalLibrarySizeBytes);
         }
         finally
@@ -326,6 +329,33 @@ public sealed class LibraryCatalogClientTests
             {
             }
         }
+    }
+
+    private static string ResolveManagedBookPath(string libraryRoot, long bookId, string managedFileName) =>
+        Path.GetFullPath(Path.Combine(
+            libraryRoot,
+            "Objects",
+            ComputeShardBucket(bookId, 0),
+            ComputeShardBucket(bookId, 8),
+            managedFileName));
+
+    private static string ComputeShardBucket(long bookId, int shift)
+    {
+        var hash = ComputeBookShardHash(bookId);
+        return $"{(hash >> shift) & 0xff:x2}";
+    }
+
+    private static uint ComputeBookShardHash(long bookId)
+    {
+        var bookIdText = bookId.ToString("0000000000");
+        uint hash = Fnv1aOffsetBasis32;
+        foreach (var ch in bookIdText)
+        {
+            hash ^= ch;
+            hash *= Fnv1aPrime32;
+        }
+
+        return hash;
     }
 
     [Fact]
@@ -450,7 +480,7 @@ public sealed class LibraryCatalogClientTests
                   [string]$source,
                   [string]$destination
                 )
-                if ($source -notmatch '[\\/]+Library[\\/]+Books[\\/]+')
+                if ($source -notmatch '[\\/]+Library[\\/]+Objects[\\/]+')
                 {
                   Write-Error 'Import conversion intentionally disabled for this test.'
                   exit 1
@@ -653,6 +683,5 @@ public sealed class LibraryCatalogClientTests
         }
     }
 
-    private static string ResolveManagedBookPath(string libraryRoot, long bookId, string managedFileName) =>
-        Path.GetFullPath(Path.Combine(libraryRoot, "Books", bookId.ToString("0000000000"), managedFileName));
 }
+

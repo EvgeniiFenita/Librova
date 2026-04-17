@@ -351,3 +351,4 @@ TEST_CASE("Fb2GenreMapper resolution is case-sensitive", "[fb2-genre-mapper]")
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("Adventure")  == "Adventure");
     REQUIRE(Librova::Fb2Parsing::CFb2GenreMapper::ResolveGenreName("THRILLER")   == "THRILLER");
 }
+

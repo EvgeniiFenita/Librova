@@ -25,3 +25,4 @@ TEST_CASE("Duplicate match exposes probable duplicate confirmation rule", "[doma
     REQUIRE_FALSE(probableMatch.IsStrictRejection());
     REQUIRE(probableMatch.IsProbable());
 }
+

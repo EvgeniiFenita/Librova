@@ -7,7 +7,7 @@
 1. Открой `Library`.
 Ожидаемое поведение:
 - верхняя панель с `Search titles, authors, tags...`, фильтром языка и счетчиком книг остается сверху.
-- в левом блоке `Current Library` под путем к библиотеке виден summary `Library: ...`, который показывает общее число managed books и единый total library size в `MB`, включая managed books, `Covers` и `Database/librova.db`.
+- в левом блоке `Current Library` под путем к библиотеке виден summary `Library: ...`, который показывает общее число managed books и единый total library size в `MB`, включая managed objects и `Database/librova.db`.
 - карточки книг отображаются в адаптивной сетке.
 - если книг больше начальной порции, при прокрутке вниз grid автоматически догружает следующие книги без отдельной кнопки page navigation.
 1.1. Сузь окно до минимально доступной ширины и открой `Book Details`.
@@ -91,7 +91,7 @@
 
 ## 2.1 Covers And Legacy FB2 Metadata
 
-1. Импортируй `FB2`, у которого есть извлеченная cover в `Covers`.
+1. Импортируй `FB2`, у которого есть извлеченная cover, сохраненная как object в `Objects/<shard>/<shard>/...cover...`.
 Ожидаемое поведение:
 - в карточке книги отображается реальная cover, а не placeholder gradient;
 - cover сохраняет свои пропорции и не обрезается;

@@ -49,10 +49,10 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
     book.Metadata.Identifier = std::string{"roadside-picnic"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
     book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
-    book.File.ManagedPath = std::filesystem::path(u8"Books/0000000001/Пикник.epub");
+    book.File.ManagedPath = std::filesystem::path(u8"Objects/5a/68/0000000001.book.Пикник.epub");
     book.File.SizeBytes = 4096;
     book.File.Sha256Hex = "abc123";
-    book.CoverPath = std::filesystem::path(u8"Covers/0000000001.jpg");
+    book.CoverPath = std::filesystem::path(u8"Objects/5a/68/0000000001.cover.jpg");
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{14} + std::chrono::minutes{5};
 
     const Librova::Domain::SBookId bookId = repository.Add(book);
@@ -119,7 +119,7 @@ TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database
     book.Metadata.TitleUtf8 = "Reserved Id";
     book.Metadata.AuthorsUtf8 = {"Author"};
     book.Metadata.Language = "en";
-    book.File.ManagedPath = "Books/0000000001/book.epub";
+    book.File.ManagedPath = "Objects/5a/68/0000000001.book.epub";
     book.File.SizeBytes = 100;
     book.File.Sha256Hex = "reserve-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -143,7 +143,7 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
     book.Metadata.TitleUtf8 = "Roadside Picnic";
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
-    book.File.ManagedPath = "Books/0000000002/book.epub";
+    book.File.ManagedPath = "Objects/c7/66/0000000002.book.epub";
     book.File.SizeBytes = 1024;
     book.File.Sha256Hex = "deadbeef";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -195,7 +195,7 @@ TEST_CASE("Sqlite book repository inserts exactly one search-index row per added
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
     book.Metadata.DescriptionUtf8 = std::string{"Zone"};
-    book.File.ManagedPath = "Books/0000000003/book.epub";
+    book.File.ManagedPath = "Objects/34/65/0000000003.book.epub";
     book.File.SizeBytes = 1024;
     book.File.Sha256Hex = "search-index";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -230,7 +230,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
     firstBook.Metadata.Language = "ru";
     firstBook.Metadata.TagsUtf8 = {"classic", "sci-fi"};
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000101/book.epub";
+    firstBook.File.ManagedPath = "Objects/55/05/0000000101.book.epub";
     firstBook.File.SizeBytes = 2048;
     firstBook.File.Sha256Hex = "hash-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -243,7 +243,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
     secondBook.Metadata.TagsUtf8 = {"sci-fi"};
     secondBook.Metadata.DescriptionUtf8 = std::string{"A zone, artifacts, and dangerous expeditions"};
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    secondBook.File.ManagedPath = "Books/0000000102/book.fb2";
+    secondBook.File.ManagedPath = "Objects/9c/00/0000000102.book.fb2";
     secondBook.File.SizeBytes = 1024;
     secondBook.File.Sha256Hex = "hash-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -299,7 +299,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     firstBook.Metadata.SeriesUtf8 = std::string{"Series Shared"};
     firstBook.Metadata.TagsUtf8 = {"shared-tag"};
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000103/first.epub";
+    firstBook.File.ManagedPath = "Objects/2f/02/0000000103.book.first.epub";
     firstBook.File.SizeBytes = 100;
     firstBook.File.Sha256Hex = "lang-filter-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -307,7 +307,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
 
     Librova::Domain::SBook secondBook = firstBook;
     secondBook.Metadata.Language = "ru";
-    secondBook.File.ManagedPath = "Books/0000000104/second.epub";
+    secondBook.File.ManagedPath = "Objects/76/fd/0000000104.book.second.epub";
     secondBook.File.Sha256Hex = "lang-filter-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
     static_cast<void>(writeRepository.Add(secondBook));
@@ -315,7 +315,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     Librova::Domain::SBook ignoredBook = firstBook;
     ignoredBook.Metadata.Language = "de";
     ignoredBook.Metadata.SeriesUtf8 = std::string{"Different Series"};
-    ignoredBook.File.ManagedPath = "Books/0000000105/ignored.epub";
+    ignoredBook.File.ManagedPath = "Objects/09/ff/0000000105.book.ignored.epub";
     ignoredBook.File.Sha256Hex = "lang-filter-3";
     ignoredBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
     static_cast<void>(writeRepository.Add(ignoredBook));
@@ -350,7 +350,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
     firstBook.Metadata.SeriesUtf8 = std::string{"Series Shared"};
     firstBook.Metadata.TagsUtf8 = {"adventure", "shared-tag"};
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000106/first.epub";
+    firstBook.File.ManagedPath = "Objects/50/fa/0000000106.book.first.epub";
     firstBook.File.SizeBytes = 100;
     firstBook.File.Sha256Hex = "tag-filter-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -359,7 +359,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
     Librova::Domain::SBook secondBook = firstBook;
     secondBook.Metadata.Language = "ru";
     secondBook.Metadata.TagsUtf8 = {"mystery", "shared-tag"};
-    secondBook.File.ManagedPath = "Books/0000000107/second.epub";
+    secondBook.File.ManagedPath = "Objects/e3/fb/0000000107.book.second.epub";
     secondBook.File.Sha256Hex = "tag-filter-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
     static_cast<void>(writeRepository.Add(secondBook));
@@ -368,7 +368,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
     ignoredBook.Metadata.Language = "de";
     ignoredBook.Metadata.SeriesUtf8 = std::string{"Different Series"};
     ignoredBook.Metadata.TagsUtf8 = {"ignored-tag"};
-    ignoredBook.File.ManagedPath = "Books/0000000108/ignored.epub";
+    ignoredBook.File.ManagedPath = "Objects/5a/10/0000000108.book.ignored.epub";
     ignoredBook.File.Sha256Hex = "tag-filter-3";
     ignoredBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
     static_cast<void>(writeRepository.Add(ignoredBook));
@@ -402,7 +402,7 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo
     firstBook.Metadata.Language = "ru";
     firstBook.Metadata.DescriptionUtf8 = std::string{"История о ежике и тумане"};
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000401/book.epub";
+    firstBook.File.ManagedPath = "Objects/4e/e8/0000000401.book.epub";
     firstBook.File.SizeBytes = 333;
     firstBook.File.Sha256Hex = "hash-cyr-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -414,7 +414,7 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo
     secondBook.Metadata.Language = "ru";
     secondBook.Metadata.DescriptionUtf8 = std::string{"Зона и опасные экспедиции"};
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    secondBook.File.ManagedPath = "Books/0000000402/book.fb2";
+    secondBook.File.ManagedPath = "Objects/bb/e6/0000000402.book.fb2";
     secondBook.File.SizeBytes = 444;
     secondBook.File.Sha256Hex = "hash-cyr-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -462,7 +462,7 @@ TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-inse
     book.Metadata.Language = "be";
     book.Metadata.DescriptionUtf8 = std::string{"Кніга пра Івана, їжака і вясёлыя падзеі"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000403/book.epub";
+    book.File.ManagedPath = "Objects/28/e5/0000000403.book.epub";
     book.File.SizeBytes = 555;
     book.File.Sha256Hex = "hash-cyr-3";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
@@ -504,7 +504,7 @@ TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-t
     book.Metadata.Language = "en";
     book.Metadata.DescriptionUtf8 = std::string{"A zone full of artifacts and dangerous expeditions"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000501/book.epub";
+    book.File.ManagedPath = "Objects/49/85/0000000501.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "hash-fts-syntax";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -538,10 +538,10 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     firstBook.Metadata.SeriesIndex = 2.0;
     firstBook.Metadata.DescriptionUtf8 = std::string{"First description"};
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = std::filesystem::path(u8"Books/0000000601/alpha.epub");
+    firstBook.File.ManagedPath = std::filesystem::path(u8"Objects/58/50/0000000601.book.alpha.epub");
     firstBook.File.SizeBytes = 600;
     firstBook.File.Sha256Hex = "hash-bulk-1";
-    firstBook.CoverPath = std::filesystem::path(u8"Covers/0000000601.jpg");
+    firstBook.CoverPath = std::filesystem::path(u8"Objects/58/50/0000000601.cover.jpg");
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     static_cast<void>(writeRepository.Add(firstBook));
 
@@ -552,7 +552,7 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     secondBook.Metadata.TagsUtf8 = {"tag-c"};
     secondBook.Metadata.DescriptionUtf8 = std::string{"Second description"};
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    secondBook.File.ManagedPath = std::filesystem::path(u8"Books/0000000602/beta.fb2");
+    secondBook.File.ManagedPath = std::filesystem::path(u8"Objects/11/55/0000000602.book.beta.fb2");
     secondBook.File.SizeBytes = 700;
     secondBook.File.Sha256Hex = "hash-bulk-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -570,14 +570,14 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     REQUIRE(books[0].Metadata.SeriesUtf8 == std::optional<std::string>{"Series A"});
     REQUIRE(books[0].Metadata.SeriesIndex == std::optional<double>{2.0});
     REQUIRE(books[0].Metadata.DescriptionUtf8 == std::optional<std::string>{"First description"});
-    REQUIRE(books[0].CoverPath == std::optional<std::filesystem::path>{std::filesystem::path(u8"Covers/0000000601.jpg")});
-    REQUIRE(books[0].File.ManagedPath == std::filesystem::path(u8"Books/0000000601/alpha.epub"));
+    REQUIRE(books[0].CoverPath == std::optional<std::filesystem::path>{std::filesystem::path(u8"Objects/58/50/0000000601.cover.jpg")});
+    REQUIRE(books[0].File.ManagedPath == std::filesystem::path(u8"Objects/58/50/0000000601.book.alpha.epub"));
 
     REQUIRE(books[1].Metadata.TitleUtf8 == "Beta Title");
     REQUIRE(books[1].Metadata.AuthorsUtf8 == std::vector<std::string>({"Solo Author"}));
     REQUIRE(books[1].Metadata.TagsUtf8 == std::vector<std::string>({"tag-c"}));
     REQUIRE(books[1].Metadata.DescriptionUtf8 == std::optional<std::string>{"Second description"});
-    REQUIRE(books[1].File.ManagedPath == std::filesystem::path(u8"Books/0000000602/beta.fb2"));
+    REQUIRE(books[1].File.ManagedPath == std::filesystem::path(u8"Objects/11/55/0000000602.book.beta.fb2"));
     REQUIRE_FALSE(books[1].CoverPath.has_value());
 
     CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
@@ -597,7 +597,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     firstBook.Metadata.AuthorsUtf8 = {"Автор 1"};
     firstBook.Metadata.Language = "ru";
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000610/anchor.epub";
+    firstBook.File.ManagedPath = "Objects/e2/09/0000000610.book.anchor.epub";
     firstBook.File.SizeBytes = 610;
     firstBook.File.Sha256Hex = "hash-cyr-sort-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -608,7 +608,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     secondBook.Metadata.AuthorsUtf8 = {"Автор 2"};
     secondBook.Metadata.Language = "ru";
     secondBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    secondBook.File.ManagedPath = "Books/0000000611/hedgehog.epub";
+    secondBook.File.ManagedPath = "Objects/75/0b/0000000611.book.hedgehog.epub";
     secondBook.File.SizeBytes = 611;
     secondBook.File.Sha256Hex = "hash-cyr-sort-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -619,7 +619,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     thirdBook.Metadata.AuthorsUtf8 = {"Автор 3"};
     thirdBook.Metadata.Language = "ru";
     thirdBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    thirdBook.File.ManagedPath = "Books/0000000612/harp.epub";
+    thirdBook.File.ManagedPath = "Objects/bc/06/0000000612.book.harp.epub";
     thirdBook.File.SizeBytes = 612;
     thirdBook.File.Sha256Hex = "hash-cyr-sort-3";
     thirdBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
@@ -652,7 +652,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     firstBook.Metadata.AuthorsUtf8 = {"Яков Автор"};
     firstBook.Metadata.Language = "ru";
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000613/first.epub";
+    firstBook.File.ManagedPath = "Objects/4f/08/0000000613.book.first.epub";
     firstBook.File.SizeBytes = 613;
     firstBook.File.Sha256Hex = "hash-cyr-author-sort-1";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -663,7 +663,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     secondBook.Metadata.AuthorsUtf8 = {"ёж автор"};
     secondBook.Metadata.Language = "ru";
     secondBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    secondBook.File.ManagedPath = "Books/0000000614/second.epub";
+    secondBook.File.ManagedPath = "Objects/96/03/0000000614.book.second.epub";
     secondBook.File.SizeBytes = 614;
     secondBook.File.Sha256Hex = "hash-cyr-author-sort-2";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -674,7 +674,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     thirdBook.Metadata.AuthorsUtf8 = {"Аркадий Автор"};
     thirdBook.Metadata.Language = "ru";
     thirdBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    thirdBook.File.ManagedPath = "Books/0000000615/third.epub";
+    thirdBook.File.ManagedPath = "Objects/29/05/0000000615.book.third.epub";
     thirdBook.File.SizeBytes = 615;
     thirdBook.File.Sha256Hex = "hash-cyr-author-sort-3";
     thirdBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
@@ -709,10 +709,10 @@ TEST_CASE("Sqlite book query repository refreshes cached library statistics when
     book.Metadata.AuthorsUtf8 = {"Author"};
     book.Metadata.Language = "en";
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000616/book.epub";
+    book.File.ManagedPath = "Objects/70/00/0000000616.book.epub";
     book.File.SizeBytes = 616;
     book.File.Sha256Hex = "hash-stats-cache";
-    book.CoverPath = std::filesystem::path("Covers/0000000616.png");
+    book.CoverPath = std::filesystem::path("Objects/70/00/0000000616.cover.png");
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{3};
     static_cast<void>(writeRepository.Add(book));
 
@@ -723,7 +723,7 @@ TEST_CASE("Sqlite book query repository refreshes cached library statistics when
     REQUIRE(initialStatistics.TotalManagedBookSizeBytes == 616);
     REQUIRE(initialStatistics.TotalLibrarySizeBytes == 616 + databaseSize);
 
-    const auto coverPath = libraryRoot / "Covers/0000000616.png";
+    const auto coverPath = libraryRoot / "Objects/70/00/0000000616.cover.png";
     std::filesystem::create_directories(coverPath.parent_path());
     std::ofstream(coverPath, std::ios::binary) << "cover-bytes";
     const auto initialCoverWriteTime = std::filesystem::last_write_time(coverPath);
@@ -761,10 +761,10 @@ TEST_CASE("Sqlite book query repository serializes concurrent library statistics
     firstBook.Metadata.AuthorsUtf8 = {"Author One"};
     firstBook.Metadata.Language = "en";
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000710/one.epub";
+    firstBook.File.ManagedPath = "Objects/49/fd/0000000710.book.epub";
     firstBook.File.SizeBytes = 710;
     firstBook.File.Sha256Hex = "hash-stats-concurrency-one";
-    firstBook.CoverPath = std::filesystem::path("Covers/0000000710.jpg");
+    firstBook.CoverPath = std::filesystem::path("Objects/49/fd/0000000710.cover.jpg");
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::April / 1 / 2026};
     static_cast<void>(writeRepository.Add(firstBook));
 
@@ -773,16 +773,17 @@ TEST_CASE("Sqlite book query repository serializes concurrent library statistics
     secondBook.Metadata.AuthorsUtf8 = {"Author Two"};
     secondBook.Metadata.Language = "en";
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    secondBook.File.ManagedPath = "Books/0000000711/two.fb2";
+    secondBook.File.ManagedPath = "Objects/b6/fb/0000000711.book.fb2";
     secondBook.File.SizeBytes = 711;
     secondBook.File.Sha256Hex = "hash-stats-concurrency-two";
-    secondBook.CoverPath = std::filesystem::path("Covers/0000000711.jpg");
+    secondBook.CoverPath = std::filesystem::path("Objects/b6/fb/0000000711.cover.jpg");
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::April / 1 / 2026} + std::chrono::hours{1};
     static_cast<void>(writeRepository.Add(secondBook));
 
-    const std::filesystem::path firstCoverPath = libraryRoot / "Covers/0000000710.jpg";
-    const std::filesystem::path secondCoverPath = libraryRoot / "Covers/0000000711.jpg";
+    const std::filesystem::path firstCoverPath = libraryRoot / "Objects/49/fd/0000000710.cover.jpg";
+    const std::filesystem::path secondCoverPath = libraryRoot / "Objects/b6/fb/0000000711.cover.jpg";
     std::filesystem::create_directories(firstCoverPath.parent_path());
+    std::filesystem::create_directories(secondCoverPath.parent_path());
     std::ofstream(firstCoverPath, std::ios::binary) << "first-cover";
     std::ofstream(secondCoverPath, std::ios::binary) << "second-cover";
 
@@ -852,7 +853,7 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
     book.Metadata.Language = "ru";
     book.Metadata.Isbn = std::string{"978-5-17-090334-4"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000201/book.epub";
+    book.File.ManagedPath = "Objects/44/82/0000000201.book.epub";
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "same-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -909,7 +910,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     matchingBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
     matchingBook.Metadata.Language = "ru";
     matchingBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    matchingBook.File.ManagedPath = "Books/0000000701/match.epub";
+    matchingBook.File.ManagedPath = "Objects/53/ed/0000000701.book.match.epub";
     matchingBook.File.SizeBytes = 800;
     matchingBook.File.Sha256Hex = "hash-probable-1";
     matchingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -921,7 +922,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     extraAuthorBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky", "Translator Name"};
     extraAuthorBook.Metadata.Language = "ru";
     extraAuthorBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    extraAuthorBook.File.ManagedPath = "Books/0000000702/extra.epub";
+    extraAuthorBook.File.ManagedPath = "Objects/e6/ee/0000000702.book.extra.epub";
     extraAuthorBook.File.SizeBytes = 900;
     extraAuthorBook.File.Sha256Hex = "hash-probable-2";
     extraAuthorBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{1};
@@ -957,7 +958,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
     storedBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
     storedBook.Metadata.Language = "ru";
     storedBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    storedBook.File.ManagedPath = "Books/0000000707/maybe.epub";
+    storedBook.File.ManagedPath = "Objects/c5/f6/0000000707.book.maybe.epub";
     storedBook.File.SizeBytes = 902;
     storedBook.File.Sha256Hex = "hash-probable-7";
     storedBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{6};
@@ -991,7 +992,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection keeps dupli
     storedBook.Metadata.AuthorsUtf8 = {"Stanislaw Lem"};
     storedBook.Metadata.Language = "pl";
     storedBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    storedBook.File.ManagedPath = "Books/0000000704/solaris.epub";
+    storedBook.File.ManagedPath = "Objects/0c/f2/0000000704.book.solaris.epub";
     storedBook.File.SizeBytes = 901;
     storedBook.File.Sha256Hex = "hash-probable-4";
     storedBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{3};
@@ -1025,14 +1026,14 @@ TEST_CASE("Sqlite book query repository returns all probable duplicate matches f
     firstBook.Metadata.AuthorsUtf8 = {"Arkady Strugatsky", "Boris Strugatsky"};
     firstBook.Metadata.Language = "ru";
     firstBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    firstBook.File.ManagedPath = "Books/0000000705/first.epub";
+    firstBook.File.ManagedPath = "Objects/9f/f3/0000000705.book.first.epub";
     firstBook.File.SizeBytes = 700;
     firstBook.File.Sha256Hex = "hash-probable-5";
     firstBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{4};
     const auto firstBookId = writeRepository.Add(firstBook);
 
     Librova::Domain::SBook secondBook = firstBook;
-    secondBook.File.ManagedPath = "Books/0000000706/second.epub";
+    secondBook.File.ManagedPath = "Objects/32/f5/0000000706.book.second.epub";
     secondBook.File.Sha256Hex = "hash-probable-6";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{5};
     const auto secondBookId = writeRepository.Add(secondBook);
@@ -1075,7 +1076,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection stays case-
     storedBook.Metadata.AuthorsUtf8 = {"Іван Єнін", "Їжак Аўтар"};
     storedBook.Metadata.Language = "be";
     storedBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    storedBook.File.ManagedPath = "Books/0000000703/match.epub";
+    storedBook.File.ManagedPath = "Objects/79/f0/0000000703.book.match.epub";
     storedBook.File.SizeBytes = 901;
     storedBook.File.Sha256Hex = "hash-probable-3";
     storedBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
@@ -1113,7 +1114,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.SeriesUtf8 = std::string{"Росмэн"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000001001/book.fb2";
+    existingBook.File.ManagedPath = "Objects/ef/e2/0000001001.book.fb2";
     existingBook.File.SizeBytes = 500;
     existingBook.File.Sha256Hex = "hp-rosmen-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1149,7 +1150,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.PublisherUtf8 = std::string{"АСТ"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000001002/book.fb2";
+    existingBook.File.ManagedPath = "Objects/82/e4/0000001002.book.fb2";
     existingBook.File.SizeBytes = 700;
     existingBook.File.Sha256Hex = "master-ast-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1185,7 +1186,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"978-5-17-090001-5"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000001003/book.fb2";
+    existingBook.File.ManagedPath = "Objects/15/e6/0000001003.book.fb2";
     existingBook.File.SizeBytes = 1200;
     existingBook.File.Sha256Hex = "voyna-ast-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1224,7 +1225,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but p
     existingBook.Metadata.Isbn = std::string{"978-5-17-090001-5"};
     existingBook.Metadata.PublisherUtf8 = std::string{"АСТ"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000002001/book.fb2";
+    existingBook.File.ManagedPath = "Objects/9c/c6/0000002001.book.fb2";
     existingBook.File.SizeBytes = 1200;
     existingBook.File.Sha256Hex = "voyna-isbn-pub-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1268,7 +1269,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but s
     existingBook.Metadata.Isbn = std::string{"978-5-04-001015-7"};
     existingBook.Metadata.SeriesUtf8 = std::string{"Библиотека классики"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    existingBook.File.ManagedPath = "Books/0000002002/book.epub";
+    existingBook.File.ManagedPath = "Objects/55/cb/0000002002.book.epub";
     existingBook.File.SizeBytes = 900;
     existingBook.File.Sha256Hex = "master-isbn-series-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1311,7 +1312,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"5-17-007805-6"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000003001/book.fb2";
+    existingBook.File.ManagedPath = "Objects/11/aa/0000003001.book.fb2";
     existingBook.File.SizeBytes = 3000;
     existingBook.File.Sha256Hex = "shok-rok-anthology-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1350,7 +1351,7 @@ TEST_CASE("Sqlite book query repository flags as duplicate when same ISBN and sa
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"978-0-671-01375-8"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000003002/book.fb2";
+    existingBook.File.ManagedPath = "Objects/58/a5/0000003002.book.fb2";
     existingBook.File.SizeBytes = 1800;
     existingBook.File.Sha256Hex = "hunters-minds-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1394,7 +1395,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"5-04-001797-9"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000005001/book.fb2";
+    existingBook.File.ManagedPath = "Objects/6b/13/0000005001.book.fb2";
     existingBook.File.SizeBytes = 1200;
     existingBook.File.Sha256Hex = "bunin-derevnya-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1433,7 +1434,7 @@ TEST_CASE("Sqlite book query repository flags annotation-variant title as duplic
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"978-5-17-099001-1"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000005002/book.fb2";
+    existingBook.File.ManagedPath = "Objects/fe/14/0000005002.book.fb2";
     existingBook.File.SizeBytes = 900;
     existingBook.File.Sha256Hex = "serebryanaya-doroga-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1475,7 +1476,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"978-5-17-099002-8"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000005003/book.fb2";
+    existingBook.File.ManagedPath = "Objects/91/16/0000005003.book.fb2";
     existingBook.File.SizeBytes = 700;
     existingBook.File.Sha256Hex = "zeleny-lug-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1513,7 +1514,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"978-5-00-000001-1"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000004001/book.fb2";
+    existingBook.File.ManagedPath = "Objects/76/d5/0000004001.book.fb2";
     existingBook.File.SizeBytes = 500;
     existingBook.File.Sha256Hex = "author-prefix-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1553,7 +1554,7 @@ TEST_CASE("Sqlite book query repository still finds by title-author when ISBN ma
     existingBook.Metadata.Language = "ru";
     existingBook.Metadata.Isbn = std::string{"5-17-007805-6"};  // shared anthology ISBN
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000004002/book.fb2";
+    existingBook.File.ManagedPath = "Objects/e3/d3/0000004002.book.fb2";
     existingBook.File.SizeBytes = 1500;
     existingBook.File.Sha256Hex = "bulgakov-master-hash";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1595,7 +1596,7 @@ TEST_CASE("Sqlite book query repository still finds by title-author when ISBN ma
     secondBook.Metadata.AuthorsUtf8 = {"Альбер Камю"};
     secondBook.Metadata.Language = "ru";
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    secondBook.File.ManagedPath = "Books/0000004003/book.fb2";
+    secondBook.File.ManagedPath = "Objects/50/d2/0000004003.book.fb2";
     secondBook.File.SizeBytes = 800;
     secondBook.File.Sha256Hex = "camus-etranger-hash";
     secondBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1635,7 +1636,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when same-ti
     existingBook.Metadata.AuthorsUtf8 = {"Фёдор Достоевский"};
     existingBook.Metadata.Language = "ru";
     existingBook.File.Format = Librova::Domain::EBookFormat::Fb2;
-    existingBook.File.ManagedPath = "Books/0000001004/book.fb2";
+    existingBook.File.ManagedPath = "Objects/10/db/0000001004.book.fb2";
     existingBook.File.SizeBytes = 900;
     existingBook.File.Sha256Hex = "crime-hash-1";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1673,7 +1674,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when one sid
     existingBook.Metadata.Language = "en";
     existingBook.Metadata.SeriesUtf8 = std::string{"Middle-earth Universe"};
     existingBook.File.Format = Librova::Domain::EBookFormat::Epub;
-    existingBook.File.ManagedPath = "Books/0000001005/book.epub";
+    existingBook.File.ManagedPath = "Objects/a3/dc/0000001005.book.epub";
     existingBook.File.SizeBytes = 400;
     existingBook.File.Sha256Hex = "hobbit-hash-1";
     existingBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1709,7 +1710,7 @@ TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after nor
     book.Metadata.Language = "en";
     book.Metadata.TagsUtf8 = {"Sci-Fi", " sci-fi ", "SCI-FI"};
     book.File.Format = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.ManagedPath = "Objects/3f/1f/0000000301.book.epub";
     book.File.SizeBytes = 256;
     book.File.Sha256Hex = "hash-dedup";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -1756,7 +1757,7 @@ TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256
     firstBook.Metadata.Language = "en";
     firstBook.File.Format = Librova::Domain::EBookFormat::Fb2;
     firstBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    firstBook.File.ManagedPath = std::filesystem::path{"Books/0000000001/first.fb2"};
+    firstBook.File.ManagedPath = std::filesystem::path{"Objects/5a/68/0000000001.book.first.fb2"};
     firstBook.File.SizeBytes = 1024;
     firstBook.File.Sha256Hex = "aabbccddeeff";
     firstBook.AddedAtUtc = std::chrono::system_clock::now();
@@ -1770,7 +1771,7 @@ TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256
     secondBook.Metadata.Language = "en";
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
     secondBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    secondBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/second.fb2"};
+    secondBook.File.ManagedPath = std::filesystem::path{"Objects/c7/66/0000000002.book.second.fb2"};
     secondBook.File.SizeBytes = 2048;
     secondBook.File.Sha256Hex = "aabbccddeeff";
     secondBook.AddedAtUtc = std::chrono::system_clock::now();
@@ -1810,7 +1811,7 @@ TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already 
     firstBook.Metadata.Language = "en";
     firstBook.File.Format = Librova::Domain::EBookFormat::Fb2;
     firstBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    firstBook.File.ManagedPath = std::filesystem::path{"Books/0000000001/first.fb2"};
+    firstBook.File.ManagedPath = std::filesystem::path{"Objects/5a/68/0000000001.book.first.fb2"};
     firstBook.File.SizeBytes = 1024;
     firstBook.File.Sha256Hex = "aabbccddeeff";
     firstBook.AddedAtUtc = std::chrono::system_clock::now();
@@ -1823,7 +1824,7 @@ TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already 
     secondBook.Metadata.Language = "en";
     secondBook.File.Format = Librova::Domain::EBookFormat::Fb2;
     secondBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    secondBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/second.fb2"};
+    secondBook.File.ManagedPath = std::filesystem::path{"Objects/c7/66/0000000002.book.second.fb2"};
     secondBook.File.SizeBytes = 2048;
     secondBook.File.Sha256Hex = "aabbccddeeff";
     secondBook.AddedAtUtc = std::chrono::system_clock::now();
@@ -1853,7 +1854,7 @@ TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-databas
     book.Metadata.GenresUtf8 = {"Science Fiction", "Adventure"};
     book.File.Format = Librova::Domain::EBookFormat::Fb2;
     book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    book.File.ManagedPath = std::filesystem::path{"Books/0000000001/roadside.fb2"};
+    book.File.ManagedPath = std::filesystem::path{"Objects/5a/68/0000000001.book.roadside.fb2"};
     book.File.SizeBytes = 1024;
     book.AddedAtUtc = std::chrono::system_clock::now();
 
@@ -1896,7 +1897,7 @@ TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-databas
     epubBook.Metadata.GenresUtf8 = {"Mystery"};
     epubBook.File.Format = Librova::Domain::EBookFormat::Epub;
     epubBook.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-    epubBook.File.ManagedPath = std::filesystem::path{"Books/0000000002/epub.epub"};
+    epubBook.File.ManagedPath = std::filesystem::path{"Objects/c7/66/0000000002.book.epub.epub"};
     epubBook.File.SizeBytes = 512;
     epubBook.AddedAtUtc = std::chrono::system_clock::now();
 
@@ -1940,9 +1941,9 @@ TEST_CASE("Sqlite book repository genre filter returns only matching books", "[b
         return b;
     };
 
-    static_cast<void>(writeRepo.Add(makeBook("Book A", "Science Fiction", "Books/0000000001/a.fb2")));
-    static_cast<void>(writeRepo.Add(makeBook("Book B", "Adventure", "Books/0000000002/b.fb2")));
-    static_cast<void>(writeRepo.Add(makeBook("Book C", "Science Fiction", "Books/0000000003/c.fb2")));
+    static_cast<void>(writeRepo.Add(makeBook("Book A", "Science Fiction", "Objects/5a/68/0000000001.book.a.fb2")));
+    static_cast<void>(writeRepo.Add(makeBook("Book B", "Adventure", "Objects/c7/66/0000000002.book.b.fb2")));
+    static_cast<void>(writeRepo.Add(makeBook("Book C", "Science Fiction", "Objects/34/65/0000000003.book.c.fb2")));
 
     Librova::Domain::SSearchQuery query;
     query.GenresUtf8 = {"Science Fiction"};
@@ -1977,8 +1978,8 @@ TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even w
         return book;
     };
 
-    REQUIRE_NOTHROW(repository.Add(makeBook("Book One", "Books/0000000001/a.fb2")));
-    REQUIRE_NOTHROW(repository.Add(makeBook("Book Two", "Books/0000000002/b.fb2")));
+    REQUIRE_NOTHROW(repository.Add(makeBook("Book One", "Objects/5a/68/0000000001.book.a.fb2")));
+    REQUIRE_NOTHROW(repository.Add(makeBook("Book Two", "Objects/c7/66/0000000002.book.b.fb2")));
 
     CloseRepositoriesAndRemoveDatabase(databasePath, repository);
 }
@@ -1998,7 +1999,7 @@ TEST_CASE("Sqlite book repository keeps a reusable session open until the reposi
         book.Metadata.Language = "en";
         book.File.Format = Librova::Domain::EBookFormat::Fb2;
         book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-        book.File.ManagedPath = "Books/0000000999/reusable.fb2";
+        book.File.ManagedPath = "Objects/30/85/0000000999.book.reusable.fb2";
         book.File.SizeBytes = 256;
         book.File.Sha256Hex = "reusable-session-hash";
         book.AddedAtUtc = std::chrono::system_clock::now();
@@ -2035,8 +2036,8 @@ TEST_CASE("Sqlite book repository stores managed_path and cover_path with forwar
     book.File.Format = Librova::Domain::EBookFormat::Epub;
     book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
     // Construct with native backslash separators — PathToUtf8 must normalise to forward slashes
-    book.File.ManagedPath = std::filesystem::path{L"Books\\0000000200\\book.epub"};
-    book.CoverPath = std::filesystem::path{L"Covers\\0000000200.jpg"};
+    book.File.ManagedPath = std::filesystem::path{L"Objects\\d7\\83\\0000000200.book.epub"};
+    book.CoverPath = std::filesystem::path{L"Objects\\d7\\83\\0000000200.cover.jpg"};
     book.File.SizeBytes = 512;
     book.File.Sha256Hex = "format-test-hash";
     book.AddedAtUtc = std::chrono::system_clock::now();
@@ -2119,8 +2120,8 @@ TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the 
         }
     };
 
-    std::thread thread1([&]() { runImport("Books/0000000001/concurrent.fb2"); });
-    std::thread thread2([&]() { runImport("Books/0000000002/concurrent.fb2"); });
+    std::thread thread1([&]() { runImport("Objects/5a/68/0000000001.book.concurrent.fb2"); });
+    std::thread thread2([&]() { runImport("Objects/c7/66/0000000002.book.concurrent.fb2"); });
 
     readyFlag.store(true, std::memory_order_release);
     thread1.join();
@@ -2178,8 +2179,8 @@ TEST_CASE("Sqlite book repository serializes concurrent Add calls on a shared in
         }
     };
 
-    std::thread thread1([&]() { runImport("Shared One", "Books/0000000001/shared-one.fb2", "shared-hash-one"); });
-    std::thread thread2([&]() { runImport("Shared Two", "Books/0000000002/shared-two.fb2", "shared-hash-two"); });
+    std::thread thread1([&]() { runImport("Shared One", "Objects/5a/68/0000000001.book.shared-one.fb2", "shared-hash-one"); });
+    std::thread thread2([&]() { runImport("Shared Two", "Objects/c7/66/0000000002.book.shared-two.fb2", "shared-hash-two"); });
 
     readyFlag.store(true, std::memory_order_release);
     thread1.join();
@@ -2226,7 +2227,7 @@ TEST_CASE("Sqlite book repository Compact reclaims FTS5 shadow-table space after
             book.Metadata.TagsUtf8 = {"приключения", "фантастика"};
             book.File.Format = Librova::Domain::EBookFormat::Fb2;
             book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-            book.File.ManagedPath = std::filesystem::path(u8"Books") / std::to_string(i) / u8"book.fb2";
+            book.File.ManagedPath = std::filesystem::path(u8"Objects") / u8"bulk" / std::to_string(i) / u8"book.fb2";
             book.File.SizeBytes = 8192;
             book.File.Sha256Hex = "hash-" + std::to_string(i);
             book.AddedAtUtc = std::chrono::system_clock::now();
@@ -2295,9 +2296,9 @@ TEST_CASE("Sqlite book repository AddBatch imports all entries and returns valid
     Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
 
     const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
-        MakeBatchEntry("Book A", "sha-a", "Books/b1/a.epub"),
-        MakeBatchEntry("Book B", "sha-b", "Books/b1/b.epub"),
-        MakeBatchEntry("Book C", "sha-c", "Books/b1/c.epub")
+        MakeBatchEntry("Book A", "sha-a", "Objects/b1/a.epub"),
+        MakeBatchEntry("Book B", "sha-b", "Objects/b1/b.epub"),
+        MakeBatchEntry("Book C", "sha-c", "Objects/b1/c.epub")
     };
 
     const auto results = repository.AddBatch(entries);
@@ -2328,16 +2329,16 @@ TEST_CASE("Sqlite book repository AddBatch rejects SHA duplicate without affecti
     preExisting.Metadata.TitleUtf8   = "Pre-existing";
     preExisting.Metadata.AuthorsUtf8 = {"Author"};
     preExisting.Metadata.Language    = "en";
-    preExisting.File.ManagedPath     = "Books/pre/x.epub";
+    preExisting.File.ManagedPath     = "Objects/pre/x.epub";
     preExisting.File.SizeBytes       = 100;
     preExisting.File.Sha256Hex       = "existing-sha";
     preExisting.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto existingId = repository.Add(preExisting);
 
     const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
-        MakeBatchEntry("Book A", "new-sha-1",    "Books/b2/a.epub"),
-        MakeBatchEntry("Book B", "existing-sha", "Books/b2/b.epub"),
-        MakeBatchEntry("Book C", "new-sha-2",    "Books/b2/c.epub")
+        MakeBatchEntry("Book A", "new-sha-1",    "Objects/b2/a.epub"),
+        MakeBatchEntry("Book B", "existing-sha", "Objects/b2/b.epub"),
+        MakeBatchEntry("Book C", "new-sha-2",    "Objects/b2/c.epub")
     };
 
     const auto results = repository.AddBatch(entries);
@@ -2384,14 +2385,14 @@ TEST_CASE("Sqlite book repository AddBatch ForceAdd bypasses duplicate hash chec
     original.Metadata.TitleUtf8   = "Original";
     original.Metadata.AuthorsUtf8 = {"Author"};
     original.Metadata.Language    = "en";
-    original.File.ManagedPath     = "Books/pre/original.epub";
+    original.File.ManagedPath     = "Objects/pre/original.epub";
     original.File.SizeBytes       = 100;
     original.File.Sha256Hex       = "force-sha";
     original.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     (void)repository.Add(original);
 
     const std::vector<Librova::Domain::IBookRepository::SBatchBookEntry> entries = {
-        MakeBatchEntry("Forced Copy", "force-sha", "Books/b3/forced.epub", true)
+        MakeBatchEntry("Forced Copy", "force-sha", "Objects/b3/forced.epub", true)
     };
 
     const auto results = repository.AddBatch(entries);
@@ -2428,9 +2429,9 @@ TEST_CASE("Sqlite book repository RemoveBatch deletes all specified books atomic
         return book;
     };
 
-    const auto id1 = repository.Add(makeBook("sha-rb-1", "Books/rb1/b.epub"));
-    const auto id2 = repository.Add(makeBook("sha-rb-2", "Books/rb2/b.epub"));
-    const auto id3 = repository.Add(makeBook("sha-rb-3", "Books/rb3/b.epub"));
+    const auto id1 = repository.Add(makeBook("sha-rb-1", "Objects/rb1/b.epub"));
+    const auto id2 = repository.Add(makeBook("sha-rb-2", "Objects/rb2/b.epub"));
+    const auto id3 = repository.Add(makeBook("sha-rb-3", "Objects/rb3/b.epub"));
 
     REQUIRE(id1.IsValid());
     REQUIRE(id2.IsValid());
@@ -2486,7 +2487,7 @@ TEST_CASE("Sqlite book repository Compact progress callback fires at least once 
             } + std::to_string(i);
             book.File.Format = Librova::Domain::EBookFormat::Fb2;
             book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Plain;
-            book.File.ManagedPath = std::filesystem::path(u8"Books") / std::to_string(i) / u8"book.fb2";
+            book.File.ManagedPath = std::filesystem::path(u8"Objects") / u8"bulk" / std::to_string(i) / u8"book.fb2";
             book.File.SizeBytes = 8192;
             book.File.Sha256Hex = "compact-progress-" + std::to_string(i);
             book.AddedAtUtc = std::chrono::system_clock::now();
@@ -2505,3 +2506,4 @@ TEST_CASE("Sqlite book repository Compact progress callback fires at least once 
 
     std::filesystem::remove(databasePath);
 }
+

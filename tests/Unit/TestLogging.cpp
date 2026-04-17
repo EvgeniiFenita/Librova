@@ -58,3 +58,4 @@ TEST_CASE("Logging initializes host logger and writes records into file", "[logg
     REQUIRE(fileContents.find("Hello logger.") != std::string::npos);
     REQUIRE(fileContents.find("Something happened.") != std::string::npos);
 }
+

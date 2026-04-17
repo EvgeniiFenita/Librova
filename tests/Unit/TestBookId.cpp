@@ -8,3 +8,4 @@ TEST_CASE("Book id is valid only for positive values", "[domain][book-id]")
     REQUIRE_FALSE(Librova::Domain::SBookId{0}.IsValid());
     REQUIRE_FALSE(Librova::Domain::SBookId{-42}.IsValid());
 }
+

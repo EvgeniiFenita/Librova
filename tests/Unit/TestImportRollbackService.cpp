@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -12,6 +13,7 @@
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
 #include "Logging/Logging.hpp"
+#include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
@@ -33,8 +35,8 @@ SRollbackSandbox CreateRollbackSandbox(std::string_view scenario)
     const auto root = std::filesystem::temp_directory_path()
         / ("librova-rollback-" + std::string{scenario});
     std::filesystem::remove_all(root);
-    std::filesystem::create_directories(root / "Books");
-    std::filesystem::create_directories(root / "Covers");
+    std::filesystem::create_directories(root / "Objects");
+    std::filesystem::create_directories(root / "Logs");
 
     const auto dbPath = root / "librova.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(dbPath);
@@ -46,6 +48,32 @@ void WriteFile(const std::filesystem::path& path)
 {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream(path).put('x');
+}
+
+std::filesystem::path BuildRelativeShardDirectory(const Librova::Domain::SBookId bookId)
+{
+    const auto libraryRoot = std::filesystem::path{"LibraryRoot"};
+    return Librova::StoragePlanning::CManagedLibraryLayout::GetObjectShardDirectory(libraryRoot, bookId)
+        .lexically_relative(libraryRoot);
+}
+
+std::filesystem::path BuildRelativeManagedBookPath(const Librova::Domain::SBookId bookId)
+{
+    const auto libraryRoot = std::filesystem::path{"LibraryRoot"};
+    return Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
+               libraryRoot,
+               bookId,
+               Librova::Domain::EBookFormat::Fb2)
+        .lexically_relative(libraryRoot);
+}
+
+std::filesystem::path BuildRelativeCoverPath(
+    const Librova::Domain::SBookId bookId,
+    std::string_view extension)
+{
+    const auto libraryRoot = std::filesystem::path{"LibraryRoot"};
+    return Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(libraryRoot, bookId, extension)
+        .lexically_relative(libraryRoot);
 }
 
 std::string ReadTextFile(const std::filesystem::path& path)
@@ -74,12 +102,12 @@ Librova::Domain::SBook BuildBook(
 
 } // namespace
 
-TEST_CASE("Rollback does not remove top-level Books directory when it becomes empty", "[rollback]")
+TEST_CASE("Rollback does not remove top-level Objects directory when it becomes empty", "[rollback]")
 {
-    auto sandbox = CreateRollbackSandbox("preserve-books-dir");
+    auto sandbox = CreateRollbackSandbox("preserve-objects-dir");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
 
-    const auto managedFilePath = std::filesystem::path(u8"Books") / u8"book.fb2";
+    const auto managedFilePath = BuildRelativeManagedBookPath({1});
     WriteFile(sandbox.Root / managedFilePath);
 
     const auto bookId = repository.Add(BuildBook(managedFilePath));
@@ -90,17 +118,18 @@ TEST_CASE("Rollback does not remove top-level Books directory when it becomes em
 
     REQUIRE(result.RemainingBookIds.empty());
     REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / managedFilePath));
-    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Books"));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Objects"));
 
     repository.CloseSession();
 }
 
-TEST_CASE("Rollback removes the empty managed directory of a cancelled book", "[rollback]")
+TEST_CASE("Rollback removes the empty shard directory of a cancelled book", "[rollback]")
 {
-    auto sandbox = CreateRollbackSandbox("remove-empty-book-dir");
+    auto sandbox = CreateRollbackSandbox("remove-empty-shard-dir");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
 
-    const auto managedFilePath = std::filesystem::path(u8"Books") / u8"0000000001" / u8"book.fb2";
+    const auto managedFilePath = BuildRelativeManagedBookPath({1});
+    const auto shardDirectory = BuildRelativeShardDirectory({1});
     WriteFile(sandbox.Root / managedFilePath);
 
     const auto bookId = repository.Add(BuildBook(managedFilePath));
@@ -111,20 +140,48 @@ TEST_CASE("Rollback removes the empty managed directory of a cancelled book", "[
 
     REQUIRE(result.RemainingBookIds.empty());
     REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / managedFilePath));
-    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / "Books" / "0000000001"));
-    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Books"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / shardDirectory));
+    REQUIRE_FALSE(std::filesystem::exists((sandbox.Root / shardDirectory).parent_path()));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Objects"));
 
     repository.CloseSession();
 }
 
-TEST_CASE("Rollback removes only cancelled book files and leaves parent directories intact", "[rollback]")
+TEST_CASE("Rollback removes shard residue when only Thumbs.db remains in the object directory", "[rollback]")
 {
-    auto sandbox = CreateRollbackSandbox("preserve-parent-subdir");
+    auto sandbox = CreateRollbackSandbox("remove-shard-thumbs-db");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
 
-    const auto subDir = std::filesystem::path(u8"Books") / u8"SomeAuthor";
-    const auto managedFilePath = subDir / u8"book.fb2";
+    const auto managedFilePath = BuildRelativeManagedBookPath({1});
+    const auto shardDirectory = BuildRelativeShardDirectory({1});
     WriteFile(sandbox.Root / managedFilePath);
+    WriteFile(sandbox.Root / shardDirectory / "Thumbs.db");
+
+    const auto bookId = repository.Add(BuildBook(managedFilePath));
+    REQUIRE(bookId.IsValid());
+
+    Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
+    const auto result = rollback.RollbackImportedBooks({bookId});
+
+    REQUIRE(result.RemainingBookIds.empty());
+    REQUIRE_FALSE(result.HasCleanupResidue);
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / shardDirectory));
+    REQUIRE_FALSE(std::filesystem::exists((sandbox.Root / shardDirectory).parent_path()));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Objects"));
+
+    repository.CloseSession();
+}
+
+TEST_CASE("Rollback removes only cancelled book files and leaves non-empty shard directories intact", "[rollback]")
+{
+    auto sandbox = CreateRollbackSandbox("preserve-non-empty-shard-dir");
+    Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
+
+    const auto shardDir = BuildRelativeShardDirectory({1});
+    const auto managedFilePath = BuildRelativeManagedBookPath({1});
+    const auto siblingManagedFilePath = shardDir / u8"0000000999.book.fb2";
+    WriteFile(sandbox.Root / managedFilePath);
+    WriteFile(sandbox.Root / siblingManagedFilePath);
 
     const auto bookId = repository.Add(BuildBook(managedFilePath));
     REQUIRE(bookId.IsValid());
@@ -134,19 +191,20 @@ TEST_CASE("Rollback removes only cancelled book files and leaves parent director
 
     REQUIRE(result.RemainingBookIds.empty());
     REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / managedFilePath));
-    REQUIRE(std::filesystem::is_directory(sandbox.Root / subDir));
-    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Books"));
+    REQUIRE(std::filesystem::exists(sandbox.Root / siblingManagedFilePath));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / shardDir));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Objects"));
 
     repository.CloseSession();
 }
 
-TEST_CASE("Rollback removes empty cover subdir but preserves Covers top-level directory", "[rollback]")
+TEST_CASE("Rollback removes cover object but preserves Objects top-level directory", "[rollback]")
 {
-    auto sandbox = CreateRollbackSandbox("preserve-covers-dir");
+    auto sandbox = CreateRollbackSandbox("preserve-objects-cover-dir");
     Librova::BookDatabase::CSqliteBookRepository repository(sandbox.DatabasePath);
 
-    const auto managedFilePath = std::filesystem::path(u8"Books") / u8"book.fb2";
-    const auto coverPath = std::filesystem::path(u8"Covers") / u8"0000000001.jpg";
+    const auto managedFilePath = BuildRelativeManagedBookPath({1});
+    const auto coverPath = BuildRelativeCoverPath({1}, "jpg");
     WriteFile(sandbox.Root / managedFilePath);
     WriteFile(sandbox.Root / coverPath);
 
@@ -158,7 +216,7 @@ TEST_CASE("Rollback removes empty cover subdir but preserves Covers top-level di
 
     REQUIRE(result.RemainingBookIds.empty());
     REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / coverPath));
-    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Covers"));
+    REQUIRE(std::filesystem::is_directory(sandbox.Root / "Objects"));
 
     repository.CloseSession();
 }
@@ -171,8 +229,7 @@ TEST_CASE("Rollback service invokes progress callback at rollback start and on c
     std::vector<Librova::Domain::SBookId> bookIds;
     for (int i = 0; i < 3; ++i)
     {
-        const auto managedFilePath =
-            std::filesystem::path(u8"Books") / ("book-" + std::to_string(i) + ".fb2");
+        const auto managedFilePath = BuildRelativeManagedBookPath({i + 1});
         WriteFile(sandbox.Root / managedFilePath);
 
         Librova::Domain::SBook book = BuildBook(managedFilePath);
@@ -222,8 +279,7 @@ TEST_CASE("Rollback service writes phase timing summary into host log", "[rollba
         std::vector<Librova::Domain::SBookId> bookIds;
         for (int i = 0; i < 2; ++i)
         {
-            const auto managedFilePath =
-                std::filesystem::path(u8"Books") / ("000000000" + std::to_string(i + 1)) / u8"book.fb2";
+            const auto managedFilePath = BuildRelativeManagedBookPath({i + 1});
             WriteFile(sandbox.Root / managedFilePath);
 
             Librova::Domain::SBook book = BuildBook(managedFilePath);
@@ -251,3 +307,4 @@ TEST_CASE("Rollback service writes phase timing summary into host log", "[rollba
     REQUIRE(logText.find("directory_cleanup=") != std::string::npos);
     REQUIRE(logText.find("bottleneck:") != std::string::npos);
 }
+

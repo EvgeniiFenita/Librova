@@ -1033,12 +1033,11 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-failure";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Books" / "0000000011");
-    std::filesystem::create_directories(sandbox / "Covers" / "0000000011");
+    std::filesystem::create_directories(sandbox / "Objects" / "00" / "00");
     std::ofstream(sandbox / "first.fb2").put('a');
     std::ofstream(sandbox / "second.fb2").put('b');
-    std::ofstream(sandbox / "Books" / "0000000011" / "book.epub").put('x');
-    std::ofstream(sandbox / "Covers" / "0000000011" / "cover.jpg").put('y');
+    std::ofstream(sandbox / "Objects" / "00" / "00" / "0000000011.book.epub").put('x');
+    std::ofstream(sandbox / "Objects" / "00" / "00" / "0000000011.cover.jpg").put('y');
 
     CImporterThatCancelsAfterFirstSuccess importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -1048,9 +1047,9 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
         .Metadata = {.TitleUtf8 = "Rollback Book"},
         .File = {
             .Format = Librova::Domain::EBookFormat::Epub,
-            .ManagedPath = std::filesystem::path{"Books"} / "0000000011" / "book.epub"
+            .ManagedPath = std::filesystem::path{"Objects"} / "00" / "00" / "0000000011.book.epub"
         },
-        .CoverPath = std::filesystem::path{"Covers"} / "0000000011" / "cover.jpg"
+        .CoverPath = std::filesystem::path{"Objects"} / "00" / "00" / "0000000011.cover.jpg"
     });
     repository.ThrowOnRemoveId = Librova::Domain::SBookId{11};
     CTestProgressSink progressSink;
@@ -1069,8 +1068,8 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
         return warning.find("catalog removal failed") != std::string::npos;
     }));
     REQUIRE(repository.GetById({11}).has_value());
-    REQUIRE(std::filesystem::exists(sandbox / "Books" / "0000000011" / "book.epub"));
-    REQUIRE(std::filesystem::exists(sandbox / "Covers" / "0000000011" / "cover.jpg"));
+    REQUIRE(std::filesystem::exists(sandbox / "Objects" / "00" / "00" / "0000000011.book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Objects" / "00" / "00" / "0000000011.cover.jpg"));
 
     std::filesystem::remove_all(sandbox);
 }
@@ -1079,12 +1078,11 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-lookup-failure";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Books" / "0000000011");
-    std::filesystem::create_directories(sandbox / "Covers" / "0000000011");
+    std::filesystem::create_directories(sandbox / "Objects" / "00" / "00");
     std::ofstream(sandbox / "first.fb2").put('a');
     std::ofstream(sandbox / "second.fb2").put('b');
-    std::ofstream(sandbox / "Books" / "0000000011" / "book.epub").put('x');
-    std::ofstream(sandbox / "Covers" / "0000000011" / "cover.jpg").put('y');
+    std::ofstream(sandbox / "Objects" / "00" / "00" / "0000000011.book.epub").put('x');
+    std::ofstream(sandbox / "Objects" / "00" / "00" / "0000000011.cover.jpg").put('y');
 
     CImporterThatCancelsAfterFirstSuccess importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -1094,9 +1092,9 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
         .Metadata = {.TitleUtf8 = "Rollback Lookup Book"},
         .File = {
             .Format = Librova::Domain::EBookFormat::Epub,
-            .ManagedPath = std::filesystem::path{"Books"} / "0000000011" / "book.epub"
+            .ManagedPath = std::filesystem::path{"Objects"} / "00" / "00" / "0000000011.book.epub"
         },
-        .CoverPath = std::filesystem::path{"Covers"} / "0000000011" / "cover.jpg"
+        .CoverPath = std::filesystem::path{"Objects"} / "00" / "00" / "0000000011.cover.jpg"
     });
     repository.ThrowOnGetById = Librova::Domain::SBookId{11};
     CTestProgressSink progressSink;
@@ -1116,8 +1114,8 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
     }));
     repository.ThrowOnGetById.reset();
     REQUIRE(repository.GetById({11}).has_value());
-    REQUIRE(std::filesystem::exists(sandbox / "Books" / "0000000011" / "book.epub"));
-    REQUIRE(std::filesystem::exists(sandbox / "Covers" / "0000000011" / "cover.jpg"));
+    REQUIRE(std::filesystem::exists(sandbox / "Objects" / "00" / "00" / "0000000011.book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Objects" / "00" / "00" / "0000000011.cover.jpg"));
 
     std::filesystem::remove_all(sandbox);
 }
@@ -1566,3 +1564,4 @@ TEST_CASE("Library import facade logs one run-level import perf summary that inc
 
     std::filesystem::remove_all(sandbox);
 }
+

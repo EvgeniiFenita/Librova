@@ -493,11 +493,8 @@ public sealed class StrongIntegrationTests
             Assert.Empty(page.Items);
             Assert.Equal(0UL, page.TotalCount);
 
-            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Books")));
-            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Covers")));
-            Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Books")));
-            Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Covers")));
-            Assert.Empty(Directory.GetDirectories(Path.Combine(options.LibraryRoot, "Books")));
+            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Objects")));
+            Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Objects")));
 
             await ImportBookAsync(
                 session.ImportJobs,
@@ -905,3 +902,4 @@ public sealed class StrongIntegrationTests
             Task.FromResult<string?>(exportPath);
     }
 }
+

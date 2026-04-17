@@ -131,3 +131,4 @@ TEST_CASE("Managed file encoding supports Unicode destination paths", "[managed-
 
     REQUIRE(ReadTextFile(decodedPath) == "unicode-path-contents");
 }
+

@@ -97,3 +97,4 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     REQUIRE(parsed.items(0).cover_resource_available());
     REQUIRE(parsed.items(0).cover_file_extension() == "jpg");
 }
+

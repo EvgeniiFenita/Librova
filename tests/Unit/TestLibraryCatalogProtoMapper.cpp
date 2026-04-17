@@ -73,8 +73,8 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     item.Year = 1972;
     item.TagsUtf8 = {"classic", "sci-fi"};
     item.Format = Librova::Domain::EBookFormat::Epub;
-    item.ManagedPath = std::filesystem::path(u8"Books/0000000012/Пикник.epub");
-    item.CoverPath = std::filesystem::path(u8"Covers/0000000012.jpg");
+    item.ManagedPath = std::filesystem::path(u8"Objects/8a/5b/0000000012.book.Пикник.epub");
+    item.CoverPath = std::filesystem::path(u8"Objects/8a/5b/0000000012.cover.jpg");
     item.SizeBytes = 4096;
     item.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
 
@@ -104,7 +104,7 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     REQUIRE(response.statistics().total_library_size_bytes() == 16384);
     REQUIRE(response.items(0).book_id() == 12);
     REQUIRE(response.items(0).title() == "Пикник на обочине");
-    REQUIRE(response.items(0).managed_file_name() == "Пикник.epub");
+    REQUIRE(response.items(0).managed_file_name() == "0000000012.book.Пикник.epub");
     REQUIRE(response.items(0).cover_resource_available());
     REQUIRE(response.items(0).cover_file_extension() == "jpg");
     REQUIRE(response.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
@@ -124,8 +124,8 @@ TEST_CASE("Library catalog proto mapper builds book details response", "[proto-m
     details.DescriptionUtf8 = std::string{"Aliens land only in one city."};
     details.Identifier = std::string{"details-id"};
     details.Format = Librova::Domain::EBookFormat::Fb2;
-    details.ManagedPath = std::filesystem::path(u8"Books/0000000042/DefinitelyMaybe.fb2");
-    details.CoverPath = std::filesystem::path(u8"Covers/0000000042.jpg");
+    details.ManagedPath = std::filesystem::path(u8"Objects/23/7d/0000000042.book.DefinitelyMaybe.fb2");
+    details.CoverPath = std::filesystem::path(u8"Objects/23/7d/0000000042.cover.jpg");
     details.SizeBytes = 8192;
     details.Sha256Hex = "details-hash";
     details.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -137,7 +137,7 @@ TEST_CASE("Library catalog proto mapper builds book details response", "[proto-m
     REQUIRE(response.details().publisher() == "Macmillan");
     REQUIRE(response.details().isbn() == "978-5-17-000000-1");
     REQUIRE(response.details().description() == "Aliens land only in one city.");
-    REQUIRE(response.details().managed_file_name() == "DefinitelyMaybe.fb2");
+    REQUIRE(response.details().managed_file_name() == "0000000042.book.DefinitelyMaybe.fb2");
     REQUIRE(response.details().cover_resource_available());
     REQUIRE(response.details().content_hash_available());
     REQUIRE(response.details().cover_file_extension() == "jpg");
@@ -240,3 +240,4 @@ TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-
     REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_RECYCLE_BIN);
     REQUIRE(response.has_orphaned_files());
 }
+

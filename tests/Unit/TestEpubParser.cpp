@@ -320,3 +320,4 @@ TEST_CASE("EPUB parser extracts subjects and collection series metadata", "[epub
     REQUIRE(parsedBook.Metadata.Identifier == std::optional<std::string>{"urn:isbn:9780316129084"});
     REQUIRE(parsedBook.Metadata.DescriptionUtf8 == std::optional<std::string>{"Humanity has spread across the solar system."});
 }
+

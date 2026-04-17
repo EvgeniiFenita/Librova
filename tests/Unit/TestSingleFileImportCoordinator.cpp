@@ -229,8 +229,7 @@ public:
     {
         LastPlan = plan;
         const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(Root);
-        std::filesystem::create_directories(layout.BooksDirectory);
-        std::filesystem::create_directories(layout.CoversDirectory);
+        std::filesystem::create_directories(layout.ObjectsDirectory);
 
         const std::filesystem::path stagingDirectory =
             Root / "RuntimeTestStaging" / Librova::StoragePlanning::CManagedLibraryLayout::GetBookFolderName(plan.BookId);
@@ -253,11 +252,10 @@ public:
                 *plan.CoverSourcePath,
                 *stagedCoverPath,
                 std::filesystem::copy_options::overwrite_existing);
-            finalCoverPath =
-                Root
-                / "Covers"
-                / std::filesystem::path{
-                    std::format("{:010}{}", plan.BookId.Value, plan.CoverSourcePath->extension().string())};
+            finalCoverPath = Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath(
+                Root,
+                plan.BookId,
+                plan.CoverSourcePath->extension().string());
         }
 
         return {
@@ -1010,7 +1008,7 @@ TEST_CASE("Single file import surfaces managed-storage rollback restore diagnost
     managedStorage.ThrowOnCommit = true;
     managedStorage.CommitFailureMessage =
         "Managed storage commit failed: Failed to move file from staged to final. "
-        "Rollback could not restore the managed book from 'C:/Library/Books/0000000001/book.fb2' back to staging path "
+        "Rollback could not restore the managed book from 'C:/Library/Objects/5a/68/0000000001.book.fb2' back to staging path "
         "'C:/Library/RuntimeTestStaging/0000000001/book.fb2'.";
     CTestProgressSink progressSink;
 
@@ -1060,10 +1058,10 @@ TEST_CASE("Single file import stores library-relative paths in book record", "[i
     REQUIRE(result.IsSuccess());
     REQUIRE(bookRepository.AddedBook.has_value());
     REQUIRE_FALSE(bookRepository.AddedBook->File.ManagedPath.is_absolute());
-    REQUIRE(bookRepository.AddedBook->File.ManagedPath == std::filesystem::path{"Books/0000000001/book.fb2.gz"});
+    REQUIRE(bookRepository.AddedBook->File.ManagedPath == std::filesystem::path{"Objects/5a/68/0000000001.book.fb2.gz"});
     REQUIRE(bookRepository.AddedBook->CoverPath.has_value());
     REQUIRE_FALSE(bookRepository.AddedBook->CoverPath->is_absolute());
-    REQUIRE(bookRepository.AddedBook->CoverPath == std::filesystem::path{"Covers/0000000001.jpg"});
+    REQUIRE(bookRepository.AddedBook->CoverPath == std::filesystem::path{"Objects/5a/68/0000000001.cover.jpg"});
 }
 
 TEST_CASE("Single file import keeps detailed parser diagnostics out of transport-facing error text", "[importing]")
@@ -1303,3 +1301,4 @@ TEST_CASE("Single file import returns Failed and rolls back when ForceAdd throws
     REQUIRE_FALSE(managedStorage.CommitCalled);
     REQUIRE(bookRepository.RemovedIds.empty());
 }
+

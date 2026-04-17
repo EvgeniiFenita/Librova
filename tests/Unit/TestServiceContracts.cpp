@@ -1,8 +1,22 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <format>
+
 #include "Domain/ServiceContracts.hpp"
 
 namespace {
+
+std::uint32_t ComputeBookShardHash(const std::string& bookIdText)
+{
+    std::uint32_t hash = 2166136261u;
+    for (const unsigned char ch : bookIdText)
+    {
+        hash ^= ch;
+        hash *= 16777619u;
+    }
+
+    return hash;
+}
 
 class CRecordingProgressSink final : public Librova::Domain::IProgressSink
 {
@@ -71,14 +85,22 @@ class CStubManagedStorage final : public Librova::Domain::IManagedStorage
 public:
     Librova::Domain::SPreparedStorage PrepareImport(const Librova::Domain::SStoragePlan& plan) override
     {
-        const auto relativeBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub";
+        const auto bookIdText = std::format("{:010}", plan.BookId.Value);
+        const auto hash = ComputeBookShardHash(bookIdText);
+        const auto relativeBookPath = std::filesystem::path{"Objects"}
+            / std::format("{:02x}", hash & 0xffu)
+            / std::format("{:02x}", (hash >> 8) & 0xffu)
+            / (bookIdText + ".book.epub");
         const auto relativeCoverPath = plan.CoverSourcePath.has_value()
-            ? std::make_optional(std::filesystem::path{"Covers"} / (std::to_string(plan.BookId.Value) + ".jpg"))
+            ? std::make_optional(std::filesystem::path{"Objects"}
+                / std::format("{:02x}", hash & 0xffu)
+                / std::format("{:02x}", (hash >> 8) & 0xffu)
+                / (bookIdText + ".cover.jpg"))
             : std::nullopt;
         return {
             .StagedBookPath = std::filesystem::path{"Temp"} / "book.epub",
             .StagedCoverPath = plan.CoverSourcePath.has_value() ? std::make_optional(std::filesystem::path{"Temp"} / "cover.jpg") : std::nullopt,
-            .FinalBookPath = std::filesystem::path{"Books"} / std::to_string(plan.BookId.Value) / "book.epub",
+            .FinalBookPath = relativeBookPath,
             .RelativeBookPath = relativeBookPath,
             .RelativeCoverPath = relativeCoverPath
         };
@@ -104,7 +126,7 @@ public:
     std::filesystem::path MoveToTrash(const std::filesystem::path& path) override
     {
         LastTrashedPath = path;
-        LastTrashDestination = std::filesystem::path{"Trash"} / path.filename();
+        LastTrashDestination = std::filesystem::path{"Trash"} / path;
         return LastTrashDestination;
     }
 
@@ -214,8 +236,8 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
 
     storage.CommitImport(prepared);
     storage.RollbackImport(prepared);
-    const auto trashPath = trash.MoveToTrash("Books/9/book.epub");
-    trash.RestoreFromTrash(trashPath, "Books/9/book.epub");
+    const auto trashPath = trash.MoveToTrash("Objects/c2/5b/0000000009.book.epub");
+    trash.RestoreFromTrash(trashPath, "Objects/c2/5b/0000000009.book.epub");
     recycleBin.MoveToRecycleBin({trashPath});
 
     const auto cover = coverProvider.TryResolve({
@@ -225,13 +247,13 @@ TEST_CASE("Storage, trash, and cover ports are usable through fake implementatio
 
     REQUIRE(prepared.HasStagedBook());
     REQUIRE(prepared.StagedCoverPath.has_value());
-    REQUIRE(storage.LastCommittedPath == std::filesystem::path{"Books/9/book.epub"});
+    REQUIRE(storage.LastCommittedPath == std::filesystem::path{"Objects/c2/5b/0000000009.book.epub"});
     REQUIRE(storage.LastRolledBackPath == std::filesystem::path{"Temp/book.epub"});
-    REQUIRE(trash.LastTrashedPath == std::filesystem::path{"Books/9/book.epub"});
-    REQUIRE(trash.LastTrashDestination == std::filesystem::path{"Trash/book.epub"});
-    REQUIRE(trash.LastRestoredFromPath == std::filesystem::path{"Trash/book.epub"});
-    REQUIRE(trash.LastRestoredToPath == std::filesystem::path{"Books/9/book.epub"});
-    REQUIRE(recycleBin.LastMovedPaths == std::vector<std::filesystem::path>{std::filesystem::path{"Trash/book.epub"}});
+    REQUIRE(trash.LastTrashedPath == std::filesystem::path{"Objects/c2/5b/0000000009.book.epub"});
+    REQUIRE(trash.LastTrashDestination == std::filesystem::path{"Trash/Objects/c2/5b/0000000009.book.epub"});
+    REQUIRE(trash.LastRestoredFromPath == std::filesystem::path{"Trash/Objects/c2/5b/0000000009.book.epub"});
+    REQUIRE(trash.LastRestoredToPath == std::filesystem::path{"Objects/c2/5b/0000000009.book.epub"});
+    REQUIRE(recycleBin.LastMovedPaths == std::vector<std::filesystem::path>{std::filesystem::path{"Trash/Objects/c2/5b/0000000009.book.epub"}});
     REQUIRE(cover.has_value());
     REQUIRE_FALSE(cover->IsEmpty());
 }

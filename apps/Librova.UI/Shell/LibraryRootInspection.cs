@@ -9,8 +9,7 @@ internal static class LibraryRootInspection
     private static readonly string[] RequiredManagedDirectories =
     [
         "Database",
-        "Books",
-        "Covers",
+        "Objects",
         "Logs",
         "Trash"
     ];

@@ -22,3 +22,4 @@ public sealed class ShellLaunchOptionsTests
         Assert.Null(options.InitialSourcePaths);
     }
 }
+

@@ -8,6 +8,8 @@ namespace Librova.UI.Tests;
 public sealed class LibraryCatalogServiceTests
 {
     private const string PwshPath = @"C:\Program Files\PowerShell\7\pwsh.exe";
+    private const uint Fnv1aOffsetBasis32 = 2166136261;
+    private const uint Fnv1aPrime32 = 16777619;
 
     [Fact]
     public async Task LibraryCatalogService_ListsBooksWithoutGeneratedProtoTypes()
@@ -426,11 +428,10 @@ public sealed class LibraryCatalogServiceTests
                 },
                 TimeSpan.FromSeconds(5),
                 cancellation.Token);
-            var coversRoot = Path.Combine(options.LibraryRoot, "Covers");
+            var coversRoot = Path.Combine(options.LibraryRoot, "Objects", "99", "99");
             Directory.CreateDirectory(coversRoot);
-            var coverPath = Path.Combine(coversRoot, "manual-cover.png");
+            var coverPath = Path.Combine(coversRoot, "9999999999.cover.png");
             await File.WriteAllTextAsync(coverPath, "stub-cover-file");
-            var coverSizeBytes = (ulong)new FileInfo(coverPath).Length;
             var refreshedPage = await service.ListBooksAsync(
                 new BookListRequestModel
                 {
@@ -451,8 +452,9 @@ public sealed class LibraryCatalogServiceTests
             Assert.NotNull(refreshedPage.Statistics);
             Assert.Equal(1UL, refreshedPage.Statistics!.BookCount);
             Assert.True(databaseSizeBytes > 0);
+            // Orphan object files that are not referenced by cover_path in the catalog must not affect library statistics.
             Assert.Equal(
-                expectedManagedBookSizeBytes + coverSizeBytes + databaseSizeBytes,
+                expectedManagedBookSizeBytes + databaseSizeBytes,
                 refreshedPage.Statistics.TotalLibrarySizeBytes);
         }
         finally
@@ -468,6 +470,33 @@ public sealed class LibraryCatalogServiceTests
             {
             }
         }
+    }
+
+    private static string ResolveManagedBookPath(string libraryRoot, long bookId, string managedFileName) =>
+        Path.GetFullPath(Path.Combine(
+            libraryRoot,
+            "Objects",
+            ComputeShardBucket(bookId, 0),
+            ComputeShardBucket(bookId, 8),
+            managedFileName));
+
+    private static string ComputeShardBucket(long bookId, int shift)
+    {
+        var hash = ComputeBookShardHash(bookId);
+        return $"{(hash >> shift) & 0xff:x2}";
+    }
+
+    private static uint ComputeBookShardHash(long bookId)
+    {
+        var bookIdText = bookId.ToString("0000000000");
+        uint hash = Fnv1aOffsetBasis32;
+        foreach (var ch in bookIdText)
+        {
+            hash ^= ch;
+            hash *= Fnv1aPrime32;
+        }
+
+        return hash;
     }
 
     [Fact]
@@ -684,6 +713,5 @@ public sealed class LibraryCatalogServiceTests
         }
     }
 
-    private static string ResolveManagedBookPath(string libraryRoot, long bookId, string managedFileName) =>
-        Path.GetFullPath(Path.Combine(libraryRoot, "Books", bookId.ToString("0000000000"), managedFileName));
 }
+

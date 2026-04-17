@@ -363,7 +363,7 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
     book.Metadata.TitleUtf8 = "Roadside Picnic";
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
-    book.File.ManagedPath = "Books/0000000301/book.epub";
+    book.File.ManagedPath = "Objects/3f/1f/0000000301.book.epub";
     book.File.SizeBytes = 1024;
     book.File.Sha256Hex = "pipe-catalog-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -415,7 +415,7 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-trash";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000302");
+    std::filesystem::create_directories(sandbox / "Library/Objects/d2/20");
 
     const std::filesystem::path databasePath = sandbox / "pipe-dispatch-trash.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -427,12 +427,12 @@ TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "
     book.Metadata.TitleUtf8 = "Pipe Trash";
     book.Metadata.AuthorsUtf8 = {"Arkady Strugatsky"};
     book.Metadata.Language = "en";
-    book.File.ManagedPath = "Books/0000000302/book.epub";
+    book.File.ManagedPath = "Objects/d2/20/0000000302.book.epub";
     book.File.SizeBytes = 128;
     book.File.Sha256Hex = "pipe-trash-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
     const auto bookId = writeRepository.Add(book);
-    std::ofstream(sandbox / "Library/Books/0000000302/book.epub", std::ios::binary) << "trash";
+    std::ofstream(sandbox / "Library/Objects/d2/20/0000000302.book.epub", std::ios::binary) << "trash";
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -491,7 +491,7 @@ TEST_CASE("Pipe dispatcher returns catalog statistics inside ListBooks response"
     book.Metadata.TitleUtf8 = "Statistics";
     book.Metadata.AuthorsUtf8 = {"Author"};
     book.Metadata.Language = "en";
-    book.File.ManagedPath = "Books/0000000303/book.epub";
+    book.File.ManagedPath = "Objects/65/22/0000000303.book.epub";
     book.File.SizeBytes = 1536;
     book.File.Sha256Hex = "pipe-stats-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};

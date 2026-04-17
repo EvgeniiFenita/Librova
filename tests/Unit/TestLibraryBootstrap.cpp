@@ -51,8 +51,7 @@ std::filesystem::path BuildUniqueSandboxPath(const std::wstring_view prefix)
 void PrepareExistingLibraryRoot(const std::filesystem::path& libraryRoot)
 {
     std::filesystem::create_directories(libraryRoot / "Database");
-    std::filesystem::create_directories(libraryRoot / "Books");
-    std::filesystem::create_directories(libraryRoot / "Covers");
+    std::filesystem::create_directories(libraryRoot / "Objects");
     std::filesystem::create_directories(libraryRoot / "Logs");
     std::filesystem::create_directories(libraryRoot / "Trash");
     WriteTextFile(libraryRoot / "Database" / "librova.db", "sqlite-placeholder");
@@ -70,8 +69,7 @@ TEST_CASE("Library bootstrap creates library layout for a new library root", "[c
         Librova::CoreHost::ELibraryOpenMode::CreateNew);
 
     REQUIRE(std::filesystem::exists(libraryRoot / "Database"));
-    REQUIRE(std::filesystem::exists(libraryRoot / "Books"));
-    REQUIRE(std::filesystem::exists(libraryRoot / "Covers"));
+    REQUIRE(std::filesystem::exists(libraryRoot / "Objects"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Logs"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Trash"));
     REQUIRE_FALSE(std::filesystem::exists(libraryRoot / "Temp"));
@@ -115,3 +113,4 @@ TEST_CASE("Library bootstrap rejects creating a library in a non-empty directory
             Librova::CoreHost::ELibraryOpenMode::CreateNew),
         Catch::Matchers::ContainsSubstring("must be empty"));
 }
+

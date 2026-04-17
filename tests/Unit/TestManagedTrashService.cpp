@@ -21,9 +21,9 @@ TEST_CASE("Managed trash service moves managed file under library trash while pr
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000001");
+    std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
 
-    const auto sourcePath = sandbox / "Library/Books/0000000001/book.epub";
+    const auto sourcePath = sandbox / "Library/Objects/5a/68/0000000001.book.epub";
     std::ofstream(sourcePath, std::ios::binary) << "epub";
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
@@ -31,7 +31,7 @@ TEST_CASE("Managed trash service moves managed file under library trash while pr
 
     REQUIRE_FALSE(std::filesystem::exists(sourcePath));
     REQUIRE(std::filesystem::exists(trashedPath));
-    REQUIRE(trashedPath == sandbox / "Library/Trash/Books/0000000001/book.epub");
+    REQUIRE(trashedPath == sandbox / "Library/Trash/Objects/5a/68/0000000001.book.epub");
 
     std::filesystem::remove_all(sandbox);
 }
@@ -40,10 +40,10 @@ TEST_CASE("Managed trash service restores managed file from trash", "[managed-tr
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-restore";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Trash/Books/0000000001");
+    std::filesystem::create_directories(sandbox / "Library/Trash/Objects/5a/68");
 
-    const auto trashedPath = sandbox / "Library/Trash/Books/0000000001/book.epub";
-    const auto destinationPath = sandbox / "Library/Books/0000000001/book.epub";
+    const auto trashedPath = sandbox / "Library/Trash/Objects/5a/68/0000000001.book.epub";
+    const auto destinationPath = sandbox / "Library/Objects/5a/68/0000000001.book.epub";
     std::ofstream(trashedPath, std::ios::binary) << "epub";
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
@@ -72,10 +72,10 @@ TEST_CASE("Managed trash service does not remove top-level library directories a
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-toplevel";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Covers");
+    std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
 
-    // Single cover file — the only entry in Covers/
-    const auto coverPath = sandbox / "Library/Covers/0000000001.jpg";
+    // Single cover object — the only entry under the shard.
+    const auto coverPath = sandbox / "Library/Objects/5a/68/0000000001.cover.jpg";
     std::ofstream(coverPath, std::ios::binary) << "cover";
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
@@ -85,8 +85,8 @@ TEST_CASE("Managed trash service does not remove top-level library directories a
     REQUIRE(std::filesystem::exists(trashedPath));
     REQUIRE_FALSE(std::filesystem::exists(coverPath));
 
-    // Covers/ must still exist — it is a required top-level layout directory
-    REQUIRE(std::filesystem::exists(sandbox / "Library/Covers"));
+    // Objects/ must still exist — it is a required top-level layout directory
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Objects"));
 
     std::filesystem::remove_all(sandbox);
 }
@@ -95,18 +95,19 @@ TEST_CASE("Managed trash service removes per-book subdirectory when it becomes e
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-subdir";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000001");
+    std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
 
-    const auto bookPath = sandbox / "Library/Books/0000000001/book.fb2";
+    const auto bookPath = sandbox / "Library/Objects/5a/68/0000000001.book.fb2";
     std::ofstream(bookPath, std::ios::binary) << "fb2";
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
     (void)service.MoveToTrash(bookPath);
 
-    // The per-book subdirectory must be removed (it is two levels deep, not a top-level dir)
-    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Books/0000000001"));
-    // But Books/ itself must remain
-    REQUIRE(std::filesystem::exists(sandbox / "Library/Books"));
+    // The shard directory becomes empty and is removed.
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Objects/5a/68"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Objects/5a"));
+    // But Objects/ itself must remain.
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Objects"));
 
     std::filesystem::remove_all(sandbox);
 }
@@ -115,11 +116,11 @@ TEST_CASE("Managed trash service cleans up empty trash subdirectory after restor
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-restore-cleanup";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000001");
-    std::filesystem::create_directories(sandbox / "Library/Trash/Books/0000000001");
+    std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
+    std::filesystem::create_directories(sandbox / "Library/Trash/Objects/5a/68");
 
-    const auto trashedPath = sandbox / "Library/Trash/Books/0000000001/book.epub";
-    const auto destinationPath = sandbox / "Library/Books/0000000001/book.epub";
+    const auto trashedPath = sandbox / "Library/Trash/Objects/5a/68/0000000001.book.epub";
+    const auto destinationPath = sandbox / "Library/Objects/5a/68/0000000001.book.epub";
     std::ofstream(trashedPath, std::ios::binary) << "epub";
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
@@ -127,11 +128,12 @@ TEST_CASE("Managed trash service cleans up empty trash subdirectory after restor
 
     REQUIRE(std::filesystem::exists(destinationPath));
 
-    // Per-book trash subdirectory must be removed (one-level cleanup, same as MoveToTrash)
-    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Books/0000000001"));
+    // Empty shard trash directory must be removed.
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Objects/5a/68"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Objects/5a"));
 
-    // Trash/Books/ and Trash/ itself are preserved (not cleaned up — same behavior as Books/ in MoveToTrash)
-    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Books"));
+    // Trash/Objects/ and Trash/ itself are preserved.
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Objects"));
     REQUIRE(std::filesystem::exists(sandbox / "Library/Trash"));
 
     std::filesystem::remove_all(sandbox);
@@ -141,11 +143,11 @@ TEST_CASE("Managed trash service rejects symlinked managed path escaping library
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-symlink";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books");
+    std::filesystem::create_directories(sandbox / "Library/Objects/c7");
     std::filesystem::create_directories(sandbox / "Outside");
     std::ofstream(sandbox / "Outside/book.epub", std::ios::binary) << "epub";
 
-    if (!TryCreateDirectorySymlink(sandbox / "Outside", sandbox / "Library/Books/0000000002"))
+    if (!TryCreateDirectorySymlink(sandbox / "Outside", sandbox / "Library/Objects/c7/66"))
     {
         std::filesystem::remove_all(sandbox);
         SKIP("Directory symlinks are not available in this environment.");
@@ -153,7 +155,7 @@ TEST_CASE("Managed trash service rejects symlinked managed path escaping library
 
     Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
     REQUIRE_THROWS_WITH(
-        service.MoveToTrash(sandbox / "Library/Books/0000000002/book.epub"),
+        service.MoveToTrash(sandbox / "Library/Objects/c7/66/0000000002.book.epub"),
         Catch::Matchers::ContainsSubstring("unsafe"));
 
     std::filesystem::remove_all(sandbox);
@@ -163,10 +165,10 @@ TEST_CASE("Managed trash service retries with a suffixed trash path when a colli
 {
     const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-race";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library/Books/0000000003");
+    std::filesystem::create_directories(sandbox / "Library/Objects/34/65");
 
-    const auto sourcePath = sandbox / "Library/Books/0000000003/book.epub";
-    const auto initialTrashPath = sandbox / "Library/Trash/Books/0000000003/book.epub";
+    const auto sourcePath = sandbox / "Library/Objects/34/65/0000000003.book.epub";
+    const auto initialTrashPath = sandbox / "Library/Trash/Objects/34/65/0000000003.book.epub";
     std::ofstream(sourcePath, std::ios::binary) << "epub";
 
     auto firstAttempt = true;
@@ -188,10 +190,31 @@ TEST_CASE("Managed trash service retries with a suffixed trash path when a colli
 
     const auto trashedPath = service.MoveToTrash(sourcePath);
 
-    REQUIRE(trashedPath == sandbox / "Library/Trash/Books/0000000003/book.trashed-1.epub");
+    REQUIRE(trashedPath == sandbox / "Library/Trash/Objects/34/65/0000000003.book.trashed-1.epub");
     REQUIRE(std::filesystem::exists(initialTrashPath));
     REQUIRE(std::filesystem::exists(trashedPath));
     REQUIRE_FALSE(std::filesystem::exists(sourcePath));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Managed trash service removes shard residue when only Thumbs.db remains after trash", "[managed-trash]")
+{
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-managed-trash-thumbs";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
+
+    const auto bookPath = sandbox / "Library/Objects/5a/68/0000000001.book.fb2";
+    const auto thumbsPath = sandbox / "Library/Objects/5a/68/Thumbs.db";
+    std::ofstream(bookPath, std::ios::binary) << "fb2";
+    std::ofstream(thumbsPath, std::ios::binary) << "thumbs";
+
+    Librova::ManagedTrash::CManagedTrashService service(sandbox / "Library");
+    (void)service.MoveToTrash(bookPath);
+
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Objects/5a/68"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Objects/5a"));
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Objects"));
 
     std::filesystem::remove_all(sandbox);
 }

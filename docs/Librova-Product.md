@@ -31,14 +31,13 @@ The current product direction is built for:
 On first launch, the user chooses whether to create a new managed library or open an existing Librova library root. Under the active library root Librova stores:
 
 - database;
-- managed books;
-- covers;
+- durable managed objects for books and covers;
 - logs;
 - trash.
 
 Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and sync the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup.
 
-During an active session, temporary import workspaces, managed-storage staging, and built-in converter process working directories are also kept in a local portable-aware runtime workspace rather than under the managed library root. The library root acts as durable storage for committed books, covers, logs retained after sync, the database, and trash; it is not treated as the hot runtime temp area.
+During an active session, temporary import workspaces, managed-storage staging, and built-in converter process working directories are also kept in a local portable-aware runtime workspace rather than under the managed library root. The library root acts as durable storage for committed managed objects, logs retained after sync, the database, and trash; it is not treated as the hot runtime temp area.
 
 For the portable packaged distribution, bootstrap-only UI files that exist before any library is opened stay beside the application under `PortableData/`, including the pre-library UI log, saved UI preferences, UI shell state, and any portable runtime log staging used before those logs are synced back into the active library.
 

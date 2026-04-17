@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 152
+  last_assigned_id: 153
 tasks:
 - id: 130
   summary: replace indeterminate import progress bar with a finite percentage counter
@@ -103,11 +103,11 @@ tasks:
   type: Bug
   priority: Major
   milestone: '1.1'
-  note: the analyzed import run logged 4 per-book failures where cover persistence aborted the whole book
-    import with Failed to move file from Z:/lib/Temp/.../cover.jpg to Z:/lib/Covers/...jpg (for example
-    124420.fb2 at 2026-04-15 23:43:55 and 158359.fb2 at 2026-04-16 01:12:26); investigate file-handle
-    ownership, temp cleanup ordering, and destination collisions in the cover storage path, then add a
-    regression test so cover finalization cannot fail a book after metadata parsing has already succeeded.
+  note: the analyzed NAS-hosted import run logged 4 per-book failures where cover persistence aborted
+    the whole book import while moving the extracted cover from the local runtime workspace into the managed
+    object shard under Objects/<aa>/<bb>/...cover.<ext>; investigate file-handle ownership, temp cleanup
+    ordering, destination collisions, and NAS rename semantics, then add a regression test so cover finalization
+    cannot fail a book after metadata parsing has already succeeded.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
@@ -139,14 +139,12 @@ tasks:
   type: Feature
   priority: Minor
   milestone: '1.1'
-  note: 'the assigned image must pass through the existing cover processing pipeline (resize to the standard
-    maximum dimensions and apply compression) before being stored in the managed library under the Covers
-    directory; the UI affordance should appear in the details panel and open a native file picker filtered
-    to common image formats; the operation must update the cover reference in the database and immediately
-    refresh the card and details panel; it must also be possible to clear an assigned cover so the book
-    reverts to its generated placeholder.
-
-    '
+  note: the assigned image must pass through the existing cover processing pipeline (resize to the standard
+    maximum dimensions and apply compression) before being stored beside the managed book bytes in the
+    sharded Objects tree; the UI affordance should appear in the details panel and open a native file
+    picker filtered to common image formats; the operation must update the cover reference in the database
+    and immediately refresh the card and details panel; it must also be possible to clear an assigned
+    cover so the book reverts to its generated placeholder.
 - id: 143
   summary: 'CExternalBookConverter: batch mode via fbc directory/archive syntax'
   status: Open

@@ -1236,3 +1236,12 @@ tasks:
   milestone: '1.1'
   note: Imported covers now always pass through canonical JPEG normalization with a 456x684 primary bound,
     120 KiB byte-budget fallback ladder, updated regressions, and architecture documentation.
+- id: 153
+  summary: replace legacy Books/Covers managed storage layout with sharded object storage for new libraries
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.1'
+  note: New libraries now use a single hash-sharded Objects tree with side-by-side book and cover objects,
+    runtime/trash/bootstrap paths were updated, and tests/docs were migrated off the legacy Books/Covers
+    layout.

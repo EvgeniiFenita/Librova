@@ -150,3 +150,4 @@ TEST_CASE("Book query repository port supports search and duplicate lookup throu
     REQUIRE(duplicates.size() == 1);
     REQUIRE(duplicates.front().IsStrictRejection());
 }
+

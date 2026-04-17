@@ -63,3 +63,4 @@ TEST_CASE("Duplicate key normalization keeps extended Cyrillic case-insensitive"
 
     REQUIRE(Librova::Domain::BuildDuplicateKey(firstMetadata) == Librova::Domain::BuildDuplicateKey(secondMetadata));
 }
+

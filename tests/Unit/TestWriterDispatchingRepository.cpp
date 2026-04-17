@@ -110,7 +110,7 @@ Librova::Domain::SBook MakeBook(std::string sha256Hex = "")
     book.Metadata.AuthorsUtf8  = {"Test Author"};
     book.Metadata.Language     = "en";
     book.File.Format           = Librova::Domain::EBookFormat::Epub;
-    book.File.ManagedPath      = "Books/001/book.epub";
+    book.File.ManagedPath      = "Objects/5a/68/0000000001.book.epub";
     book.File.SizeBytes        = 1024;
     book.File.Sha256Hex        = std::move(sha256Hex);
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
@@ -368,3 +368,4 @@ TEST_CASE("Writer dispatching repository enters fatal state when AddBatch return
 
     dispatcher.Drain();
 }
+

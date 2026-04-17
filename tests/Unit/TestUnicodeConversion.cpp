@@ -6,7 +6,7 @@
 
 TEST_CASE("Unicode conversion converts Cyrillic paths to UTF-8", "[unicode]")
 {
-    const std::filesystem::path path = std::filesystem::path(u8"Books/Автор/Книга.fb2");
+    const std::filesystem::path path = std::filesystem::path(u8"Objects/Автор/Книга.fb2");
     const auto expectedUtf8 = path.generic_u8string();
     const std::string expected(
         reinterpret_cast<const char*>(expectedUtf8.data()),
@@ -17,12 +17,12 @@ TEST_CASE("Unicode conversion converts Cyrillic paths to UTF-8", "[unicode]")
 
 TEST_CASE("Unicode conversion restores Cyrillic paths from UTF-8", "[unicode]")
 {
-    const auto utf8Bytes = std::filesystem::path(u8"Books/Автор/Книга.fb2").generic_u8string();
+    const auto utf8Bytes = std::filesystem::path(u8"Objects/Автор/Книга.fb2").generic_u8string();
     const std::string utf8Path(
         reinterpret_cast<const char*>(utf8Bytes.data()),
         utf8Bytes.size());
 
-    REQUIRE(Librova::Unicode::PathFromUtf8(utf8Path) == std::filesystem::path(u8"Books/Автор/Книга.fb2"));
+    REQUIRE(Librova::Unicode::PathFromUtf8(utf8Path) == std::filesystem::path(u8"Objects/Автор/Книга.fb2"));
 }
 
 #ifdef _WIN32
@@ -104,4 +104,5 @@ TEST_CASE("IsValidUtf8 rejects truncated multi-byte sequence", "[unicode]")
     const std::string truncated = "\xC3";
     REQUIRE_FALSE(Librova::Unicode::IsValidUtf8(truncated));
 }
+
 

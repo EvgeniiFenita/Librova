@@ -118,3 +118,4 @@ TEST_CASE("Converter command builder preserves literal placeholder text inside r
         "Temp/{output_format}"
     }));
 }
+

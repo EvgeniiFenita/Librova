@@ -178,3 +178,4 @@ TEST_CASE("Import conversion preserves cancellation instead of silently falling 
         "Conversion cancelled."
     }));
 }
+

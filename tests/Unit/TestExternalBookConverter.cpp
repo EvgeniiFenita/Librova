@@ -341,3 +341,4 @@ TEST_CASE("External book converter launch failures include executable and workin
         REQUIRE(message.find("win32_error=") != std::string::npos);
     }
 }
+
