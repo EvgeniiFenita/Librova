@@ -2,6 +2,7 @@ using Librova.UI.CoreHost;
 using Librova.UI.Desktop;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Runtime;
 using Librova.UI.Shell;
 using Librova.UI.ViewModels;
 using Xunit;
@@ -40,7 +41,7 @@ public sealed class ShellApplicationTests
         Assert.Equal(Librova.UI.Runtime.ApplicationVersion.Author, application.Shell.ApplicationAuthorText);
         Assert.Equal(Librova.UI.Runtime.ApplicationVersion.ContactEmail, application.Shell.ApplicationContactEmailText);
         Assert.Equal(
-            Path.Combine(@"C:\Libraries\Librova", "Temp", "UiImport"),
+            RuntimeEnvironment.GetImportWorkspacePathForLibrary(@"C:\Libraries\Librova"),
             application.Shell.ImportJobs.WorkingDirectory);
         Assert.False(application.Shell.ImportJobs.ShowForceEpubConversionOption);
     }
@@ -272,7 +273,6 @@ public sealed class ShellApplicationTests
         stateStore.Save(new ShellStateSnapshot
         {
             SourcePaths = [@"C:\Saved\previous.fb2", @"C:\Saved\previous.epub"],
-            WorkingDirectory = @"C:\Saved\Work",
             AllowProbableDuplicates = true
         });
         var session = new ShellSession(
@@ -292,7 +292,9 @@ public sealed class ShellApplicationTests
             preferencesStore: new FakePreferencesStore());
 
         Assert.Equal([@"C:\Saved\previous.fb2", @"C:\Saved\previous.epub"], application.Shell.ImportJobs.SourcePaths);
-        Assert.Equal(@"C:\Saved\Work", application.Shell.ImportJobs.WorkingDirectory);
+        Assert.Equal(
+            RuntimeEnvironment.GetImportWorkspacePathForLibrary(@"C:\Libraries\Librova"),
+            application.Shell.ImportJobs.WorkingDirectory);
         Assert.True(application.Shell.ImportJobs.AllowProbableDuplicates);
     }
 
@@ -324,7 +326,6 @@ public sealed class ShellApplicationTests
         Assert.NotNull(snapshot);
         Assert.NotNull(snapshot!.SourcePaths);
         Assert.Equal([@"C:\Incoming\persist.fb2"], snapshot!.SourcePaths);
-        Assert.Equal(@"C:\Temp\Persisted", snapshot.WorkingDirectory);
         Assert.True(snapshot.AllowProbableDuplicates);
     }
 
@@ -619,7 +620,6 @@ public sealed class ShellApplicationTests
         Directory.CreateDirectory(Path.Combine(selectedPath, "Books"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Covers"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Logs"));
-        Directory.CreateDirectory(Path.Combine(selectedPath, "Temp"));
         Directory.CreateDirectory(Path.Combine(selectedPath, "Trash"));
         File.WriteAllText(Path.Combine(selectedPath, "Database", "librova.db"), "sqlite-placeholder");
         var session = new ShellSession(

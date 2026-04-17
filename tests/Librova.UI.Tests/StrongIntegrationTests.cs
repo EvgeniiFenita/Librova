@@ -495,7 +495,6 @@ public sealed class StrongIntegrationTests
 
             Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Books")));
             Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Covers")));
-            Assert.True(Directory.Exists(Path.Combine(options.LibraryRoot, "Temp")));
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Books")));
             Assert.Empty(EnumerateAllFiles(Path.Combine(options.LibraryRoot, "Covers")));
             Assert.Empty(Directory.GetDirectories(Path.Combine(options.LibraryRoot, "Books")));

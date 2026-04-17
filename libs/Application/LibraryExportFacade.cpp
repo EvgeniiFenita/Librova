@@ -1,6 +1,7 @@
 #include "Application/LibraryExportFacade.hpp"
 
 #include <chrono>
+#include <functional>
 #include <stdexcept>
 
 #include "Domain/DomainError.hpp"
@@ -97,11 +98,20 @@ std::filesystem::path CanonicalizeForComparison(const std::filesystem::path& pat
 CLibraryExportFacade::CLibraryExportFacade(
     const Librova::Domain::IBookRepository& bookRepository,
     std::filesystem::path libraryRoot,
-    const Librova::Domain::IBookConverter* converter)
+    const Librova::Domain::IBookConverter* converter,
+    std::filesystem::path runtimeWorkspaceRoot)
     : m_bookRepository(bookRepository)
     , m_libraryRoot(std::move(libraryRoot))
     , m_converter(converter)
+    , m_runtimeWorkspaceRoot(std::move(runtimeWorkspaceRoot))
 {
+    if (m_runtimeWorkspaceRoot.empty())
+    {
+        const auto normalizedLibraryRoot = m_libraryRoot.lexically_normal();
+        const auto libraryRootUtf8 = Librova::Unicode::PathToUtf8(normalizedLibraryRoot);
+        const auto runtimeKey = std::to_string(std::hash<std::string>{}(libraryRootUtf8));
+        m_runtimeWorkspaceRoot = std::filesystem::temp_directory_path() / "Librova" / "Runtime" / runtimeKey;
+    }
 }
 
 std::optional<std::filesystem::path> CLibraryExportFacade::ExportBook(
@@ -220,7 +230,7 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
 
     if (book.File.StorageEncoding == Librova::Domain::EStorageEncoding::Compressed)
     {
-        const auto tempDirectory = m_libraryRoot / "Temp" / "Export";
+        const auto tempDirectory = m_runtimeWorkspaceRoot / "ExportWorkspace";
         std::filesystem::create_directories(tempDirectory);
         const auto uniqueSuffix = std::to_string(
             std::chrono::steady_clock::now().time_since_epoch().count());

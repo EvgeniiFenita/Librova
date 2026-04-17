@@ -68,10 +68,11 @@ One managed library root contains:
 - `Books`
 - `Covers`
 - `Logs`
-- `Temp`
 - `Trash`
 
 Managed paths are stable and `BookId`-based.
+
+Hot runtime workspace is intentionally separate from the managed library root. Import workspaces, converter working directories, managed-storage staging, and active-session runtime logs live in a portable-aware local runtime area and are synchronized back to retained library locations only where needed.
 
 Managed file bytes may use an internal storage encoding that is independent from the logical book format. In the current implementation, fallback-managed `FB2` files are stored compressed inside `Books/`, while browse, export, delete, and duplicate behavior continue to treat them as ordinary `FB2` books.
 
@@ -94,7 +95,7 @@ Imports are staged before commit.
 The system is expected to:
 
 - avoid partial visible success where possible;
-- clean stale temp state on startup;
+- clean stale runtime workspace state on startup;
 - keep rollback/failure semantics explicit.
 
 The import pipeline now accepts one or many selected source paths, including folders. Directory import follows the same transactional and summary-oriented principles as single-file import while scaling to recursive scans over mixed-content folders.

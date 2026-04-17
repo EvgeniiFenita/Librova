@@ -57,6 +57,14 @@ internal static class CoreHostDevelopmentDefaults
                 libraryRoot,
                 baseDirectory ?? AppContext.BaseDirectory,
                 RuntimeEnvironment.GetCoreHostExecutableOverride()),
+            ConverterWorkingDirectory = RuntimeEnvironment.GetConverterRuntimeWorkingDirectoryForLibrary(
+                libraryRoot,
+                baseDirectory ?? AppContext.BaseDirectory,
+                RuntimeEnvironment.GetCoreHostExecutableOverride()),
+            ManagedStorageStagingRoot = RuntimeEnvironment.GetManagedStorageStagingRootForLibrary(
+                libraryRoot,
+                baseDirectory ?? AppContext.BaseDirectory,
+                RuntimeEnvironment.GetCoreHostExecutableOverride()),
             ShutdownEventName = $@"Local\Librova.UI.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
             LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,

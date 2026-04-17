@@ -420,7 +420,6 @@ public sealed class FirstRunSetupViewModelTests
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Books"));
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Covers"));
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Logs"));
-        Directory.CreateDirectory(Path.Combine(libraryRoot, "Temp"));
         Directory.CreateDirectory(Path.Combine(libraryRoot, "Trash"));
         File.WriteAllText(Path.Combine(libraryRoot, "Database", "librova.db"), string.Empty);
     }

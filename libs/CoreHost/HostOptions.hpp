@@ -22,6 +22,8 @@ struct SHostOptions
     std::filesystem::path PipePath;
     std::filesystem::path LibraryRoot;
     std::optional<std::filesystem::path> LogFilePath;
+    std::optional<std::filesystem::path> ConverterWorkingDirectory;
+    std::optional<std::filesystem::path> ManagedStorageStagingRoot;
     std::optional<std::string> ShutdownEventName;
     ELibraryOpenMode LibraryOpenMode = ELibraryOpenMode::OpenExisting;
     std::optional<std::uint32_t> ParentProcessId;

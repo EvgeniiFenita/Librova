@@ -124,6 +124,14 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         {
             builder.Append(" --log-file ").Append(Quote(options.HostLogFilePath));
         }
+        if (!string.IsNullOrWhiteSpace(options.ConverterWorkingDirectory))
+        {
+            builder.Append(" --converter-working-dir ").Append(Quote(options.ConverterWorkingDirectory));
+        }
+        if (!string.IsNullOrWhiteSpace(options.ManagedStorageStagingRoot))
+        {
+            builder.Append(" --managed-storage-staging-root ").Append(Quote(options.ManagedStorageStagingRoot));
+        }
         if (!string.IsNullOrWhiteSpace(options.ShutdownEventName))
         {
             builder.Append(" --shutdown-event ").Append(Quote(options.ShutdownEventName));

@@ -179,9 +179,16 @@ std::filesystem::path BuildStagedCoverPath(
 
 } // namespace
 
-CManagedFileStorage::CManagedFileStorage(std::filesystem::path libraryRoot)
+CManagedFileStorage::CManagedFileStorage(
+    std::filesystem::path libraryRoot,
+    std::filesystem::path stagingRoot)
     : m_libraryRoot(std::move(libraryRoot))
+    , m_stagingRoot(std::move(stagingRoot))
 {
+    if (m_stagingRoot.empty())
+    {
+        throw std::invalid_argument("Managed storage staging root must not be empty.");
+    }
 }
 
 Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Librova::Domain::SStoragePlan& plan)
@@ -193,7 +200,7 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
 
     const Librova::StoragePlanning::SLibraryLayoutPaths layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
     const std::string bookFolderName = Librova::StoragePlanning::CManagedLibraryLayout::GetBookFolderName(plan.BookId);
-    const std::filesystem::path stagingDirectory = layout.TempDirectory / bookFolderName;
+    const std::filesystem::path stagingDirectory = m_stagingRoot / bookFolderName;
     const std::filesystem::path stagedBookPath = stagingDirectory / plan.SourcePath.filename();
     const std::filesystem::path finalBookPath =
         layout.BooksDirectory / bookFolderName / Librova::Domain::GetManagedFileName(plan.Format, plan.StorageEncoding);
@@ -201,7 +208,7 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
     std::call_once(m_rootDirsEnsuredOnce, [&] {
         EnsureDirectory(layout.BooksDirectory);
         EnsureDirectory(layout.CoversDirectory);
-        EnsureDirectory(layout.TempDirectory);
+        EnsureDirectory(m_stagingRoot);
     });
 
     RemovePathNoThrow(stagingDirectory);

@@ -100,6 +100,28 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--converter-working-dir")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --converter-working-dir.");
+            }
+
+            options.ConverterWorkingDirectory = Librova::Unicode::PathFromUtf8(arguments[++index]);
+            continue;
+        }
+
+        if (argument == "--managed-storage-staging-root")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --managed-storage-staging-root.");
+            }
+
+            options.ManagedStorageStagingRoot = Librova::Unicode::PathFromUtf8(arguments[++index]);
+            continue;
+        }
+
         if (argument == "--shutdown-event")
         {
             if (!HasValue(arguments, index))

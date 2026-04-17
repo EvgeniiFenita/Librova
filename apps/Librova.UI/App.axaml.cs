@@ -163,6 +163,7 @@ internal sealed partial class App : Application
         try
         {
             RuntimeLogSynchronization.SyncPendingRuntimeLogs(hostOptions.LibraryRoot);
+            RuntimeWorkspaceMaintenance.PrepareForSession(hostOptions.LibraryRoot);
             UiLogging.Information("Starting Avalonia desktop shell.");
             var session = await ShellBootstrap.StartSessionAsync(hostOptions, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

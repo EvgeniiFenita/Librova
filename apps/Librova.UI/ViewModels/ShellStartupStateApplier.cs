@@ -37,9 +37,7 @@ internal sealed class ShellStartupStateApplier
     {
         var hasConfiguredConverter = HasConfiguredBuiltInConverter(_hostOptions);
 
-        _importJobs.WorkingDirectory = string.IsNullOrWhiteSpace(_savedState?.WorkingDirectory)
-            ? ImportJobsDefaults.BuildDefaultWorkingDirectory(_hostOptions.LibraryRoot)
-            : _savedState.WorkingDirectory!;
+        _importJobs.WorkingDirectory = ImportJobsDefaults.BuildDefaultWorkingDirectory(_hostOptions.LibraryRoot);
         _importJobs.AllowProbableDuplicates = _savedState?.AllowProbableDuplicates ?? false;
         _importJobs.HasConfiguredConverter = hasConfiguredConverter;
         _importJobs.ForceEpubConversionOnImport = hasConfiguredConverter

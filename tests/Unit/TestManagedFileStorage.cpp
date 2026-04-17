@@ -47,6 +47,11 @@ private:
     std::filesystem::path m_path;
 };
 
+std::filesystem::path BuildManagedStorageStagingRoot(const CScopedDirectory& sandbox)
+{
+    return sandbox.GetPath() / "Runtime" / "ManagedStorageStaging";
+}
+
 } // namespace
 
 TEST_CASE("Managed file storage stages source and cover files before commit", "[managed-storage]")
@@ -58,7 +63,9 @@ TEST_CASE("Managed file storage stages source and cover files before commit", "[
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
 
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {17},
@@ -92,7 +99,9 @@ TEST_CASE("Managed file storage commit finalizes staged files and removes temp s
     WriteTextFile(sourceBookPath, "epub-content");
     WriteTextFile(sourceCoverPath, "png-cover");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {21},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -122,7 +131,9 @@ TEST_CASE("Managed file storage compresses FB2 files for managed storage when re
         "compressed fb2 content compressed fb2 content compressed fb2 content"
         "</p></section></body></FictionBook>");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {78},
         .Format = Librova::Domain::EBookFormat::Fb2,
@@ -152,7 +163,9 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
 
     WriteTextFile(sourceBookPath, "rollback-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {34},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -166,7 +179,7 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
     REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath));
     REQUIRE_FALSE(std::filesystem::exists(prepared.FinalBookPath.parent_path()));
     REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Books"));
-    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Temp"));
+    REQUIRE(std::filesystem::is_directory(BuildManagedStorageStagingRoot(sandbox)));
 }
 
 TEST_CASE("Managed file storage rollback preserves top-level Covers directory when it becomes empty", "[managed-storage]")
@@ -178,7 +191,9 @@ TEST_CASE("Managed file storage rollback preserves top-level Covers directory wh
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {35},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -194,7 +209,7 @@ TEST_CASE("Managed file storage rollback preserves top-level Covers directory wh
     REQUIRE_FALSE(std::filesystem::exists(prepared.StagedCoverPath->parent_path()));
     REQUIRE(std::filesystem::is_directory(prepared.FinalCoverPath->parent_path()));
     REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Covers"));
-    REQUIRE(std::filesystem::is_directory(sandbox.GetPath() / "Library" / "Temp"));
+    REQUIRE(std::filesystem::is_directory(BuildManagedStorageStagingRoot(sandbox)));
 }
 
 TEST_CASE("Managed file storage restores staging state when commit fails after moving the book", "[managed-storage]")
@@ -206,7 +221,9 @@ TEST_CASE("Managed file storage restores staging state when commit fails after m
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {55},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -237,7 +254,9 @@ TEST_CASE("Managed file storage rollback removes final paths left by a partial c
     WriteTextFile(sourceBookPath, "book-content");
     WriteTextFile(sourceCoverPath, "cover-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {56},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -277,7 +296,9 @@ TEST_CASE("Managed file storage PrepareImport produces forward-slash relative pa
 
     WriteTextFile(sourceBookPath, "epub-content");
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath());
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath(),
+        BuildManagedStorageStagingRoot(sandbox));
     const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
         .BookId = {42},
         .Format = Librova::Domain::EBookFormat::Epub,
@@ -294,9 +315,11 @@ TEST_CASE("Managed file storage cleans staging directory when preparation fails"
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-prepare-failure");
     const std::filesystem::path missingSourceBookPath = sandbox.GetPath() / "input" / "missing.fb2";
-    const auto expectedStagingDirectory = sandbox.GetPath() / "Library" / "Temp" / "0000000089";
+    const auto expectedStagingDirectory = BuildManagedStorageStagingRoot(sandbox) / "0000000089";
 
-    Librova::ManagedStorage::CManagedFileStorage storage(sandbox.GetPath() / "Library");
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
 
     REQUIRE_THROWS(storage.PrepareImport({
         .BookId = {89},

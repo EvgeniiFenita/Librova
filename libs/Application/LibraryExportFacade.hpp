@@ -21,7 +21,8 @@ public:
     CLibraryExportFacade(
         const Librova::Domain::IBookRepository& bookRepository,
         std::filesystem::path libraryRoot,
-        const Librova::Domain::IBookConverter* converter = nullptr);
+        const Librova::Domain::IBookConverter* converter = nullptr,
+        std::filesystem::path runtimeWorkspaceRoot = {});
 
     [[nodiscard]] std::optional<std::filesystem::path> ExportBook(
         const SExportBookRequest& request) const;
@@ -43,6 +44,7 @@ private:
     const Librova::Domain::IBookRepository& m_bookRepository;
     std::filesystem::path m_libraryRoot;
     const Librova::Domain::IBookConverter* m_converter;
+    std::filesystem::path m_runtimeWorkspaceRoot;
 };
 
 } // namespace Librova::Application

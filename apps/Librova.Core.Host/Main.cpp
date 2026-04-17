@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <functional>
 
 #include "Application/LibraryImportFacade.hpp"
 #include "Application/LibraryCatalogFacade.hpp"
@@ -103,6 +104,14 @@ namespace {
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(options.LibraryRoot).LogsDirectory / "host.log";
 }
 
+[[nodiscard]] std::filesystem::path BuildFallbackRuntimeWorkspaceRoot(const std::filesystem::path& libraryRoot)
+{
+    const auto normalizedLibraryRoot = libraryRoot.lexically_normal();
+    const auto libraryRootUtf8 = Librova::Unicode::PathToUtf8(normalizedLibraryRoot);
+    const auto runtimeKey = std::to_string(std::hash<std::string>{}(libraryRootUtf8));
+    return std::filesystem::temp_directory_path() / "Librova" / "Runtime" / runtimeKey;
+}
+
 void PrintUsage()
 {
     std::cout
@@ -115,6 +124,10 @@ void PrintUsage()
         << "  --parent-pid <pid>      Bind host lifetime to the given parent process.\n"
         << "  --serve-one             Stop after serving a single pipe session.\n"
         << "  --max-sessions <count>  Stop after serving the specified number of sessions.\n"
+        << "  --converter-working-dir <path>\n"
+        << "                         Override built-in converter process working directory.\n"
+        << "  --managed-storage-staging-root <path>\n"
+        << "                         Override managed-storage staging root.\n"
         << "  --fb2cng-exe <path>     Use built-in fb2cng converter profile.\n"
         << "  --fb2cng-config <path>  Built-in fb2cng configuration path.\n";
 }
@@ -289,7 +302,14 @@ int main(int argc, char** argv)
         const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
         Librova::BookDatabase::CSqliteBookRepository bookRepository(databasePath);
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
-        Librova::ManagedStorage::CManagedFileStorage managedStorage(options.LibraryRoot);
+        const auto runtimeWorkspaceRoot = BuildFallbackRuntimeWorkspaceRoot(options.LibraryRoot);
+        const auto converterWorkingDirectory =
+            options.ConverterWorkingDirectory.value_or(runtimeWorkspaceRoot / "ConverterWorkspace");
+        const auto managedStorageStagingRoot =
+            options.ManagedStorageStagingRoot.value_or(runtimeWorkspaceRoot / "ManagedStorageStaging");
+        Librova::ManagedStorage::CManagedFileStorage managedStorage(
+            options.LibraryRoot,
+            managedStorageStagingRoot);
         Librova::ManagedTrash::CManagedTrashService trashService(options.LibraryRoot);
         Librova::RecycleBin::CWindowsRecycleBinService recycleBinService;
 
@@ -298,12 +318,11 @@ int main(int argc, char** argv)
                 Librova::ConverterConfiguration::TryBuildCommandProfile(options.ConverterConfiguration);
             profile.has_value())
         {
-            const auto libraryLayout = Librova::StoragePlanning::CManagedLibraryLayout::Build(options.LibraryRoot);
             converter.emplace(Librova::ConverterRuntime::SExternalConverterSettings{
                 .CommandProfile = *profile,
                 .WorkingDirectory =
                     options.ConverterConfiguration.Mode == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng
-                        ? libraryLayout.LogsDirectory
+                        ? converterWorkingDirectory
                         : std::filesystem::path{}
             });
         }
@@ -326,7 +345,11 @@ int main(int argc, char** argv)
             bookRepository,
             {.LibraryRoot = options.LibraryRoot});
         const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, bookRepository);
-        const Librova::Application::CLibraryExportFacade exportFacade(bookRepository, options.LibraryRoot, converterPtr);
+        const Librova::Application::CLibraryExportFacade exportFacade(
+            bookRepository,
+            options.LibraryRoot,
+            converterPtr,
+            runtimeWorkspaceRoot);
         const Librova::Application::CLibraryTrashFacade trashFacade(
             bookRepository,
             trashService,

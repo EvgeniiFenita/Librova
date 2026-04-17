@@ -587,17 +587,17 @@ TEST_CASE("Library import facade cleans per-source working directories after bat
     std::filesystem::remove_all(sandbox);
 }
 
-TEST_CASE("Library import facade removes empty generated temp working directory after batch import", "[application][import]")
+TEST_CASE("Library import facade removes empty generated runtime working directory after batch import", "[application][import]")
 {
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-generated-temp-cleanup";
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-generated-runtime-cleanup";
     std::filesystem::remove_all(sandbox);
-    std::filesystem::create_directories(sandbox / "Library" / "Temp");
+    std::filesystem::create_directories(sandbox / "Library");
     std::ofstream(sandbox / "one.fb2").put('a');
     std::ofstream(sandbox / "two.epub").put('b');
-    const auto workingDirectory = sandbox / "Library" / "Temp" / "UiImport";
+    const auto workingDirectory = sandbox / "Runtime" / "ABC12345" / "ImportWorkspaces" / "GeneratedUiImportWorkspace";
 
     const Librova::Application::CLibraryImportFacade facade(
         importer,
@@ -627,6 +627,35 @@ TEST_CASE("Library import facade preserves custom working directory outside libr
     std::ofstream(sandbox / "one.fb2").put('a');
     std::ofstream(sandbox / "two.epub").put('b');
     const auto workingDirectory = sandbox / "CustomWork";
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox / "Library"});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox / "one.fb2", sandbox / "two.epub"},
+        .WorkingDirectory = workingDirectory
+    }, progressSink, {});
+
+    REQUIRE(result.Summary.Mode == Librova::Application::EImportMode::Batch);
+    REQUIRE(result.Summary.ImportedEntries == 2);
+    REQUIRE(std::filesystem::exists(workingDirectory));
+
+    std::filesystem::remove_all(sandbox);
+}
+
+TEST_CASE("Library import facade preserves custom working directory that only reuses generated leaf name", "[application][import]")
+{
+    CWorkspaceWritingSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-generated-leaf-preserved";
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library");
+    std::ofstream(sandbox / "one.fb2").put('a');
+    std::ofstream(sandbox / "two.epub").put('b');
+    const auto workingDirectory = sandbox / "CustomWork" / "GeneratedUiImportWorkspace";
 
     const Librova::Application::CLibraryImportFacade facade(
         importer,

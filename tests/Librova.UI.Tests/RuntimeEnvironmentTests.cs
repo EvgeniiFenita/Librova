@@ -35,19 +35,42 @@ public sealed class RuntimeEnvironmentTests
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-tests", $"{Guid.NewGuid():N}");
         var libraryRoot = Path.Combine(sandboxRoot, "library");
-        var expectedRoot = Path.Combine(
+        var expectedRuntimeRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Librova",
-            "RuntimeLogs");
+            "Runtime");
 
         var uiPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
         var hostPath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+        var importWorkspacePath = RuntimeEnvironment.GetImportWorkspacePathForLibrary(libraryRoot, sandboxRoot, null);
+        var converterWorkspacePath = RuntimeEnvironment.GetConverterRuntimeWorkingDirectoryForLibrary(libraryRoot, sandboxRoot, null);
+        var managedStorageStagingRoot = RuntimeEnvironment.GetManagedStorageStagingRootForLibrary(libraryRoot, sandboxRoot, null);
 
-        Assert.StartsWith(expectedRoot, uiPath, StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(expectedRoot, hostPath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRuntimeRoot, uiPath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRuntimeRoot, hostPath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRuntimeRoot, importWorkspacePath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRuntimeRoot, converterWorkspacePath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRuntimeRoot, managedStorageStagingRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(Path.Combine("RuntimeLogs", "ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(Path.Combine("RuntimeLogs", "host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(
+            Path.Combine("ImportWorkspaces", "GeneratedUiImportWorkspace"),
+            importWorkspacePath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(
+            Path.Combine("ConverterWorkspace"),
+            converterWorkspacePath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(
+            Path.Combine("ManagedStorageStaging"),
+            managedStorageStagingRoot,
+            StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith(Path.Combine("ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith(Path.Combine("host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(Path.GetDirectoryName(uiPath), Path.GetDirectoryName(hostPath));
+        Assert.NotEqual(Path.GetDirectoryName(uiPath), importWorkspacePath);
+        Assert.NotEqual(Path.GetDirectoryName(uiPath), converterWorkspacePath);
+        Assert.NotEqual(Path.GetDirectoryName(uiPath), managedStorageStagingRoot);
     }
 
     [Fact]
@@ -62,17 +85,44 @@ public sealed class RuntimeEnvironmentTests
         {
             var uiPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
             var hostPath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(libraryRoot, sandboxRoot, null);
+            var importWorkspacePath = RuntimeEnvironment.GetImportWorkspacePathForLibrary(libraryRoot, sandboxRoot, null);
+            var converterWorkspacePath = RuntimeEnvironment.GetConverterRuntimeWorkingDirectoryForLibrary(libraryRoot, sandboxRoot, null);
+            var managedStorageStagingRoot = RuntimeEnvironment.GetManagedStorageStagingRootForLibrary(libraryRoot, sandboxRoot, null);
 
             Assert.StartsWith(
-                Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                Path.Combine(sandboxRoot, "PortableData", "Runtime"),
                 uiPath,
                 StringComparison.OrdinalIgnoreCase);
             Assert.StartsWith(
-                Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                Path.Combine(sandboxRoot, "PortableData", "Runtime"),
                 hostPath,
                 StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith(Path.Combine("ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith(Path.Combine("host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(
+                Path.Combine(sandboxRoot, "PortableData", "Runtime"),
+                importWorkspacePath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(
+                Path.Combine(sandboxRoot, "PortableData", "Runtime"),
+                converterWorkspacePath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(
+                Path.Combine(sandboxRoot, "PortableData", "Runtime"),
+                managedStorageStagingRoot,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(Path.Combine("RuntimeLogs", "ui.log"), uiPath, StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(Path.Combine("RuntimeLogs", "host.log"), hostPath, StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(
+                Path.Combine("ImportWorkspaces", "GeneratedUiImportWorkspace"),
+                importWorkspacePath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(
+                Path.Combine("ConverterWorkspace"),
+                converterWorkspacePath,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith(
+                Path.Combine("ManagedStorageStaging"),
+                managedStorageStagingRoot,
+                StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -356,6 +406,12 @@ public sealed class RuntimeEnvironmentTests
                 Assert.Equal(
                     RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(expectedLibraryRoot),
                     options.HostLogFilePath);
+                Assert.Equal(
+                    RuntimeEnvironment.GetConverterRuntimeWorkingDirectoryForLibrary(expectedLibraryRoot),
+                    options.ConverterWorkingDirectory);
+                Assert.Equal(
+                    RuntimeEnvironment.GetManagedStorageStagingRootForLibrary(expectedLibraryRoot),
+                    options.ManagedStorageStagingRoot);
             });
         });
     }
@@ -428,8 +484,16 @@ public sealed class RuntimeEnvironmentTests
                         Assert.Equal(portableLibraryRoot, options.LibraryRoot);
                         Assert.Equal(packagedHostPath, options.ExecutablePath);
                         Assert.StartsWith(
-                            Path.Combine(sandboxRoot, "PortableData", "RuntimeLogs"),
+                            Path.Combine(sandboxRoot, "PortableData", "Runtime"),
                             options.HostLogFilePath,
+                            StringComparison.OrdinalIgnoreCase);
+                        Assert.StartsWith(
+                            Path.Combine(sandboxRoot, "PortableData", "Runtime"),
+                            options.ConverterWorkingDirectory,
+                            StringComparison.OrdinalIgnoreCase);
+                        Assert.StartsWith(
+                            Path.Combine(sandboxRoot, "PortableData", "Runtime"),
+                            options.ManagedStorageStagingRoot,
                             StringComparison.OrdinalIgnoreCase);
                     });
                 });

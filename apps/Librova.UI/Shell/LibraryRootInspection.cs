@@ -12,7 +12,6 @@ internal static class LibraryRootInspection
         "Books",
         "Covers",
         "Logs",
-        "Temp",
         "Trash"
     ];
 

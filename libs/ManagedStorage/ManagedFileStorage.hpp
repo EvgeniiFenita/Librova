@@ -10,7 +10,9 @@ namespace Librova::ManagedStorage {
 class CManagedFileStorage final : public Librova::Domain::IManagedStorage
 {
 public:
-    explicit CManagedFileStorage(std::filesystem::path libraryRoot);
+    CManagedFileStorage(
+        std::filesystem::path libraryRoot,
+        std::filesystem::path stagingRoot);
 
     [[nodiscard]] Librova::Domain::SPreparedStorage PrepareImport(const Librova::Domain::SStoragePlan& plan) override;
     void CommitImport(const Librova::Domain::SPreparedStorage& preparedStorage) override;
@@ -18,6 +20,7 @@ public:
 
 private:
     std::filesystem::path m_libraryRoot;
+    std::filesystem::path m_stagingRoot;
     mutable std::once_flag m_rootDirsEnsuredOnce;
 };
 

@@ -9,6 +9,8 @@ internal sealed class CoreHostLaunchOptions
     public required string PipePath { get; init; }
     public required string LibraryRoot { get; init; }
     public string? HostLogFilePath { get; init; }
+    public string? ConverterWorkingDirectory { get; init; }
+    public string? ManagedStorageStagingRoot { get; init; }
     public string? ShutdownEventName { get; init; }
     public UiLibraryOpenMode LibraryOpenMode { get; init; } = UiLibraryOpenMode.OpenExisting;
     public int? ParentProcessId { get; init; }
@@ -53,6 +55,16 @@ internal sealed class CoreHostLaunchOptions
         if (!string.IsNullOrWhiteSpace(HostLogFilePath) && !Path.IsPathFullyQualified(HostLogFilePath))
         {
             throw new InvalidOperationException("Host log file path must be absolute when provided.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(ConverterWorkingDirectory) && !Path.IsPathFullyQualified(ConverterWorkingDirectory))
+        {
+            throw new InvalidOperationException("Converter working directory must be absolute when provided.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(ManagedStorageStagingRoot) && !Path.IsPathFullyQualified(ManagedStorageStagingRoot))
+        {
+            throw new InvalidOperationException("Managed storage staging root must be absolute when provided.");
         }
 
         if (!Enum.IsDefined(LibraryOpenMode))

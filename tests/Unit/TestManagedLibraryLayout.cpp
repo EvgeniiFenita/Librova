@@ -10,7 +10,6 @@ TEST_CASE("Managed library layout builds stable root directories", "[storage-pla
     REQUIRE(layout.DatabaseDirectory == std::filesystem::path{"D:/Library/Database"});
     REQUIRE(layout.BooksDirectory == std::filesystem::path{"D:/Library/Books"});
     REQUIRE(layout.CoversDirectory == std::filesystem::path{"D:/Library/Covers"});
-    REQUIRE(layout.TempDirectory == std::filesystem::path{"D:/Library/Temp"});
     REQUIRE(layout.TrashDirectory == std::filesystem::path{"D:/Library/Trash"});
     REQUIRE(layout.LogsDirectory == std::filesystem::path{"D:/Library/Logs"});
 }
@@ -25,7 +24,7 @@ TEST_CASE("Managed library layout uses zero-padded stable book folders", "[stora
         std::invalid_argument);
 }
 
-TEST_CASE("Managed library layout builds managed book, cover, and staging paths", "[storage-planning]")
+TEST_CASE("Managed library layout builds managed book and cover paths", "[storage-planning]")
 {
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetManagedBookPath(
@@ -53,8 +52,4 @@ TEST_CASE("Managed library layout builds managed book, cover, and staging paths"
     REQUIRE(
         Librova::StoragePlanning::CManagedLibraryLayout::GetCoverPath("D:/Library", {7}, ".jpg") ==
         std::filesystem::path{"D:/Library/Covers/0000000007.jpg"});
-
-    REQUIRE(
-        Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory("D:/Library", {7}) ==
-        std::filesystem::path{"D:/Library/Temp/0000000007"});
 }

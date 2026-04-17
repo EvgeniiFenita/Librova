@@ -257,7 +257,6 @@ internal sealed class ImportJobsViewModel : ObservableObject
         new()
         {
             SourcePaths = SourcePaths.ToArray(),
-            WorkingDirectory = WorkingDirectory,
             AllowProbableDuplicates = AllowProbableDuplicates
         };
 

@@ -190,17 +190,23 @@ void CleanupEntryWorkspaceNoThrow(
 }
 
 void CleanupWorkingDirectoryNoThrow(
-    const std::filesystem::path& libraryRoot,
+    const std::filesystem::path&,
     const std::filesystem::path& workingDirectory) noexcept
 {
-    if (libraryRoot.empty() || workingDirectory.empty())
+    if (workingDirectory.empty())
     {
         return;
     }
 
-    const auto generatedWorkingDirectory = (libraryRoot / "Temp" / "UiImport").lexically_normal();
+    static constexpr std::string_view kGeneratedRuntimeWorkspaceDirectoryName = "GeneratedUiImportWorkspace";
+    static constexpr std::string_view kGeneratedRuntimeWorkspaceParentDirectoryName = "ImportWorkspaces";
     const auto normalizedWorkingDirectory = workingDirectory.lexically_normal();
-    if (normalizedWorkingDirectory != generatedWorkingDirectory)
+    const bool isGeneratedRuntimeWorkingDirectory =
+        normalizedWorkingDirectory.filename() == kGeneratedRuntimeWorkspaceDirectoryName
+        && normalizedWorkingDirectory.has_parent_path()
+        && normalizedWorkingDirectory.parent_path().filename() == kGeneratedRuntimeWorkspaceParentDirectoryName;
+
+    if (!isGeneratedRuntimeWorkingDirectory)
     {
         return;
     }

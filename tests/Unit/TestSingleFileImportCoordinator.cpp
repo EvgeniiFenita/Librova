@@ -229,12 +229,11 @@ public:
     {
         LastPlan = plan;
         const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(Root);
-        std::filesystem::create_directories(layout.TempDirectory);
         std::filesystem::create_directories(layout.BooksDirectory);
         std::filesystem::create_directories(layout.CoversDirectory);
 
         const std::filesystem::path stagingDirectory =
-            Librova::StoragePlanning::CManagedLibraryLayout::GetStagingDirectory(Root, plan.BookId);
+            Root / "RuntimeTestStaging" / Librova::StoragePlanning::CManagedLibraryLayout::GetBookFolderName(plan.BookId);
         std::filesystem::remove_all(stagingDirectory);
         std::filesystem::create_directories(stagingDirectory);
 
@@ -1012,7 +1011,7 @@ TEST_CASE("Single file import surfaces managed-storage rollback restore diagnost
     managedStorage.CommitFailureMessage =
         "Managed storage commit failed: Failed to move file from staged to final. "
         "Rollback could not restore the managed book from 'C:/Library/Books/0000000001/book.fb2' back to staging path "
-        "'C:/Library/Temp/0000000001/book.fb2'.";
+        "'C:/Library/RuntimeTestStaging/0000000001/book.fb2'.";
     CTestProgressSink progressSink;
 
     const Librova::Importing::CSingleFileImportCoordinator coordinator(

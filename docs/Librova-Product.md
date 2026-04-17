@@ -34,10 +34,11 @@ On first launch, the user chooses whether to create a new managed library or ope
 - managed books;
 - covers;
 - logs;
-- temporary import files;
 - trash.
 
 Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and sync the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup.
+
+During an active session, temporary import workspaces, managed-storage staging, and built-in converter process working directories are also kept in a local portable-aware runtime workspace rather than under the managed library root. The library root acts as durable storage for committed books, covers, logs retained after sync, the database, and trash; it is not treated as the hot runtime temp area.
 
 For the portable packaged distribution, bootstrap-only UI files that exist before any library is opened stay beside the application under `PortableData/`, including the pre-library UI log, saved UI preferences, UI shell state, and any portable runtime log staging used before those logs are synced back into the active library.
 
@@ -139,7 +140,7 @@ Saving converter settings reloads the current shell session so the active host p
 
 That reload keeps the user in the current section instead of forcing a jump back to `Library`.
 
-For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with the managed library `Logs` directory as its process working directory so default `fb2cng.log` output and similar diagnostic artifacts do not pollute import temp folders or user export destinations.
+For the built-in `fb2cng` / `fbc.exe` profile, Librova runs the converter with a local portable-aware runtime working directory rather than the managed library root, so converter scratch files and default sidecar diagnostics do not add write pressure to NAS-hosted libraries during import.
 
 The `Settings` UI does not expose a separate YAML config path for built-in `fb2cng`; the shell only asks for the executable path, and leaving that path empty keeps EPUB conversion disabled.
 

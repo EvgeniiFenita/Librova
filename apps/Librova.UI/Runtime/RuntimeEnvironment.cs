@@ -36,6 +36,24 @@ internal static class RuntimeEnvironment
             AppContext.BaseDirectory,
             GetCoreHostExecutableOverride());
 
+    public static string GetImportWorkspacePathForLibrary(string libraryRoot) =>
+        GetImportWorkspacePathForLibrary(
+            libraryRoot,
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
+
+    public static string GetConverterRuntimeWorkingDirectoryForLibrary(string libraryRoot) =>
+        GetConverterRuntimeWorkingDirectoryForLibrary(
+            libraryRoot,
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
+
+    public static string GetManagedStorageStagingRootForLibrary(string libraryRoot) =>
+        GetManagedStorageStagingRootForLibrary(
+            libraryRoot,
+            AppContext.BaseDirectory,
+            GetCoreHostExecutableOverride());
+
     public static string GetDefaultUiLogFilePath() =>
         GetPathFromEnvironment(UiLogFileEnvVar)
         ?? GetDefaultPortableAwarePath(
@@ -164,6 +182,31 @@ internal static class RuntimeEnvironment
         string? hostExecutableOverride) =>
         GetRuntimeLogFilePathForLibrary(libraryRoot, "host.log", baseDirectory, hostExecutableOverride);
 
+    internal static string GetImportWorkspacePathForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride) =>
+        Path.Combine(
+            GetRuntimeWorkspaceRootForLibrary(libraryRoot, baseDirectory, hostExecutableOverride),
+            "ImportWorkspaces",
+            "GeneratedUiImportWorkspace");
+
+    internal static string GetConverterRuntimeWorkingDirectoryForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride) =>
+        Path.Combine(
+            GetRuntimeWorkspaceRootForLibrary(libraryRoot, baseDirectory, hostExecutableOverride),
+            "ConverterWorkspace");
+
+    internal static string GetManagedStorageStagingRootForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride) =>
+        Path.Combine(
+            GetRuntimeWorkspaceRootForLibrary(libraryRoot, baseDirectory, hostExecutableOverride),
+            "ManagedStorageStaging");
+
     internal static string GetDefaultUiStateFilePath(string baseDirectory, string? hostExecutableOverride) =>
         GetDefaultPortableAwarePath(
             "ui-shell-state.json",
@@ -208,16 +251,26 @@ internal static class RuntimeEnvironment
         string baseDirectory,
         string? hostExecutableOverride)
     {
-        var runtimeLogsRoot = GetDefaultPortableAwarePath(
+        return Path.Combine(
+            GetRuntimeWorkspaceRootForLibrary(libraryRoot, baseDirectory, hostExecutableOverride),
             "RuntimeLogs",
-            GetLocalAppDataPath("RuntimeLogs"),
+            fileName);
+    }
+
+    internal static string GetRuntimeWorkspaceRootForLibrary(
+        string libraryRoot,
+        string baseDirectory,
+        string? hostExecutableOverride)
+    {
+        var runtimeRoot = GetDefaultPortableAwarePath(
+            "Runtime",
+            GetLocalAppDataPath("Runtime"),
             baseDirectory,
             hostExecutableOverride);
 
         return Path.Combine(
-            runtimeLogsRoot,
-            GetStableLibraryRuntimeKey(libraryRoot),
-            fileName);
+            runtimeRoot,
+            GetStableLibraryRuntimeKey(libraryRoot));
     }
 
     private static string GetLocalAppDataPath(string relativePath) =>

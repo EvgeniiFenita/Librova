@@ -15,6 +15,8 @@ public sealed class CoreHostProcessTests
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
             HostLogFilePath = @"C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log",
+            ConverterWorkingDirectory = @"C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ConverterWorkspace",
+            ManagedStorageStagingRoot = @"C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ManagedStorageStaging",
             ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
             ParentProcessId = 12345,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
@@ -29,6 +31,10 @@ public sealed class CoreHostProcessTests
         Assert.Contains("--library-mode open", arguments, StringComparison.Ordinal);
         Assert.Contains("--log-file", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log""", arguments, StringComparison.Ordinal);
+        Assert.Contains("--converter-working-dir", arguments, StringComparison.Ordinal);
+        Assert.Contains(@"""C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ConverterWorkspace""", arguments, StringComparison.Ordinal);
+        Assert.Contains("--managed-storage-staging-root", arguments, StringComparison.Ordinal);
+        Assert.Contains(@"""C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ManagedStorageStaging""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-exe", arguments, StringComparison.Ordinal);
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-config", arguments, StringComparison.Ordinal);
@@ -44,6 +50,8 @@ public sealed class CoreHostProcessTests
             PipePath = @"\\.\pipe\Librova ""quoted"" pipe\",
             LibraryRoot = @"C:\Книги\Новая папка\",
             HostLogFilePath = @"C:\Логи\runtime ""host""\",
+            ConverterWorkingDirectory = @"C:\Рантайм\конвертер ""cwd""\",
+            ManagedStorageStagingRoot = @"C:\Рантайм\стейджинг ""root""\",
             ShutdownEventName = @"Local\Librova ""shutdown""\",
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\conv ""special""\",
@@ -59,14 +67,18 @@ public sealed class CoreHostProcessTests
         Assert.Equal(options.LibraryRoot, parsedArguments[3]);
         Assert.Equal("--log-file", parsedArguments[4]);
         Assert.Equal(options.HostLogFilePath, parsedArguments[5]);
-        Assert.Equal("--shutdown-event", parsedArguments[6]);
-        Assert.Equal(options.ShutdownEventName, parsedArguments[7]);
-        Assert.Equal("--library-mode", parsedArguments[8]);
-        Assert.Equal("open", parsedArguments[9]);
-        Assert.Equal("--fb2cng-exe", parsedArguments[10]);
-        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[11]);
-        Assert.Equal("--fb2cng-config", parsedArguments[12]);
-        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[13]);
+        Assert.Equal("--converter-working-dir", parsedArguments[6]);
+        Assert.Equal(options.ConverterWorkingDirectory, parsedArguments[7]);
+        Assert.Equal("--managed-storage-staging-root", parsedArguments[8]);
+        Assert.Equal(options.ManagedStorageStagingRoot, parsedArguments[9]);
+        Assert.Equal("--shutdown-event", parsedArguments[10]);
+        Assert.Equal(options.ShutdownEventName, parsedArguments[11]);
+        Assert.Equal("--library-mode", parsedArguments[12]);
+        Assert.Equal("open", parsedArguments[13]);
+        Assert.Equal("--fb2cng-exe", parsedArguments[14]);
+        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[15]);
+        Assert.Equal("--fb2cng-config", parsedArguments[16]);
+        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[17]);
     }
 
     [Fact]

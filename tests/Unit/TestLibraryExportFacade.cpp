@@ -426,7 +426,7 @@ TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression f
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto managedSourcePath = libraryRoot / "Books/0000000011/book.fb2";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
-    const auto tempExportDirectory = libraryRoot / "Temp" / "Export";
+    const auto legacyTempExportDirectory = libraryRoot / "Temp" / "Export";
 
     std::filesystem::create_directories(managedSourcePath.parent_path());
     std::ofstream(managedSourcePath, std::ios::binary) << "broken-gzip";
@@ -451,8 +451,9 @@ TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression f
         Catch::Matchers::ContainsSubstring("decompression"));
 
     REQUIRE_FALSE(std::filesystem::exists(destinationPath));
-    if (std::filesystem::exists(tempExportDirectory))
+    REQUIRE_FALSE(std::filesystem::exists(legacyTempExportDirectory));
+    if (std::filesystem::exists(legacyTempExportDirectory))
     {
-        REQUIRE(std::filesystem::is_empty(tempExportDirectory));
+        REQUIRE(std::filesystem::is_empty(legacyTempExportDirectory));
     }
 }

@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 
 namespace Librova::CoreHost {
@@ -28,7 +27,6 @@ void ValidateExistingLibraryRoot(const std::filesystem::path& libraryRoot)
     EnsureDirectoryExists(layout.DatabaseDirectory, "Database");
     EnsureDirectoryExists(layout.BooksDirectory, "Books");
     EnsureDirectoryExists(layout.CoversDirectory, "Covers");
-    EnsureDirectoryExists(layout.TempDirectory, "Temp");
     EnsureDirectoryExists(layout.LogsDirectory, "Logs");
     EnsureDirectoryExists(layout.TrashDirectory, "Trash");
 
@@ -60,26 +58,8 @@ void PrepareNewLibraryRoot(const std::filesystem::path& libraryRoot)
     std::filesystem::create_directories(layout.DatabaseDirectory);
     std::filesystem::create_directories(layout.BooksDirectory);
     std::filesystem::create_directories(layout.CoversDirectory);
-    std::filesystem::create_directories(layout.TempDirectory);
     std::filesystem::create_directories(layout.TrashDirectory);
     std::filesystem::create_directories(layout.LogsDirectory);
-}
-
-void ResetTransientTempState(const std::filesystem::path& libraryRoot)
-{
-    const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot);
-
-    for (const auto& entry : std::filesystem::directory_iterator(layout.TempDirectory))
-    {
-        Librova::ManagedPaths::RemovePathRecursivelyWithinRoot(
-            libraryRoot,
-            entry.path(),
-            "Managed library Temp path does not exist.",
-            "Managed library Temp path is unsafe.",
-            "Managed library Temp path could not be canonicalized.");
-    }
-
-    std::filesystem::create_directories(layout.TempDirectory);
 }
 
 } // namespace
@@ -97,8 +77,6 @@ void CLibraryBootstrap::PrepareLibraryRoot(
         PrepareNewLibraryRoot(libraryRoot);
         break;
     }
-
-    ResetTransientTempState(libraryRoot);
 }
 
 } // namespace Librova::CoreHost

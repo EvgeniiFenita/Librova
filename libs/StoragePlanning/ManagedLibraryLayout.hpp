@@ -15,7 +15,6 @@ struct SLibraryLayoutPaths
     std::filesystem::path DatabaseDirectory;
     std::filesystem::path BooksDirectory;
     std::filesystem::path CoversDirectory;
-    std::filesystem::path TempDirectory;
     std::filesystem::path TrashDirectory;
     std::filesystem::path LogsDirectory;
 };
@@ -41,9 +40,6 @@ public:
         const std::filesystem::path& libraryRoot,
         Librova::Domain::SBookId bookId,
         std::string_view extension);
-    [[nodiscard]] static std::filesystem::path GetStagingDirectory(
-        const std::filesystem::path& libraryRoot,
-        Librova::Domain::SBookId bookId);
 };
 
 } // namespace Librova::StoragePlanning

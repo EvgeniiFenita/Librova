@@ -14,7 +14,6 @@ SLibraryLayoutPaths CManagedLibraryLayout::Build(const std::filesystem::path& li
         .DatabaseDirectory = libraryRoot / "Database",
         .BooksDirectory = libraryRoot / "Books",
         .CoversDirectory = libraryRoot / "Covers",
-        .TempDirectory = libraryRoot / "Temp",
         .TrashDirectory = libraryRoot / "Trash",
         .LogsDirectory = libraryRoot / "Logs"
     };
@@ -69,13 +68,6 @@ std::filesystem::path CManagedLibraryLayout::GetCoverPath(
         : std::string{extension};
 
     return Build(libraryRoot).CoversDirectory / std::format("{}.{}", GetBookFolderName(bookId), normalizedExtension);
-}
-
-std::filesystem::path CManagedLibraryLayout::GetStagingDirectory(
-    const std::filesystem::path& libraryRoot,
-    const Librova::Domain::SBookId bookId)
-{
-    return Build(libraryRoot).TempDirectory / GetBookFolderName(bookId);
 }
 
 } // namespace Librova::StoragePlanning

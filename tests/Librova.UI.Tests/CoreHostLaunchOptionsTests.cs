@@ -15,6 +15,8 @@ public sealed class CoreHostLaunchOptionsTests
             PipePath = @"\\.\pipe\Librova.Test",
             LibraryRoot = @"C:\Libraries\Librova",
             HostLogFilePath = @"C:\Users\evgen\AppData\Local\Librova\RuntimeLogs\ABCDEF1234567890\host.log",
+            ConverterWorkingDirectory = @"C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ConverterWorkspace",
+            ManagedStorageStagingRoot = @"C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ManagedStorageStaging",
             LibraryOpenMode = UiLibraryOpenMode.OpenExisting,
             ConverterMode = UiConverterMode.Disabled
         };
@@ -65,6 +67,38 @@ public sealed class CoreHostLaunchOptionsTests
 
         var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
         Assert.Contains("named pipe", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validate_RejectsRelativeConverterWorkingDirectory()
+    {
+        var options = new CoreHostLaunchOptions
+        {
+            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+            PipePath = @"\\.\pipe\Librova.Test",
+            LibraryRoot = @"C:\Libraries\Librova",
+            ConverterWorkingDirectory = @"Runtime\ConverterWorkspace",
+            ConverterMode = UiConverterMode.Disabled
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Contains("converter working directory", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validate_RejectsRelativeManagedStorageStagingRoot()
+    {
+        var options = new CoreHostLaunchOptions
+        {
+            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+            PipePath = @"\\.\pipe\Librova.Test",
+            LibraryRoot = @"C:\Libraries\Librova",
+            ManagedStorageStagingRoot = @"Runtime\ManagedStorageStaging",
+            ConverterMode = UiConverterMode.Disabled
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Contains("managed storage staging root", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -134,6 +168,8 @@ public sealed class CoreHostLaunchOptionsTests
         Assert.Equal(UiConverterMode.BuiltInFb2Cng, options.ConverterMode);
         Assert.Equal(@"D:\Tools\fbc.exe", options.Fb2CngExecutablePath);
         Assert.False(string.IsNullOrWhiteSpace(options.HostLogFilePath));
+        Assert.False(string.IsNullOrWhiteSpace(options.ConverterWorkingDirectory));
+        Assert.False(string.IsNullOrWhiteSpace(options.ManagedStorageStagingRoot));
     }
 
     private sealed class FakePreferencesStore : IUiPreferencesStore

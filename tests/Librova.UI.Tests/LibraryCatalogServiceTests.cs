@@ -236,9 +236,14 @@ public sealed class LibraryCatalogServiceTests
                   Write-Error 'Unexpected built-in converter contract.'
                   exit 1
                 }
-                if ($source -notmatch '[\\/]+Library[\\/]+')
+                if (-not [System.IO.Path]::IsPathFullyQualified($source))
                 {
-                  Write-Error 'Export conversion source must stay inside the managed library.'
+                  Write-Error 'Export conversion source must be absolute.'
+                  exit 1
+                }
+                if ($source -match '[\\/]+Library[\\/]+Temp[\\/]+')
+                {
+                  Write-Error 'Export conversion source must not come from legacy Library\\Temp.'
                   exit 1
                 }
                 if (-not (Test-Path -LiteralPath $source))
