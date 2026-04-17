@@ -5,65 +5,68 @@ description: Step-by-step guide for adding a new RPC / IPC method to the Librova
 
 # Transport RPC Checklist
 
-Librova IPC: Protobuf contracts over Windows named pipes.  
-Both sides (C++ and C#) must always stay synchronized.
+## Goal
 
-> **Rule:** Never treat a transport change as verified until both language sides are green.
+Add or change an IPC method without drifting C++, C#, proto definitions, tests, or transport documentation.
 
----
+## When to Use
 
-## Required Change Set (in order)
+- use this skill when adding a new transport method
+- use this skill when changing protobuf request/response messages or pipe method IDs
+- use this skill when any change under `proto/` affects the transport contract
+- do **not** use this skill as a full feature checklist when the main work is outside transport; use `$vertical-slice` for that
 
-### Protobuf Contract
+## References
 
-- [ ] Edit `proto/import_jobs.proto`
-  - Add new message types (request + response)
-  - Use **new field numbers only** — never reuse
-  - Prefer additive evolution — avoid breaking reshapes
-  - Keep DTOs transport-oriented, not storage-oriented
+- method inventory and mapping points: `docs/CodebaseMap.md` §5 IPC Boundary
+- transport invariants and verification policy: `docs/engineering/TransportInvariants.md`
 
-### Native Side (C++)
+## Required Change Set
 
-- [ ] Add proto mapping
-- [ ] Add or extend native application facade method
-- [ ] Add or extend native service adapter
-- [ ] Add or update the native pipe method enum so it matches the managed side exactly for this checkpoint
-- [ ] Add validation for the new method id in the native request parser
-- [ ] Add case to native pipe request dispatcher
-- [ ] Update host composition if constructor shape changes
-- [ ] Add native unit tests for the new method
-- [ ] Add native integration test (real pipe round-trip)
+### Protobuf contract
 
-### Managed Side (C#)
+- [ ] edit `proto/import_jobs.proto`
+- [ ] add new message types only with new field numbers
+- [ ] prefer additive evolution over breaking reshapes
+- [ ] keep DTOs transport-oriented
 
-- [ ] Add new method to C# `PipeProtocol` method enum (must match native)
-- [ ] Add or extend C# client method
-- [ ] Add or extend C# service and mapper
-- [ ] Add C# integration test for the new RPC
+### Native side
 
-### Verification Sequence
+- [ ] add proto mapping
+- [ ] add or extend the native application facade method
+- [ ] add or extend the native service adapter
+- [ ] add or update the native pipe method enum so it matches the managed side for this checkpoint
+- [ ] add validation for the new method id in the native request parser
+- [ ] add the case to the native pipe request dispatcher
+- [ ] update host composition if constructor shape changes
+- [ ] add native unit tests
+- [ ] add native integration coverage for the real pipe round-trip
 
-Run **in this exact order** — do not skip steps:
+### Managed side
+
+- [ ] add the method to C# `PipeProtocol`
+- [ ] add or extend the C# client method
+- [ ] add or extend the C# service and mapper
+- [ ] add managed integration coverage for the RPC
+
+### Documentation
+
+- [ ] update `docs/CodebaseMap.md` §5 when method inventory or mapping points changed
+- [ ] update any other docs required by `AGENTS.md` document-maintenance policy
+
+## Verification Sequence
+
+Run in this exact order:
 
 1. `scripts/ValidateProto.ps1`
-2. Rebuild native code (CMake)
-3. Run native tests (Catch2)
-4. Run managed tests (xUnit)
+2. rebuild native code
+3. run native tests
+4. run managed tests
 
-All four steps must be green before closing the checkpoint.
-
----
-
-## Transport Invariants (summary — full detail in `docs/engineering/TransportInvariants.md`)
-
-- Protobuf field numbers: append-only, never reuse.
-- Named-pipe method ids must stay synchronized between native and managed `PipeProtocol` enums for the same checkpoint.
-- UI and host are shipped in lockstep; if a method is replaced or removed, update both sides, docs, and tests in the same checkpoint.
-- gRPC runtime must **not** be introduced in the MVP path.
-
----
+Do not treat the change as verified until all four are green.
 
 ## Close-Out
 
-- [ ] Both sides rebuild and all tests pass
-- [ ] `docs/Librova-Architecture.md` updated if IPC boundary structure changed
+- [ ] both language sides stay in lockstep
+- [ ] transport docs match the implemented contract
+- [ ] no gRPC runtime dependency was introduced

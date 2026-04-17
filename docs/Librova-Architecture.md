@@ -1,5 +1,7 @@
 # Librova Architecture
 
+> **Navigation**: For a quick orientation on module locations, IPC methods, and task-entry points, see [`docs/CodebaseMap.md`](CodebaseMap.md). This document covers architectural decisions and frozen constraints.
+
 ## 1. Runtime Model
 
 Librova is a two-process desktop application:

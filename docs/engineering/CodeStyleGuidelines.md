@@ -4,6 +4,8 @@ This document defines the baseline coding conventions for the Librova repository
 
 These rules are intentionally strict at project start so the codebase grows with one consistent style instead of accumulating local conventions.
 
+This file is the **canonical** style reference. Local `AGENTS.md` files and the `$code-style` skill should summarize or point here, not compete with it.
+
 ## 1. Scope
 
 These rules apply to:

@@ -1,0 +1,717 @@
+# Librova Codebase Map
+
+Navigation reference for agents and contributors working in the Librova repository. Start with `README.md` for the repository-wide documentation map, then use this file to locate modules, boundaries, invariants, and task-entry points.
+
+---
+
+## 0. Reading Guide & Maintenance Rules
+
+### When to read this document
+
+| Situation | Sections to read |
+|---|---|
+| Starting any task — orient fast | §1 Introduction, §2 Architectural Layers |
+| Need to find where a class lives | §3 C++ Modules, §4 C# Modules |
+| Working on IPC / proto | §5 IPC Boundary, then `$transport-rpc` skill |
+| Working on import pipeline | §6 Import Pipeline Architecture |
+| Working on storage, DB, covers | §7 Storage & Persistence Model |
+| Unsure if a change is safe | §8 Critical Invariants |
+| Need to know where to go for a task | §9 Task Navigation |
+| Adding or reviewing code style | §11 → `$code-style` skill, `docs/engineering/CodeStyleGuidelines.md` |
+| Adding a test | §11 Test Conventions, `docs/engineering/TestStrategy.md` |
+| Reviewing domain interfaces | §12 Domain Interfaces Reference |
+
+### Document relationships
+
+This map is a **navigation layer**, not an authoritative specification. The authoritative sources are:
+
+| Topic | Authoritative source |
+|---|---|
+| Repository doc map | `README.md` |
+| Frozen architecture decisions | `docs/Librova-Architecture.md` |
+| IPC contract rules | `docs/engineering/TransportInvariants.md` |
+| Code style (full) | `docs/engineering/CodeStyleGuidelines.md` |
+| Test policy | `docs/engineering/TestStrategy.md` |
+| UI design system | `docs/UiDesignSystem.md` |
+| Product scope | `docs/Librova-Product.md` |
+| Active work | `docs/backlog.yaml` |
+
+When this map and an authoritative source disagree, **the authoritative source wins**. Fix the map.
+
+### What to update and when
+
+Update `docs/CodebaseMap.md` in the **same task** (not later) when:
+
+| Change | Update which section |
+|---|---|
+| New `libs/<Module>/` added or renamed | §3 C++ Modules — add/update the row |
+| New `apps/Librova.UI/<Folder>/` added | §4 C# Modules — add/update the row |
+| New RPC method added to proto | §5 IPC Boundary — add row to the methods table |
+| Import pipeline stages changed | §6 Import Pipeline Architecture |
+| Library root layout or storage encoding changed | §7 Storage & Persistence Model |
+| New domain interface added or existing one changed | §12 Domain Interfaces Reference |
+| New critical invariant discovered or existing one removed | §8 Critical Invariants |
+
+Do **not** duplicate decision rationale here — that belongs in `docs/Librova-Architecture.md`. This map records *what exists* and *where it lives*.
+
+---
+
+## 1. Introduction
+
+Librova is a Windows-first desktop e-book library manager. It is structured as **two cooperating processes**: `Librova.Core` (C++20 native host) handles all domain logic — import, parsing, conversion, persistence, search, export, and trash — while `Librova.UI` (C# / .NET / Avalonia) owns the UI, ViewModels, and user interactions. The processes are deployed as a matched pair; no cross-version named-pipe compatibility is guaranteed.
+
+The **IPC boundary** is a Windows named pipe carrying length-prefixed Protobuf 3 messages. The contract is defined in a single `.proto` file (`proto/import_jobs.proto`) and exposes 11 RPC methods via the `LibraryJobService` service. There is no gRPC runtime and no P/Invoke as the primary transport. The UI process spawns the native host on startup and controls its lifetime; the host can also self-terminate if the parent UI PID disappears.
+
+Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build), SQLite + FTS5 (persistence and full-text search), spdlog (C++ logging), Serilog (C# logging), pugixml (XML / FB2 parsing), libzip (ZIP extraction), stb (cover image processing), BS::thread_pool (parallel import). All build artifacts are written to `out/`.
+
+---
+
+## 2. Architectural Layers
+
+| Layer | Location | Responsibility |
+|---|---|---|
+| **Entry Points** | `apps/Librova.Core.Host/Main.cpp`, `apps/Librova.UI/Program.cs` | Process startup, CLI parsing, dependency wiring, graceful shutdown |
+| **Shell & UI Lifecycle** | `apps/Librova.UI/Shell/`, `apps/Librova.UI/CoreHost/` | Bootstrap, library root validation, host process spawn/teardown, preferences persistence |
+| **ViewModels** | `apps/Librova.UI/ViewModels/` | MVVM logic: browse, import job tracking, first-run wizard, settings, section state machine |
+| **Views** | `apps/Librova.UI/Views/`, `apps/Librova.UI/Styles/` | AXAML markup, code-behind event handlers, design-token styles |
+| **Transport (C#)** | `apps/Librova.UI/PipeTransport/`, `apps/Librova.UI/ImportJobs/`, `apps/Librova.UI/LibraryCatalog/` | Named-pipe client, envelope protocol, service wrappers, proto ↔ C# model mapping |
+| **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 11 RPC methods, all message types, all enums |
+| **Transport (C++)** | `libs/PipeTransport/`, `libs/PipeHost/`, `libs/PipeClient/` | Named-pipe host, envelope serialization/deserialization, request dispatcher |
+| **Proto Adapter** | `libs/ProtoServices/`, `libs/ProtoMapping/`, `libs/ProtoContracts/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
+| **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
+| **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
+| **Import Pipeline** | `libs/Importing/`, `libs/ZipImporting/`, `libs/ImportConversion/`, `libs/ImportSourceExpander/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion |
+| **Parsing** | `libs/Fb2Parsing/`, `libs/EpubParsing/`, `libs/ParserRegistry/` | Format-specific metadata/cover extraction; registry dispatches by format |
+| **Persistence** | `libs/BookDatabase/`, `libs/DatabaseRuntime/`, `libs/DatabaseSchema/`, `libs/Sqlite/`, `libs/SearchIndex/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
+| **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
+| **Conversion** | `libs/ConverterRuntime/`, `libs/ConverterCommand/`, `libs/ConverterConfiguration/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
+| **Infrastructure** | `libs/Unicode/`, `libs/Hashing/`, `libs/Logging/`, `libs/Core/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
+
+---
+
+## 3. C++ Modules (`libs/`)
+
+### IPC & Transport
+
+| Module | Role | Key types |
+|---|---|---|
+| `PipeTransport` | Envelope protocol: serialize/deserialize `SPipeRequestEnvelope` / `SPipeResponseEnvelope`; `EPipeMethod` enum (append-only method IDs 1–12) | `CNamedPipeChannel`, `CPipeProtocol`, `CPipeRequestDispatcher`, `EPipeMethod` |
+| `PipeHost` | Named-pipe server: accept connections, dispatch requests to adapter | `CNamedPipeHost` |
+| `PipeClient` | Named-pipe client for C++ side (used by integration tests) | `CNamedPipeClient` |
+| `ProtoContracts` | Generated Protobuf C++ code from `proto/import_jobs.proto` | all `librova::proto::*` message classes |
+| `ProtoMapping` | Translate proto ↔ domain structs in both directions | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` |
+| `ProtoServices` | Route method enum → facade/manager calls; mandatory outcome logging per method | `CLibraryJobServiceAdapter` |
+| `ApplicationClient` | C++ import job client (wraps pipe channel; used in native integration tests) | `CImportJobClient` |
+
+### Application & Jobs
+
+| Module | Role | Key types |
+|---|---|---|
+| `Application` | Top-level use-case facades; orchestrate lower layers | `CLibraryImportFacade`, `CLibraryCatalogFacade`, `CLibraryExportFacade`, `CLibraryTrashFacade`, `CImportRollbackService` |
+| `ApplicationJobs` | Wrap `CLibraryImportFacade` as a job-compatible service | `CImportJobService` |
+| `Jobs` | Async job lifecycle: create, track, cancel, wait, remove | `CImportJobManager`, `CImportJobRunner`, `EJobStatus`, `SJobProgressSnapshot`, `SImportJobResult` |
+
+### Import Pipeline
+
+| Module | Role | Key types |
+|---|---|---|
+| `Importing` | Single-file import coordinator; parallel writer dispatcher; performance tracker | `CSingleFileImportCoordinator`, `CWriterDispatchingRepository`, `CImportPerfTracker`, `CParallelImportHelpers`, `SSingleFileImportRequest/Result` |
+| `ZipImporting` | Two-phase parallel ZIP import: main-thread extraction + worker pool | `CZipImportCoordinator`, `SZipImportRequest/Result`, `SZipEntryImportResult`, `EZipEntryImportStatus` |
+| `ImportConversion` | Decide whether to convert FB2→EPUB; handle forced-conversion semantics | `CImportConversionPolicy`, `SImportConversionPlan`, `SImportConversionOutcome` |
+| `ImportSourceExpander` | Expand directories and ZIP paths into individual file sources | `CImportSourceExpander` |
+
+### Parsing
+
+| Module | Role | Key types |
+|---|---|---|
+| `Fb2Parsing` | Parse FictionBook 2 XML; decode non-UTF-8 (Windows-1251); extract metadata + cover | `CFb2Parser`, `CFb2GenreMapper` |
+| `EpubParsing` | Parse EPUB (OPF metadata, ZIP-based); extract dc:subject as tags | `CEpubParser` |
+| `ParserRegistry` | Dispatch `IBookParser` by format | `CBookParserRegistry` |
+
+### Persistence
+
+| Module | Role | Key types |
+|---|---|---|
+| `BookDatabase` | SQLite write and read repositories; FTS5 search; dedup queries | `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
+| `DatabaseRuntime` | Schema migration (version 0→1 only; other versions = incompatibility error) | `CSchemaMigrator` |
+| `DatabaseSchema` | SQL DDL as compile-time string constants | `CDatabaseSchema` |
+| `Sqlite` | RAII wrappers for SQLite connection and statement | `CSqliteConnection`, `CSqliteStatement` |
+| `SearchIndex` | FTS5 virtual table maintenance: insert, remove, rebuild, optimize | `CSearchIndexMaintenance` |
+
+### Managed Storage
+
+| Module | Role | Key types |
+|---|---|---|
+| `ManagedStorage` | Stage/commit/rollback book and cover files; FNV-1a sharding of object paths | `CManagedFileStorage` (implements `IManagedStorage`) |
+| `StoragePlanning` | Compute canonical paths within library root | `CManagedLibraryLayout` |
+| `ManagedPaths` | Sanitize file names for safe filesystem placement | `CManagedPathSafety` |
+| `ManagedFileEncoding` | gz-compress/decompress FB2 for internal managed storage | compression helpers |
+| `ManagedTrash` | Stage deleted books in `LibraryRoot/Trash/` before Recycle Bin handoff | `CManagedTrashService` (implements `ITrashService`) |
+| `RecycleBin` | Windows Recycle Bin integration via `SHFileOperation` | `CWindowsRecycleBinService` (implements `IRecycleBinService`) |
+
+### Conversion
+
+| Module | Role | Key types |
+|---|---|---|
+| `ConverterRuntime` | Spawn external converter process (fb2cng / ebook-convert); manage per-entry working dir | `CExternalBookConverter` (implements `IBookConverter`) |
+| `ConverterCommand` | Build CLI command string for configured converter profile | `CConverterCommandBuilder` |
+| `ConverterConfiguration` | Load and validate converter binary path from settings | `CConverterConfiguration` |
+| `CoverProcessingStb` | Decode cover image with stb; resize to target bounds; re-encode as JPEG with quality fallback | `CStbCoverImageProcessor` (implements `ICoverImageProcessor`) |
+
+### Infrastructure
+
+| Module | Role | Key types |
+|---|---|---|
+| `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
+| `Unicode` | UTF-8 ↔ UTF-16 conversions; `PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings | `CUnicodeConversion`, `PathFromUtf8()` |
+| `Hashing` | SHA-256 via Windows BCrypt API | `CSha256` |
+| `Logging` | Initialize and configure spdlog for the host process | `CLoggingInitializer` |
+| `Core` | Compile-time version constant | `Version.hpp` |
+| `CoreHost` | Parse CLI options; bootstrap library (schema migration, service wiring) | `CLibraryBootstrap`, `SHostOptions` |
+
+---
+
+## 4. C# Modules (`apps/Librova.UI/`)
+
+| Folder | Role | Key types |
+|---|---|---|
+| `Program.cs` / `App.axaml.cs` | Avalonia entry point; top-level exception handler | `App` |
+| `CoreHost/` | Spawn and manage native host process; resolve executable path; probe converter | `CoreHostProcess`, `CoreHostPathResolver`, `CoreHostLaunchOptions`, `Fb2ConverterProbe`, `UiConverterMode` |
+| `Shell/` | Application bootstrap; session lifecycle; preferences and state persistence; library root validation | `ShellApplication`, `ShellBootstrap`, `ShellSession`, `ShellStateStore`, `UiPreferencesStore`, `LibraryRootValidation`, `FirstRunSetupPolicy`, `ConverterValidationCoordinator` |
+| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `LibrarySelectionViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem` |
+| `Views/` | AXAML markup + code-behind | `MainWindow`, `LibraryView`, `ImportView`, `SettingsView` |
+| `Styles/` | Design-token resources | `Colors.axaml`, `Typography.axaml`, `Components.axaml` |
+| `ImportJobs/` | Import job IPC client + service + mapper + models | `IImportJobsService`, `ImportJobsService`, `ImportJobClient`, `ImportJobMapper`, `ImportJobModels`, `ImportJobDomainError` |
+| `LibraryCatalog/` | Catalog query IPC client + service + mapper + models | `ILibraryCatalogService`, `LibraryCatalogService`, `LibraryCatalogClient`, `LibraryCatalogMapper`, `LibraryCatalogModels`, `NullLibraryCatalogService` |
+| `PipeTransport/` | Low-level named-pipe I/O and envelope protocol (mirrors C++ side) | `NamedPipeClient`, `PipeProtocol` |
+| `Runtime/` | Version, OS environment, workspace cleanup, log sync | `ApplicationVersion`, `RuntimeEnvironment`, `RuntimeWorkspaceMaintenance`, `RuntimeLogSynchronization` |
+| `Mvvm/` | Base MVVM helpers | `AsyncCommand`, `ObservableObject` |
+| `Desktop/` | File/folder picker dialogs | `IPathSelectionService`, `DesktopPathSelectionService` |
+| `Logging/` | Serilog initialization | `LoggingInitializer` |
+| `Styling/` | Runtime theme resource management | `UiThemeResources` |
+
+---
+
+## 5. IPC Boundary
+
+### Contract: `LibraryJobService` (`proto/import_jobs.proto`)
+
+| Method | Request → Response | Purpose |
+|---|---|---|
+| `StartImport` | `StartImportRequest → StartImportResponse` | Launch async import job; returns `job_id` |
+| `ValidateImportSources` | `ValidateImportSourcesRequest → ValidateImportSourcesResponse` | Pre-flight check; returns optional `blocking_message` |
+| `GetImportJobSnapshot` | `GetImportJobSnapshotRequest → GetImportJobSnapshotResponse` | Current job progress (status, percent, counters, warnings) |
+| `WaitImportJob` | `WaitImportJobRequest → WaitImportJobResponse` | Long-poll with timeout; unblocks when job is terminal |
+| `GetImportJobResult` | `GetImportJobResultRequest → GetImportJobResultResponse` | Full terminal result: summary, per-file outcomes, errors |
+| `CancelImportJob` | `CancelImportJobRequest → CancelImportJobResponse` | Request cancellation; job transitions to Cancelling → RollingBack → Compacting → Cancelled |
+| `RemoveImportJob` | `RemoveImportJobRequest → RemoveImportJobResponse` | Discard completed job record from manager |
+| `ListBooks` | `ListBooksRequest → ListBooksResponse` | Query catalog with filters, sort, pagination |
+| `GetBookDetails` | `GetBookDetailsRequest → GetBookDetailsResponse` | Full metadata for a single book |
+| `ExportBook` | `ExportBookRequest → ExportBookResponse` | Copy/convert managed book to destination path |
+| `MoveBookToTrash` | `MoveBookToTrashRequest → MoveBookToTrashResponse` | Remove from catalog; route to Recycle Bin or managed trash |
+
+### Protocol Wire Format
+
+- Every call is wrapped in `SPipeRequestEnvelope` (request_id, method `EPipeMethod`, payload bytes) / `SPipeResponseEnvelope` (request_id, status, error_message, payload bytes).
+- Method IDs in `EPipeMethod` are **append-only integers** (1–10, 12; ID 11 is reserved). Adding a method requires a new ID; IDs are never recycled.
+- UI and Core are deployed in lockstep; no backward-compatibility guarantee across versions.
+
+### Mapping Points
+
+| Side | Where mapping happens | Types |
+|---|---|---|
+| C++ inbound | `libs/ProtoMapping/` | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` — proto message → domain struct |
+| C++ outbound | same mappers | domain struct → proto message |
+| C# inbound | `apps/Librova.UI/ImportJobs/ImportJobMapper.cs` | proto → `ImportJobSnapshotModel`, `ImportJobResultModel` |
+| C# inbound | `apps/Librova.UI/LibraryCatalog/LibraryCatalogMapper.cs` | proto → `BookListPageModel`, `BookDetailsModel` |
+
+### Key Message Types
+
+**`StartImportRequest`** fields: `source_paths[]`, `working_directory`, optional `sha256_hex`, `allow_probable_duplicates` (bool), `force_epub_conversion` (bool).
+
+**`ImportJobSnapshot`** fields: `job_id`, `status` (`ImportJobStatus` enum), `percent` (0–100), `total_entries`, `processed_entries`, `imported_entries`, `failed_entries`, `skipped_entries`, `warnings[]`.
+
+**`ImportJobStatus` enum**: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `CANCELLING`, `ROLLING_BACK`, `COMPACTING` — 8 states, full lifecycle including post-cancel rollback phases.
+
+**`BookListItem`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `has_cover` (bool), `managed_file_name`, `size_bytes`, `added_at_unix_ms`.
+
+**`BookListRequest`** fields: `text` (FTS query), `author`, `languages[]`, `genres[]`, `series`, `tags[]`, `format`, `sort_by` (`BookSort` enum), `direction` (`SortDirection`), `offset`, `limit`.
+
+**`ErrorCode`** enum values: `VALIDATION`, `UNSUPPORTED_FORMAT`, `DUPLICATE_REJECTED`, `PARSER_FAILURE`, `CONVERTER_UNAVAILABLE`, `CONVERTER_FAILED`, `STORAGE_FAILURE`, `DATABASE_FAILURE`, `CANCELLATION`, `INTEGRITY_ISSUE`, `NOT_FOUND`.
+
+**`BookFormat`** enum: `EPUB`, `FB2`, `ZIP`.  
+**`DeleteDestination`** enum: `RECYCLE_BIN`, `MANAGED_TRASH`.
+
+### Ordered checklist for a new RPC
+
+1. Add message types + method to `proto/import_jobs.proto`
+2. Regenerate C++ proto code (`libs/ProtoContracts/`)
+3. Add method ID to `EPipeMethod` enum (append only)
+4. Register in `CPipeRequestDispatcher`
+5. Implement in `CLibraryJobServiceAdapter` (with mandatory outcome logging)
+6. Add mapping in `CImportJobProtoMapper` or `CLibraryCatalogProtoMapper`
+7. Add facade method (if new domain operation)
+8. Add C# pipe method enum value
+9. Implement in `ImportJobClient` or `LibraryCatalogClient`
+10. Add service method in `ImportJobsService` / `LibraryCatalogService` (with success-path logging)
+11. Add mapper in `ImportJobMapper` / `LibraryCatalogMapper`
+12. Run `scripts/ValidateProto.ps1`; rebuild both sides; run all tests
+
+---
+
+## 6. Import Pipeline Architecture
+
+### Import Modes
+
+| Mode | Trigger | Parallelism |
+|---|---|---|
+| `SingleFile` | One file path | Sequential |
+| `ZipArchive` | One `.zip` path | Parallel (per-entry, up to 8 workers) |
+| `Batch` | Multiple paths (files and/or dirs) | ZIP entries parallel; contiguous non-ZIP stretches parallel; ZIP sources sequential |
+
+### Thread Pool Sizing
+
+```
+workers = max(1, min(8, hardwareThreads > 1 ? hardwareThreads - 1 : 1))
+```
+
+Always ≥ 1 (prevents deadlock on single-core); ≤ 8 (prevents I/O saturation); leaves 1 thread free for OS + Avalonia UI.
+
+### ZIP Two-Phase Orchestration (`CZipImportCoordinator`)
+
+**Phase 1 — Extract & Submit (main thread only):**
+1. Iterate ZIP entries sequentially (`zip_t*` is not thread-safe).
+2. Skip immediately (no I/O, no semaphore): directories, nested archives, unsafe paths, unsupported formats.
+3. Check cancellation + semaphore back-pressure (`inFlight.acquire()` — blocks main thread if temp space full).
+4. Extract entry bytes to `working_dir/entries/<zip_index>/` (index, not filename).
+5. Submit worker lambda to thread pool; store `std::future` in slot vector at original entry index.
+
+**Phase 2 — Finalise in Order (main thread):**
+1. Drain completion notifications from progress queue (workers push as they finish).
+2. Wait for all submitted futures (`future.get()`).
+3. Iterate slots in original ZIP order: materialise results preserving entry ordering.
+
+Ordering guarantee: result order == ZIP entry order, despite parallel worker completion.
+
+### Back-Pressure Semaphore
+
+- Capacity: `threadCount × 2`.
+- Main thread acquires before extraction; worker releases on completion (RAII guard).
+- Peak temp disk usage ≈ `threadCount × 2 × ~500 KB` (8–16 MB, not GB).
+
+### Writer Dispatcher (`CWriterDispatchingRepository`)
+
+- Single dedicated writer thread; all `Add()` / `ForceAdd()` calls routed through it.
+- Callers (workers) submit a request and get a `std::future`; block on `future.get()`.
+- Writer batches up to **50 requests per SQLite transaction** — reduces per-book overhead.
+- Read operations (`ReserveId`, `GetById`, `Remove`, `Compact`) forwarded directly to underlying repository (no queuing).
+- Fatal writer error stops all further submissions; pending futures unblock with error status.
+
+### Single-File Import Stages (`CSingleFileImportCoordinator`)
+
+1. Parse metadata + cover (`CBookParserRegistry`)
+2. Find duplicates — read-side check (`IBookQueryRepository::FindDuplicates`)
+3. Compute SHA-256 (`CSha256`)
+4. Plan conversion (`CImportConversionPolicy`)
+5. Execute conversion if needed (`IBookConverter`)
+6. Prepare managed storage — stage bytes (`IManagedStorage::PrepareImport`)
+7. Process cover — decode/resize/re-encode (`ICoverImageProcessor`)
+8. Write DB entry (`IBookRepository::Add` via writer dispatcher)
+9. Commit storage (`IManagedStorage::CommitImport`)
+10. On failure at any step: rollback staged bytes (`IManagedStorage::RollbackImport`)
+
+### Conversion Policy (`CImportConversionPolicy`)
+
+| Source format | `force_epub_conversion` | Converter | Decision |
+|---|---|---|---|
+| EPUB | any | any | `StoreSource` (EPUB stored as-is) |
+| FB2 | false | any | `StoreSource` (stored as `.fb2.gz`) |
+| FB2 | true | available | `StoreConverted` (convert then store EPUB) |
+| FB2 | true | unavailable | `FailImport` (hard failure, no fallback) |
+| FB2 | true | cancelled | `CancelImport` (user-initiated, not a failure) |
+
+### Cancellation Contract
+
+- Main thread checks `stopToken.stop_requested()` before each new worker submission.
+- Already-submitted workers run to completion; return `Cancelled` result if they detect the token.
+- Phase 2 always collects all futures — no abandoned futures.
+- `CLibraryImportFacade` detects `WasCancelled` after pipeline completes, collects imported IDs, invokes `CImportRollbackService::RollbackImportedBooks()`.
+- Rollback is explicit; partial success visible to caller.
+
+### Performance Telemetry (`CImportPerfTracker`)
+
+Stages measured with cache-line-aligned atomic accumulators:
+
+| Stage key | Measures |
+|---|---|
+| `parse` | XML/EPUB metadata parsing |
+| `hash` | SHA-256 computation |
+| `dedup` | `FindDuplicates` read call |
+| `convert` | external converter process |
+| `cover` | cover decode + resize + re-encode |
+| `storage` | managed file staging |
+| `db_wait` | time blocked on writer queue (`IBookRepository::Add`) |
+| `zip_scan` | ZIP pre-scan (`CountPlannedEntries`) |
+| `zip_extract` | main-thread extraction to temp |
+| `sema_wait` | main thread blocked on back-pressure semaphore |
+
+Periodic log: every 500 books or 30 seconds — throughput, per-stage averages, bottleneck %, writer queue depth.  
+Outlier log: warn per book that takes > 5 seconds end-to-end.  
+Summary log: total counts, elapsed time, throughput, bottleneck ranking.
+
+---
+
+## 7. Storage & Persistence Model
+
+### Library Root Layout
+
+```
+<LibraryRoot>/
+  Database/
+    librova.db                         ← SQLite database (books, genres, tags, FTS5)
+  Objects/
+    <aa>/<bb>/<BookId>.book.<ext>      ← managed book bytes (sharded)
+    <aa>/<bb>/<BookId>.cover.<ext>     ← extracted cover (JPEG)
+  Logs/                                ← session logs (synced from native host)
+  Trash/                               ← staging directory before Recycle Bin
+```
+
+### Object Path Sharding
+
+BookId is zero-padded to 10 digits. `<aa>/<bb>` are the two lowest bytes of the FNV-1a hash of the padded ID (hex). Distribution is deterministic and even from the first import.
+
+```
+BookId = 42  →  padded = "0000000042"  →  hash lower 2 bytes  →  "Objects/3f/a7/0000000042.book.epub"
+```
+
+### Storage Encodings
+
+| Format | Internal storage | Extension |
+|---|---|---|
+| EPUB | Plain bytes | `.book.epub` |
+| FB2 (default) | gz-compressed | `.book.fb2.gz` (transparent to UI and export) |
+| FB2 (forced conversion) | EPUB after conversion | `.book.epub` |
+
+### Cover Processing Pipeline
+
+1. Extract cover bytes from parsed book (`ICoverProcessor`).
+2. Decode with `stbi_load_from_memory` (stb_image).
+3. Compute target dimensions: primary `456×684`; fallback `400×600`.
+4. JPEG re-encode: quality sequence `q85 → q78 → q72` until ≤ 120 KiB.
+5. If still over budget after `q72`: store the result and emit a warning (no infinite loop).
+6. All stored covers are JPEG regardless of source format.
+
+### Duplicate Detection (Two-Layer)
+
+| Layer | When | Mechanism | Outcome |
+|---|---|---|---|
+| Read-side | Before staging | `IBookQueryRepository::FindDuplicates(sha256_hex)` | Returns matches; coordinator decides reject or allow |
+| Write-side | At `Add()` | `BEGIN IMMEDIATE` transaction re-checks `sha256_hex` | Throws `CDuplicateHashException(conflictingBookId)` on collision |
+
+Empty `sha256_hex` skips the write-side check (treated as "unknown hash").  
+`IBookRepository::ForceAdd()` bypasses the hash check entirely (explicit override).
+
+### Database Schema (version 1)
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `books` | id, title, authors (JSON array), language, series, series_index, publisher, year, isbn, description, identifier, format, storage_encoding, managed_path, size_bytes, sha256_hex, cover_path, added_at_unix_ms | Primary book record |
+| `genres` | id, normalized_name (unique, lowercase), display_name (English) | Genre lookup |
+| `book_genres` | book_id, genre_id, source_type | `source_type`: `fb2_genre` or `epub_subject` — preserves provenance |
+| `tags` | name (unique) | Freeform tag |
+| `book_tags` | book_id, tag_id | Many-to-many |
+| `search_index` | FTS5 virtual table: title, authors, tags, description, genres | Full-text search |
+
+Schema version policy: `user_version 0` → create fresh DB + set to 1. `user_version 1` → no-op. Any other value → incompatibility error (manual deletion required).
+
+---
+
+## 8. Critical Invariants
+
+Violating any of these causes data corruption, crashes, or silent test failures.
+
+1. **`PathFromUtf8()` for all UTF-8 paths.** Never construct `std::filesystem::path` from `std::string`, `const char*`, or protobuf string fields directly — `path(string)` uses the ANSI codepage and silently corrupts Cyrillic. Always call `PathFromUtf8()` from `libs/Unicode/UnicodeConversion.hpp`.
+
+2. **`inFlight` semaphore declared before `pool`.** In `CZipImportCoordinator` the back-pressure semaphore object must be declared before the thread pool in the same scope. The pool destructor calls `wait()` internally; worker lambdas reference `inFlight` by ref. If the semaphore is destroyed first, workers dangle.
+
+3. **ZIP access is single-threaded.** `zip_t*` (libzip) is **not thread-safe**. All ZIP enumeration and file extraction must happen on the main thread. Workers only receive already-extracted paths.
+
+4. **`AddBatch()` must return exactly one result per input.** `CWriterDispatchingRepository` validates this invariant; a size mismatch is treated as a fatal writer error and stops further submissions.
+
+5. **`CloseSession()` before deleting the database file in tests.** Both `CSqliteBookRepository` and `CSqliteBookQueryRepository` hold open SQLite connections. Windows prevents deletion of files with open handles; tests that skip `CloseSession()` fail with a filesystem error.
+
+6. **ID reservation before worker dispatch.** The main thread calls `IBookRepository::ReserveIds(count)` for the full batch before submitting any worker. Workers must not open SQLite transactions to obtain IDs; all concurrency is confined to the writer actor.
+
+7. **Conversion cancellation ≠ converter failure.** `ImportConversionPolicy` distinguishes `CancelImport` (user cancelled mid-convert) from `FailImport` (converter binary missing or exited with error). Forced EPUB conversion with an unavailable converter is a hard failure, not a silent fallback to storing the original FB2.
+
+8. **Per-entry working directories use ZIP index, not filename.** Subdirectories are `working_dir/entries/<zip_index>/` — never the entry's relative path. Identical filenames in different archive subdirectories would otherwise collide.
+
+9. **DB schema version policy.** `CSchemaMigrator` accepts `user_version == 0` (creates fresh DB) or `user_version == 1` (no-op). Any other version throws an incompatibility error. Do not add automatic upgrade logic unless the change is non-destructive and the decision is explicit.
+
+10. **Mandatory IPC boundary logging in both directions.** Every method in `CLibraryJobServiceAdapter` must log the key outcome (not only on failure). Every managed `*Service.cs` wrapping an IPC call must log the successful response. Error-only logs are a diagnostic gap.
+
+11. **Futures are never abandoned.** In Phase 2 of `CZipImportCoordinator`, all `std::future` objects are resolved with `future.get()` even when cancellation was requested. Abandoning futures would detach worker threads from the pool and corrupt pool state.
+
+12. **Rollback is explicit, not silent.** When import is cancelled after workers have committed books, `CLibraryImportFacade` collects all imported IDs and invokes `CImportRollbackService::RollbackImportedBooks()`. Partial success is always visible to the caller; it is never hidden.
+
+---
+
+## 9. Task Navigation
+
+### Add a new RPC method
+**Use the `$transport-rpc` skill** — it has the complete, ordered checklist for both sides (proto → C++ → C#, validation sequence, close-out).
+
+Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod`), `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` (`CLibraryJobServiceAdapter`), `apps/Librova.UI/PipeTransport/`, and the relevant client/service/mapper in `ImportJobs/` or `LibraryCatalog/`.
+
+### Change single-file import logic
+- `libs/Importing/SingleFileImportCoordinator.cpp/.hpp` — main orchestration
+- `libs/ImportConversion/` — conversion decision
+- `libs/Importing/ImportDiagnosticText.cpp` — user-facing error messages
+- Tests: `tests/Unit/TestSingleFileImportCoordinator.cpp`
+
+### Change parallel import (batch or ZIP)
+- ZIP: `libs/ZipImporting/ZipImportCoordinator.cpp/.hpp`
+- Batch loose files: `libs/Application/LibraryImportFacade.cpp` (workload planner) + `libs/Importing/ParallelImportHelpers.*`
+- Writer: `libs/Importing/WriterDispatchingRepository.cpp/.hpp`
+- Performance tracking: `libs/Importing/ImportPerfTracker.cpp/.hpp`
+- Tests: `tests/Unit/TestZipImportCoordinator.cpp`, `tests/Unit/TestParallelImport*.cpp`
+
+### Add a new book format
+- Implement `IBookParser` in a new `libs/<FormatName>Parsing/` library
+- Register in `libs/ParserRegistry/BookParserRegistry.cpp`
+- Extend `EBookFormat` in `libs/Domain/BookFormat.hpp` and update all switch statements
+- Add proto enum value `BookFormat` in `proto/import_jobs.proto`; update `CLibraryCatalogProtoMapper`
+- Add test in `tests/Unit/Test<Format>Parser.cpp`
+
+### Change the database schema
+- SQL DDL is in `libs/DatabaseSchema/DatabaseSchema.cpp`
+- Schema version enforcement is in `libs/DatabaseRuntime/SchemaMigrator.cpp`
+- If upgrading from version 1: add a migration branch, increment expected version, ensure it is non-destructive, document the decision
+- Tests: `tests/Unit/TestSchemaMigrator.cpp`
+
+### Add a field to the book card (parser → UI)
+1. Add field to `SBookMetadata` in `libs/Domain/`
+2. Parse it in `CFb2Parser` and/or `CEpubParser`
+3. Persist it: add column in `libs/DatabaseSchema/`, update `CSqliteBookRepository` and `CSqliteBookQueryRepository`
+4. Expose via `IBookQueryRepository` + `GetBookDetails` response
+5. Add to proto `BookDetails` message
+6. Map in `CLibraryCatalogProtoMapper`
+7. Add to C# `BookDetailsModel` and `LibraryCatalogMapper`
+8. Bind in `LibraryBrowserViewModel` / AXAML view
+
+### Change cover processing
+- Decode/resize/re-encode: `libs/CoverProcessingStb/StbCoverImageProcessor.cpp/.hpp`
+- Size targets and quality fallback constants are inside that file
+- Interface: `ICoverImageProcessor` in `libs/Domain/`
+- Test: `tests/Unit/TestStbCoverImageProcessor.cpp`
+
+### Change delete / Recycle Bin logic
+- Facade: `libs/Application/LibraryTrashFacade.cpp`
+- Trash staging: `libs/ManagedTrash/ManagedTrashService.cpp`
+- Recycle Bin: `libs/RecycleBin/WindowsRecycleBinService.cpp`
+- Proto: `MoveBookToTrashRequest/Response` and `DeleteDestination` enum in `proto/import_jobs.proto`
+- Adapter: `CLibraryJobServiceAdapter::MoveBookToTrash()`
+
+### Add a new ViewModel / View
+- ViewModel: `apps/Librova.UI/ViewModels/<Name>ViewModel.cs` — derive from `ObservableObject`; commands use `AsyncCommand`
+- View: `apps/Librova.UI/Views/<Name>View.axaml` + `.axaml.cs` code-behind
+- Register in `ShellViewModel` or compose into parent ViewModel
+- Styles: reuse design tokens from `apps/Librova.UI/Styles/` — see `docs/UiDesignSystem.md`
+
+### Change converter settings
+- Configuration loading: `libs/ConverterConfiguration/`
+- CLI command building: `libs/ConverterCommand/`
+- External process execution: `libs/ConverterRuntime/ExternalBookConverter.cpp`
+- C# probe and validation: `apps/Librova.UI/CoreHost/Fb2ConverterProbe.cs`, `Shell/ConverterValidationCoordinator.cs`
+- ViewModel: `ViewModels/ShellConverterPathController.cs`, `ShellConverterSettingsState.cs`
+
+### Add a unit test (C++)
+- File: `tests/Unit/Test<Area>.cpp`
+- Framework: Catch2 (`TEST_CASE`, `REQUIRE`, `SECTION`)
+- Temp database: call `repository.CloseSession()` in teardown before deleting the file
+- Naming: describe observable behaviour (e.g., `"AddBatch returns exactly one result per request"`)
+
+### Add a unit test (C#)
+- File: `tests/Librova.UI.Tests/<Area>Tests.cs`
+- Framework: xUnit (`[Fact]`, `[Theory]`)
+- Null service stubs: use `NullLibraryCatalogService` or equivalent
+- Naming: `Method_Scenario_ExpectedBehavior`
+
+---
+
+## 10. External Dependencies
+
+| Library | Used in | Purpose |
+|---|---|---|
+| `pugixml` | `libs/Fb2Parsing/`, `libs/EpubParsing/` | XML parsing for FB2 and EPUB OPF metadata |
+| `libzip` | `libs/ZipImporting/` | ZIP archive enumeration and entry extraction |
+| `sqlite3` (+ fts5 feature) | `libs/Sqlite/`, `libs/BookDatabase/`, `libs/SearchIndex/` | Embedded relational database; FTS5 full-text search |
+| `spdlog` | `libs/Logging/`; all C++ modules | Structured, async-capable logging |
+| `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
+| `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |
+| `stb` | `libs/CoverProcessingStb/` | Single-header image decode/encode (JPEG, PNG) for cover processing |
+| `bshoshany-thread-pool` (BS::thread_pool) | `libs/ZipImporting/`, `libs/Importing/` | Fixed-size thread pool for parallel import workers |
+| `zlib` | `libs/ManagedFileEncoding/`; libzip dependency | gz compression/decompression for internal FB2 storage |
+| `catch2` | `tests/Unit/` | C++ unit test framework |
+| **Avalonia** | `apps/Librova.UI/` | Cross-platform XAML UI framework (.NET / C#) |
+| **Google.Protobuf** | `apps/Librova.UI/`; generated C# proto bindings | C# protobuf serialization |
+| **Serilog** | `apps/Librova.UI/Logging/` | Structured logging for C# UI process |
+
+---
+
+## 11. Code Conventions
+
+> **Authoritative source**: `docs/engineering/CodeStyleGuidelines.md` and the `$code-style` skill. This section is a compact quick-reference only — if anything here conflicts with those sources, those sources win.
+
+### C++ Naming Prefixes
+
+| Prefix | Applies to | Example |
+|---|---|---|
+| `C` | Classes (concrete) | `CSingleFileImportCoordinator` |
+| `I` | Interfaces (pure virtual) | `IBookRepository` |
+| `S` | Structs (data / value types) | `SBookMetadata` |
+| `E` | Enums | `EBookFormat` |
+| `k` | Compile-time constants | `kMaxWorkerCount` |
+
+**Other C++ rules (non-obvious):** Allman braces; member variables `m_memberName`; methods `PascalCase`; locals `camelCase`; file names `PascalCase`; one `.hpp`/`.cpp` pair per slice directory.
+
+**C#:** types/methods `PascalCase`, private fields `_camelCase`, file-scoped namespaces, async suffix `Async`.
+
+### Non-Negotiable Rules
+
+- **English only** — code, comments, logs, UI strings, commit messages
+- **`PathFromUtf8()`** — only approved construction of `std::filesystem::path` from UTF-8; `path(string)` is forbidden
+- **One static library per logical slice** — each `libs/<Module>/` has its own `CMakeLists.txt`
+- **IPC logging is mandatory** — adapter methods (C++) and service wrappers (C#) must log success outcomes, not only errors
+
+### Proto Quick Rules
+
+Field numbers: append-only, never reuse. Message names: `PascalCase`. Field names: `snake_case`. Enum values: `SCREAMING_SNAKE_CASE`. Enum zero: `UNKNOWN`/`UNSPECIFIED`.
+
+### Log Level Guide
+
+| Level | When to use |
+|---|---|
+| `Info` | Expected outcomes; normal state transitions; successful IPC responses |
+| `Warn` | Unexpected-but-handled: `CanStartImport=false`, empty result, degraded operation |
+| `Error` | Caught exceptions; failures surfaced to the user |
+| `Critical` | Unrecoverable failures |
+| `Debug` | High-frequency tracing (per-entry timings, duplicate checks) |
+
+### Test Conventions
+
+> Full policy: `docs/engineering/TestStrategy.md`.
+
+- C++ tests: Catch2 `TEST_CASE` / `REQUIRE` / `SECTION`
+- C# tests: xUnit `[Fact]` / `[Theory]`; naming `Method_Scenario_ExpectedBehavior`
+- Mandatory test areas: Unicode + Cyrillic, duplicate detection, rollback after cancellation, forced conversion failures
+- **DB teardown**: call `repository.CloseSession()` before deleting temp DB file (Windows file handle)
+- No fixed sleeps in IPC tests — explicit readiness signals and deterministic cleanup
+
+---
+## 12. Domain Interfaces Reference
+
+Quick reference for core abstractions in `libs/Domain/`. All implemented in higher layers; consumed by import pipeline components.
+
+### `IBookRepository` (write)
+
+```cpp
+SBookId    ReserveId();
+std::vector<SBookId> ReserveIds(size_t count);
+void       Add(const SBook& book);          // throws CDuplicateHashException on sha256 collision
+void       ForceAdd(const SBook& book);     // bypass hash check
+SBook      GetById(SBookId id);
+void       Remove(SBookId id);
+void       RemoveBatch(const std::vector<SBookId>& ids);
+std::vector<SBatchBookResult> AddBatch(const std::vector<SBatchBookEntry>& entries);
+void       Compact();
+void       OptimizeSearchIndex();
+void       CloseSession();                  // tests only: release file handle before deletion
+```
+
+### `IBookQueryRepository` (read)
+
+```cpp
+SBookListResult      Search(const SSearchQuery& query);
+uint64_t             CountSearchResults(const SSearchQuery& query);
+std::vector<std::string> ListAvailableLanguages(const SSearchQuery& query);
+std::vector<std::string> ListAvailableTags(const SSearchQuery& query);
+std::vector<std::string> ListAvailableGenres(const SSearchQuery& query);
+std::vector<SDuplicateMatch> FindDuplicates(const SDuplicateCandidate& candidate);
+SLibraryStatistics   GetLibraryStatistics();
+```
+
+### `IProgressSink`
+
+```cpp
+void ReportValue(int percent, std::string_view message);
+bool IsCancellationRequested();
+void BeginRollback();
+void ReportRollbackProgress(int percent);
+void BeginCompacting();
+```
+
+### `IManagedStorage`
+
+```cpp
+SPreparedStorage PrepareImport(const SStoragePlan& plan);
+void             CommitImport(const SPreparedStorage& prepared);
+void             RollbackImport(const SPreparedStorage& prepared) noexcept;
+```
+
+### `IBookParser`
+
+```cpp
+bool        CanParse(EBookFormat format) const;
+SParsedBook Parse(const std::filesystem::path& path, std::string_view logicalSourceLabel);
+```
+
+### `IBookConverter`
+
+```cpp
+bool              CanConvert(EBookFormat source, EBookFormat dest) const;
+SConversionResult Convert(const SConversionRequest& request,
+                          IProgressSink& progressSink,
+                          std::stop_token stopToken);
+```
+
+### Key Domain Value Types
+
+| Type | Key fields |
+|---|---|
+| `SBook` | `id`, `metadata`, `fileInfo`, `optional<cover_path>`, `added_at_utc` |
+| `SBookMetadata` | `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `description`, `identifier` |
+| `SBookFileInfo` | `format` (`EBookFormat`), `storage_encoding` (`EStorageEncoding`), `managed_path`, `size_bytes`, `sha256_hex` |
+| `SParsedBook` | `metadata`, `source_format`, `cover_extension`, `cover_bytes`, `diagnostic_message` |
+| `SStoragePlan` | `book_id`, `format`, `storage_encoding`, `source_path`, optional `cover_source_path` |
+| `SPreparedStorage` | staged paths (book + cover), final paths, relative paths for DB storage |
+
+---
+
+## 13. Process Startup & Shutdown
+
+### Native Host (`apps/Librova.Core.Host/Main.cpp`)
+
+1. Parse CLI: library root, working directory, parent UI PID, pipe name.
+2. Initialize spdlog (log to `LibraryRoot/Logs/`).
+3. Run `CSchemaMigrator` — create DB (version 0 → 1) or validate (version 1 = no-op); error on any other version.
+4. Construct services: `CSqliteBookRepository`, `CSqliteBookQueryRepository`, `CManagedFileStorage`, parsers, converter, facades, job manager.
+5. Start `CNamedPipeHost` — begin listening for requests.
+6. Bind lifetime to parent PID: monitor UI process; self-terminate if UI dies.
+7. Dispatch loop: `EPipeMethod` → `CLibraryJobServiceAdapter` → proto response.
+8. Shutdown: stop accepting; drain in-flight jobs; flush logs.
+
+### C# UI (`apps/Librova.UI/Program.cs` → `ShellBootstrap`)
+
+1. Load `ShellStateStore` (window geometry, last library path) + `UiPreferencesStore` (converter path).
+2. If no library → show `FirstRunSetupViewModel` wizard.
+3. Validate library root (`LibraryRootValidation`): requires `Database/librova.db`.
+4. Probe FB2 converter (`Fb2ConverterProbe`): set `UiConverterMode`.
+5. Spawn native host (`CoreHostProcess`): pass library root, pipe name, own PID.
+6. Create IPC services: `ImportJobsService`, `LibraryCatalogService`.
+7. Construct `ShellApplication` → `ShellViewModel` → show `MainWindow`.
+8. On exit: send graceful shutdown request to host; wait with timeout; force-terminate if no response.
+
+---
+
+*See also: `docs/Librova-Architecture.md` (detailed design decisions), `docs/engineering/CodeStyleGuidelines.md` (full style reference), `docs/engineering/TransportInvariants.md` (IPC contract rules), `docs/engineering/TestStrategy.md` (test scope and coverage policy).*

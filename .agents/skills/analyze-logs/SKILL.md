@@ -5,6 +5,25 @@ description: "Step-by-step guide for analyzing Librova import logs (host.log + u
 
 # Import Log Analysis Playbook
 
+## Goal
+
+Turn `host.log` and `ui.log` into a short diagnosis: what failed, whether logging quality regressed, and which fixes should happen now versus later.
+
+## When to Use
+
+- use this skill when the user provides post-import logs
+- use this skill when you need to compare two import runs or explain a cancellation timeline
+- do **not** use this skill before you have actual `host.log` and `ui.log` data
+
+## Expected Deliverable
+
+Your final analysis should identify:
+
+- the main failure or degradation pattern
+- whether the logs are clean enough to trust
+- whether the issue is parser / duplicate / conversion / rollback / noise / performance related
+- which fixes are immediate and which ones can be queued
+
 Log files after an import run live at `<LibraryRoot>\Logs\`:
 
 - `host.log` — C++ native process (parsing, importing, IPC service)
@@ -64,6 +83,8 @@ Select-String -Path $log -Pattern "\[debug\]"               | Measure-Object | S
 | `[info]` lines | ~1–3 per imported book |
 | `[warning]` lines | proportional to format quirks |
 | `[error]` lines | only for genuine failures |
+
+Treat these ratios as a baseline from large real-world import runs, not as a universal hard limit for every library.
 
 
 ---
@@ -361,7 +382,7 @@ If the tail shows many repeated rows with the same `Imported/Failed/Skipped/Perc
 | Situation | Decision |
 |---|---|
 | New genre code appearing ≥ 5 times | Add to mapper now |
-| New genre code appearing < 5 times | Log as known gap; add to mapper in next batch |
+| New genre code appearing < 5 times | Document it in the findings; add or update a backlog note if it repeats across runs |
 | New parser error pattern (not in §4) | Investigate file; add warn+skip if field is optional |
 | Error causes complete import failure for many files | Fix immediately — critical |
 | CP1251 / body-recovery warnings increasing | Expected; no action unless rate doubles |

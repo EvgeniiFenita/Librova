@@ -5,72 +5,63 @@ description: Checklist for extending the Librova import pipeline. Use when addin
 
 # Import Pipeline Extension Checklist
 
-Librova import pipeline: source selection → metadata parsing → duplicate detection →
-optional conversion (FB2→EPUB) → staging → commit → database write → managed storage placement.
+## Goal
 
----
+Change the import pipeline without breaking transactional safety, cancellation semantics, logging, or import-specific docs.
+
+## When to Use
+
+- use this skill when adding a new source format
+- use this skill when changing import stages, duplicate detection, conversion handling, or archive / directory behavior
+- use `$transport-rpc` alongside this skill if the import change also requires IPC contract updates
+
+> **Architecture overview**: For stage classes, thread model, cancellation contract, and directory layout, see `docs/CodebaseMap.md` §6 Import Pipeline Architecture.
 
 ## Pre-Start
 
-- [ ] Confirm the task maps to an open backlog item (`python scripts/backlog.py list`); use `$backlog-update` skill if adding a new one
-- [ ] Identify which stage of the pipeline is changing
+- [ ] confirm the task maps to an open backlog item (`python scripts/backlog.py list`)
+- [ ] identify which pipeline stage is changing
 
----
+## Format Support
 
-## Format Support (new file type)
+- [ ] add the parser under `libs/<SliceName>/` with a local `CMakeLists.txt`
+- [ ] keep `.hpp` and `.cpp` together
+- [ ] declare new vcpkg dependencies explicitly in `vcpkg.json`
+- [ ] preserve legacy encodings that still appear in real libraries
+- [ ] add unit tests for normal, malformed, and encoding edge cases
 
-- [ ] Add parser under `libs/<SliceName>/` with local `CMakeLists.txt`
-- [ ] Keep `.hpp` and `.cpp` together in the parser directory
-- [ ] Declare any new vcpkg dependencies explicitly in `vcpkg.json`
-- [ ] Preserve non-UTF-8 legacy encodings (e.g., Windows-1251 in real FB2 files)
-- [ ] Unit tests for the new parser (cover normal, malformed, and encoding edge cases)
+## Staging And Commit Safety
 
----
-
-## Staging and Commit Safety
-
-- [ ] Stage imports before commit — no partial visible success
-- [ ] Rollback / failure semantics are explicit
-- [ ] Stale temp state is cleaned on startup
-- [ ] Strict duplicates are rejected; probable duplicates require explicit user consent
-- [ ] Integration test covers rollback on failure
-
----
+- [ ] stage imports before commit — no partial visible success
+- [ ] rollback / failure semantics are explicit
+- [ ] stale temp state is cleaned on startup
+- [ ] strict duplicates are rejected; probable duplicates require explicit user consent
+- [ ] integration coverage proves rollback on failure
 
 ## Conversion
 
-- [ ] Cancellation is a **distinct outcome** — never silently fall back to storing the original FB2
-- [ ] Converter integration stays user-configurable through the built-in `fb2cng` / `fbc.exe` executable path in `Settings`, and empty path cleanly disables conversion
-- [ ] Import behavior matches the current product rule: plain `FB2` storage by default, forced `FB2 -> EPUB` only when the current session has a configured converter and the user explicitly enables it
-- [ ] Conversion failure path is logged through the repository logging facade
+- [ ] cancellation remains a distinct outcome — never silently fall back to storing the original FB2
+- [ ] converter integration stays user-configurable through Settings
+- [ ] import behavior still matches the current product rule for plain FB2 vs forced FB2 -> EPUB
+- [ ] conversion failure paths are logged through the repository logging facade
 
----
+## Directory And Archive Import
 
-## Directory and Archive Import
-
-- [ ] Recursive scan follows the same transactional and summary principles as single-file import
-- [ ] Progress and cancellation are surfaced correctly at the UI level
-- [ ] No silent partial success for batch operations
-
----
-
-## Transport
-
-If the import pipeline change requires new or modified IPC methods, use the `$transport-rpc` skill.
-
----
+- [ ] recursive scan follows the same transactional and summary principles as single-file import
+- [ ] progress and cancellation are surfaced correctly at the UI level
+- [ ] batch operations do not hide silent partial success
 
 ## Logging
 
-- [ ] Import start, each stage transition, and import end are logged
-- [ ] Failure and rollback paths emit actionable logs
-- [ ] Long-running batch jobs log progress at meaningful intervals
-
----
+- [ ] import start, meaningful stage transitions, and import end are logged
+- [ ] failure and rollback paths emit actionable logs
+- [ ] long-running batch jobs log progress at meaningful intervals
 
 ## Close-Out
 
-- [ ] All tests green (unit + integration)
-- [ ] `docs/Librova-Architecture.md` updated if import pipeline structure changed
+- [ ] tests are green
+- [ ] `docs/Librova-Architecture.md` updated if import structure changed
 - [ ] `docs/Librova-Product.md` updated if user-facing import behavior changed
-- [ ] `docs/ManualUiTestScenarios.md` updated in Russian if UI import workflow changed
+- [ ] `docs/CodebaseMap.md` updated when import stages, cancellation contract, or storage behavior changed
+- [ ] relevant file under `docs/manual-tests/` updated if the UI workflow changed
+- [ ] `docs/ManualUiTestScenarios.md` registry row added or updated when a scenario changed

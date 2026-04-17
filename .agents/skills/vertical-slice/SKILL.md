@@ -5,82 +5,81 @@ description: End-to-end implementation checklist for any new Librova feature. Us
 
 # Vertical Slice Playbook
 
+## Goal
+
+Deliver a feature or workflow end-to-end across every touched layer, with tests and documentation updated in the same task.
+
+## When to Use
+
+- use this skill for user-visible features or workflow changes that cross multiple layers
+- use this skill for read-side or mutation flows that touch domain, transport, and UI together
+- use `$transport-rpc` instead when the change is IPC-only
+- use `$epub-import` as the domain-specific companion when the slice is mainly about import behavior
+- use `$review-pass` instead for stabilization or hardening passes without new feature work
+
 ## 0. Pre-Start Gate
 
-Before writing any code:
+Before writing code:
 
-1. Run `python scripts/backlog.py list` and confirm the task maps to an open backlog item.
-2. If no backlog item matches, **stop** and confirm with the user whether to proceed.
-3. Identify the slice category: read-side query / mutation-use-case / transport-contract / UI-shell-workflow.
-
----
+1. run `python scripts/backlog.py list` and confirm the task maps to an open backlog item
+2. if no backlog item matches, stop and confirm with the user whether to proceed
+3. identify the slice category: read-side query / mutation-use-case / transport-contract / UI-shell-workflow
+4. consult `docs/CodebaseMap.md` §9 Task Navigation for the entry-point checklist for your slice type, and §3-§4 to locate the relevant modules
 
 ## 1. Read-Side Query Slice
 
-Use for: list, details, search, filters, and similar read-only flows.
+Use for list, details, search, filters, and similar read-only flows.
 
-Checklist:
-
-- [ ] Add or extend native application facade
-- [ ] Keep domain and repository boundaries unchanged (unless a new contract is needed)
-- [ ] Add or extend protobuf request/response messages in `proto/`
-- [ ] Extend proto mapping on native side
-- [ ] Extend protobuf service adapter (native)
-- [ ] Extend pipe transport method registration and request dispatch (native)
-- [ ] Run `scripts/ValidateProto.ps1`
-- [ ] Add or extend C# `PipeProtocol` method enum
-- [ ] Add or extend C# client method
-- [ ] Add or extend C# service and mapper
-- [ ] Add or extend C# ViewModel / UI binding
-- [ ] Unit tests for local logic
-- [ ] Integration test for the IPC boundary
-- [ ] Update `docs/Librova-Architecture.md` if any structural decision changed
-
----
+- [ ] add or extend the native application facade
+- [ ] keep domain and repository boundaries clean unless a new contract is genuinely required
+- [ ] add or extend protobuf request/response messages in `proto/`
+- [ ] extend native proto mapping
+- [ ] extend the native protobuf service adapter
+- [ ] extend pipe transport method registration and request dispatch
+- [ ] run `scripts/ValidateProto.ps1` when `proto/` changes
+- [ ] add or extend the C# pipe method enum, client, service, and mapper
+- [ ] add or extend the C# ViewModel / UI binding
+- [ ] add unit tests for local logic
+- [ ] add an integration test for the IPC boundary
+- [ ] update docs according to `AGENTS.md` document-maintenance policy
 
 ## 2. Mutation / Use-Case Slice
 
-Use for: import, delete, export, conversion, any state-changing flow.
+Use for import, delete, export, conversion, and any state-changing flow.
 
-Additional requirements on top of the read-side checklist:
+Apply the read-side checklist plus:
 
-- [ ] Staging before commit — no partial visible success
-- [ ] Rollback / failure semantics are explicit and tested
-- [ ] Cancellation is a distinct outcome (not silent fallback)
-- [ ] Cleanup of stale temp state is handled
-- [ ] Logging covers the long-running job path and failure path
-- [ ] Update `docs/Librova-Product.md` if the user-facing behavior changed
-- [ ] Update `docs/ManualUiTestScenarios.md` (in Russian) if UI workflow changed
-
----
+- [ ] staging before commit — no partial visible success
+- [ ] rollback / failure semantics are explicit and tested
+- [ ] cancellation is a distinct outcome, not a silent fallback
+- [ ] cleanup of stale temp state is handled
+- [ ] logging covers long-running work and failure paths
+- [ ] `docs/Librova-Product.md` updated if user-facing behavior changed
+- [ ] relevant manual-test file under `docs/manual-tests/` updated if the workflow changed
+- [ ] `docs/ManualUiTestScenarios.md` registry row added or updated when a scenario changes
 
 ## 3. Transport Contract Change Slice
 
-Use `$transport-rpc` skill instead — it has the full IPC-specific checklist.
-
----
+If the slice is primarily transport work, use `$transport-rpc` for the ordered IPC checklist and come back here only for the surrounding feature wiring.
 
 ## 4. UI Shell Workflow Slice
 
-Use for: new section, dialog, settings panel, first-run flow.
+Use for a new section, dialog, settings panel, or first-run flow.
 
-Checklist:
-
-- [ ] Dialog abstraction behind an interface (keeps it testable without the real platform)
+- [ ] dialog abstraction behind an interface where platform UI would otherwise be hard to test
 - [ ] ViewModel logic covered by unit tests
-- [ ] Shell composition test for the new workflow
-- [ ] Manual UI scenario added to `docs/ManualUiTestScenarios.md` (in Russian)
+- [ ] shell composition test for the new workflow
+- [ ] relevant manual-test file under `docs/manual-tests/` updated
+- [ ] `docs/ManualUiTestScenarios.md` registry row updated
 - [ ] UI labels in English exactly as they appear in the source
-
----
 
 ## 5. Close-Out
 
 Before marking the task done:
 
-- [ ] `Debug` and `Release` build both pass
-- [ ] All new tests are green
-- [ ] `docs/` updated for any changed product / architecture / backlog reality
-- [ ] Backlog item closed using `$backlog-update` skill (`python scripts/backlog.py close <id> --note="…"`; moved to `docs/backlog-archive.yaml`)
-- [ ] No decorative tests added (see `docs/engineering/TestStrategy.md`)
-- [ ] No commits made unless explicitly requested
+- [ ] `Debug` and `Release` build validation complete when the task changes code
+- [ ] new tests are green
+- [ ] docs updated per `AGENTS.md` document-maintenance policy
+- [ ] backlog item closed using `$backlog-update`
+- [ ] no decorative tests added
+- [ ] no commit made unless explicitly requested

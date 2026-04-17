@@ -1,66 +1,35 @@
 # Librova Native Core — Local Context
 
-Libraries under `libs/` contain the C++20 domain and infrastructure slices of `Librova.Core`.  
-Each slice is a static library with its own `CMakeLists.txt`. Keep `.hpp` and `.cpp` together.
+This file is for `libs/`-specific context only.
 
----
+- For global repository rules, workflow, and document ownership, see the root `AGENTS.md`.
+- For the canonical style guide, use `$code-style` and `docs/engineering/CodeStyleGuidelines.md`.
+- For module locations and task-entry points, use `docs/CodebaseMap.md`.
 
-## C++ Naming (project-specific — differs from common defaults)
+## Local Scope
 
-| Kind | Rule | Example |
-|------|------|---------|
-| Class | `C` prefix | `CImportService` |
-| Interface | `I` prefix | `IBookRepository` |
-| Struct | `S` prefix | `SBookRecord` |
-| Enum | `E` prefix | `EImportResult` |
-| Method | `PascalCase` | `ParseMetadata()` |
-| Parameter / local | `camelCase` | `bookId` |
-| Member variable | `m_` prefix | `m_repository` |
+Libraries under `libs/` contain the C++20 domain and infrastructure slices of `Librova.Core`.
 
-Plain DTO / value-object structs may omit `m_`.
+- each slice is a static library with its own `CMakeLists.txt`
+- keep `.hpp` and `.cpp` together unless there is a strong local reason not to
+- keep reusable code behind clear interfaces instead of reaching upward into UI concerns
 
-## Brace Style: Allman (NOT K&R)
+## Local Reminders
 
-```cpp
-if (condition)
-{
-    doSomething();
-}
-```
+- Use the repository logging facade, not `std::cout` / `std::cerr`, in reusable library code.
+- Route UTF-8 / wide / path conversions through `libs/Unicode/UnicodeConversion.*`.
+- Treat transport-facing DTOs and mappers as boundary code, not domain code.
 
-## Namespaces
-
-```cpp
-namespace Librova::Core::Import {
-
-class CImportService
-{
-};
-
-} // namespace Librova::Core::Import
-```
-
-## Unicode and Path Conversions
-
-All UTF-8 ↔ wide-string ↔ `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`.  
-Never add local `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers.
-
-## Logging
-
-Use `spdlog` through the repository logging facade. Never write to `std::cout` or `std::cerr` from reusable library code. Log actionable context at startup, shutdown, IPC boundaries, long-running operations, and failure paths.
-
-## Build and Test (native)
+## Native Quick Loop
 
 ```powershell
-# Configure + build
+# Native-only fast path
 cmake --preset x64-debug
 cmake --build --preset x64-debug --config Debug
-
-# Run native tests
 ctest --test-dir out\build\x64-debug -C Debug --output-on-failure
 
-# Native only via script
+# Or use the repo script
 .\Run-Tests.ps1 -SkipManaged
 ```
 
-Run `scripts\ValidateProto.ps1` after any change under `proto/`.
+For the full build -> test workflow, including sequential validation rules and proto checks, follow the root `AGENTS.md`.

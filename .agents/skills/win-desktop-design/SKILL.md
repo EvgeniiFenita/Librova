@@ -12,6 +12,16 @@ description: >
 
 # Modern Windows Desktop App Design with Avalonia UI + C#
 
+## Goal
+
+Produce Windows-desktop-oriented Avalonia UI guidance that stays practical, consistent, and easy to translate into real XAML.
+
+## When to Use
+
+- use this skill for layout, component, theming, navigation, typography, iconography, and motion questions in Avalonia apps
+- in Librova itself, treat `docs/UiDesignSystem.md` as the canonical design source and use this skill as a companion for broader design reasoning
+- do **not** use this skill to override repository-specific tokens or component rules without updating the repo design-system doc
+
 ## 1. Philosophy and Guidelines
 
 The goal is an application that looks native on Windows 11 while remaining

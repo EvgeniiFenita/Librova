@@ -5,84 +5,80 @@ description: Pre-release review and verification checklist for Librova. Use befo
 
 # Review Pass Checklist
 
-Use `/review` in the Codex CLI to open a dedicated reviewer that reads the current diff
-and reports prioritized findings before you open a pull request.
+## Goal
 
----
+Run a high-signal hardening pass over risky changes before review, release, or a new major implementation wave.
+
+## When to Use
+
+- use this skill after high-risk changes touching transport, storage, cancellation, rollback, startup, shutdown, or other failure-prone boundaries
+- use this skill before a release-candidate pass
+- use this skill when you want to check for documentation drift before handing work off
+- do **not** use this as a replacement for the implementation checklist of a feature; use it after the implementation work exists
+
+Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff when code review is the goal.
 
 ## 1. Runtime Safety
 
-- [ ] Shutdown and disposal paths are deterministic
-- [ ] Background work does not outlive destroyed dependencies
-- [ ] Partial failures do not leave inconsistent storage or database state
-- [ ] Stale temp state is cleaned on startup
+- [ ] shutdown and disposal paths are deterministic
+- [ ] background work does not outlive destroyed dependencies
+- [ ] partial failures do not leave inconsistent storage or database state
+- [ ] stale temp state is cleaned on startup
 
----
-
-## 2. IPC and Contract Safety
+## 2. IPC And Contract Safety
 
 - [ ] C++ and C# transport method enums are synchronized
-- [ ] Request/response ids and parsing rules are covered by tests
-- [ ] Timeouts and cancellation semantics are explicit
-- [ ] `scripts/ValidateProto.ps1` passes
+- [ ] request/response ids and parsing rules are covered by tests
+- [ ] timeouts and cancellation semantics are explicit
+- [ ] `scripts/ValidateProto.ps1` passes when transport changed
 
----
+## 3. Import And Conversion Safety
 
-## 3. Import and Conversion Safety
-
-- [ ] Cancellation is a distinct outcome from converter failure
-- [ ] No silent fallback to storing the original FB2 on conversion failure
-- [ ] Probable duplicates require explicit user consent
-- [ ] Rollback semantics are explicit and tested
-
----
+- [ ] cancellation is distinct from converter failure
+- [ ] no silent fallback to storing the original FB2 on conversion failure
+- [ ] probable duplicates require explicit user consent
+- [ ] rollback semantics are explicit and tested
 
 ## 4. Unicode Correctness
 
-- [ ] Non-UTF-8 encodings (e.g., Windows-1251) handled in parsers
-- [ ] Storage and search paths handle Cyrillic correctly
-- [ ] UI source strings use UTF-8
-
----
+- [ ] non-UTF-8 encodings (for example Windows-1251) are handled where required
+- [ ] storage and search paths handle Cyrillic correctly
+- [ ] UI source strings remain valid UTF-8 / Unicode text
 
 ## 5. Test Quality
 
-- [ ] Tests cover behavior and user-visible outcomes, not just call counts
-- [ ] Strong integration tests are few but protect critical cross-layer paths
-- [ ] Fake services model realistic failure outcomes
-- [ ] No decorative tests that only restate implementation details
-- [ ] `build → test` is sequential (not parallel)
-
----
+- [ ] tests cover behavior and user-visible outcomes, not just call counts
+- [ ] strong integration tests are few but protect critical cross-layer paths
+- [ ] fake services model realistic failure outcomes
+- [ ] no decorative tests that only restate implementation details
+- [ ] build -> test execution stayed sequential
 
 ## 6. Logging
 
-- [ ] Startup and shutdown are logged with actionable context
+- [ ] startup and shutdown are logged with actionable context
 - [ ] IPC boundaries emit meaningful log entries
-- [ ] Long-running jobs log progress
-- [ ] Failure and recovery paths are diagnosable from logs alone
-- [ ] Routine polling does not flood logs
-
----
+- [ ] long-running jobs log progress
+- [ ] failure and recovery paths are diagnosable from logs alone
+- [ ] routine polling does not flood logs
 
 ## 7. Doc Drift Check
 
-Verify these files match implemented reality:
+Verify these match implemented reality:
 
 - [ ] `docs/Librova-Product.md`
 - [ ] `docs/Librova-Architecture.md`
-- [ ] `docs/backlog.yaml` (open tasks; run `python scripts/backlog.py list` and use `$backlog-update` skill to close any that are done)
-- [ ] `docs/ManualUiTestScenarios.md` (Russian, UI labels in English as-is)
+- [ ] `docs/CodebaseMap.md`
+- [ ] `docs/backlog.yaml`
+- [ ] `docs/ManualUiTestScenarios.md`
+- [ ] relevant file under `docs/manual-tests/` when a UI scenario changed
 - [ ] `AGENTS.md`
 
-If any file disagrees with implemented reality, fix it before closing the review pass.
+If any of these drifted, fix them immediately using the relevant doc owner from `AGENTS.md` instead of leaving follow-up cleanup behind.
 
----
+## 8. Release Readiness
 
-## 8. MVP Release Readiness Criteria (from Backlog)
-
-- [ ] `Debug` and `Release` validation both green
-- [ ] Manual UI test scenarios walked through successfully
-- [ ] No critical regressions in: startup, import, browser, export, delete, settings
-- [ ] Logs are actionable enough to diagnose startup and runtime problems
-- [ ] Any remaining open backlog items are intentionally scheduled for a future release rather than being accidental 1.0 drift
+- [ ] `Debug` and `Release` validation are complete when code changed
+- [ ] required manual UI scenarios were walked through
+- [ ] no critical regressions remain in startup, import, browser, export, delete, or settings
+- [ ] logs are actionable enough to diagnose startup and runtime problems
+- [ ] remaining open backlog items are intentionally scheduled, not accidental drift

@@ -2,6 +2,8 @@
 
 This document defines what kinds of tests the project should add and when.
 
+This file is a repository policy reference, not a per-task checklist. Use it together with `AGENTS.md`, `docs/CodebaseMap.md`, and the relevant skill for the slice you are touching.
+
 ## 1. Core Principles
 
 - Prefer the cheapest test that still protects the real risk.

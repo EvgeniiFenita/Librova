@@ -1,59 +1,51 @@
 # Librova UI — Local Context
 
-`apps/Librova.UI/` contains the C# / .NET / Avalonia UI layer.  
-This layer is responsible for windowing, user interactions, dialogs, ViewModels, and UI-facing services.  
-It communicates with `Librova.Core` exclusively via Protobuf over named pipes.
+This file is for `apps/Librova.UI/`-specific context only.
 
----
+- For global repository rules, workflow, and document ownership, see the root `AGENTS.md`.
+- For the canonical style guide, use `$code-style` and `docs/engineering/CodeStyleGuidelines.md`.
+- For UI shell layout, tokens, and component rules, use `docs/UiDesignSystem.md`.
 
-## C# Naming
+## Local Scope
 
-- Public types, methods, properties, enums: `PascalCase`
-- Parameters and locals: `camelCase`
-- Private fields: `_camelCase` — `_importService`, `_logger`
-- Prefer file-scoped namespaces
+`apps/Librova.UI/` contains the C# / .NET / Avalonia UI layer.
 
-## ViewModel Rules
+- it owns windows, dialogs, ViewModels, and UI-facing services
+- it talks to `Librova.Core` only through the protobuf-over-pipes transport
+- it should stay free of database and native-domain logic
+
+## ViewModel And UI Boundaries
 
 ViewModels must **not**:
-- Access SQLite or native libraries directly
-- Bypass the IPC transport layer
-- Hold domain logic
 
-Use async end-to-end for UI-triggered operations that can block. Avoid `async void` except for true event handlers. Keep code-behind thin — UI behavior belongs in ViewModels, not in `.axaml.cs` files.
+- access SQLite or native libraries directly
+- bypass the IPC transport layer
+- hold domain logic that belongs in the core
 
-## UI Design System
+Use async end-to-end for UI-triggered operations that can block. Keep code-behind thin — `.axaml.cs` files are for view wiring, not business logic.
 
-Read `docs/UiDesignSystem.md` before any colour, typography, layout, or component change.  
-Warm Library palette: base `#0D0A07`, accent amber `#F5A623`, text cream `#F5EDD8`.  
-Or use the `$win-desktop-design` skill for full design guidance.
+## UI Design References
 
-## Build and Test (managed)
+- `docs/UiDesignSystem.md` is the canonical Librova UI reference.
+- `$win-desktop-design` helps with layout and UX reasoning, but it must not override Librova-specific design tokens without updating the design-system doc.
+
+## Managed Quick Loop
 
 ```powershell
-# Build UI app
 dotnet build apps\Librova.UI\Librova.UI.csproj -c Debug
-
-# Build and run managed tests
 dotnet test tests\Librova.UI.Tests\Librova.UI.Tests.csproj -c Debug
 
-# Managed only via script
+# Or use the repo script
 .\Run-Tests.ps1 -SkipNative
-
-# Build everything and launch the app
-.\Run-Librova.ps1
-.\Run-Librova.ps1 -FirstRun    # first-run setup screen
 ```
 
-## Manual Test Scenarios
+For the full build -> test workflow, including sequential validation rules, follow the root `AGENTS.md`.
 
-When a UI workflow changes, update `docs/ManualUiTestScenarios.md`.
+## Manual Test Docs
 
-Format rules:
-- Language: **Russian**
-- Structure: numbered `## N. <Feature Name>` sections
-- Each step on its own numbered line followed by `Ожидаемое поведение:` block
-- UI control names appear in **English** exactly as on screen (e.g. `Browse...`, `Continue`, `Import`)
-- Append new sections at the end; do not restructure existing ones
+When a UI workflow changes:
 
-Do not load the full file as upfront context — open it only when appending or editing a specific section.
+1. update the relevant file under `docs/manual-tests/`
+2. add or update the registry row in `docs/ManualUiTestScenarios.md`
+
+Detailed scenario text must stay in Russian, while UI labels remain in English exactly as shown in the application.

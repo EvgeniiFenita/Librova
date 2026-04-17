@@ -5,66 +5,72 @@ description: Code style reference for Librova. Use when writing new C++, C#, Pro
 
 # Code Style Reference
 
-Full authoritative rules: `docs/engineering/CodeStyleGuidelines.md`.  
-Read that file when you need full detail. This skill covers only the **project-specific rules that differ from common defaults** — the ones most likely to be missed.
+## Goal
 
----
+Resolve Librova-specific style questions quickly and defer to the full canonical guide when the short reminders are not enough.
 
-## C++ — Non-Obvious Project Rules
+## When to Use
 
-### Type Name Prefixes (mandatory)
+- use this skill when naming, formatting, or structure is unclear
+- use this skill during review when a rule might differ from common ecosystem defaults
+- do **not** use this as a replacement for `docs/engineering/CodeStyleGuidelines.md`; that file remains canonical
+
+## Canonical Source
+
+Full authoritative rules: `docs/engineering/CodeStyleGuidelines.md`.
+
+This skill only highlights the rules most likely to be missed.
+
+## Most-Missed Rules
+
+### C++ type prefixes
 
 | Kind | Prefix | Example |
-|------|--------|---------|
+|---|---|---|
 | Class | `C` | `CImportService` |
 | Interface | `I` | `IBookRepository` |
 | Struct | `S` | `SBookRecord` |
 | Enum | `E` | `EImportResult` |
 
-### Brace Style: Allman (NOT K&R)
+### C++ formatting
+
+- Allman braces, not K&R
+- member variables use `m_`
+- nested namespace syntax is preferred
+
+Correct:
 
 ```cpp
-// Correct
 if (isDuplicate)
 {
     return result;
 }
 ```
 
-### Member Variables
-
-- Class members: `m_` prefix — `m_repository`, `m_logger`
-- Plain DTO / value-object structs: `m_` may be omitted
-
-### Namespaces
+Incorrect:
 
 ```cpp
-namespace Librova::Core::Import {
-
-class CImportService
-{
-};
-
-} // namespace Librova::Core::Import
+if (isDuplicate) {
+    return result;
+}
 ```
 
-### Unicode and Path
+### C# private fields
 
-All UTF-8 ↔ wide ↔ `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`.  
-Never add local `WideCharToMultiByte` / `MultiByteToWideChar` / `generic_u8string` helpers.
+- private fields use `_camelCase`
+- public types, methods, properties, and enums use `PascalCase`
 
----
+### Unicode and path handling
 
-## C# Private Fields
+- route UTF-8 / wide / path conversions through `libs/Unicode/UnicodeConversion.*`
+- never add local `WideCharToMultiByte`, `MultiByteToWideChar`, or `generic_u8string` helpers
 
-`_camelCase` — `_importService`, `_logger` (differs from C++ `m_` convention).
+### Proto naming
 
----
+- message and enum names: `PascalCase`
+- field names: `snake_case`
+- helper names must reflect actual ownership and return type; do not use names like `*View` for owning UTF-8 strings
 
-## Protobuf — One Non-Obvious Rule
+## If You Need More Than This
 
-Helper names must reflect actual ownership and return type. Do not use names like `*View` for functions that return owning UTF-8 strings.
-
----
-
-For everything else (class structure, includes, error handling, testing style, file naming, comments, Python) — read `docs/engineering/CodeStyleGuidelines.md`.
+Read `docs/engineering/CodeStyleGuidelines.md` before making style-sensitive edits in unfamiliar code.

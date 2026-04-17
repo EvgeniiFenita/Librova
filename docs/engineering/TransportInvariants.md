@@ -2,6 +2,12 @@
 
 This document captures the invariants that keep the C++ and C# IPC surfaces in sync.
 
+> **Role of this document**: use it for transport rules and verification policy.
+>
+> **Method inventory and mapping points**: see `docs/CodebaseMap.md` §5 IPC Boundary.
+>
+> **Ordered implementation procedure**: use the `$transport-rpc` skill.
+
 ## 1. Protobuf Rules
 
 - Treat `proto/import_jobs.proto` as append-only by default.
@@ -24,6 +30,7 @@ This document captures the invariants that keep the C++ and C# IPC surfaces in s
 Whenever a new RPC is added, update all of these in one checkpoint:
 
 - `proto/import_jobs.proto`
+- `docs/CodebaseMap.md` §5 IPC Boundary
 - native proto mapping
 - native service adapter
 - native pipe method enum and validation

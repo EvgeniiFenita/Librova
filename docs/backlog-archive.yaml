@@ -1273,3 +1273,11 @@ tasks:
   note: 'ProgressBar switched to deterministic mode: IsProgressIndeterminate and ProgressValue properties
     added to ImportJobsViewModel, bound in ImportView.axaml; indeterminate during pre-scan, percentage-driven
     once TotalEntries is known.'
+- id: 155
+  summary: audit and normalize repository documentation for AI agent workflows
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: normalized documentation hierarchy, aligned local agent docs and skills with the CodebaseMap/manual-test
+    registry model, and fixed stale planning and transport guidance

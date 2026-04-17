@@ -1,90 +1,101 @@
-# Librova — Execution Plan Template (ExecPlan)
+# Librova — Execution Plan Template
 
-This file defines the ExecPlan format for complex Librova tasks that span multiple sessions
-or cross multiple layers. Codex should create a task-specific plan file for any non-trivial
-feature or stabilization effort, following this skeleton.
+This file defines the plan shape for complex Librova work that spans multiple phases,
+multiple sessions, or multiple architectural layers.
 
-> **When to create an ExecPlan:** Any task that touches more than one architectural layer,
-> requires multiple sessions, or has explicit "done when" criteria that span C++ and C# sides.
+Use it as a **template reference** only.
+
+- For an active Copilot / Codex task, keep the live plan in the session `plan.md`.
+- Do **not** create repository markdown planning files for ordinary task execution unless the user explicitly asks for one.
+- Do **not** use the plan as a status tracker; operational task state belongs in the backlog and session todo tracking.
+
+> **When to create a plan:** Any task that touches more than one architectural layer, requires multiple sessions, or has explicit "done when" criteria spanning both native and managed sides.
 
 ---
 
-## ExecPlan Skeleton
-
-Copy this template to `.agent/plans/<task-name>.md` and fill in the sections.
+## Recommended Structure
 
 ```markdown
-# ExecPlan: <Task Name>
+# Plan: <Task Name>
 
-## Scope
-What is in scope. What is explicitly out of scope.
+## Problem
+What is changing, why it matters, and what is explicitly out of scope.
 
-## Why It Matters
-Why this task closes a real backlog gap (reference the backlog item id, e.g. `python scripts/backlog.py show <id>`).
+## Backlog Link
+Reference the active backlog item, for example:
+`python scripts/backlog.py show <id>`
 
-## Steps
+## Approach
+Short description of the intended implementation direction.
 
-### Phase 1: <Phase Name>
-- [ ] Step 1
-- [ ] Step 2
+## Phases
 
-### Phase 2: <Phase Name>
-- [ ] Step 1
-- [ ] Step 2
+### Phase 1: <Name>
+- outcome
+- key files or modules
+
+### Phase 2: <Name>
+- outcome
+- key files or modules
 
 ## Done When
-Concrete, verifiable criteria. Examples:
+Concrete verification criteria, for example:
 - Debug and Release build pass
-- Native tests (Catch2) green
-- Managed tests (xUnit) green
-- scripts/ValidateProto.ps1 passes
-- Manual UI scenario X walks through successfully
-- docs/ updated to match implemented reality
+- Native tests green
+- Managed tests green
+- `scripts/ValidateProto.ps1` passes after proto changes
+- relevant manual UI scenario completed when the workflow is user-visible
+- docs match implemented reality
 
-## Related Files
-- docs/backlog.yaml (item id: ...)
-- docs/Librova-Architecture.md (section: ...)
+## References
+- `docs/CodebaseMap.md`
+- `docs/Librova-Architecture.md`
+- `docs/engineering/TestStrategy.md`
+- relevant skill(s)
 ```
 
 ---
 
-## Example: Series and Genres ExecPlan
+## Example
 
 ```markdown
-# ExecPlan: Series and Genres End-to-End
+# Plan: Series And Genres End-To-End
 
-## Scope
-Add series and genres as first-class metadata:
-parser output → persistence → transport contracts → browser filter → details panel.
+## Problem
+Expose series and genres from parser output through persistence, transport, and UI filtering.
 Out of scope: ratings, shelves, reading lists.
 
-## Why It Matters
-Closes the open "series and genres" backlog item (see `python scripts/backlog.py show <id>`).
+## Backlog Link
+`python scripts/backlog.py show <id>`
 
-## Steps
+## Approach
+Implement a single vertical slice: parser output -> database -> proto -> UI filters/details.
 
-### Phase 1: Parser and Persistence
-- [ ] Extend FB2 and EPUB parsers to extract series/genres fields
-- [ ] Extend SQLite schema (additive migration)
-- [ ] Update FTS5 index if genres need text search
+## Phases
+
+### Phase 1: Parser And Persistence
+- extend FB2 and EPUB parsers
+- extend SQLite schema and repositories
+- update any FTS coverage if required
 
 ### Phase 2: Transport
-- [ ] Follow $transport-rpc skill to add new proto fields and pipe methods
-- [ ] scripts/ValidateProto.ps1 passes
+- follow `$transport-rpc` for new proto fields and transport plumbing
+- regenerate / validate proto changes
 
 ### Phase 3: UI
-- [ ] Extend ViewModel for details panel
-- [ ] Add genre/series filter to browser
-- [ ] Update ManualUiTestScenarios.md (Russian)
+- extend ViewModels and binding
+- update the relevant file under `docs/manual-tests/`
+- add the registry row in `docs/ManualUiTestScenarios.md`
 
 ## Done When
 - Debug and Release build pass
-- All Catch2 and xUnit tests green
-- Genre and series data visible in details panel
-- Browser filter by series/genre works end-to-end
-- Manual UI scenario walked through
+- Catch2 and xUnit tests green
+- series and genres visible in `Book Details`
+- browser filtering works end-to-end
+- documentation matches the implementation
 
-## Related Files
-- docs/backlog.yaml (open item: series and genres)
-- docs/Librova-Architecture.md (Section 5: Search Model)
+## References
+- `docs/backlog.yaml`
+- `docs/CodebaseMap.md`
+- `docs/Librova-Architecture.md`
 ```
