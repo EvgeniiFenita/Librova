@@ -357,3 +357,71 @@ TEST_CASE("Managed file storage cleans staging directory when preparation fails"
 
     REQUIRE_FALSE(std::filesystem::exists(expectedStagingDirectory));
 }
+
+TEST_CASE("Managed file storage CommitImport overwrites stale cover at destination", "[managed-storage]")
+{
+    // Regression: destination collisions — a stale cover left by a prior failed import
+    // at the final cover path must be overwritten, not cause CommitImport to abort.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-cover-overwrite");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+    const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
+
+    WriteTextFile(sourceBookPath, "epub-content");
+    WriteTextFile(sourceCoverPath, "new-cover-content");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {91},
+        .Format = Librova::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath,
+        .CoverSourcePath = sourceCoverPath
+    });
+
+    REQUIRE(prepared.FinalCoverPath.has_value());
+
+    // Plant a stale file at the final cover destination to simulate a prior partial commit.
+    std::filesystem::create_directories(prepared.FinalCoverPath->parent_path());
+    WriteTextFile(*prepared.FinalCoverPath, "stale-cover-content");
+
+    // CommitImport must succeed and replace the stale cover.
+    REQUIRE_NOTHROW(storage.CommitImport(prepared));
+
+    REQUIRE(std::filesystem::exists(prepared.FinalBookPath));
+    REQUIRE(std::filesystem::exists(*prepared.FinalCoverPath));
+    REQUIRE(ReadTextFile(*prepared.FinalCoverPath) == "new-cover-content");
+}
+
+TEST_CASE("Managed file storage CommitImport succeeds via copy+delete when staging and library share a root", "[managed-storage]")
+{
+    // Regression guard for #149: MoveFile must not abort a book commit when the
+    // atomic rename fails. Here staging and library are under the same sandbox root
+    // (same device, rename always works) — this verifies that the refactored MoveFile
+    // still produces the correct final layout whether it took the rename or copy+delete path.
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-movefile");
+    const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
+    const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.png";
+
+    WriteTextFile(sourceBookPath, "movefile-book");
+    WriteTextFile(sourceCoverPath, "movefile-cover");
+
+    Librova::ManagedStorage::CManagedFileStorage storage(
+        sandbox.GetPath() / "Library",
+        BuildManagedStorageStagingRoot(sandbox));
+    const Librova::Domain::SPreparedStorage prepared = storage.PrepareImport({
+        .BookId = {93},
+        .Format = Librova::Domain::EBookFormat::Epub,
+        .SourcePath = sourceBookPath,
+        .CoverSourcePath = sourceCoverPath
+    });
+
+    storage.CommitImport(prepared);
+
+    REQUIRE(std::filesystem::exists(prepared.FinalBookPath));
+    REQUIRE(prepared.FinalCoverPath.has_value());
+    REQUIRE(std::filesystem::exists(*prepared.FinalCoverPath));
+    REQUIRE(ReadTextFile(prepared.FinalBookPath) == "movefile-book");
+    REQUIRE(ReadTextFile(*prepared.FinalCoverPath) == "movefile-cover");
+    REQUIRE_FALSE(std::filesystem::exists(prepared.StagedBookPath));
+}

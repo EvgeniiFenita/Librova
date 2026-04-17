@@ -97,17 +97,6 @@ tasks:
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
     '
-- id: 149
-  summary: fix intermittent cover file move failures during import
-  status: Open
-  type: Bug
-  priority: Major
-  milestone: '1.1'
-  note: the analyzed NAS-hosted import run logged 4 per-book failures where cover persistence aborted
-    the whole book import while moving the extracted cover from the local runtime workspace into the managed
-    object shard under Objects/<aa>/<bb>/...cover.<ext>; investigate file-handle ownership, temp cleanup
-    ordering, destination collisions, and NAS rename semantics, then add a regression test so cover finalization
-    cannot fail a book after metadata parsing has already succeeded.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open

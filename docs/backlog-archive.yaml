@@ -1245,3 +1245,14 @@ tasks:
   note: New libraries now use a single hash-sharded Objects tree with side-by-side book and cover objects,
     runtime/trash/bootstrap paths were updated, and tests/docs were migrated off the legacy Books/Covers
     layout.
+- id: 149
+  summary: fix intermittent cover file move failures during import
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: 'Fixed by adding copy+delete fallback in MoveFile: when std::filesystem::rename fails (e.g. ERROR_NOT_SAME_DEVICE
+    — local staging vs NAS library), fall back to copy_file+remove so CommitImport succeeds. Added Info
+    log on fallback, Warn on source-removal failure. All error messages now include the actual OS error
+    string. Two regression tests added: overwrite of stale cover at destination, and full commit layout
+    verification with the refactored MoveFile.'

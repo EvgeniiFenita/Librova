@@ -25,7 +25,8 @@ void EnsureDirectory(const std::filesystem::path& path)
     if (errorCode)
     {
         throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
+            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path)
+            + ": " + errorCode.message());
     }
 }
 
@@ -121,16 +122,67 @@ void LogRestoreFailureIfInitialized(
 
 void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::path& destinationPath)
 {
-    std::error_code errorCode;
-    std::filesystem::rename(sourcePath, destinationPath, errorCode);
+    std::error_code renameError;
+    std::filesystem::rename(sourcePath, destinationPath, renameError);
 
-    if (errorCode)
+    if (!renameError)
+    {
+        return;
+    }
+
+    // std::filesystem::rename (MoveFileExW) fails across filesystem boundaries,
+    // e.g. when the staging root is on a local drive and the library is on NAS.
+    // Fall back to copy + delete so the import succeeds in that configuration.
+    if (Librova::Logging::CLogging::IsInitialized())
+    {
+        try
+        {
+            Librova::Logging::Info(
+                "MoveFile: atomic rename failed ({}), falling back to copy+delete. src='{}' dst='{}'.",
+                renameError.message(),
+                Librova::Unicode::PathToUtf8(sourcePath),
+                Librova::Unicode::PathToUtf8(destinationPath));
+        }
+        catch (...)
+        {
+        }
+    }
+
+    std::error_code copyError;
+    const bool copied = std::filesystem::copy_file(
+        sourcePath,
+        destinationPath,
+        std::filesystem::copy_options::overwrite_existing,
+        copyError);
+
+    if (!copied || copyError)
     {
         throw std::runtime_error(
             std::string{"Failed to move file from "}
             + Librova::Unicode::PathToUtf8(sourcePath)
             + " to "
-            + Librova::Unicode::PathToUtf8(destinationPath));
+            + Librova::Unicode::PathToUtf8(destinationPath)
+            + ": rename failed ("
+            + renameError.message()
+            + "), copy fallback also failed ("
+            + copyError.message()
+            + ")");
+    }
+
+    std::error_code removeError;
+    std::filesystem::remove(sourcePath, removeError);
+    if (removeError && Librova::Logging::CLogging::IsInitialized())
+    {
+        try
+        {
+            Librova::Logging::Warn(
+                "MoveFile: copy succeeded but source removal failed — staging cleanup will handle it. src='{}' err='{}'.",
+                Librova::Unicode::PathToUtf8(sourcePath),
+                removeError.message());
+        }
+        catch (...)
+        {
+        }
     }
 }
 
@@ -149,7 +201,8 @@ void CopyFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
             std::string{"Failed to copy file from "}
             + Librova::Unicode::PathToUtf8(sourcePath)
             + " to "
-            + Librova::Unicode::PathToUtf8(destinationPath));
+            + Librova::Unicode::PathToUtf8(destinationPath)
+            + ": " + errorCode.message());
     }
 }
 
