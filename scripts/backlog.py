@@ -34,7 +34,7 @@ except ImportError:
     print("ERROR: pyyaml is not installed. Run: pip install pyyaml", file=sys.stderr)
     sys.exit(1)
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+# -- Paths -------------------------------------------------------------------
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT   = SCRIPT_DIR.parent
@@ -42,7 +42,7 @@ DOCS_DIR    = REPO_ROOT / "docs"
 BACKLOG_FILE  = DOCS_DIR / "backlog.yaml"
 ARCHIVE_FILE  = DOCS_DIR / "backlog-archive.yaml"
 
-# ── Constants ─────────────────────────────────────────────────────────────────
+# -- Constants ----------------------------------------------------------------
 
 VALID_STATUSES    = {"Open", "Blocked", "Needs Reproduction"}
 VALID_TYPES       = {"Feature", "Bug"}
@@ -50,7 +50,7 @@ VALID_PRIORITIES  = ["Critical", "Major", "Minor", "Low"]
 PRIORITY_ORDER    = {p: i for i, p in enumerate(VALID_PRIORITIES)}
 ACTIVE_STATUSES   = VALID_STATUSES  # alias for readability
 
-# ── YAML I/O ──────────────────────────────────────────────────────────────────
+# -- YAML I/O -----------------------------------------------------------------
 
 def _load(path: Path) -> dict:
     if not path.exists():
@@ -83,7 +83,7 @@ def save_backlog(data: dict) -> None:
 def save_archive(data: dict) -> None:
     _save(ARCHIVE_FILE, data)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def die(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
@@ -109,9 +109,9 @@ def fmt_task(t: dict, wide: bool = False) -> str:
 
 
 def header(title: str) -> str:
-    return f"\n{'─'*70}\n  {title}\n{'─'*70}"
+    return f"\n{'-'*70}\n  {title}\n{'-'*70}"
 
-# ── Commands ──────────────────────────────────────────────────────────────────
+# -- Commands -----------------------------------------------------------------
 
 def cmd_list(args: list[str]) -> None:
     opts = parse_opts(args)
@@ -148,11 +148,11 @@ def cmd_list(args: list[str]) -> None:
     print(header(f"Open Backlog  ({len(filtered)} tasks)"))
     col = "  #id    [Priority ] [Type   ] [Status             ] [Milestone   ]  Summary"
     print(f"\n{col}")
-    print("  " + "─" * 100)
+    print("  " + "-" * 100)
     for prio in VALID_PRIORITIES:
         group = by_priority[prio]
         if group:
-            print(f"\n  ── {prio} ──")
+            print(f"\n  -- {prio} --")
             for t in group:
                 print(fmt_task(t))
     print()
@@ -175,7 +175,7 @@ def cmd_show(args: list[str]) -> None:
     else:
         print(f"\n  Task #{task_id}")
 
-    print(f"  {'─'*60}")
+    print(f"  {'-'*60}")
     print(f"  Summary  : {t['summary']}")
     print(f"  Status   : {t['status']}")
     print(f"  Type     : {t['type']}")
@@ -231,7 +231,7 @@ def cmd_add(args: list[str]) -> None:
     data["tasks"] = tasks
     save_backlog(data)
 
-    print(f"\n  ✓ Added task #{new_id}: {summary}")
+    print(f"\n  [OK] Added task #{new_id}: {summary}")
     print(f"    Priority: {priority}  |  Type: {ttype}  |  Milestone: {milestone}\n")
 
 
@@ -274,7 +274,7 @@ def cmd_close(args: list[str]) -> None:
     if not in_archive:
         die(f"BUG: #{task_id} not found in archive after close!")
 
-    print(f"\n  ✓ Closed task #{task_id}: {task['summary']}")
+    print(f"\n  [OK] Closed task #{task_id}: {task['summary']}")
     print(f"    Note: {note}\n")
 
 
@@ -323,7 +323,7 @@ def cmd_edit(args: list[str]) -> None:
         changes.append("note")
 
     save_backlog(data)
-    print(f"\n  ✓ Updated task #{task_id}: {', '.join(changes)} changed\n")
+    print(f"\n  [OK] Updated task #{task_id}: {', '.join(changes)} changed\n")
 
 
 def cmd_next(args: list[str]) -> None:
@@ -427,20 +427,20 @@ def cmd_validate(args: list[str]) -> None:
     print(f"  Last id       : {declared_last}")
 
     if errors:
-        print(f"\n  ✗ {len(errors)} error(s):")
+        print(f"\n  [ERROR] {len(errors)} error(s):")
         for e in errors:
-            print(f"    • {e}")
+            print(f"    - {e}")
     if warnings:
-        print(f"\n  ⚠  {len(warnings)} warning(s):")
+        print(f"\n  [WARN] {len(warnings)} warning(s):")
         for w in warnings:
-            print(f"    • {w}")
+            print(f"    - {w}")
     if not errors and not warnings:
-        print("\n  ✓ All checks passed\n")
+        print("\n  [OK] All checks passed\n")
     else:
         print()
         sys.exit(1)
 
-# ── Argument parsing (no external deps) ──────────────────────────────────────
+# -- Argument parsing (no external deps) --------------------------------------
 
 def parse_opts(args: list[str]) -> dict[str, str]:
     """Parse --key=value or --key value pairs."""
@@ -472,7 +472,7 @@ def require_opt(opts: dict, key: str, msg: str) -> str:
         die(msg)
     return v
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# -- Entry point ---------------------------------------------------------------
 
 COMMANDS = {
     "list":     cmd_list,

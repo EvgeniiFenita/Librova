@@ -19,6 +19,7 @@
 #include "Application/StructuredProgressMapper.hpp"
 #include "ImportSourceExpander/ImportDiagnostics.hpp"
 #include "ImportSourceExpander/ImportSourceExpander.hpp"
+#include "Importing/ImportDiagnosticText.hpp"
 #include "Importing/ImportPerfTracker.hpp"
 #include "Importing/ParallelImportHelpers.hpp"
 #include "Importing/WriterDispatchingRepository.hpp"
@@ -35,43 +36,9 @@ namespace {
     return value;
 }
 
-[[nodiscard]] std::string JoinWarningsAndError(
-    const std::vector<std::string>& warnings,
-    const std::string& error)
-{
-    std::string combined;
-
-    for (const auto& warning : warnings)
-    {
-        if (warning.empty())
-        {
-            continue;
-        }
-
-        if (!combined.empty())
-        {
-            combined += " | ";
-        }
-
-        combined += warning;
-    }
-
-    if (!error.empty())
-    {
-        if (!combined.empty())
-        {
-            combined += " | ";
-        }
-
-        combined += error;
-    }
-
-    return combined;
-}
-
 [[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
 {
-    return JoinWarningsAndError(
+    return Librova::Importing::CImportDiagnosticText::JoinWarningsAndError(
         result.Warnings,
         result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
 }
@@ -189,9 +156,7 @@ void CleanupEntryWorkspaceNoThrow(
     RemovePathNoThrow(entriesRoot);
 }
 
-void CleanupWorkingDirectoryNoThrow(
-    const std::filesystem::path&,
-    const std::filesystem::path& workingDirectory) noexcept
+void CleanupWorkingDirectoryNoThrow(const std::filesystem::path& workingDirectory) noexcept
 {
     if (workingDirectory.empty())
     {
@@ -958,7 +923,7 @@ SImportResult CLibraryImportFacade::Run(
         catch (...) {}
     }
 
-    CleanupWorkingDirectoryNoThrow(m_libraryRoot, request.WorkingDirectory);
+    CleanupWorkingDirectoryNoThrow(request.WorkingDirectory);
 
     return result;
 }

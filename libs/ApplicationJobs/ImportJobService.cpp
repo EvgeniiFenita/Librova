@@ -1,5 +1,7 @@
 #include "ApplicationJobs/ImportJobService.hpp"
 
+#include <cassert>
+
 namespace Librova::ApplicationJobs {
 
 CImportJobService::CImportJobService(Librova::Jobs::CImportJobManager& jobManager)
@@ -59,9 +61,10 @@ EImportJobStatus CImportJobService::MapStatus(const Librova::Jobs::EJobStatus st
         return EImportJobStatus::RollingBack;
     case Librova::Jobs::EJobStatus::Compacting:
         return EImportJobStatus::Compacting;
+    default:
+        assert(false && "Unhandled Librova::Jobs::EJobStatus.");
+        return EImportJobStatus::Failed;
     }
-
-    return EImportJobStatus::Failed;
 }
 
 SImportJobSnapshot CImportJobService::MapSnapshot(

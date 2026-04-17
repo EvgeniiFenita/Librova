@@ -2,6 +2,7 @@ include(CTest)
 
 if(BUILD_TESTING)
     find_package(Catch2 CONFIG REQUIRED)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
     find_package(Stb REQUIRED)
     include(Catch)
 
@@ -10,6 +11,7 @@ if(BUILD_TESTING)
         TestImportJobClient.cpp
         TestImportJobService.cpp
         TestImportJobProtoMapper.cpp
+        TestImportDiagnosticText.cpp
         TestImportSourceExpander.cpp
         TestLibraryCatalogProtoMapper.cpp
         TestLibraryJobServiceAdapter.cpp
@@ -120,6 +122,26 @@ if(BUILD_TESTING)
         LibrovaCoreTests
         DISCOVERY_MODE POST_BUILD
         DISCOVERY_TIMEOUT 60
+    )
+
+    add_test(
+        NAME BacklogCliSupportsLegacyConsoleCodePage
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+            PYTHONIOENCODING=cp1252
+            ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/backlog.py
+            list
+    )
+
+    add_test(
+        NAME BacklogCliValidateSupportsLegacyConsoleCodePage
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+            PYTHONIOENCODING=cp1252
+            ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/backlog.py
+            validate
     )
 endif()
 

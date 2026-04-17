@@ -76,7 +76,13 @@ namespace {
     const DWORD attributes = GetFileAttributesW(path.c_str());
     if (attributes == INVALID_FILE_ATTRIBUTES)
     {
-        throw std::runtime_error("Failed to inspect filesystem attributes.");
+        const DWORD errorCode = GetLastError();
+        throw std::runtime_error(
+            "Failed to inspect filesystem attributes for '"
+            + Librova::Unicode::PathToUtf8(path)
+            + "' (Win32 error "
+            + std::to_string(errorCode)
+            + ").");
     }
 
     return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;

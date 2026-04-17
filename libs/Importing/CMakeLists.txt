@@ -1,4 +1,6 @@
 add_library(LibrovaImporting STATIC
+    ImportDiagnosticText.cpp
+    ImportDiagnosticText.hpp
     ImportPerfTracker.cpp
     ImportPerfTracker.hpp
     SingleFileImportCoordinator.cpp

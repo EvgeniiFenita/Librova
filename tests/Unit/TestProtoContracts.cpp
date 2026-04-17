@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <google/protobuf/descriptor.h>
 
 #include <string>
 
@@ -96,5 +97,24 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     REQUIRE(parsed.items(0).managed_file_name() == "book.epub");
     REQUIRE(parsed.items(0).cover_resource_available());
     REQUIRE(parsed.items(0).cover_file_extension() == "jpg");
+}
+
+TEST_CASE("Import error code keeps removed duplicate-decision value reserved", "[proto]")
+{
+    const auto* enumDescriptor = librova::v1::ErrorCode_descriptor();
+    REQUIRE(enumDescriptor != nullptr);
+    REQUIRE(enumDescriptor->FindValueByNumber(4) == nullptr);
+
+    bool hasReservedName = false;
+    for (int index = 0; index < enumDescriptor->reserved_name_count(); ++index)
+    {
+        if (enumDescriptor->reserved_name(index) == "ERROR_CODE_DUPLICATE_DECISION_REQUIRED")
+        {
+            hasReservedName = true;
+            break;
+        }
+    }
+
+    REQUIRE(hasReservedName);
 }
 

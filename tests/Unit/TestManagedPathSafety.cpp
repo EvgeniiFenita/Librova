@@ -131,4 +131,3 @@ TEST_CASE("Managed path safety removes a symlink under the library root without 
     REQUIRE(std::filesystem::exists(outsideRoot / "outside.tmp"));
 }
 
-

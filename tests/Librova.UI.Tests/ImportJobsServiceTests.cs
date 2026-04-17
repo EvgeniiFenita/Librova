@@ -1,10 +1,12 @@
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
+using Librova.UI.Logging;
 using System.IO.Compression;
 using Xunit;
 
 namespace Librova.UI.Tests;
 
+[Collection(UiLoggingCollection.Name)]
 public sealed partial class ImportJobsServiceTests
 {
     [Fact]
@@ -32,6 +34,56 @@ public sealed partial class ImportJobsServiceTests
                 TimeSpan.FromSeconds(2)
             ],
             client.WaitTimeouts);
+    }
+
+    [Fact]
+    public async Task Service_BoundsProgressLogVolume_WhenCountersChangeForEverySnapshot()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-import-service-log-volume",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sandboxRoot);
+        var logPath = Path.Combine(sandboxRoot, "ui.log");
+
+        try
+        {
+            UiLogging.ReinitializeForTests(logPath);
+
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var client = new ProgressLoggingImportJobClient(totalSnapshots: 50);
+            var service = new ImportJobsService(client);
+
+            var result = await service.WaitForCompletionAsync(
+                88UL,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromMilliseconds(50),
+                _ => { },
+                cancellation.Token);
+
+            Assert.NotNull(result);
+            Assert.Equal(ImportJobStatusModel.Completed, result.Snapshot.Status);
+
+            UiLogging.Shutdown();
+            var logText = await File.ReadAllTextAsync(logPath, cancellation.Token);
+            var progressLogCount = CountOccurrences(logText, "Import job in progress.");
+
+            Assert.InRange(progressLogCount, 1, 7);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
+            try
+            {
+                Directory.Delete(sandboxRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     [Fact]
@@ -501,6 +553,19 @@ public sealed partial class ImportJobsServiceTests
         writer.Write(text);
     }
 
+    private static int CountOccurrences(string text, string needle)
+    {
+        var count = 0;
+        var offset = 0;
+        while ((offset = text.IndexOf(needle, offset, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += needle.Length;
+        }
+
+        return count;
+    }
+
     private sealed class AdaptiveWaitImportJobClient : ImportJobClient
     {
         private int _waitCallCount;
@@ -576,6 +641,81 @@ public sealed partial class ImportJobsServiceTests
                     {
                         Code = Librova.V1.ErrorCode.Cancellation,
                         Message = "Import was cancelled."
+                    }
+                }
+            });
+        }
+    }
+
+    private sealed class ProgressLoggingImportJobClient : ImportJobClient
+    {
+        private readonly int _totalSnapshots;
+        private int _waitCallCount;
+
+        public ProgressLoggingImportJobClient(int totalSnapshots)
+            : base(@"\\.\pipe\Librova.UI.Tests.ProgressLogging")
+        {
+            _totalSnapshots = totalSnapshots;
+        }
+
+        public override Task<Librova.V1.WaitImportJobResponse> WaitAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            CancellationToken cancellationToken)
+        {
+            _waitCallCount++;
+            return Task.FromResult(new Librova.V1.WaitImportJobResponse
+            {
+                Completed = _waitCallCount > _totalSnapshots
+            });
+        }
+
+        public override Task<Librova.V1.GetImportJobSnapshotResponse> GetSnapshotAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var processedEntries = (ulong)_waitCallCount;
+            return Task.FromResult(new Librova.V1.GetImportJobSnapshotResponse
+            {
+                Snapshot = new Librova.V1.ImportJobSnapshot
+                {
+                    JobId = jobId,
+                    Status = Librova.V1.ImportJobStatus.Running,
+                    Percent = _waitCallCount,
+                    Message = "Importing",
+                    TotalEntries = 100,
+                    ProcessedEntries = processedEntries,
+                    ImportedEntries = processedEntries
+                }
+            });
+        }
+
+        public override Task<Librova.V1.GetImportJobResultResponse> GetResultAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new Librova.V1.GetImportJobResultResponse
+            {
+                Result = new Librova.V1.ImportJobResult
+                {
+                    Snapshot = new Librova.V1.ImportJobSnapshot
+                    {
+                        JobId = jobId,
+                        Status = Librova.V1.ImportJobStatus.Completed,
+                        Percent = 100,
+                        Message = "Completed",
+                        TotalEntries = 100,
+                        ProcessedEntries = (ulong)_totalSnapshots,
+                        ImportedEntries = (ulong)_totalSnapshots
+                    },
+                    Summary = new Librova.V1.ImportSummary
+                    {
+                        Mode = Librova.V1.ImportMode.Batch,
+                        TotalEntries = 100,
+                        ImportedEntries = (ulong)_totalSnapshots
                     }
                 }
             });

@@ -1256,3 +1256,11 @@ tasks:
     log on fallback, Warn on source-removal failure. All error messages now include the actual OS error
     string. Two regression tests added: overwrite of stale cover at destination, and full commit layout
     verification with the refactored MoveFile.'
+- id: 154
+  summary: fix review findings batch 1 from review_findings.md
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Fixed the review findings batch by hardening drag-drop validation, backlog CLI console encoding,
+    import diagnostics/logging behavior, and covering the regressions with native and managed tests.

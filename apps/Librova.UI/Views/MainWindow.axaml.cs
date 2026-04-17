@@ -59,9 +59,7 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        eventArgs.DragEffects = eventArgs.DataTransfer?.Contains(DataFormat.File) == true
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+        eventArgs.DragEffects = GetDropEffect(eventArgs.DataTransfer);
         eventArgs.Handled = true;
     }
 
@@ -79,27 +77,51 @@ internal sealed partial class MainWindow : Window
         }
 
         var sourcePaths = TryGetDroppedSourcePaths(eventArgs);
+        if (sourcePaths.Count == 0)
+        {
+            eventArgs.Handled = true;
+            return;
+        }
+
         await viewModel.Shell.ActivateImportSectionAsync();
         await viewModel.Shell.ImportJobs.ApplyDroppedSourcePathsAndStartAsync(sourcePaths);
         eventArgs.Handled = true;
     }
 
+    internal static DragDropEffects GetDropEffect(IDataTransfer? dataTransfer) =>
+        GetDropEffect(GetDroppedSourcePaths(dataTransfer));
+
+    internal static DragDropEffects GetDropEffect(IReadOnlyList<string> sourcePaths) =>
+        sourcePaths.Count > 0
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+
     private static IReadOnlyList<string> TryGetDroppedSourcePaths(DragEventArgs eventArgs)
+        => GetDroppedSourcePaths(eventArgs.DataTransfer);
+
+    internal static IReadOnlyList<string> GetDroppedSourcePaths(IDataTransfer? dataTransfer)
     {
-        var transfer = eventArgs.DataTransfer;
-        if (transfer is null || !transfer.Contains(DataFormat.File))
+        if (dataTransfer is null || !dataTransfer.Contains(DataFormat.File))
         {
             return [];
         }
 
-        var files = transfer.TryGetFiles();
+        return GetDroppedSourcePaths(dataTransfer.TryGetFiles());
+    }
+
+    internal static IReadOnlyList<string> GetDroppedSourcePaths(IEnumerable<IStorageItem>? files)
+    {
         if (files is null)
         {
             return [];
         }
 
-        return files
-            .Select(GetLocalPath)
+        return NormalizeDroppedSourcePaths(files.Select(GetLocalPath));
+    }
+
+    internal static IReadOnlyList<string> NormalizeDroppedSourcePaths(IEnumerable<string?> paths)
+    {
+        return paths
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Cast<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)

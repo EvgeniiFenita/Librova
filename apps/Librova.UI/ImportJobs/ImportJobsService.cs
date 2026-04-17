@@ -11,6 +11,8 @@ internal sealed class ImportJobsService : IImportJobsService
 {
     private static readonly TimeSpan RollingBackWaitTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan CompactingWaitTimeout = TimeSpan.FromSeconds(2);
+    private const int PercentLogStep = 10;
+    private const ulong ProcessedEntriesLogStep = 25;
 
     private readonly ImportJobClient _client;
 
@@ -156,8 +158,8 @@ internal sealed class ImportJobsService : IImportJobsService
     {
         ImportJobStatusModel? lastLoggedStatus = null;
         string? lastLoggedMessage = null;
-        ulong lastLoggedImported = ulong.MaxValue, lastLoggedFailed = ulong.MaxValue, lastLoggedSkipped = ulong.MaxValue;
-        int lastLoggedPercent = -1;
+        int lastLoggedPercentBucket = -1;
+        ulong lastLoggedProcessedBucket = ulong.MaxValue;
         var currentWaitTimeout = waitTimeout;
 
         while (true)
@@ -185,12 +187,13 @@ internal sealed class ImportJobsService : IImportJobsService
 
                 var statusChanged = snapshot.Status != lastLoggedStatus;
                 var messageChanged = !string.IsNullOrEmpty(snapshot.Message) && snapshot.Message != lastLoggedMessage;
-                var countersChanged = snapshot.ImportedEntries != lastLoggedImported
-                    || snapshot.FailedEntries != lastLoggedFailed
-                    || snapshot.SkippedEntries != lastLoggedSkipped
-                    || (int)snapshot.Percent != lastLoggedPercent;
+                var percentBucket = GetPercentLogBucket(snapshot.Percent);
+                var processedBucket = GetProcessedEntriesLogBucket(snapshot.ProcessedEntries);
+                var progressMilestoneChanged =
+                    percentBucket != lastLoggedPercentBucket
+                    || processedBucket != lastLoggedProcessedBucket;
 
-                if (statusChanged || messageChanged || countersChanged)
+                if (statusChanged || messageChanged || progressMilestoneChanged)
                 {
                     UiLogging.Information(
                         "Import job in progress. JobId={JobId} Status={Status} Percent={Percent} " +
@@ -205,10 +208,8 @@ internal sealed class ImportJobsService : IImportJobsService
 
                     lastLoggedStatus = snapshot.Status;
                     lastLoggedMessage = snapshot.Message;
-                    lastLoggedImported = snapshot.ImportedEntries;
-                    lastLoggedFailed = snapshot.FailedEntries;
-                    lastLoggedSkipped = snapshot.SkippedEntries;
-                    lastLoggedPercent = (int)snapshot.Percent;
+                    lastLoggedPercentBucket = percentBucket;
+                    lastLoggedProcessedBucket = processedBucket;
                 }
             }
         }
@@ -221,6 +222,12 @@ internal sealed class ImportJobsService : IImportJobsService
             ImportJobStatusModel.Compacting => CompactingWaitTimeout,
             _ => defaultWaitTimeout
         };
+
+    internal static int GetPercentLogBucket(double percent) =>
+        Math.Clamp((int)percent, 0, 100) / PercentLogStep;
+
+    internal static ulong GetProcessedEntriesLogBucket(ulong processedEntries) =>
+        processedEntries / ProcessedEntriesLogStep;
 
     public async Task<bool> CancelAsync(
         ulong jobId,

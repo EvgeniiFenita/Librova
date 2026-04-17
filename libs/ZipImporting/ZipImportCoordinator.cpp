@@ -22,49 +22,16 @@
 #include <BS_thread_pool.hpp>
 
 #include "Importing/ImportPerfTracker.hpp"
+#include "Importing/ImportDiagnosticText.hpp"
 #include "Importing/ParallelImportHelpers.hpp"
 #include "Logging/Logging.hpp"
 #include "Unicode/UnicodeConversion.hpp"
 
 namespace {
 
-[[nodiscard]] std::string JoinWarningsAndError(
-    const std::vector<std::string>& warnings,
-    const std::string& error)
-{
-    std::string combined;
-
-    for (const auto& warning : warnings)
-    {
-        if (warning.empty())
-        {
-            continue;
-        }
-
-        if (!combined.empty())
-        {
-            combined += " | ";
-        }
-
-        combined += warning;
-    }
-
-    if (!error.empty())
-    {
-        if (!combined.empty())
-        {
-            combined += " | ";
-        }
-
-        combined += error;
-    }
-
-    return combined;
-}
-
 [[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
 {
-    return JoinWarningsAndError(
+    return Librova::Importing::CImportDiagnosticText::JoinWarningsAndError(
         result.Warnings,
         result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
 }
