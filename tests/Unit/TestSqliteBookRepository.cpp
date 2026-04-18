@@ -10,11 +10,11 @@
 #include <thread>
 #include <unordered_set>
 
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 
 namespace {
 

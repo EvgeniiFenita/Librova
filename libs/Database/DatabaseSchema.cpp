@@ -1,4 +1,4 @@
-#include "DatabaseSchema/DatabaseSchema.hpp"
+#include "Database/DatabaseSchema.hpp"
 
 namespace Librova::DatabaseSchema {
 namespace {

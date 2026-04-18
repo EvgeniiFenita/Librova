@@ -5,9 +5,9 @@
 #include <fstream>
 
 #include "Application/LibraryCatalogFacade.hpp"
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 
 namespace {
 

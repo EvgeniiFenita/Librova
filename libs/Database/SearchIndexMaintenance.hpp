@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "Domain/Book.hpp"
-#include "Sqlite/SqliteConnection.hpp"
+#include "Database/SqliteConnection.hpp"
 
 namespace Librova::SearchIndex {
 

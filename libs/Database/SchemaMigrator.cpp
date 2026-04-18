@@ -1,11 +1,11 @@
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Database/SchemaMigrator.hpp"
 
 #include <format>
 #include <stdexcept>
 
-#include "DatabaseSchema/DatabaseSchema.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/DatabaseSchema.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 
 namespace Librova::DatabaseRuntime {
 namespace {

@@ -1,10 +1,10 @@
-#include "SearchIndex/SearchIndexMaintenance.hpp"
+#include "Database/SearchIndexMaintenance.hpp"
 
 #include <string>
 #include <vector>
 
 #include "Domain/MetadataNormalization.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SqliteStatement.hpp"
 
 namespace Librova::SearchIndex {
 namespace {

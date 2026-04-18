@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "Domain/MetadataNormalization.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 
 namespace Librova::BookDatabase {
 

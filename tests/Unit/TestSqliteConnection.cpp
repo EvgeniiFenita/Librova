@@ -6,9 +6,9 @@
 #include <system_error>
 #include <thread>
 
-#include "DatabaseSchema/DatabaseSchema.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/DatabaseSchema.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 
 TEST_CASE("Sqlite connection can apply schema migrations to a temporary database", "[sqlite]")
 {

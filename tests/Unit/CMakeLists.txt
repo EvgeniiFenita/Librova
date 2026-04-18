@@ -73,14 +73,12 @@ if(BUILD_TESTING)
             LibrovaApplication
             LibrovaApplicationClient
             LibrovaApplicationJobs
-            LibrovaBookDatabase
+            LibrovaDatabase
             LibrovaConverter
             LibrovaCoverProcessingStb
             LibrovaDomain
             LibrovaFoundation
             LibrovaCoreHost
-            LibrovaDatabaseRuntime
-            LibrovaDatabaseSchema
             LibrovaParsing
             LibrovaImportConversion
             LibrovaImporting
@@ -96,8 +94,6 @@ if(BUILD_TESTING)
             LibrovaProtoMapping
             LibrovaProtoServices
             LibrovaRecycleBin
-            LibrovaSearchIndex
-            LibrovaSqlite
             LibrovaStoragePlanning
             LibrovaZipImporting
     )

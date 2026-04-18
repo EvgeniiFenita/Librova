@@ -1,4 +1,4 @@
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -18,8 +18,8 @@
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
 #include "Domain/StorageEncoding.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::BookDatabase {

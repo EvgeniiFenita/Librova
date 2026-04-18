@@ -1,4 +1,4 @@
-#include "Sqlite/SqliteConnection.hpp"
+#include "Database/SqliteConnection.hpp"
 
 #include <cstdint>
 #include <stdexcept>

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "Domain/BookRepository.hpp"
-#include "Sqlite/SqliteConnection.hpp"
+#include "Database/SqliteConnection.hpp"
 
 namespace Librova::BookDatabase {
 

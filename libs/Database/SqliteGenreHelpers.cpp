@@ -1,10 +1,10 @@
-#include "SqliteGenreHelpers.hpp"
+#include "Database/SqliteGenreHelpers.hpp"
 
 #include <stdexcept>
 #include <unordered_set>
 
 #include "Domain/MetadataNormalization.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SqliteStatement.hpp"
 
 namespace Librova::BookDatabase {
 

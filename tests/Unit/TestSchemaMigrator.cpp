@@ -4,9 +4,9 @@
 #include <cstdint>
 #include <filesystem>
 
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
 
 TEST_CASE("Schema migrator applies schema and sets user version", "[database-runtime]")
 {

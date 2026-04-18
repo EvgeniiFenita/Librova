@@ -21,7 +21,7 @@ target_link_libraries(LibrovaImporting
         LibrovaImportConversion
         LibrovaParsing
     PRIVATE
-        LibrovaBookDatabase
+        LibrovaDatabase
 )
 
 target_compile_features(LibrovaImporting PUBLIC cxx_std_20)

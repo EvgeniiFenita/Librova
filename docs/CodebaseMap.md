@@ -82,7 +82,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
 | **Import Pipeline** | `libs/Importing/`, `libs/ZipImporting/`, `libs/ImportConversion/`, `libs/ImportSourceExpander/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion |
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
-| **Persistence** | `libs/BookDatabase/`, `libs/DatabaseRuntime/`, `libs/DatabaseSchema/`, `libs/Sqlite/`, `libs/SearchIndex/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
+| **Persistence** | `libs/Database/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
 | **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
 | **Conversion** | `libs/Converter/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
 | **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
@@ -130,11 +130,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `BookDatabase` | SQLite write and read repositories; FTS5 search; dedup queries | `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
-| `DatabaseRuntime` | Schema migration (version 0→1 only; other versions = incompatibility error) | `CSchemaMigrator` |
-| `DatabaseSchema` | SQL DDL as compile-time string constants | `CDatabaseSchema` |
-| `Sqlite` | RAII wrappers for SQLite connection and statement | `CSqliteConnection`, `CSqliteStatement` |
-| `SearchIndex` | FTS5 virtual table maintenance: insert, remove, rebuild, optimize | `CSearchIndexMaintenance` |
+| `Database` | SQLite RAII wrappers; SQL DDL constants; schema migration (v0→1); FTS5 index maintenance; SQLite book repositories; genre helpers | `CSqliteConnection`, `CSqliteStatement`, `CDatabaseSchema`, `CSchemaMigrator`, `CSearchIndexMaintenance`, `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
 
 ### Managed Storage
 
@@ -494,15 +490,15 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 ### Change the database schema
 **Use the `$sqlite` skill** for the current Librova-specific schema, query, FTS, and review checklist before editing the files below.
 
-- SQL DDL is in `libs/DatabaseSchema/DatabaseSchema.cpp`
-- Schema version enforcement is in `libs/DatabaseRuntime/SchemaMigrator.cpp`
+- SQL DDL is in `libs/Database/DatabaseSchema.cpp`
+- Schema version enforcement is in `libs/Database/SchemaMigrator.cpp`
 - If upgrading from version 1: add a migration branch, increment expected version, ensure it is non-destructive, document the decision
 - Tests: `tests/Unit/TestSchemaMigrator.cpp`
 
 ### Add a field to the book card (parser → UI)
 1. Add field to `SBookMetadata` in `libs/Domain/`
 2. Parse it in `CFb2Parser` and/or `CEpubParser`
-3. Persist it: add column in `libs/DatabaseSchema/`, update `CSqliteBookRepository` and `CSqliteBookQueryRepository`
+3. Persist it: add column in `libs/Database/DatabaseSchema.cpp`, update `CSqliteBookRepository` and `CSqliteBookQueryRepository`
 4. Expose via `IBookQueryRepository` + `GetBookDetails` response
 5. Add to proto `BookDetails` message
 6. Map in `CLibraryCatalogProtoMapper`
@@ -554,7 +550,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 |---|---|---|
 | `pugixml` | `libs/Parsing/` | XML parsing for FB2 and EPUB OPF metadata |
 | `libzip` | `libs/ZipImporting/` | ZIP archive enumeration and entry extraction |
-| `sqlite3` (+ fts5 feature) | `libs/Sqlite/`, `libs/BookDatabase/`, `libs/SearchIndex/` | Embedded relational database; FTS5 full-text search |
+| `sqlite3` (+ fts5 feature) | `libs/Database/` | Embedded relational database; FTS5 full-text search |
 | `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |
 | `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
 | `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |

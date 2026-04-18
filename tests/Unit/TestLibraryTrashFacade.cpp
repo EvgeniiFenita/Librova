@@ -6,8 +6,8 @@
 #include <fstream>
 
 #include "Application/LibraryTrashFacade.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 #include "Foundation/Logging.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 

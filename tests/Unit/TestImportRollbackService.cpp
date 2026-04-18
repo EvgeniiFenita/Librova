@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "Application/ImportRollbackService.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
 #include "Foundation/Logging.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"

@@ -11,11 +11,10 @@ target_link_libraries(LibrovaCoreHostApp
     PRIVATE
         LibrovaApplication
         LibrovaApplicationJobs
-        LibrovaBookDatabase
+        LibrovaDatabase
         LibrovaConverter
         LibrovaCoverProcessingStb
         LibrovaCoreHost
-        LibrovaDatabaseRuntime
         LibrovaFoundation
         LibrovaImporting
         LibrovaJobs

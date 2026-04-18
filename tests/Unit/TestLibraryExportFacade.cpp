@@ -6,8 +6,8 @@
 #include <stop_token>
 
 #include "Application/LibraryExportFacade.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 #include "Foundation/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 
