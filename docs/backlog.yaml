@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 159
+  last_assigned_id: 160
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -84,6 +84,17 @@ tasks:
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
     '
+- id: 160
+  summary: audit test isolation and enable safe parallel execution across native and managed suites
+  status: Open
+  type: Feature
+  priority: Major
+  milestone: '1.1'
+  note: Before enabling any parallel test execution, audit every C++ and C# test for shared files, temp
+    directories, managed library roots, ports/pipes, environment state, globals, singletons, static caches,
+    and output artifacts; eliminate collisions; make test workspaces deterministic and isolated; then
+    enable parallelism inside the native suite and between native and managed test runs in Run-Tests.ps1
+    without introducing flaky resource-conflict failures.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
