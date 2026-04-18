@@ -14,7 +14,7 @@ Navigation reference for agents and contributors working in the Librova reposito
 | Need to find where a class lives | §3 C++ Modules, §4 C# Modules |
 | Working on IPC / proto | §5 IPC Boundary, then `$transport-rpc` skill |
 | Working on import pipeline | §6 Import Pipeline Architecture |
-| Working on storage, DB, covers | §7 Storage & Persistence Model |
+| Working on storage, DB, covers | §7 Storage & Persistence Model; use `$sqlite` for schema / SQL / FTS work |
 | Unsure if a change is safe | §8 Critical Invariants |
 | Need to know where to go for a task | §9 Task Navigation |
 | Adding or reviewing code style | §11 → `$code-style` skill, `docs/CodeStyleGuidelines.md` |
@@ -498,6 +498,8 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 - Add test in `tests/Unit/Test<Format>Parser.cpp`
 
 ### Change the database schema
+**Use the `$sqlite` skill** for the current Librova-specific schema, query, FTS, and review checklist before editing the files below.
+
 - SQL DDL is in `libs/DatabaseSchema/DatabaseSchema.cpp`
 - Schema version enforcement is in `libs/DatabaseRuntime/SchemaMigrator.cpp`
 - If upgrading from version 1: add a migration branch, increment expected version, ensure it is non-destructive, document the decision
@@ -805,4 +807,3 @@ Bump `GetCurrentVersion()` in `DatabaseSchema.cpp` to match.
 - FB2 metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real libraries, including Windows-1251.
 - Duplicate detection rejects by default; the UI may explicitly override and store the new item as a separate managed record via `IBookRepository::ForceAdd`.
 - Conversion cancellation is never treated as ordinary converter failure; the import entry does not silently downgrade to storing the original source.
-

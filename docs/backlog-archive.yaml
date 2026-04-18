@@ -1315,3 +1315,37 @@ tasks:
   note: Verified the 2026-04-17 audit against the current codebase, closed the still-relevant IPC and
     catalog coverage gaps with new native and managed regression tests, and reran the full native and
     managed test suites successfully.
+- id: 161
+  summary: add a Librova-specific SQLite skill for schema, query, FTS, and safe SQL practices
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: unscheduled
+  note: Canonical archived task for the single sqlite-skill change. Added the local sqlite skill for Librova's
+    native persistence layer, covering schema v1, search_index FTS maintenance, repository transaction/query
+    patterns, and concise safe SQL/query-writing guidance.
+- id: 162
+  summary: 'merged into #161: sqlite skill follow-up guidance'
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: unscheduled
+  note: 'Merged into archived task #161. This was not a separate logical backlog item; it only extended
+    the same sqlite skill with closely related safe SQL/query-writing guidance.'
+- id: 163
+  summary: extend backlog CLI to edit archived tasks and codify task-splitting rules
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: unscheduled
+  note: Extended backlog.py so edit works for archived tasks, added a regression test for archive edits,
+    and codified the one-logical-change-per-task rule in AGENTS.md and the backlog-update skill.
+- id: 164
+  summary: harden backlog CLI against concurrent reads and writes
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Hardened backlog.py with a repository-level CLI lock and atomic file replacement, added a deterministic
+    concurrent archive-edit regression test, and updated backlog rules to treat backlog operations as
+    serialized shared state.

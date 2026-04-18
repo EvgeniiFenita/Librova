@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 160
+  last_assigned_id: 165
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -155,3 +155,11 @@ tasks:
     or per-batch) and implement it so FTS5 shadow-table space is reclaimed without blocking the UI.
 
     '
+- id: 165
+  summary: design and implement a coherent backlog CLI test pipeline
+  status: Open
+  type: Feature
+  priority: Low
+  milestone: unscheduled
+  note: Replace the removed ad-hoc backlog test scaffolding with a documented, repository-consistent test
+    pipeline for backlog tooling, including fixture strategy, runner choice, and mutating-command isolation.

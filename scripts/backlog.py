@@ -24,9 +24,11 @@ from __future__ import annotations
 
 import sys
 import os
+import tempfile
 import textwrap
 from pathlib import Path
 from typing import Optional
+from contextlib import contextmanager
 
 try:
     import yaml
@@ -39,8 +41,10 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT   = SCRIPT_DIR.parent
 DOCS_DIR    = REPO_ROOT / "docs"
+OUT_DIR     = REPO_ROOT / "out"
 BACKLOG_FILE_ENV = "LIBROVA_BACKLOG_FILE"
 ARCHIVE_FILE_ENV = "LIBROVA_BACKLOG_ARCHIVE_FILE"
+LOCK_FILE = OUT_DIR / "backlog" / "backlog.lock"
 
 
 def _resolve_data_path(env_var: str, default_path: Path) -> Path:
@@ -76,9 +80,34 @@ def _load(path: Path) -> dict:
 
 def _save(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(data, f, allow_unicode=True, sort_keys=False,
-                  default_flow_style=False, width=100)
+    serialized = yaml.dump(
+        data,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+        width=100)
+
+    temp_path: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            delete=False,
+            dir=path.parent,
+            prefix=f"{path.name}.",
+            suffix=".tmp") as temp_file:
+            temp_file.write(serialized)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_path = Path(temp_file.name)
+
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
 
 
 def load_backlog() -> dict:
@@ -105,6 +134,35 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
+@contextmanager
+def backlog_lock():
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(LOCK_FILE, "a+b") as lock_file:
+        lock_file.seek(0, os.SEEK_END)
+        if lock_file.tell() == 0:
+            lock_file.write(b"0")
+            lock_file.flush()
+
+        lock_file.seek(0)
+
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
 def configure_console_streams() -> None:
     for stream_name in ("stdout", "stderr"):
         stream = getattr(sys, stream_name, None)
@@ -122,6 +180,22 @@ def find_task(tasks: list[dict], task_id: int) -> Optional[dict]:
         if t["id"] == task_id:
             return t
     return None
+
+
+def find_task_container(task_id: int) -> tuple[dict, list[dict], dict, str]:
+    backlog = load_backlog()
+    backlog_tasks = backlog.get("tasks", [])
+    backlog_task = find_task(backlog_tasks, task_id)
+    if backlog_task is not None:
+        return backlog, backlog_tasks, backlog_task, "backlog"
+
+    archive = load_archive()
+    archive_tasks = archive.get("tasks", [])
+    archive_task = find_task(archive_tasks, task_id)
+    if archive_task is not None:
+        return archive, archive_tasks, archive_task, "archive"
+
+    die(f"Task #{task_id} not found in backlog or archive")
 
 
 def fmt_task(t: dict, wide: bool = False) -> str:
@@ -314,11 +388,7 @@ def cmd_edit(args: list[str]) -> None:
     if not opts:
         die("edit requires at least one field to update (--summary, --status, --type, --priority, --milestone, --note)")
 
-    data = load_backlog()
-    tasks = data.get("tasks", [])
-    task = find_task(tasks, task_id)
-    if not task:
-        die(f"Task #{task_id} not found in open backlog")
+    data, _, task, location = find_task_container(task_id)
 
     changes = []
     if "--summary" in opts:
@@ -326,8 +396,11 @@ def cmd_edit(args: list[str]) -> None:
         changes.append("summary")
     if "--status" in opts:
         s = opts["--status"]
-        if s not in VALID_STATUSES:
-            die(f"Invalid status '{s}'. Must be: {', '.join(VALID_STATUSES)}")
+        valid_statuses = VALID_STATUSES | {"Closed"} if location == "archive" else VALID_STATUSES
+        if s not in valid_statuses:
+            die(f"Invalid status '{s}'. Must be: {', '.join(sorted(valid_statuses))}")
+        if location == "archive" and s != "Closed":
+            die("Archived tasks may only keep status 'Closed'")
         task["status"] = s
         changes.append("status")
     if "--type" in opts:
@@ -349,8 +422,12 @@ def cmd_edit(args: list[str]) -> None:
         task["note"] = opts["--note"]
         changes.append("note")
 
-    save_backlog(data)
-    print(f"\n  [OK] Updated task #{task_id}: {', '.join(changes)} changed\n")
+    if location == "archive":
+        save_archive(data)
+    else:
+        save_backlog(data)
+
+    print(f"\n  [OK] Updated {location} task #{task_id}: {', '.join(changes)} changed\n")
 
 
 def cmd_next(args: list[str]) -> None:
@@ -524,7 +601,8 @@ def main() -> None:
     if cmd not in COMMANDS:
         die(f"Unknown command '{cmd}'. Available: {', '.join(COMMANDS)}")
 
-    COMMANDS[cmd](args[1:])
+    with backlog_lock():
+        COMMANDS[cmd](args[1:])
 
 
 if __name__ == "__main__":

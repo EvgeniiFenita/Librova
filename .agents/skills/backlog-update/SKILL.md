@@ -20,6 +20,8 @@ Keep `docs/backlog.yaml` and `docs/backlog-archive.yaml` consistent by using `sc
 - Never edit backlog YAML directly.
 - Keep tasks `Open` while you work; the backlog has no `In Progress` status.
 - Run `python scripts/backlog.py validate` after add / close operations and after any suspicious backlog state.
+- One logical change should usually map to one backlog task. Do not create extra backlog items for tiny same-scope follow-ups such as a matching doc fix, a skill tweak, or a closely related test adjustment if they are part of the same coherent slice.
+- Treat backlog CLI operations as serialized repository state changes. Do not launch `add` / `edit` / `close` / `validate` in parallel against the same repo copy.
 
 ## Storage Layout
 
@@ -56,7 +58,7 @@ python scripts/backlog.py <command> [options]
 | `show <id>` | Show full details for one task (searches archive too) |
 | `add` | Create a new task |
 | `close <id> --note="..."` | Move task to archive with a completion note |
-| `edit <id>` | Update fields on an open task |
+| `edit <id>` | Update fields on an open or archived task |
 | `next [--milestone=<m>]` | Pick the highest-priority open task |
 | `validate` | Run integrity checks on both files |
 
@@ -92,14 +94,26 @@ python scripts/backlog.py add `
 
 The CLI assigns the next id automatically and updates `meta.last_assigned_id`. Do not compute ids manually.
 
+Before adding a task, ask whether the change is actually a new slice:
+
+- if several small edits serve the same outcome, keep them under one backlog item
+- if a doc update, skill update, test fix, or follow-up script tweak exists only to complete the same logical work, do not split it into another task
+- add a separate task only when the work has meaningfully separate scope, priority, or completion criteria
+
 ### Edit an existing task
 
 ```powershell
 python scripts/backlog.py edit <id> --status=Blocked --note="waiting on X"
 python scripts/backlog.py edit <id> --priority=Critical
+python scripts/backlog.py edit <id> --note="clarified completion note for an archived task"
 ```
 
 Only the passed fields change; all others stay untouched.
+
+Notes:
+
+- `edit` can update both open backlog tasks and archived tasks
+- archived tasks remain archived; their status must stay `Closed`
 
 ### Close a task
 

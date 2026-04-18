@@ -43,6 +43,7 @@ Before making changes, read these documents in order:
 Use `$skill-name` in the CLI whenever this file says to use a skill.
 
 When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.
+When changing the SQLite schema, native SQL queries, FTS behavior, or SQLite review/debugging rules: use the `$sqlite` skill.
 
 ---
 
@@ -109,6 +110,8 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - For all backlog operations — adding tasks, taking into work, closing, and validating — follow the `$backlog-update` skill.
 - For documentation updates, documentation drift reviews, deduplication, and doc-to-code verification, follow the `$docs-maintenance` skill.
 - When implementation state and `docs/backlog.yaml` diverge, update the backlog in the same task instead of leaving stale statuses behind.
+- Do not split one logical change into multiple backlog tasks just because it has several small follow-up edits. If the work is one coherent slice with closely related code, skill, test, or documentation adjustments, track it under one backlog item.
+- Do not run backlog CLI operations in parallel against the same repository copy. Backlog changes are shared repository state and must be treated as serialized operations.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - Disposable runtime files, logs, and transient state go under `out/` rather than scattered across source.
@@ -296,6 +299,7 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 | `$commit-message` | composing a commit message after the user explicitly asked for a commit |
 | `$code-style` | resolving naming, formatting, or structure questions not already answered by local context |
 | `$docs-maintenance` | updating, reviewing, de-duplicating, or verifying repository documentation against code and the documentation hierarchy |
+| `$sqlite` | changing the SQLite schema, native SQL queries, FTS/search behavior, or SQLite-specific review/debugging in the C++ persistence layer |
 | `$vertical-slice` | implementing a feature or workflow that crosses multiple layers |
 | `$transport-rpc` | adding or changing an IPC / Protobuf method |
 | `$import-pipeline` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |

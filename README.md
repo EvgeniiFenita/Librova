@@ -30,6 +30,7 @@ Librova is not an e-book reader. It manages the library itself: import, storage,
 | inspect frozen architecture decisions | `docs/CodebaseMap.md` §14 Architecture Decisions |
 | understand test expectations | `AGENTS.md` § Verification and test discipline |
 | change IPC / Protobuf transport safely | `docs/CodebaseMap.md` §5 IPC Boundary |
+| change the SQLite schema or native SQL / FTS queries safely | `AGENTS.md` → `$sqlite` skill, then `docs/CodebaseMap.md` §7 / §12 |
 | change UI appearance or layout | `docs/UiDesignSystem.md` |
 | inspect active work | `python scripts\backlog.py list` or `python scripts\backlog.py show <id>` |
 
