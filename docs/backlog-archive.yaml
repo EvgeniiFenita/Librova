@@ -1377,3 +1377,12 @@ tasks:
   note: Fixed the validated review findings by making details loading ABA-safe, bounding parent-start
     timestamp parsing, replacing converter-test busy-waiting, and extending ABA and optimize-search-index
     regression coverage.
+- id: 169
+  summary: stop writing converter log to the repository root when launching via Run-Librova.ps1
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Added WorkingDirectory = probeDir to Fb2ConverterProbe ProcessStartInfo so fb2cng runs with its
+    CWD set to the isolated temp probe directory instead of inheriting the UI process CWD (repo root when
+    launched via Run-Librova.ps1).

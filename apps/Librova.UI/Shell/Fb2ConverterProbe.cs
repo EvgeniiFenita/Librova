@@ -91,7 +91,8 @@ internal static class Fb2ConverterProbe
             {
                 FileName = executablePath,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                WorkingDirectory = probeDir
             };
             // Mirrors CConverterCommandBuilder::CreateFb2CngProfile argument template:
             // convert --to epub2 --overwrite <source> <destination_dir>
