@@ -19,7 +19,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaImport
         LibrovaJobs
         LibrovaParsing
-        LibrovaPipeHost
+        LibrovaTransport
         LibrovaProtoServices
         LibrovaProtoMapping
 )

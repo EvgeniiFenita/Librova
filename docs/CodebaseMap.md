@@ -76,7 +76,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Views** | `apps/Librova.UI/Views/`, `apps/Librova.UI/Styles/` | AXAML markup, code-behind event handlers, design-token styles |
 | **Transport (C#)** | `apps/Librova.UI/PipeTransport/`, `apps/Librova.UI/ImportJobs/`, `apps/Librova.UI/LibraryCatalog/` | Named-pipe client, envelope protocol, service wrappers, proto ↔ C# model mapping |
 | **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 11 RPC methods, all message types, all enums |
-| **Transport (C++)** | `libs/PipeTransport/`, `libs/PipeHost/`, `libs/PipeClient/` | Named-pipe host, envelope serialization/deserialization, request dispatcher |
+| **Transport (C++)** | `libs/Transport/` | Named-pipe host, envelope serialization/deserialization, request dispatcher, pipe client |
 | **Proto Adapter** | `libs/ProtoServices/`, `libs/ProtoMapping/`, `libs/ProtoContracts/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
 | **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
@@ -95,9 +95,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `PipeTransport` | Envelope protocol: serialize/deserialize `SPipeRequestEnvelope` / `SPipeResponseEnvelope`; `EPipeMethod` enum (append-only method IDs 1–12) | `CNamedPipeChannel`, `CPipeProtocol`, `CPipeRequestDispatcher`, `EPipeMethod` |
-| `PipeHost` | Named-pipe server: accept connections, dispatch requests to adapter | `CNamedPipeHost` |
-| `PipeClient` | Named-pipe client for C++ side (used by integration tests) | `CNamedPipeClient` |
+| `Transport` | Named-pipe channel I/O, envelope protocol (serialize/deserialize `SPipeRequestEnvelope` / `SPipeResponseEnvelope`), request dispatcher, pipe server, pipe client | `CNamedPipeChannel`, `CPipeProtocol`, `CPipeRequestDispatcher`, `CNamedPipeHost`, `CNamedPipeClient`, `EPipeMethod` |
 | `ProtoContracts` | Generated Protobuf C++ code from `proto/import_jobs.proto` | all `librova::v1::*` message classes |
 | `ProtoMapping` | Translate proto ↔ domain structs in both directions | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` |
 | `ProtoServices` | Route method enum → facade/manager calls; mandatory outcome logging per method | `CLibraryJobServiceAdapter` |
@@ -457,7 +455,7 @@ Violating any of these causes data corruption, crashes, or silent test failures.
 ### Add a new RPC method
 **Use the `$transport-rpc` skill** — it has the complete, ordered checklist for both sides (proto → C++ → C#, validation sequence, close-out).
 
-Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod`), `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` (`CLibraryJobServiceAdapter`), `apps/Librova.UI/PipeTransport/`, and the relevant client/service/mapper in `ImportJobs/` or `LibraryCatalog/`.
+Modules involved: `proto/import_jobs.proto`, `libs/Transport/` (`EPipeMethod`), `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` (`CLibraryJobServiceAdapter`), `apps/Librova.UI/PipeTransport/`, and the relevant client/service/mapper in `ImportJobs/` or `LibraryCatalog/`.
 
 ### Change single-file import logic
 - `libs/Importing/SingleFileImportCoordinator.cpp/.hpp` — main orchestration

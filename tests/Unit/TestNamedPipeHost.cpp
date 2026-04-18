@@ -19,7 +19,7 @@
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "Storage/ManagedTrashService.hpp"
-#include "PipeHost/NamedPipeHost.hpp"
+#include "Transport/NamedPipeHost.hpp"
 #include "TestNamedPipeReadySignal.hpp"
 
 namespace {

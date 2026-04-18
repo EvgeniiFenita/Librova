@@ -18,8 +18,8 @@
 #include <string>
 #include <thread>
 
-#include "PipeTransport/NamedPipeChannel.hpp"
-#include "PipeTransport/PipeProtocol.hpp"
+#include "Transport/NamedPipeChannel.hpp"
+#include "Transport/PipeProtocol.hpp"
 #include "TestNamedPipeReadySignal.hpp"
 
 namespace {

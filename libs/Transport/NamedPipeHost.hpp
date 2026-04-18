@@ -1,7 +1,7 @@
 #pragma once
 
-#include "PipeTransport/NamedPipeChannel.hpp"
-#include "PipeTransport/PipeRequestDispatcher.hpp"
+#include "Transport/NamedPipeChannel.hpp"
+#include "Transport/PipeRequestDispatcher.hpp"
 
 namespace Librova::PipeHost {
 

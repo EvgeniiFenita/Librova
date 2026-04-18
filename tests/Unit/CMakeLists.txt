@@ -82,9 +82,7 @@ if(BUILD_TESTING)
             LibrovaParsing
             LibrovaImport
             LibrovaJobs
-            LibrovaPipeClient
-            LibrovaPipeHost
-            LibrovaPipeTransport
+            LibrovaTransport
             LibrovaProtoContracts
             LibrovaProtoMapping
             LibrovaProtoServices

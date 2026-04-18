@@ -8,8 +8,8 @@
 
 #include <google/protobuf/message_lite.h>
 
-#include "PipeTransport/NamedPipeChannel.hpp"
-#include "PipeTransport/PipeProtocol.hpp"
+#include "Transport/NamedPipeChannel.hpp"
+#include "Transport/PipeProtocol.hpp"
 
 namespace Librova::PipeClient {
 

@@ -1,4 +1,4 @@
-#include "PipeTransport/NamedPipeChannel.hpp"
+#include "Transport/NamedPipeChannel.hpp"
 
 #ifndef NOMINMAX
 #define NOMINMAX
