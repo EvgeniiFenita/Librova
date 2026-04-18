@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include "ProtoMapping/ImportJobProtoMapper.hpp"
+#include "Rpc/ImportJobProtoMapper.hpp"
 
 TEST_CASE("Import job proto mapper round-trips import request paths and optional hash", "[proto-mapping]")
 {

@@ -1,10 +1,10 @@
-#include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
+#include "Rpc/LibraryCatalogProtoMapper.hpp"
 
 #include <chrono>
 #include <stdexcept>
 
 #include "Foundation/Logging.hpp"
-#include "ProtoMapping/ImportJobProtoMapper.hpp"
+#include "Rpc/ImportJobProtoMapper.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {

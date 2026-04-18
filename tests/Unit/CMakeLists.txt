@@ -83,9 +83,7 @@ if(BUILD_TESTING)
             LibrovaImport
             LibrovaJobs
             LibrovaTransport
-            LibrovaProtoContracts
-            LibrovaProtoMapping
-            LibrovaProtoServices
+            LibrovaRpc
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)

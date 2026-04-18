@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "ProtoMapping/ImportJobProtoMapper.hpp"
+#include "Rpc/ImportJobProtoMapper.hpp"
 
 namespace Librova::ApplicationClient {
 

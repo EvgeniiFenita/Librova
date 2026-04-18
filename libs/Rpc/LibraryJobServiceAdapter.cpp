@@ -1,4 +1,4 @@
-#include "ProtoServices/LibraryJobServiceAdapter.hpp"
+#include "Rpc/LibraryJobServiceAdapter.hpp"
 
 #include <filesystem>
 #include <format>
@@ -6,8 +6,8 @@
 
 #include "Domain/DomainError.hpp"
 #include "Foundation/Logging.hpp"
-#include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
-#include "ProtoMapping/ImportJobProtoMapper.hpp"
+#include "Rpc/LibraryCatalogProtoMapper.hpp"
+#include "Rpc/ImportJobProtoMapper.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ProtoServices {

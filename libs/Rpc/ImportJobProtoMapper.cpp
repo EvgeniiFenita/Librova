@@ -1,4 +1,4 @@
-#include "ProtoMapping/ImportJobProtoMapper.hpp"
+#include "Rpc/ImportJobProtoMapper.hpp"
 
 #include "Foundation/UnicodeConversion.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Transport/PipeProtocol.hpp"
-#include "ProtoServices/LibraryJobServiceAdapter.hpp"
+#include "Rpc/LibraryJobServiceAdapter.hpp"
 
 namespace Librova::PipeTransport {
 

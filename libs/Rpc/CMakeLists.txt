@@ -31,19 +31,27 @@ add_custom_command(
     VERBATIM
 )
 
-add_library(LibrovaProtoContracts STATIC
+add_library(LibrovaRpc STATIC
     ${LIBROVA_PROTO_CC}
-    ${LIBROVA_PROTO_H}
+    ImportJobProtoMapper.cpp
+    LibraryCatalogProtoMapper.cpp
+    LibraryJobServiceAdapter.cpp
 )
 
-target_include_directories(LibrovaProtoContracts
+target_include_directories(LibrovaRpc
     PUBLIC
+        ${CMAKE_SOURCE_DIR}/libs
         ${LIBROVA_PROTO_BINARY_DIR}
 )
 
-target_link_libraries(LibrovaProtoContracts
+target_link_libraries(LibrovaRpc
     PUBLIC
+        LibrovaApplication
+        LibrovaApplicationJobs
+        LibrovaDomain
         protobuf::libprotobuf
+    PRIVATE
+        LibrovaFoundation
 )
 
-target_compile_features(LibrovaProtoContracts PUBLIC cxx_std_20)
+target_compile_features(LibrovaRpc PUBLIC cxx_std_20)

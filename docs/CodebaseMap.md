@@ -77,7 +77,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Transport (C#)** | `apps/Librova.UI/PipeTransport/`, `apps/Librova.UI/ImportJobs/`, `apps/Librova.UI/LibraryCatalog/` | Named-pipe client, envelope protocol, service wrappers, proto ↔ C# model mapping |
 | **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 11 RPC methods, all message types, all enums |
 | **Transport (C++)** | `libs/Transport/` | Named-pipe host, envelope serialization/deserialization, request dispatcher, pipe client |
-| **Proto Adapter** | `libs/ProtoServices/`, `libs/ProtoMapping/`, `libs/ProtoContracts/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
+| **Proto Adapter** | `libs/Rpc/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
 | **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
 | **Import Pipeline** | `libs/Import/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion, diagnostics |
@@ -96,9 +96,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | Module | Role | Key types |
 |---|---|---|
 | `Transport` | Named-pipe channel I/O, envelope protocol (serialize/deserialize `SPipeRequestEnvelope` / `SPipeResponseEnvelope`), request dispatcher, pipe server, pipe client | `CNamedPipeChannel`, `CPipeProtocol`, `CPipeRequestDispatcher`, `CNamedPipeHost`, `CNamedPipeClient`, `EPipeMethod` |
-| `ProtoContracts` | Generated Protobuf C++ code from `proto/import_jobs.proto` | all `librova::v1::*` message classes |
-| `ProtoMapping` | Translate proto ↔ domain structs in both directions | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` |
-| `ProtoServices` | Route method enum → facade/manager calls; mandatory outcome logging per method | `CLibraryJobServiceAdapter` |
+| `Rpc` | Generated Protobuf C++ code from `proto/import_jobs.proto`; translate proto ↔ domain structs; route method enum → facade/manager calls with mandatory outcome logging | all `librova::v1::*` message classes, `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper`, `CLibraryJobServiceAdapter` |
 | `ApplicationClient` | C++ import job client (wraps pipe channel; used in native integration tests) | `CImportJobClient` |
 
 ### Application & Jobs

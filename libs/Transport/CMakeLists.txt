@@ -10,8 +10,7 @@ target_include_directories(LibrovaTransport PUBLIC "${CMAKE_SOURCE_DIR}/libs")
 
 target_link_libraries(LibrovaTransport
     PUBLIC
-        LibrovaProtoContracts
-        LibrovaProtoServices
+        LibrovaRpc
     PRIVATE
         LibrovaFoundation
 )

@@ -20,8 +20,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaJobs
         LibrovaParsing
         LibrovaTransport
-        LibrovaProtoServices
-        LibrovaProtoMapping
+        LibrovaRpc
 )
 
 target_compile_features(LibrovaCoreHostApp PRIVATE cxx_std_20)

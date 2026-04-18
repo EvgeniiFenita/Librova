@@ -35,7 +35,7 @@
 #include "Transport/NamedPipeHost.hpp"
 #include "Transport/NamedPipeChannel.hpp"
 #include "Transport/PipeRequestDispatcher.hpp"
-#include "ProtoServices/LibraryJobServiceAdapter.hpp"
+#include "Rpc/LibraryJobServiceAdapter.hpp"
 #include "Storage/WindowsRecycleBinService.hpp"
 #include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"

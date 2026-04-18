@@ -12,7 +12,7 @@ target_link_libraries(LibrovaApplicationClient
     PUBLIC
         LibrovaApplicationJobs
         LibrovaTransport
-        LibrovaProtoMapping
+        LibrovaRpc
 )
 
 target_compile_features(LibrovaApplicationClient PUBLIC cxx_std_20)

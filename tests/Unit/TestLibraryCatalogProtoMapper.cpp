@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-#include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
+#include "Rpc/LibraryCatalogProtoMapper.hpp"
 
 TEST_CASE("Library catalog proto mapper round-trips book list request filters", "[proto-mapping][catalog]")
 {
