@@ -50,8 +50,10 @@ When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.
 
 Run the full build and test suite (native + managed, `Debug` by default):
 
+Repository helper scripts live under `scripts/` and resolve the repository root from the script path. The commands below assume the repository root as the current directory; from another working directory, call the same script by a path that points to the repo copy.
+
 ```powershell
-.\Run-Tests.ps1
+scripts\Run-Tests.ps1
 ```
 
 Individual steps:
@@ -71,8 +73,8 @@ dotnet test tests\Librova.UI.Tests\Librova.UI.Tests.csproj -c Debug
 scripts\ValidateProto.ps1
 
 # Build and launch the app (for manual verification)
-.\Run-Librova.ps1
-.\Run-Librova.ps1 -FirstRun    # first-run setup screen
+scripts\Run-Librova.ps1
+scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 ```
 
 > `build → test` must always be **sequential** — never run tests against a stale build.

@@ -36,7 +36,7 @@ dotnet build apps\Librova.UI\Librova.UI.csproj -c Debug
 dotnet test tests\Librova.UI.Tests\Librova.UI.Tests.csproj -c Debug
 
 # Or use the repo script
-.\Run-Tests.ps1 -SkipNative
+..\..\scripts\Run-Tests.ps1 -SkipNative
 ```
 
 For the full build -> test workflow, including sequential validation rules, follow the root `AGENTS.md`.

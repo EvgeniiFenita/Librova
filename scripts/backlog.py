@@ -39,8 +39,23 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT   = SCRIPT_DIR.parent
 DOCS_DIR    = REPO_ROOT / "docs"
-BACKLOG_FILE  = DOCS_DIR / "backlog.yaml"
-ARCHIVE_FILE  = DOCS_DIR / "backlog-archive.yaml"
+BACKLOG_FILE_ENV = "LIBROVA_BACKLOG_FILE"
+ARCHIVE_FILE_ENV = "LIBROVA_BACKLOG_ARCHIVE_FILE"
+
+
+def _resolve_data_path(env_var: str, default_path: Path) -> Path:
+    override = os.environ.get(env_var)
+    if not override:
+        return default_path
+
+    path = Path(override)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path.resolve()
+
+
+BACKLOG_FILE  = _resolve_data_path(BACKLOG_FILE_ENV, DOCS_DIR / "backlog.yaml")
+ARCHIVE_FILE  = _resolve_data_path(ARCHIVE_FILE_ENV, DOCS_DIR / "backlog-archive.yaml")
 
 # -- Constants ----------------------------------------------------------------
 
@@ -88,6 +103,18 @@ def save_archive(data: dict) -> None:
 def die(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def configure_console_streams() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except ValueError:
+            # Some redirected streams do not allow reconfigure; keep the original encoding in that case.
+            continue
 
 
 def find_task(tasks: list[dict], task_id: int) -> Optional[dict]:
@@ -486,6 +513,8 @@ COMMANDS = {
 
 
 def main() -> None:
+    configure_console_streams()
+
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
         print(__doc__)

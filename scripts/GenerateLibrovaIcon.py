@@ -6,6 +6,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+
+
 class CIconGenerator:
     SIZES = (16, 24, 32, 48, 64, 128, 256)
 
@@ -110,8 +114,18 @@ class CIconGenerator:
         image.paste(gradient, (0, 0), mask)
 
 
+def ResolveOutputPath(raw_output_path: str) -> Path:
+    output_path = Path(raw_output_path)
+    if not output_path.is_absolute():
+        output_path = REPO_ROOT / output_path
+    return output_path.resolve()
+
+
 def main() -> int:
-    output_path = sys.argv[1] if len(sys.argv) > 1 else "apps/Librova.UI/Assets/librova.ico"
+    if len(sys.argv) > 1:
+        output_path = str(ResolveOutputPath(sys.argv[1]))
+    else:
+        output_path = str(REPO_ROOT / "apps/Librova.UI/Assets/librova.ico")
     CIconGenerator.Generate(output_path)
     return 0
 

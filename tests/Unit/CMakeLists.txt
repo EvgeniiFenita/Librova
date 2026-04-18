@@ -129,6 +129,8 @@ if(BUILD_TESTING)
         COMMAND
             ${CMAKE_COMMAND} -E env
             PYTHONIOENCODING=cp1252
+            LIBROVA_BACKLOG_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog.yaml
+            LIBROVA_BACKLOG_ARCHIVE_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog-archive.yaml
             ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/scripts/backlog.py
             list
@@ -139,9 +141,24 @@ if(BUILD_TESTING)
         COMMAND
             ${CMAKE_COMMAND} -E env
             PYTHONIOENCODING=cp1252
+            LIBROVA_BACKLOG_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog.yaml
+            LIBROVA_BACKLOG_ARCHIVE_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog-archive.yaml
             ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/scripts/backlog.py
             validate
+    )
+
+    add_test(
+        NAME BacklogCliShowSupportsLegacyConsoleCodePage
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+            PYTHONIOENCODING=cp1252
+            LIBROVA_BACKLOG_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog.yaml
+            LIBROVA_BACKLOG_ARCHIVE_FILE=${CMAKE_SOURCE_DIR}/tests/Unit/BacklogFixture/backlog-archive.yaml
+            ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/backlog.py
+            show
+            9001
     )
 endif()
 

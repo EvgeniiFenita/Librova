@@ -29,7 +29,7 @@ cmake --build --preset x64-debug --config Debug
 ctest --test-dir out\build\x64-debug -C Debug --output-on-failure
 
 # Or use the repo script
-.\Run-Tests.ps1 -SkipManaged
+..\scripts\Run-Tests.ps1 -SkipManaged
 ```
 
 For the full build -> test workflow, including sequential validation rules and proto checks, follow the root `AGENTS.md`.

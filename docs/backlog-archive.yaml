@@ -1281,3 +1281,28 @@ tasks:
   milestone: '1.1'
   note: normalized documentation hierarchy, aligned local agent docs and skills with the CodebaseMap/manual-test
     registry model, and fixed stale planning and transport guidance
+- id: 156
+  summary: consolidate repository helper scripts under scripts and make them working-directory independent
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.1'
+  note: Moved the root helper entry-point scripts into scripts/, made repo scripts resolve paths from
+    the repository root instead of the current directory, and updated documentation references.
+- id: 157
+  summary: make backlog CLI Unicode-safe on standard Windows console encoding
+  status: Closed
+  type: Bug
+  priority: Minor
+  milestone: '1.1'
+  note: Configured backlog.py console streams to UTF-8 so Cyrillic notes print safely on legacy Windows
+    console encodings, and added a regression test for show 142 under cp1252.
+- id: 158
+  summary: fix review findings in script relocation and backlog CLI regression coverage
+  status: Closed
+  type: Bug
+  priority: Minor
+  milestone: '1.1'
+  note: Fixed the review findings by making GenerateLibrovaIcon.py resolve relative output paths from
+    the repo root, correcting script-launch docs, and moving backlog Unicode console regression coverage
+    to isolated fixture files.

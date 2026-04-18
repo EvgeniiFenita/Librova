@@ -35,11 +35,13 @@ Librova is not an e-book reader. It manages the library itself: import, storage,
 
 ## Common Commands
 
+Repository helper scripts live in `scripts/` and resolve the repository root from the script location. The commands below assume you are in the repository root; from another working directory, call the same script by a path that points to the repo copy.
+
 ```powershell
-.\Run-Tests.ps1
+scripts\Run-Tests.ps1
 python scripts\backlog.py list
 scripts\ValidateProto.ps1
-.\Run-Librova.ps1
+scripts\Run-Librova.ps1
 ```
 
 For agent-oriented task procedures, see the skills listed in `AGENTS.md`.

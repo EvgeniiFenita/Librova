@@ -105,5 +105,5 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 ## Regression
 
 - Relaunch state persistence: Import preserves the last source path after restart
-- Smoke pass after release build: `.\Run-Tests.ps1 -Preset x64-release -Configuration Release` passes **(RG)**
-- Smoke launch release build: `.\Run-Librova.ps1 -Preset x64-release -Configuration Release` starts and opens the library **(RG)**
+- Smoke pass after release build: `scripts\Run-Tests.ps1 -Preset x64-release -Configuration Release` passes **(RG)**
+- Smoke launch release build: `scripts\Run-Librova.ps1 -Preset x64-release -Configuration Release` starts and opens the library **(RG)**

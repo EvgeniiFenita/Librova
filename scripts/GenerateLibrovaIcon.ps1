@@ -3,4 +3,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-python (Join-Path $PSScriptRoot "GenerateLibrovaIcon.py") $OutputPath
+$repoRoot = Split-Path -Parent $PSScriptRoot
+
+if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $resolvedOutputPath = $OutputPath
+}
+else {
+    $resolvedOutputPath = Join-Path $repoRoot $OutputPath
+}
+
+python (Join-Path $PSScriptRoot "GenerateLibrovaIcon.py") $resolvedOutputPath
