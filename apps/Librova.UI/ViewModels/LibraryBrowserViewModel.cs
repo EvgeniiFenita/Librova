@@ -786,7 +786,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
         if (previousSelectionId is not null)
         {
+            var preservedDetails = SelectedBookDetails;
             SelectedBook = refreshResult.VisibleItems.FirstOrDefault(item => item.BookId == previousSelectionId);
+            if (SelectedBook?.BookId == previousSelectionId && preservedDetails is not null)
+            {
+                SelectedBookDetails = preservedDetails;
+            }
         }
         else
         {

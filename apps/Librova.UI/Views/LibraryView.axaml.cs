@@ -114,6 +114,12 @@ internal sealed partial class LibraryView : UserControl
             CaptureOpenPanelSnapshot(browser);
             ScheduleSelectionPositioning(SelectionViewportAction.Center);
         }
+        else if (_wasDetailsPanelVisible && detailsVisible && _isOpenPanelSnapshotInvalidated && browser.SelectedBook is not null)
+        {
+            // Panel stays open (same or new book after sort/filter reset) but scroll was reset;
+            // ensure the selected book is visible again.
+            ScheduleSelectionPositioning(SelectionViewportAction.EnsureVisible);
+        }
         else if (_wasDetailsPanelVisible && !detailsVisible)
         {
             if (CanRestoreOpenPanelSnapshot())

@@ -1908,7 +1908,7 @@ public sealed class ViewModelsTests
 
         Assert.Equal(1, service.GetBookDetailsCalls);
         Assert.Equal(1L, viewModel.SelectedBook?.BookId);
-        Assert.Null(viewModel.SelectedBookDetails);
+        Assert.NotNull(viewModel.SelectedBookDetails);
     }
 
     [Fact]
@@ -2211,6 +2211,28 @@ public sealed class ViewModelsTests
 
         await viewModel.RefreshAsync();
         Assert.Equal(BookSortDirectionModel.Descending, service.LastRequest!.SortDirection);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_SortDirectionChangePreservesSelectedBookDetails()
+    {
+        var service = new FakeLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.NotNull(viewModel.SelectedBookDetails);
+        var detailsBefore = viewModel.SelectedBookDetails;
+
+        await viewModel.ToggleSortDirectionCommand.ExecuteAsyncForTests();
+        await viewModel.RefreshAsync();
+
+        Assert.NotNull(viewModel.SelectedBook);
+        Assert.NotNull(viewModel.SelectedBookDetails);
+        Assert.Equal(detailsBefore!.BookId, viewModel.SelectedBookDetails!.BookId);
+        Assert.Equal("sci-fi", viewModel.SelectedBookDetails.Genres.FirstOrDefault());
+        Assert.Equal("Aliens land only in one city.", viewModel.SelectedBookAnnotationText);
     }
 
     private sealed class FakeImportJobsService : IImportJobsService
