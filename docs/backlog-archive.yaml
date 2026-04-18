@@ -1395,3 +1395,11 @@ tasks:
   note: 'Fixed in ExternalBookConverter::Convert: per-invocation subdirectory created under shared ConverterWorkspace
     so concurrent fbc.exe processes each write to their own fb2cng.log. RAII cleanup removes the subdir
     after each conversion. Build OK, 459/459 tests passed.'
+- id: 172
+  summary: centralize all filesystem I/O behind a dedicated libs/FileSystem/ facade and enforce the constraint
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.2'
+  note: 'Decided not to implement: centralising std::filesystem calls behind a facade was deemed unnecessary
+    overhead. Closed without implementation.'

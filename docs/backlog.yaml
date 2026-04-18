@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 170
+  last_assigned_id: 173
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -143,6 +143,32 @@ tasks:
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
     Eliminates per-book CreateProcess overhead for EPUB conversion. Deferred from #60 to avoid complexity
     in the parallel import slice.'
+- id: 171
+  summary: auto-navigate to Library tab after a successful import completes
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: when the import pipeline finishes and at least one book was committed (i.e. no full rollback),
+    the shell must automatically switch the active tab to the Library view so the user sees the result
+    without a manual click; if the user already navigated away from the import area during the run, the
+    redirect should still happen on completion; implement the state transition at the ViewModel level,
+    not in the view, and cover it with a unit test; do not redirect when the import ends in a full cancel-and-discard
+    rollback.
+- id: 173
+  summary: audit entire C++ codebase for underused C++20 features and eliminate pre-standard workarounds
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'systematically review all C++ sources for patterns that ignore available C++20 features: pointer+size
+    pairs that should be std::span, const std::string& parameters that should be std::string_view, hand-rolled
+    loops that should use std::ranges algorithms, missing [[nodiscard]] on functions returning error-indicating
+    or resource-owning values, string concatenation that should use std::format, compile-time-computable
+    values not marked constexpr or consteval, aggregate initialization not using designated initializers
+    where clarity would improve; produce a findings list, fix all violations in one focused pass, and
+    add a rule to AGENTS.md: new C++ code must not introduce manual workarounds or reinventions of features
+    available in the C++20 standard library.'
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open
