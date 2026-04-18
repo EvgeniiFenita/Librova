@@ -1,4 +1,4 @@
-#include "Importing/ImportDiagnosticText.hpp"
+#include "Import/ImportDiagnosticText.hpp"
 
 namespace Librova::Importing {
 

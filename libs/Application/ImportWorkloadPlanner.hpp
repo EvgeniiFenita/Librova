@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "Domain/ServiceContracts.hpp"
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Import/ZipImportCoordinator.hpp"
 
 namespace Librova::Application {
 

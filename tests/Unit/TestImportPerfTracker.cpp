@@ -7,7 +7,7 @@
 #include <string>
 #include <thread>
 
-#include "Importing/ImportPerfTracker.hpp"
+#include "Import/ImportPerfTracker.hpp"
 #include "Foundation/Logging.hpp"
 
 namespace {

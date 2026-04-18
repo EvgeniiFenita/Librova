@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "Domain/BookRepository.hpp"
-#include "Importing/SingleFileImportCoordinator.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
 #include "Storage/ManagedFileEncoding.hpp"
 #include "Storage/ManagedLibraryLayout.hpp"
 #include "Parsing/BookParserRegistry.hpp"

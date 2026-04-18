@@ -9,8 +9,8 @@
 
 #include "Domain/BookRepository.hpp"
 #include "Domain/ServiceContracts.hpp"
-#include "ImportConversion/ImportConversionPolicy.hpp"
-#include "Importing/ImportPerfTracker.hpp"
+#include "Import/ImportConversionPolicy.hpp"
+#include "Import/ImportPerfTracker.hpp"
 #include "Parsing/BookParserRegistry.hpp"
 
 namespace Librova::Importing {

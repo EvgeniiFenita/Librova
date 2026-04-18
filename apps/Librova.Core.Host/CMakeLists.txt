@@ -16,13 +16,12 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaStorage
         LibrovaCoreHost
         LibrovaFoundation
-        LibrovaImporting
+        LibrovaImport
         LibrovaJobs
         LibrovaParsing
         LibrovaPipeHost
         LibrovaProtoServices
         LibrovaProtoMapping
-        LibrovaZipImporting
 )
 
 target_compile_features(LibrovaCoreHostApp PRIVATE cxx_std_20)

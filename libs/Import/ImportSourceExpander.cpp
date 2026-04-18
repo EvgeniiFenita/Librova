@@ -1,10 +1,10 @@
-#include "ImportSourceExpander/ImportSourceExpander.hpp"
+#include "Import/ImportSourceExpander.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <set>
 
-#include "ImportSourceExpander/ImportDiagnostics.hpp"
+#include "Import/ImportDiagnostics.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {

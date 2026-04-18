@@ -4,7 +4,7 @@
 #include <cctype>
 #include <string_view>
 
-#include "ImportSourceExpander/ImportDiagnostics.hpp"
+#include "Import/ImportDiagnostics.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {

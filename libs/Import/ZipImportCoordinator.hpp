@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "Domain/ServiceContracts.hpp"
-#include "Importing/ImportPerfTracker.hpp"
-#include "Importing/SingleFileImportCoordinator.hpp"
+#include "Import/ImportPerfTracker.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
 
 namespace Librova::ZipImporting {
 

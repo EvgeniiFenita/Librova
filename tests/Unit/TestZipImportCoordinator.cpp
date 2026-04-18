@@ -17,11 +17,11 @@
 
 #include <zip.h>
 
-#include "Importing/SingleFileImportCoordinator.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
 #include "Foundation/Logging.hpp"
 #include "TestStructuredProgressSink.hpp"
 #include "Foundation/UnicodeConversion.hpp"
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Import/ZipImportCoordinator.hpp"
 
 namespace {
 

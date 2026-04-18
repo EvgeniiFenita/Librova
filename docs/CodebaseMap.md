@@ -1,4 +1,4 @@
-# Librova Codebase Map
+﻿# Librova Codebase Map
 
 Navigation reference for agents and contributors working in the Librova repository. Start with `README.md` for the repository-wide documentation map, then use this file to locate modules, boundaries, invariants, and task-entry points.
 
@@ -80,7 +80,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Proto Adapter** | `libs/ProtoServices/`, `libs/ProtoMapping/`, `libs/ProtoContracts/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
 | **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
-| **Import Pipeline** | `libs/Importing/`, `libs/ZipImporting/`, `libs/ImportConversion/`, `libs/ImportSourceExpander/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion |
+| **Import Pipeline** | `libs/Import/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion, diagnostics |
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
 | **Persistence** | `libs/Database/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
 | **Managed Storage** | `libs/Storage/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow; cover decode/resize/re-encode |
@@ -115,10 +115,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Importing` | Single-file import coordinator; parallel writer dispatcher; performance tracker | `CSingleFileImportCoordinator`, `CWriterDispatchingRepository`, `CImportPerfTracker`, `CParallelImportHelpers`, `SSingleFileImportRequest/Result` |
-| `ZipImporting` | Two-phase parallel ZIP import: main-thread extraction + worker pool | `CZipImportCoordinator`, `SZipImportRequest/Result`, `SZipEntryImportResult`, `EZipEntryImportStatus` |
-| `ImportConversion` | Decide whether to convert FB2→EPUB; handle forced-conversion semantics | `CImportConversionPolicy`, `SImportConversionPlan`, `SImportConversionOutcome` |
-| `ImportSourceExpander` | Expand directories and ZIP paths into individual file sources | `CImportSourceExpander` |
+| `Import` | Single-file import coordinator; parallel ZIP import; parallel writer dispatcher; performance tracker; conversion policy (FB2→EPUB); directory/ZIP source expansion; diagnostics | `CSingleFileImportCoordinator`, `CZipImportCoordinator`, `CWriterDispatchingRepository`, `CImportPerfTracker`, `CImportConversionPolicy`, `CImportSourceExpander`, `CImportDiagnosticText`, `CParallelImportHelpers` |
 
 ### Parsing
 
@@ -543,13 +540,13 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 | Library | Used in | Purpose |
 |---|---|---|
 | `pugixml` | `libs/Parsing/` | XML parsing for FB2 and EPUB OPF metadata |
-| `libzip` | `libs/ZipImporting/` | ZIP archive enumeration and entry extraction |
+| `libzip` | `libs/Import/` | ZIP archive enumeration and entry extraction |
 | `sqlite3` (+ fts5 feature) | `libs/Database/` | Embedded relational database; FTS5 full-text search |
 | `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |
 | `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
 | `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |
 | `stb` | `libs/Storage/` | Single-header image decode/encode (JPEG, PNG) for cover processing |
-| `bshoshany-thread-pool` (BS::thread_pool) | `libs/ZipImporting/`, `libs/Importing/` | Fixed-size thread pool for parallel import workers |
+| `bshoshany-thread-pool` (BS::thread_pool) | `libs/Import/` | Fixed-size thread pool for parallel import workers |
 | `zlib` | `libs/Storage/`; libzip dependency | gz compression/decompression for internal FB2 storage |
 | `catch2` | `tests/Unit/` | C++ unit test framework |
 | **Avalonia** | `apps/Librova.UI/` | Cross-platform XAML UI framework (.NET / C#) |

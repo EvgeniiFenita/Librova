@@ -13,8 +13,8 @@
 #include "ImportRollbackService.hpp"
 #include "ImportWorkloadPlanner.hpp"
 #include "StructuredProgressMapper.hpp"
-#include "Importing/SingleFileImportCoordinator.hpp"
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
+#include "Import/ZipImportCoordinator.hpp"
 
 namespace Librova::Application {
 

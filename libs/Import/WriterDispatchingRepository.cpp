@@ -1,4 +1,4 @@
-#include "Importing/WriterDispatchingRepository.hpp"
+#include "Import/WriterDispatchingRepository.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "Importing/ImportPerfTracker.hpp"
+#include "Import/ImportPerfTracker.hpp"
 #include "Foundation/Logging.hpp"
 
 namespace Librova::Importing {

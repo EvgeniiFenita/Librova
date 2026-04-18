@@ -1,4 +1,4 @@
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Import/ZipImportCoordinator.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -21,9 +21,9 @@
 #include <zip.h>
 #include <BS_thread_pool.hpp>
 
-#include "Importing/ImportPerfTracker.hpp"
-#include "Importing/ImportDiagnosticText.hpp"
-#include "Importing/ParallelImportHelpers.hpp"
+#include "Import/ImportPerfTracker.hpp"
+#include "Import/ImportDiagnosticText.hpp"
+#include "Import/ParallelImportHelpers.hpp"
 #include "Foundation/Logging.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 

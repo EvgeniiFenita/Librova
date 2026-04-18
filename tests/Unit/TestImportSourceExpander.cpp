@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "ImportSourceExpander/ImportSourceExpander.hpp"
+#include "Import/ImportSourceExpander.hpp"
 
 TEST_CASE("Import source expander expands directories recursively and ignores unsupported files", "[import-source-expander]")
 {

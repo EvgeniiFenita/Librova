@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "Domain/BookRepository.hpp"
-#include "Importing/WriterDispatchingRepository.hpp"
+#include "Import/WriterDispatchingRepository.hpp"
 
 namespace {
 

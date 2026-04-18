@@ -25,7 +25,7 @@
 #include "CoreHost/HostOptions.hpp"
 #include "CoreHost/LibraryBootstrap.hpp"
 #include "Database/SchemaMigrator.hpp"
-#include "Importing/SingleFileImportCoordinator.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "Foundation/Logging.hpp"
@@ -39,7 +39,7 @@
 #include "Storage/WindowsRecycleBinService.hpp"
 #include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Import/ZipImportCoordinator.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>

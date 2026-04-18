@@ -80,8 +80,7 @@ if(BUILD_TESTING)
             LibrovaFoundation
             LibrovaCoreHost
             LibrovaParsing
-            LibrovaImportConversion
-            LibrovaImporting
+            LibrovaImport
             LibrovaJobs
             LibrovaPipeClient
             LibrovaPipeHost
@@ -89,7 +88,6 @@ if(BUILD_TESTING)
             LibrovaProtoContracts
             LibrovaProtoMapping
             LibrovaProtoServices
-            LibrovaZipImporting
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)
