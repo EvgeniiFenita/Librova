@@ -421,6 +421,17 @@ void EnsureDirectory(const std::filesystem::path& path)
     }
 }
 
+void RemoveDirectoryNoThrow(const std::filesystem::path& path) noexcept
+{
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::error_code errorCode;
+    std::filesystem::remove_all(path, errorCode);
+}
+
 void CleanupProducedFiles(
     const std::filesystem::path& directoryPath,
     const std::unordered_set<std::filesystem::path>& beforeSnapshot,
@@ -548,14 +559,34 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
         Librova::ConverterCommand::CConverterCommandBuilder::Build(m_settings.CommandProfile, request);
 
     EnsureDirectory(command.ExpectedOutputDirectory);
-    std::filesystem::remove(command.ExpectedOutputPath);
+    {
+        std::error_code ec;
+        std::filesystem::remove(command.ExpectedOutputPath, ec);
+    }
     const std::unordered_set<std::filesystem::path> outputSnapshot = SnapshotDirectoryFiles(command.ExpectedOutputDirectory);
 
+    // When a shared working directory is configured, create a unique per-invocation
+    // subdirectory so concurrent converter processes don't collide on the log file
+    // (e.g. fb2cng.log) that tools write to their current working directory.
     const std::filesystem::path processWorkingDirectory =
         m_settings.WorkingDirectory.empty()
             ? command.ExpectedOutputDirectory
-            : m_settings.WorkingDirectory;
+            : m_settings.WorkingDirectory / command.ExpectedOutputPath.stem();
     EnsureDirectory(processWorkingDirectory);
+
+    struct CWorkingDirectoryCleanup
+    {
+        const std::filesystem::path& path;
+        bool active;
+
+        ~CWorkingDirectoryCleanup() noexcept
+        {
+            if (active)
+            {
+                RemoveDirectoryNoThrow(path);
+            }
+        }
+    } workingDirectoryCleanup{processWorkingDirectory, !m_settings.WorkingDirectory.empty()};
 
     std::wstring commandLine = BuildCommandLine(command);
     std::wstring workingDirectory = PathToWide(processWorkingDirectory);

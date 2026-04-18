@@ -1386,3 +1386,12 @@ tasks:
   note: Added WorkingDirectory = probeDir to Fb2ConverterProbe ProcessStartInfo so fb2cng runs with its
     CWD set to the isolated temp probe directory instead of inheriting the UI process CWD (repo root when
     launched via Run-Librova.ps1).
+- id: 170
+  summary: fix concurrent converter log collision causing all parallel FB2-to-EPUB conversions to fail
+  status: Closed
+  type: Bug
+  priority: Critical
+  milestone: '1.0'
+  note: 'Fixed in ExternalBookConverter::Convert: per-invocation subdirectory created under shared ConverterWorkspace
+    so concurrent fbc.exe processes each write to their own fb2cng.log. RAII cleanup removes the subdir
+    after each conversion. Build OK, 459/459 tests passed.'
