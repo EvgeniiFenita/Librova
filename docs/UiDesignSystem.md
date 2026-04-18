@@ -199,6 +199,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `IconInfo` | Info circle | Info hint |
 | `IconUploadCloud` | Cloud with arrow | Drop zone |
 | `IconChevronRight` | › chevron | Navigation hint |
+| `IconChevronDown` | ∨ chevron (Fluent outline path) | FilterButton dropdown arrow; matches the Avalonia Fluent ComboBox `DropDownGlyph` shape |
 | `IconWarning` | Triangle with ! | Validation errors, warnings |
 | `IconCheck` | Checkmark in circle | Import success, operation complete |
 | `IconRefresh` | Circular arrow | Retry on startup error |
@@ -219,7 +220,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 |---|---|---|
 | `TextBox` | `AppTextInput` | h=42, SurfaceAlt bg, Medium radius |
 | `TextBox` | `AppTextArea` | Multi-line, TextWrapping=Wrap |
-| `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup |
+| `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup. Popup открывается с `VerticalOffset=6` (зазор под кнопкой). При `:dropdownopen` иконка `DropDownGlyph` становится `AppAccentBrush` (янтарная) |
 | `CheckBox` | *(none)* | Foreground override to Primary |
 
 ### ToolTip
@@ -384,13 +385,13 @@ The library filter panel is a single **ToggleButton + Popup** — a store-style 
 
 ### Trigger button
 
-`ToggleButton` with `Classes="FilterButton"`. Label bound to `LibraryBrowser.FilterButtonLabel` — shows `"Filters"` when no filter is active, `"Filters · N"` (amber) when N facets are selected. Checked state gets `AccentSurfaceBrush` background. `IsChecked` bound two-way to `LibraryBrowser.IsFilterPanelOpen`.
+`ToggleButton` with `Classes="FilterButton"`. Content — `StackPanel` (`Orientation=Horizontal, Spacing=6`) с `TextBlock` и `PathIcon` (`IconChevronDown`, 10×10) — обе иконки используют тот же Fluent-путь, что и `AppComboBox`, обеспечивая визуальное единство. Label bound to `LibraryBrowser.FilterButtonLabel` — shows `"Filters"` when no filter is active, `"Filters · N"` (amber) when N facets are selected. Checked state gets `AccentSurfaceBrush` background. `IsChecked` bound two-way to `LibraryBrowser.IsFilterPanelOpen`.
 
 `PlacementTarget` assigned in code-behind (`LibraryView.axaml.cs`) after `AvaloniaXamlLoader.Load` because Avalonia compiled-XAML bindings do not support `x:Reference` for `PlacementTarget`.
 
 ### Popup
 
-`Popup` with `Placement="Bottom"`, `IsLightDismissEnabled="True"`, `IsOpen` bound two-way to `LibraryBrowser.IsFilterPanelOpen`. Width 420. Content wrapped in `Border.FilterPopup`.
+`Popup` with `Placement="Bottom"`, `VerticalOffset="6"` (зазор 6px под кнопкой), `IsLightDismissEnabled="True"`, `IsOpen` bound two-way to `LibraryBrowser.IsFilterPanelOpen`. Width 420. Content wrapped in `Border.FilterPopup`.
 
 ### Layout inside popup
 
@@ -439,6 +440,9 @@ Empty selection ≡ no filter applied (all values pass through). Both facets use
 | `ToggleButton.FilterButton:checked` | `AppAccentMutedBrush` (#2A1C06) bg — тёплый amber-тинт, ясно читается как активное; `AppAccentBrush` border+text |
 | `ToggleButton.FilterButton:checked:pointerover` | `AppAccentBorderBrush` (#3D2C0A) bg, `AppAccentBrightBrush` text |
 | `ToggleButton.FilterButton:pointerover` | `AppSurfaceHoverBrush` bg |
+| `ToggleButton.FilterButton PathIcon` | `AppTextSecondaryBrush` — бежевый chevron в обычном состоянии (совпадает с `AppComboBox DropDownGlyph`) |
+| `ToggleButton.FilterButton:checked PathIcon` | `AppAccentBrush` — янтарный chevron при открытом фильтре |
+| `ToggleButton.FilterButton:checked:pointerover PathIcon` | `AppAccentBrightBrush` |
 | `Border.FilterPopup` | `AppSurfaceElevatedBrush` bg (`#2E2414`, warm amber elevated), `AppAccentBorderBrush` amber border, `Radius.Large` (12) — popup выделяется тёплой рамкой без тени (BoxShadow не используется: Avalonia Popup рендерит прямоугольную тень внутри PopupRoot, не уважая CornerRadius) |
 | `TextBlock.FilterSectionHeader` | `FontSize.Xs` (11), uppercase labels, `TextMutedBrush`, 0,0,0,6 margin |
 | `ToggleButton.GenreChip` | Default: `AppSurfaceAltBrush` bg, `AppBorderBrush` border, `AppTextSecondaryBrush` text, `Radius.Large` (18, pill), `Padding=8,4`, `FontSize.Sm` (13), `Margin=0,3,4,3`, `HorizontalAlignment=Left` |

@@ -317,6 +317,8 @@
   <!-- Sort direction: simple chevrons, both geometrically centred at (12,12) on 24px grid -->
   <StreamGeometry x:Key="IconSortAsc">M5,15 L12,9 L19,15</StreamGeometry>
   <StreamGeometry x:Key="IconSortDesc">M5,9 L12,15 L19,9</StreamGeometry>
+  <!-- Dropdown chevron — same outline path used by the Avalonia Fluent ComboBox dropdown glyph -->
+  <StreamGeometry x:Key="IconChevronDown">M1939 486L2029 576L1024 1581L19 576L109 486L1024 1401L1939 486Z</StreamGeometry>
   <StreamGeometry x:Key="IconFilter">M4,5 L20,5 L14,13 L14,19 L10,17 L10,13 Z</StreamGeometry>
 
 </ResourceDictionary>

@@ -163,7 +163,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         get
         {
             var count = ActiveFilterCount;
-            return count == 0 ? "Filters ▾" : $"Filters · {count} ▾";
+            return count == 0 ? "Filters" : $"Filters · {count}";
         }
     }
 

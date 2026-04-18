@@ -112,12 +112,20 @@
           <!-- Filter button + flyout -->
           <ToggleButton x:Name="FilterBtn"
                         Classes="FilterButton"
-                        IsChecked="{Binding LibraryBrowser.IsFilterPanelOpen, Mode=TwoWay}"
-                        Content="{Binding LibraryBrowser.FilterButtonLabel}" />
+                        IsChecked="{Binding LibraryBrowser.IsFilterPanelOpen, Mode=TwoWay}">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="{Binding LibraryBrowser.FilterButtonLabel}"
+                         VerticalAlignment="Center" />
+              <PathIcon Width="10" Height="10"
+                        VerticalAlignment="Center"
+                        Data="{StaticResource IconChevronDown}" />
+            </StackPanel>
+          </ToggleButton>
           <Popup x:Name="FilterPopup"
                  IsOpen="{Binding LibraryBrowser.IsFilterPanelOpen, Mode=TwoWay}"
                  IsLightDismissEnabled="True"
-                 Placement="Bottom">
+                 Placement="Bottom"
+                 VerticalOffset="6">
             <Border Classes="FilterPopup" Width="420">
               <StackPanel Spacing="0">
                 <!-- LANGUAGES section -->

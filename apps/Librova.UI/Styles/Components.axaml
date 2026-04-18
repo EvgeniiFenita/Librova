@@ -460,6 +460,14 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
   </Style>
+  <!-- Gap between ComboBox button and its dropdown list -->
+  <Style Selector="ComboBox.AppComboBox /template/ Popup#PART_Popup">
+    <Setter Property="VerticalOffset" Value="6" />
+  </Style>
+  <!-- Dropdown chevron turns accent when the list is open -->
+  <Style Selector="ComboBox.AppComboBox:dropdownopen /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
 
   <!-- ════════════════════════════════════════════
        CHECKBOX
@@ -666,6 +674,16 @@
   </Style>
   <Style Selector="ToggleButton.FilterButton:checked:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <!-- FilterButton dropdown chevron foreground per state -->
+  <Style Selector="ToggleButton.FilterButton PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.FilterButton:checked PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.FilterButton:checked:pointerover PathIcon">
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
   </Style>
 
