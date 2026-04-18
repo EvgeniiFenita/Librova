@@ -6,7 +6,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'extend source selection, recursive directory discovery, and archive import handling so .rar files
     are accepted anywhere .zip is currently supported, with the same per-entry diagnostics, partial-success
     behavior, cancellation semantics, and duplicate handling as ZIP imports.
@@ -17,7 +17,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'currently a single Cancel button stops the pipeline with undefined semantics regarding already-imported
     books; replace it with two explicit actions — "Cancel and discard" rolls back and removes all books
     imported in the current batch, "Stop here" halts new processing but retains every book successfully
@@ -31,7 +31,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'the scenario is a user who already has an FB2 library and then configures a converter for the
     first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every
     managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted,
@@ -47,7 +47,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'each collection is a named list stored in the database; a book can independently belong to zero
     or more collections; the sidebar must surface Favorites and Read as first-class navigation destinations
     alongside Library; when a collection is selected the main grid shows only its books and all existing
@@ -63,7 +63,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'remaining performance scope after remediation-wave hardening is keyset pagination for deep browse,
     scalable author-sort/index strategy, FTS5 query-plan/tokenizer review, composite indexes aligned with
     browse filters, and explicit response-time budgets for browse/search/filter at 100k and 500k book
@@ -76,7 +76,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image
     processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface
     with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly
@@ -89,7 +89,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.1'
+  milestone: '1.2'
   note: Before enabling any parallel test execution, audit every C++ and C# test for shared files, temp
     directories, managed library roots, ports/pipes, environment state, globals, singletons, static caches,
     and output artifacts; eliminate collisions; make test workspaces deterministic and isolated; then
@@ -100,7 +100,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'the import card currently shows the internal processing stage for the current book (e.g. "Parsing
     metadata"); replace this sub-label with a rotating display picked from a curated set of ~100 short
     book-related facts (one sentence, fits the card width); shuffle the set per session, show each fact
@@ -112,7 +112,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'when unchecked, the import pipeline must skip cover extraction and storage entirely for the whole
     batch — no cover file is written to disk and no cover reference is stored in the database; this reduces
     disk usage and import time for users who do not need cover art; the setting applies only to the current
@@ -125,7 +125,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.1'
+  milestone: '1.2'
   note: the assigned image must pass through the existing cover processing pipeline (resize to the standard
     maximum dimensions and apply compression) before being stored beside the managed book bytes in the
     sharded Objects tree; the UI affordance should appear in the details panel and open a native file
@@ -137,7 +137,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.1'
+  milestone: '1.2'
   note: 'fbc supports ''fbc convert archive.zip/ outDir/'' — one process for N books. Prerequisite: IBookConverter
     needs SupportsGroupConversion()+ConvertGroup() extension points. Challenge: mixed-format archives
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
