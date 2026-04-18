@@ -1,4 +1,4 @@
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Storage/ManagedPathSafety.hpp"
 
 #include <Windows.h>
 

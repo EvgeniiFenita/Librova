@@ -1,4 +1,4 @@
-#include "ManagedStorage/ManagedFileStorage.hpp"
+#include "Storage/ManagedFileStorage.hpp"
 
 #include <filesystem>
 #include <exception>
@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "Foundation/Logging.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
-#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedPathSafety.hpp"
+#include "Storage/ManagedFileEncoding.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedStorage {

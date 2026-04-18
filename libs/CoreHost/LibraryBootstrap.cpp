@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 
 namespace Librova::CoreHost {
 namespace {

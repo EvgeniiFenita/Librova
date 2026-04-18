@@ -29,12 +29,10 @@ target_link_libraries(LibrovaApplication
         LibrovaDomain
         LibrovaImporting
         LibrovaImportSourceExpander
-        LibrovaManagedTrash
+        LibrovaStorage
         LibrovaZipImporting
     PRIVATE
         LibrovaFoundation
-        LibrovaManagedFileEncoding
-        LibrovaManagedPaths
 )
 
 target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

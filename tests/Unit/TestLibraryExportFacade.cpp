@@ -9,7 +9,7 @@
 #include "Database/SqliteBookRepository.hpp"
 #include "Database/SchemaMigrator.hpp"
 #include "Foundation/Logging.hpp"
-#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
+#include "Storage/ManagedFileEncoding.hpp"
 
 namespace {
 

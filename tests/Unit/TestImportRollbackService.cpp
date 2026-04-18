@@ -13,7 +13,7 @@
 #include "Database/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
 #include "Foundation/Logging.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {

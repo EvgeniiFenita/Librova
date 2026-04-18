@@ -4,8 +4,8 @@
 #include <fstream>
 #include <string>
 
-#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
-#include "ManagedStorage/ManagedFileStorage.hpp"
+#include "Storage/ManagedFileEncoding.hpp"
+#include "Storage/ManagedFileStorage.hpp"
 
 namespace {
 

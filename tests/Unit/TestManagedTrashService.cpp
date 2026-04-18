@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "Storage/ManagedTrashService.hpp"
 
 namespace {
 

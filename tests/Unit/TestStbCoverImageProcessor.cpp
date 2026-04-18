@@ -5,7 +5,7 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
-#include "CoverProcessingStb/StbCoverImageProcessor.hpp"
+#include "Storage/StbCoverImageProcessor.hpp"
 
 #include <cstddef>
 #include <cstdint>

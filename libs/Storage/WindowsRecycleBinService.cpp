@@ -1,4 +1,4 @@
-#include "RecycleBin/WindowsRecycleBinService.hpp"
+#include "Storage/WindowsRecycleBinService.hpp"
 
 #include <stdexcept>
 #include <string>

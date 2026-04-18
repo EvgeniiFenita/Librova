@@ -18,7 +18,7 @@
 #include "ApplicationJobs/ImportJobService.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "Storage/ManagedTrashService.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
 #include "TestNamedPipeReadySignal.hpp"
 

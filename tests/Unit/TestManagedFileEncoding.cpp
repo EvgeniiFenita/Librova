@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 
-#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
+#include "Storage/ManagedFileEncoding.hpp"
 
 namespace {
 

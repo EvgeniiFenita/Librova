@@ -83,8 +83,8 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Import Pipeline** | `libs/Importing/`, `libs/ZipImporting/`, `libs/ImportConversion/`, `libs/ImportSourceExpander/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion |
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
 | **Persistence** | `libs/Database/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
-| **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
-| **Conversion** | `libs/Converter/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
+| **Managed Storage** | `libs/Storage/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow; cover decode/resize/re-encode |
+| **Conversion** | `libs/Converter/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
 | **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
 
 ---
@@ -136,19 +136,13 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `ManagedStorage` | Stage/commit/rollback book and cover files; FNV-1a sharding of object paths | `CManagedFileStorage` (implements `IManagedStorage`) |
-| `StoragePlanning` | Compute canonical paths within library root | `CManagedLibraryLayout` |
-| `ManagedPaths` | Sanitize file names for safe filesystem placement | `CManagedPathSafety` |
-| `ManagedFileEncoding` | gz-compress/decompress FB2 for internal managed storage | compression helpers |
-| `ManagedTrash` | Stage deleted books in `LibraryRoot/Trash/` before Recycle Bin handoff | `CManagedTrashService` (implements `ITrashService`) |
-| `RecycleBin` | Windows Recycle Bin integration via `SHFileOperation` | `CWindowsRecycleBinService` (implements `IRecycleBinService`) |
+| `Storage` | Stage/commit/rollback book and cover files; sharded object layout; gz-compress/decompress; path safety; trash staging; Windows Recycle Bin; cover decode/resize/re-encode | `CManagedFileStorage` (implements `IManagedStorage`), `CManagedLibraryLayout`, `CManagedTrashService` (implements `ITrashService`), `CWindowsRecycleBinService` (implements `IRecycleBinService`), `CStbCoverImageProcessor` (implements `ICoverImageProcessor`) |
 
 ### Conversion
 
 | Module | Role | Key types |
 |---|---|---|
 | `Converter` | Spawn external converter process (fb2cng / ebook-convert); build CLI command string; load and validate converter binary path from settings | `CExternalBookConverter` (implements `IBookConverter`), `CConverterCommandBuilder`, `CConverterConfiguration` |
-| `CoverProcessingStb` | Decode cover image with stb; resize to target bounds; re-encode as JPEG with quality fallback | `CStbCoverImageProcessor` (implements `ICoverImageProcessor`) |
 
 ### Infrastructure
 
@@ -506,15 +500,15 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 8. Bind in `LibraryBrowserViewModel` / AXAML view
 
 ### Change cover processing
-- Decode/resize/re-encode: `libs/CoverProcessingStb/StbCoverImageProcessor.cpp/.hpp`
+- Decode/resize/re-encode: `libs/Storage/StbCoverImageProcessor.cpp/.hpp`
 - Size targets and quality fallback constants are inside that file
 - Interface: `ICoverImageProcessor` in `libs/Domain/`
 - Test: `tests/Unit/TestStbCoverImageProcessor.cpp`
 
 ### Change delete / Recycle Bin logic
 - Facade: `libs/Application/LibraryTrashFacade.cpp`
-- Trash staging: `libs/ManagedTrash/ManagedTrashService.cpp`
-- Recycle Bin: `libs/RecycleBin/WindowsRecycleBinService.cpp`
+- Trash staging: `libs/Storage/ManagedTrashService.cpp`
+- Recycle Bin: `libs/Storage/WindowsRecycleBinService.cpp`
 - Proto: `MoveBookToTrashRequest/Response` and `DeleteDestination` enum in `proto/import_jobs.proto`
 - Adapter: `CLibraryJobServiceAdapter::MoveBookToTrash()`
 
@@ -554,9 +548,9 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 | `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |
 | `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
 | `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |
-| `stb` | `libs/CoverProcessingStb/` | Single-header image decode/encode (JPEG, PNG) for cover processing |
+| `stb` | `libs/Storage/` | Single-header image decode/encode (JPEG, PNG) for cover processing |
 | `bshoshany-thread-pool` (BS::thread_pool) | `libs/ZipImporting/`, `libs/Importing/` | Fixed-size thread pool for parallel import workers |
-| `zlib` | `libs/ManagedFileEncoding/`; libzip dependency | gz compression/decompression for internal FB2 storage |
+| `zlib` | `libs/Storage/`; libzip dependency | gz compression/decompression for internal FB2 storage |
 | `catch2` | `tests/Unit/` | C++ unit test framework |
 | **Avalonia** | `apps/Librova.UI/` | Cross-platform XAML UI framework (.NET / C#) |
 | **Google.Protobuf** | `apps/Librova.UI/`; generated C# proto bindings | C# protobuf serialization |

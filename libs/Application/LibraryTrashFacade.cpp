@@ -4,8 +4,8 @@
 
 #include "Domain/DomainError.hpp"
 #include "Foundation/Logging.hpp"
-#include "ManagedPaths/ManagedPathSafety.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedPathSafety.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::Application {

@@ -1,11 +1,11 @@
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "Storage/ManagedTrashService.hpp"
 
 #include <system_error>
 #include <stdexcept>
 #include <string>
 
-#include "ManagedPaths/ManagedPathSafety.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedPathSafety.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedTrash {

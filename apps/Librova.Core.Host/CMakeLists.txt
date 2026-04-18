@@ -13,21 +13,16 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaApplicationJobs
         LibrovaDatabase
         LibrovaConverter
-        LibrovaCoverProcessingStb
+        LibrovaStorage
         LibrovaCoreHost
         LibrovaFoundation
         LibrovaImporting
         LibrovaJobs
-        LibrovaManagedPaths
-        LibrovaManagedStorage
-        LibrovaManagedTrash
         LibrovaParsing
         LibrovaPipeHost
         LibrovaProtoServices
         LibrovaProtoMapping
-        LibrovaStoragePlanning
         LibrovaZipImporting
-        LibrovaRecycleBin
 )
 
 target_compile_features(LibrovaCoreHostApp PRIVATE cxx_std_20)

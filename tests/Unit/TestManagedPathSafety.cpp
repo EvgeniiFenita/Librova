@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "ManagedPaths/ManagedPathSafety.hpp"
+#include "Storage/ManagedPathSafety.hpp"
 
 namespace {
 

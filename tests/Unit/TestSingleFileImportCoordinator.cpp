@@ -13,8 +13,8 @@
 
 #include "Domain/BookRepository.hpp"
 #include "Importing/SingleFileImportCoordinator.hpp"
-#include "ManagedFileEncoding/ManagedFileEncoding.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedFileEncoding.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 #include "Parsing/BookParserRegistry.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 

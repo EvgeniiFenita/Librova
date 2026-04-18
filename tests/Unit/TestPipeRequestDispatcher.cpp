@@ -17,7 +17,7 @@
 #include "Database/SchemaMigrator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "Storage/ManagedTrashService.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"
 
 namespace {

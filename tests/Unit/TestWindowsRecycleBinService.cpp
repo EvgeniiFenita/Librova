@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "RecycleBin/WindowsRecycleBinService.hpp"
+#include "Storage/WindowsRecycleBinService.hpp"
 
 TEST_CASE("Windows recycle bin service rejects empty path list", "[recycle-bin]")
 {

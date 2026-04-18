@@ -23,7 +23,7 @@
 #    define LIBROVA_STB_RESIZE_V2 0
 #endif
 
-#include "CoverProcessingStb/StbCoverImageProcessor.hpp"
+#include "Storage/StbCoverImageProcessor.hpp"
 
 #include <array>
 #include <climits>

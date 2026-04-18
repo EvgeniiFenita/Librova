@@ -19,7 +19,7 @@
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
 #include "Foundation/Logging.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "Storage/ManagedTrashService.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
