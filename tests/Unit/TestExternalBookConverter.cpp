@@ -7,8 +7,8 @@
 #include <thread>
 #include <stdexcept>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
-#include "ConverterRuntime/ExternalBookConverter.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
+#include "Converter/ExternalBookConverter.hpp"
 
 namespace {
 

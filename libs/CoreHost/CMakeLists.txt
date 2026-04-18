@@ -12,7 +12,7 @@ target_include_directories(LibrovaCoreHost
 
 target_link_libraries(LibrovaCoreHost
     PUBLIC
-        LibrovaConverterConfiguration
+        LibrovaConverter
         LibrovaFoundation
         LibrovaManagedPaths
         LibrovaStoragePlanning

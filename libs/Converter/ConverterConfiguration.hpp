@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
 
 namespace Librova::ConverterConfiguration {
 

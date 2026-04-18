@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "ConverterConfiguration/ConverterConfiguration.hpp"
+#include "Converter/ConverterConfiguration.hpp"
 #include "CoreHost/HostOptions.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 

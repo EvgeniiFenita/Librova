@@ -3,7 +3,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::CoreHost {

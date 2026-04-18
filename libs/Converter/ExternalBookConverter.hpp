@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
 #include "Domain/ServiceContracts.hpp"
 
 namespace Librova::ConverterRuntime {

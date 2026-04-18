@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "ConverterConfiguration/ConverterConfiguration.hpp"
+#include "Converter/ConverterConfiguration.hpp"
 
 namespace Librova::CoreHost {
 

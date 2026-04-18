@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
 
 TEST_CASE("Converter command builder creates default fb2cng command profile", "[converter-command]")
 {

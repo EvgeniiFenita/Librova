@@ -84,7 +84,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
 | **Persistence** | `libs/BookDatabase/`, `libs/DatabaseRuntime/`, `libs/DatabaseSchema/`, `libs/Sqlite/`, `libs/SearchIndex/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
 | **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
-| **Conversion** | `libs/ConverterRuntime/`, `libs/ConverterCommand/`, `libs/ConverterConfiguration/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
+| **Conversion** | `libs/Converter/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
 | **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
 
 ---
@@ -151,9 +151,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `ConverterRuntime` | Spawn external converter process (fb2cng / ebook-convert); manage per-entry working dir | `CExternalBookConverter` (implements `IBookConverter`) |
-| `ConverterCommand` | Build CLI command string for configured converter profile | `CConverterCommandBuilder` |
-| `ConverterConfiguration` | Load and validate converter binary path from settings | `CConverterConfiguration` |
+| `Converter` | Spawn external converter process (fb2cng / ebook-convert); build CLI command string; load and validate converter binary path from settings | `CExternalBookConverter` (implements `IBookConverter`), `CConverterCommandBuilder`, `CConverterConfiguration` |
 | `CoverProcessingStb` | Decode cover image with stb; resize to target bounds; re-encode as JPEG with quality fallback | `CStbCoverImageProcessor` (implements `ICoverImageProcessor`) |
 
 ### Infrastructure
@@ -531,9 +529,8 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 - Styles: reuse design tokens from `apps/Librova.UI/Styles/` — see `docs/UiDesignSystem.md`
 
 ### Change converter settings
-- Configuration loading: `libs/ConverterConfiguration/`
-- CLI command building: `libs/ConverterCommand/`
-- External process execution: `libs/ConverterRuntime/ExternalBookConverter.cpp`
+- Configuration and CLI command building: `libs/Converter/`
+- External process execution: `libs/Converter/ExternalBookConverter.cpp`
 - C# probe and validation: `apps/Librova.UI/Shell/Fb2ConverterProbe.cs`, `Shell/ConverterValidationCoordinator.cs`
 - ViewModel: `ViewModels/ShellConverterPathController.cs`, `ShellConverterSettingsState.cs`
 

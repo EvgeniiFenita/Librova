@@ -1,4 +1,4 @@
-#include "ConverterConfiguration/ConverterConfiguration.hpp"
+#include "Converter/ConverterConfiguration.hpp"
 
 namespace Librova::ConverterConfiguration {
 

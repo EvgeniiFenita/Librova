@@ -74,9 +74,7 @@ if(BUILD_TESTING)
             LibrovaApplicationClient
             LibrovaApplicationJobs
             LibrovaBookDatabase
-            LibrovaConverterCommand
-            LibrovaConverterConfiguration
-            LibrovaConverterRuntime
+            LibrovaConverter
             LibrovaCoverProcessingStb
             LibrovaDomain
             LibrovaFoundation
