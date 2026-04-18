@@ -11,13 +11,13 @@
 #include <string>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
 #include "Storage/ManagedTrashService.hpp"
 #include "Transport/NamedPipeHost.hpp"
 #include "TestNamedPipeReadySignal.hpp"

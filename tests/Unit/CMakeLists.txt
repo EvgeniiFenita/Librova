@@ -70,18 +70,11 @@ if(BUILD_TESTING)
     target_link_libraries(LibrovaCoreTests
         PRIVATE
             Catch2::Catch2WithMain
-            LibrovaApplication
+            LibrovaApp
             LibrovaApplicationClient
-            LibrovaApplicationJobs
             LibrovaDatabase
-            LibrovaConverter
-            LibrovaStorage
             LibrovaDomain
-            LibrovaFoundation
-            LibrovaCoreHost
             LibrovaParsing
-            LibrovaImport
-            LibrovaJobs
             LibrovaTransport
             LibrovaRpc
     )

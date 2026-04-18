@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "Application/LibraryTrashFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
 #include "Database/SqliteBookRepository.hpp"
 #include "Database/SchemaMigrator.hpp"
 #include "Foundation/Logging.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Application/LibraryImportFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/ImportJobService.hpp"
 #include "Domain/DomainError.hpp"
 #include "import_jobs.pb.h"
 

@@ -10,7 +10,7 @@
 #include <thread>
 #include <unordered_map>
 
-#include "Jobs/ImportJobRunner.hpp"
+#include "App/ImportJobRunner.hpp"
 
 namespace Librova::Jobs {
 

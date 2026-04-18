@@ -10,9 +10,9 @@
 
 #include "Domain/BookRepository.hpp"
 #include "Domain/ServiceContracts.hpp"
-#include "ImportRollbackService.hpp"
-#include "ImportWorkloadPlanner.hpp"
-#include "StructuredProgressMapper.hpp"
+#include "App/ImportRollbackService.hpp"
+#include "App/ImportWorkloadPlanner.hpp"
+#include "App/StructuredProgressMapper.hpp"
 #include "Import/SingleFileImportCoordinator.hpp"
 #include "Import/ZipImportCoordinator.hpp"
 

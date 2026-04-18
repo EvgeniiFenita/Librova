@@ -1,4 +1,4 @@
-#include "Application/LibraryTrashFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
 
 #include <stdexcept>
 

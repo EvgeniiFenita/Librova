@@ -1,4 +1,4 @@
-#include "CoreHost/HostOptions.hpp"
+#include "App/HostOptions.hpp"
 
 #include <limits>
 #include <stdexcept>

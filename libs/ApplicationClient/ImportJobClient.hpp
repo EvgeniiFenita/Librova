@@ -5,8 +5,8 @@
 #include <filesystem>
 #include <optional>
 
-#include "Application/LibraryImportFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/ImportJobService.hpp"
 #include "Transport/NamedPipeClient.hpp"
 
 namespace Librova::ApplicationClient {

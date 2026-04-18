@@ -1,4 +1,4 @@
-#include "CoreHost/LibraryBootstrap.hpp"
+#include "App/LibraryBootstrap.hpp"
 
 #include <stdexcept>
 #include <system_error>

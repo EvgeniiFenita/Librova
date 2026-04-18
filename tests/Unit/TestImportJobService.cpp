@@ -7,8 +7,8 @@
 #include <stop_token>
 #include <thread>
 
-#include "Application/LibraryImportFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/ImportJobService.hpp"
 #include "Domain/BookRepository.hpp"
 
 namespace {

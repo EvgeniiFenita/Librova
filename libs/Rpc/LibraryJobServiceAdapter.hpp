@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
 #include "import_jobs.pb.h"
 
 namespace Librova::ProtoServices {

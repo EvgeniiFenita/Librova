@@ -9,15 +9,8 @@ target_include_directories(LibrovaCoreHostApp
 
 target_link_libraries(LibrovaCoreHostApp
     PRIVATE
-        LibrovaApplication
-        LibrovaApplicationJobs
+        LibrovaApp
         LibrovaDatabase
-        LibrovaConverter
-        LibrovaStorage
-        LibrovaCoreHost
-        LibrovaFoundation
-        LibrovaImport
-        LibrovaJobs
         LibrovaParsing
         LibrovaTransport
         LibrovaRpc

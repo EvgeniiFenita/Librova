@@ -6,7 +6,7 @@
 #include <string>
 #include <Windows.h>
 
-#include "CoreHost/LibraryBootstrap.hpp"
+#include "App/LibraryBootstrap.hpp"
 
 namespace {
 

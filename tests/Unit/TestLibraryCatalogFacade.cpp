@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "Application/LibraryCatalogFacade.hpp"
+#include "App/LibraryCatalogFacade.hpp"
 #include "Database/SqliteBookQueryRepository.hpp"
 #include "Database/SqliteBookRepository.hpp"
 #include "Database/SchemaMigrator.hpp"

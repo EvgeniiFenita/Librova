@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "Application/LibraryImportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
 #include "Domain/DomainError.hpp"
-#include "Jobs/ImportJobManager.hpp"
+#include "App/ImportJobManager.hpp"
 
 namespace Librova::ApplicationJobs {
 

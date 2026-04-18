@@ -8,16 +8,16 @@
 #include <stop_token>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
 #include "Database/SqliteBookQueryRepository.hpp"
 #include "Database/SqliteBookRepository.hpp"
 #include "Database/SchemaMigrator.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
 #include "Foundation/Logging.hpp"
 #include "Storage/ManagedTrashService.hpp"
 #include "Rpc/LibraryJobServiceAdapter.hpp"

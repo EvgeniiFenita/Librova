@@ -78,7 +78,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 11 RPC methods, all message types, all enums |
 | **Transport (C++)** | `libs/Transport/` | Named-pipe host, envelope serialization/deserialization, request dispatcher, pipe client |
 | **Proto Adapter** | `libs/Rpc/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
-| **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
+| **Application Facades** | `libs/App/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle; host bootstrap and CLI options |
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
 | **Import Pipeline** | `libs/Import/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion, diagnostics |
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
@@ -103,9 +103,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Application` | Top-level use-case facades; orchestrate lower layers | `CLibraryImportFacade`, `CLibraryCatalogFacade`, `CLibraryExportFacade`, `CLibraryTrashFacade`, `CImportRollbackService` |
-| `ApplicationJobs` | Wrap `CLibraryImportFacade` as a job-compatible service | `CImportJobService` |
-| `Jobs` | Async job lifecycle: create, track, cancel, wait, remove | `CImportJobManager`, `CImportJobRunner`, `EJobStatus`, `SJobProgressSnapshot`, `SImportJobResult` |
+| `App` | Top-level use-case facades; async job lifecycle; host CLI options and library bootstrap | `CLibraryImportFacade`, `CLibraryCatalogFacade`, `CLibraryExportFacade`, `CLibraryTrashFacade`, `CImportRollbackService`, `CImportJobService`, `CImportJobManager`, `CImportJobRunner`, `CHostOptions`, `CLibraryBootstrap` |
 
 ### Import Pipeline
 

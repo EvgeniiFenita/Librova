@@ -1,4 +1,4 @@
-#include "Application/StructuredProgressMapper.hpp"
+#include "App/StructuredProgressMapper.hpp"
 
 namespace Librova::Application {
 

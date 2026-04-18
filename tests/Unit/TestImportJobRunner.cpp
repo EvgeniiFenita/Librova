@@ -14,10 +14,10 @@
 
 #include <zip.h>
 
-#include "Application/LibraryImportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
-#include "Jobs/ImportJobRunner.hpp"
+#include "App/ImportJobRunner.hpp"
 
 namespace {
 

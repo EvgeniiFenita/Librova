@@ -17,8 +17,8 @@
 
 #include <zip.h>
 
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/StructuredProgressMapper.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/StructuredProgressMapper.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
 #include "Foundation/Logging.hpp"

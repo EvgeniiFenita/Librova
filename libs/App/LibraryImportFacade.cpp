@@ -1,4 +1,4 @@
-#include "Application/LibraryImportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
 
 #include <algorithm>
 #include <condition_variable>
@@ -14,9 +14,9 @@
 
 #include <BS_thread_pool.hpp>
 
-#include "Application/ImportRollbackService.hpp"
-#include "Application/ImportWorkloadPlanner.hpp"
-#include "Application/StructuredProgressMapper.hpp"
+#include "App/ImportRollbackService.hpp"
+#include "App/ImportWorkloadPlanner.hpp"
+#include "App/StructuredProgressMapper.hpp"
 #include "Import/ImportDiagnostics.hpp"
 #include "Import/ImportSourceExpander.hpp"
 #include "Import/ImportDiagnosticText.hpp"

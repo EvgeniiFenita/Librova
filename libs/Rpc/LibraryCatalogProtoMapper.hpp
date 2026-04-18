@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
 #include "Domain/DomainError.hpp"
 #include "import_jobs.pb.h"
 

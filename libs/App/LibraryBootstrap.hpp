@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "CoreHost/HostOptions.hpp"
+#include "App/HostOptions.hpp"
 
 namespace Librova::CoreHost {
 

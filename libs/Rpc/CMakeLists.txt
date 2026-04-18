@@ -46,8 +46,7 @@ target_include_directories(LibrovaRpc
 
 target_link_libraries(LibrovaRpc
     PUBLIC
-        LibrovaApplication
-        LibrovaApplicationJobs
+        LibrovaApp
         LibrovaDomain
         protobuf::libprotobuf
     PRIVATE
