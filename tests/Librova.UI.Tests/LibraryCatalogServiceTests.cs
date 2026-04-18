@@ -1,6 +1,11 @@
+using Google.Protobuf;
 using Librova.UI.CoreHost;
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.PipeTransport;
+using Librova.V1;
+using System.Buffers.Binary;
+using System.IO.Pipes;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -710,6 +715,94 @@ public sealed class LibraryCatalogServiceTests
             catch (UnauthorizedAccessException)
             {
             }
+        }
+    }
+
+    [Fact]
+    public async Task LibraryCatalogService_GetBookDetailsThrowsStructuredNotFoundError()
+    {
+        var pipeName = $"Librova.UI.LibraryCatalogServiceTests.{Environment.ProcessId}.{Environment.TickCount64}";
+        var pipePath = $@"\\.\pipe\{pipeName}";
+
+        await using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            var requestBytes = await ReadClientFrameAsync(server);
+            var requestEnvelope = PipeProtocol.DeserializeRequestEnvelope(requestBytes);
+
+            var responseBytes = PipeProtocol.SerializeResponseEnvelope(new PipeResponseEnvelope
+            {
+                RequestId = requestEnvelope.RequestId,
+                Status = PipeResponseStatus.Ok,
+                Payload = new GetBookDetailsResponse
+                {
+                    Error = new DomainError
+                    {
+                        Code = ErrorCode.NotFound,
+                        Message = "Book 42 was not found."
+                    }
+                }.ToByteArray()
+            });
+
+            await WriteServerFrameAsync(server, responseBytes);
+        });
+
+        var service = new LibraryCatalogService(pipePath);
+        var error = await Assert.ThrowsAsync<LibraryCatalogDomainException>(() =>
+            service.GetBookDetailsAsync(42, TimeSpan.FromSeconds(5), CancellationToken.None));
+
+        Assert.Equal(LibraryCatalogErrorCodeModel.NotFound, error.Error.Code);
+        Assert.Equal("Book 42 was not found.", error.Message);
+        await serverTask;
+    }
+
+    private static async Task<byte[]> ReadClientFrameAsync(PipeStream stream)
+    {
+        var prefix = new byte[sizeof(uint)];
+        await ReadExactAsync(stream, prefix);
+        var length = BinaryPrimitives.ReadUInt32LittleEndian(prefix);
+        if (length == 0)
+        {
+            return [];
+        }
+
+        var payload = new byte[length];
+        await ReadExactAsync(stream, payload);
+        return payload;
+    }
+
+    private static async Task WriteServerFrameAsync(PipeStream stream, byte[] payload)
+    {
+        var prefix = new byte[sizeof(uint)];
+        BinaryPrimitives.WriteUInt32LittleEndian(prefix, checked((uint)payload.Length));
+        await stream.WriteAsync(prefix);
+        if (payload.Length != 0)
+        {
+            await stream.WriteAsync(payload);
+        }
+
+        await stream.FlushAsync();
+    }
+
+    private static async Task ReadExactAsync(PipeStream stream, byte[] buffer)
+    {
+        var offset = 0;
+        while (offset < buffer.Length)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset));
+            if (read == 0)
+            {
+                throw new IOException("Named pipe closed while reading test payload.");
+            }
+
+            offset += read;
         }
     }
 

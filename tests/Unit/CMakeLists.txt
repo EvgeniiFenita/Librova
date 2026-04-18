@@ -63,6 +63,7 @@ if(BUILD_TESTING)
         TestDuplicateMatch.cpp
         TestVersion.cpp
         TestStbCoverImageProcessor.cpp
+        TestWindowsRecycleBinService.cpp
         TestWriterDispatchingRepository.cpp
         TestZipImportCoordinator.cpp
     )
@@ -100,7 +101,8 @@ if(BUILD_TESTING)
             LibrovaPipeTransport
             LibrovaProtoContracts
             LibrovaProtoMapping
-        LibrovaProtoServices
+            LibrovaProtoServices
+            LibrovaRecycleBin
         LibrovaSearchIndex
         LibrovaSqlite
         LibrovaStoragePlanning

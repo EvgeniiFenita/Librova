@@ -65,6 +65,25 @@ TEST_CASE("Pipe response envelopes round-trip through binary framing", "[pipe]")
     REQUIRE(parsed.Value->ErrorMessage == response.ErrorMessage);
 }
 
+TEST_CASE("Pipe protocol round-trips empty payloads without treating them as EOF", "[pipe]")
+{
+    const Librova::PipeTransport::SPipeResponseEnvelope response{
+        .RequestId = 91,
+        .Status = Librova::PipeTransport::EPipeResponseStatus::Ok,
+        .Payload = {},
+        .ErrorMessage = {}
+    };
+
+    const auto bytes = Librova::PipeTransport::SerializeResponseEnvelope(response);
+    const auto parsed = Librova::PipeTransport::DeserializeResponseEnvelope(bytes);
+
+    REQUIRE(parsed.HasValue());
+    REQUIRE(parsed.Value->RequestId == response.RequestId);
+    REQUIRE(parsed.Value->Status == response.Status);
+    REQUIRE(parsed.Value->Payload.empty());
+    REQUIRE(parsed.Value->ErrorMessage.empty());
+}
+
 TEST_CASE("Pipe protocol rejects corrupted method values", "[pipe]")
 {
     const Librova::PipeTransport::SPipeRequestEnvelope request{

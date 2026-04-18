@@ -1306,3 +1306,12 @@ tasks:
   note: Fixed the review findings by making GenerateLibrovaIcon.py resolve relative output paths from
     the repo root, correcting script-launch docs, and moving backlog Unicode console regression coverage
     to isolated fixture files.
+- id: 159
+  summary: close gaps from the 2026-04-17 test coverage audit and harden missing regression coverage
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Verified the 2026-04-17 audit against the current codebase, closed the still-relevant IPC and
+    catalog coverage gaps with new native and managed regression tests, and reran the full native and
+    managed test suites successfully.

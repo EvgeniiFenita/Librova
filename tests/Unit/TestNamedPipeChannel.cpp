@@ -181,6 +181,47 @@ TEST_CASE("Named pipe channel timeout read cancels pending overlapped wait inste
     REQUIRE(serverFailure == nullptr);
 }
 
+TEST_CASE("Named pipe channel reports peer disconnect while waiting for a framed response", "[pipe]")
+{
+    const auto pipePath = BuildTestPipePath();
+    std::exception_ptr serverFailure;
+    CTestNamedPipeReadySignal readySignal;
+
+    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
+        try
+        {
+            Librova::PipeTransport::CNamedPipeServer server(pipePath);
+            readySignal.NotifyReady();
+            auto connection = server.WaitForClient();
+        }
+        catch (...)
+        {
+            const std::exception_ptr failure = std::current_exception();
+            readySignal.NotifyFailure(failure);
+            serverFailure = failure;
+        }
+    });
+
+    readySignal.Wait();
+
+    auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
+
+    try
+    {
+        static_cast<void>(client.ReadMessage(std::chrono::milliseconds(500)));
+        FAIL("Expected peer disconnect while waiting for a framed response.");
+    }
+    catch (const std::runtime_error& error)
+    {
+        const std::string message = error.what();
+        REQUIRE(message.find("Failed to read from named pipe") != std::string::npos);
+        REQUIRE(message.find("win32=109") != std::string::npos);
+    }
+
+    serverThread.join();
+    REQUIRE(serverFailure == nullptr);
+}
+
 TEST_CASE("Named pipe channel timeout write cancels pending overlapped wait instead of blocking behind a non-reading peer", "[pipe]")
 {
     const auto pipePath = BuildTestPipePath();

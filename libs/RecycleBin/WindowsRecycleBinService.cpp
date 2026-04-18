@@ -55,7 +55,10 @@ void CWindowsRecycleBinService::MoveToRecycleBin(const std::vector<std::filesyst
     const int result = ::SHFileOperationW(&operation);
     if (result != 0)
     {
-        throw std::runtime_error("SHFileOperationW failed while moving files to the Windows Recycle Bin.");
+        throw std::runtime_error(
+            "SHFileOperationW failed while moving files to the Windows Recycle Bin. FirstPath='"
+            + Librova::Unicode::PathToUtf8(paths.front())
+            + "'.");
     }
 
     if (operation.fAnyOperationsAborted)

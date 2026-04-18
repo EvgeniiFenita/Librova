@@ -48,6 +48,141 @@ public sealed class NamedPipeClientTests
     }
 
     [Fact]
+    public async Task CallAsync_WhenServerReturnsInternalError_ThrowsPipeTransportException()
+    {
+        var pipeName = $"Librova.UI.NamedPipeClient.Tests.{Environment.ProcessId}.{Environment.TickCount64}";
+        var pipePath = $@"\\.\pipe\{pipeName}";
+
+        await using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            var requestBytes = await ReadClientFrameAsync(server);
+            var requestEnvelope = PipeProtocol.DeserializeRequestEnvelope(requestBytes);
+
+            var responseBytes = PipeProtocol.SerializeResponseEnvelope(new PipeResponseEnvelope
+            {
+                RequestId = requestEnvelope.RequestId,
+                Status = PipeResponseStatus.InternalError,
+                ErrorMessage = "server exploded"
+            });
+
+            await WriteServerFrameAsync(server, responseBytes);
+        });
+
+        var client = new NamedPipeClient(pipePath);
+        var error = await Assert.ThrowsAsync<PipeTransportException>(() =>
+            client.CallAsync(
+                PipeMethod.WaitImportJob,
+                new Librova.V1.WaitImportJobRequest { JobId = 1, TimeoutMs = 1 },
+                Librova.V1.WaitImportJobResponse.Parser,
+                TimeSpan.FromSeconds(5),
+                CancellationToken.None));
+
+        Assert.Contains("server exploded", error.Message, StringComparison.Ordinal);
+        await serverTask;
+    }
+
+    [Fact]
+    public async Task CallAsync_WhenCancelled_ThrowsOperationCanceledAndAllowsNextCall()
+    {
+        var pipeName = $"Librova.UI.NamedPipeClient.Tests.{Environment.ProcessId}.{Environment.TickCount64}";
+        var pipePath = $@"\\.\pipe\{pipeName}";
+
+        await using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            2,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+
+        var firstRequestReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowDisconnect = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            await ReadClientFrameAsync(server);
+            firstRequestReceived.TrySetResult();
+            await allowDisconnect.Task;
+
+            server.Disconnect();
+            await server.WaitForConnectionAsync();
+            var secondRequestBytes = await ReadClientFrameAsync(server);
+            var secondRequestEnvelope = PipeProtocol.DeserializeRequestEnvelope(secondRequestBytes);
+            var responseBytes = PipeProtocol.SerializeResponseEnvelope(new PipeResponseEnvelope
+            {
+                RequestId = secondRequestEnvelope.RequestId,
+                Status = PipeResponseStatus.Ok,
+                Payload = new Librova.V1.RemoveImportJobResponse { Removed = true }.ToByteArray()
+            });
+            await WriteServerFrameAsync(server, responseBytes);
+        });
+
+        var client = new NamedPipeClient(pipePath);
+        using var cancellation = new CancellationTokenSource();
+        var firstCallTask = client.CallAsync(
+            PipeMethod.WaitImportJob,
+            new Librova.V1.WaitImportJobRequest { JobId = 1, TimeoutMs = 1000 },
+            Librova.V1.WaitImportJobResponse.Parser,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+
+        await firstRequestReceived.Task;
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => firstCallTask);
+        allowDisconnect.SetResult();
+
+        var secondResponse = await client.CallAsync(
+            PipeMethod.RemoveImportJob,
+            new Librova.V1.RemoveImportJobRequest { JobId = 1 },
+            Librova.V1.RemoveImportJobResponse.Parser,
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None);
+
+        Assert.True(secondResponse.Removed);
+        await serverTask;
+    }
+
+    [Fact]
+    public async Task CallAsync_WhenServerDisconnectsDuringRead_ThrowsPipeTransportException()
+    {
+        var pipeName = $"Librova.UI.NamedPipeClient.Tests.{Environment.ProcessId}.{Environment.TickCount64}";
+        var pipePath = $@"\\.\pipe\{pipeName}";
+
+        await using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync();
+            await ReadClientFrameAsync(server);
+            server.Disconnect();
+        });
+
+        var client = new NamedPipeClient(pipePath);
+        var error = await Assert.ThrowsAsync<PipeTransportException>(() =>
+            client.CallAsync(
+                PipeMethod.WaitImportJob,
+                new Librova.V1.WaitImportJobRequest { JobId = 1, TimeoutMs = 1 },
+                Librova.V1.WaitImportJobResponse.Parser,
+                TimeSpan.FromSeconds(5),
+                CancellationToken.None));
+
+        Assert.Contains("closed while reading", error.Message, StringComparison.OrdinalIgnoreCase);
+        await serverTask;
+    }
+
+    [Fact]
     public async Task CallAsync_LogsRequestIdAndElapsedTimeForSuccessfulResponse()
     {
         var sandboxRoot = Path.Combine(
