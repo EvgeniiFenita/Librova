@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 168
+  last_assigned_id: 169
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -95,6 +95,14 @@ tasks:
     and output artifacts; eliminate collisions; make test workspaces deterministic and isolated; then
     enable parallelism inside the native suite and between native and managed test runs in Run-Tests.ps1
     without introducing flaky resource-conflict failures.
+- id: 169
+  summary: stop writing converter log to the repository root when launching via Run-Librova.ps1
+  status: Open
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Launching the app through scripts\\Run-Librova.ps1 should keep converter diagnostics under the
+    configured runtime workspace instead of creating a converter log file in the repository root.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
