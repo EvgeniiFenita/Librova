@@ -1,12 +1,12 @@
 meta:
-  last_assigned_id: 173
+  last_assigned_id: 181
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: unscheduled
   note: 'extend source selection, recursive directory discovery, and archive import handling so .rar files
     are accepted anywhere .zip is currently supported, with the same per-entry diagnostics, partial-success
     behavior, cancellation semantics, and duplicate handling as ZIP imports.
@@ -17,7 +17,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: '1.3'
   note: 'currently a single Cancel button stops the pipeline with undefined semantics regarding already-imported
     books; replace it with two explicit actions — "Cancel and discard" rolls back and removes all books
     imported in the current batch, "Stop here" halts new processing but retains every book successfully
@@ -31,7 +31,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: unscheduled
   note: 'the scenario is a user who already has an FB2 library and then configures a converter for the
     first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every
     managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted,
@@ -47,7 +47,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: '1.3'
   note: 'each collection is a named list stored in the database; a book can independently belong to zero
     or more collections; the sidebar must surface Favorites and Read as first-class navigation destinations
     alongside Library; when a collection is selected the main grid shows only its books and all existing
@@ -63,7 +63,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: unscheduled
   note: 'remaining performance scope after remediation-wave hardening is keyset pagination for deep browse,
     scalable author-sort/index strategy, FTS5 query-plan/tokenizer review, composite indexes aligned with
     browse filters, and explicit response-time budgets for browse/search/filter at 100k and 500k book
@@ -76,7 +76,7 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: unscheduled
   note: 'affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image
     processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface
     with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly
@@ -89,18 +89,51 @@ tasks:
   status: Open
   type: Feature
   priority: Major
-  milestone: '1.2'
+  milestone: '1.3'
   note: Before enabling any parallel test execution, audit every C++ and C# test for shared files, temp
     directories, managed library roots, ports/pipes, environment state, globals, singletons, static caches,
     and output artifacts; eliminate collisions; make test workspaces deterministic and isolated; then
     enable parallelism inside the native suite and between native and managed test runs in Run-Tests.ps1
     without introducing flaky resource-conflict failures.
+- id: 179
+  summary: add Go to Import CTA button to empty library state
+  status: Open
+  type: Feature
+  priority: Major
+  milestone: '1.2'
+  note: in Library empty state (no books, no active filters) add a PrimaryAction button Go to Import below
+    the description; add ShowGoToImportButton (= ShowEmptyState and not HasActiveFilters), GoToImportCommand,
+    and a shell navigation callback to LibraryBrowserViewModel constructor; in Nothing found state (filters
+    active, zero results) hide the CTA and show a SecondaryAction Clear Filters button bound to existing
+    ClearAllFiltersCommand
+- id: 180
+  summary: add live search suggestions dropdown to the library search field
+  status: Open
+  type: Feature
+  priority: Major
+  milestone: '1.3'
+  note: 'show a dropdown under the search input as the user types with debounce ~200ms; two groups: top-5
+    author matches and top-5 title matches with SectionEyebrow headers; matched substring highlighted
+    in AppAccentBrush; keyboard navigation with up/down arrows, Enter to apply, Escape to close without
+    clearing; dropdown does not appear when there are no results; requires a new or extended RPC method
+    for prefix search returning authors and titles separately'
+- id: 181
+  summary: add library statistics dashboard as a dedicated sidebar section
+  status: Open
+  type: Feature
+  priority: Major
+  milestone: unscheduled
+  note: 'add a Statistics NavItem (fourth sidebar entry, new icon); content: horizontal bar charts for
+    top-5 genres, authors, languages, and a year histogram; each bar row shows label, proportional fill
+    (AppAccentDimBrush to AppAccentBrush), and MetricPill count; section headers use SectionEyebrow; first
+    load shows a skeleton instead of an empty screen; requires extending LibraryStatisticsModel in proto,
+    new SQL aggregate queries in C++, and a new RPC method'
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
   type: Feature
-  priority: Minor
-  milestone: '1.2'
+  priority: Low
+  milestone: unscheduled
   note: 'the import card currently shows the internal processing stage for the current book (e.g. "Parsing
     metadata"); replace this sub-label with a rotating display picked from a curated set of ~100 short
     book-related facts (one sentence, fits the card width); shuffle the set per session, show each fact
@@ -125,7 +158,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.2'
+  milestone: unscheduled
   note: the assigned image must pass through the existing cover processing pipeline (resize to the standard
     maximum dimensions and apply compression) before being stored beside the managed book bytes in the
     sharded Objects tree; the UI affordance should appear in the details panel and open a native file
@@ -137,7 +170,7 @@ tasks:
   status: Open
   type: Feature
   priority: Minor
-  milestone: '1.2'
+  milestone: unscheduled
   note: 'fbc supports ''fbc convert archive.zip/ outDir/'' — one process for N books. Prerequisite: IBookConverter
     needs SupportsGroupConversion()+ConvertGroup() extension points. Challenge: mixed-format archives
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
@@ -169,6 +202,47 @@ tasks:
     where clarity would improve; produce a findings list, fix all violations in one focused pass, and
     add a rule to AGENTS.md: new C++ code must not introduce manual workarounds or reinventions of features
     available in the C++20 standard library.'
+- id: 175
+  summary: add drag-over visual highlight to Import DropZone border
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Border.DropZone in ImportView has no drag-over state; MainWindow already handles DragDrop globally
+    and silently; add DragEnterEvent and DragLeaveEvent handlers in ImportView.axaml.cs to toggle a DragOver
+    CSS class on the border; add Border.DropZone.DragOver style in Components.axaml switching border to
+    AppAccentBrush and background to AppAccentMutedBrush
+- id: 176
+  summary: add keyboard shortcuts for core library actions
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'add KeyBindings in MainWindow.axaml (window-level): Esc -> Shell.LibraryBrowser.CloseSelectionCommand,
+    Delete -> Shell.LibraryBrowser.MoveSelectedBookToTrashCommand, Ctrl+I -> Shell.ShowImportSectionCommand,
+    Ctrl+F -> focus search field; no ViewModel changes required; add a Keyboard Shortcuts reference table
+    in the Settings view using AppPanelMuted'
+- id: 177
+  summary: show author text as second line on book card
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'AuthorsText already exists on BookListItemModel; add a BodyMuted TextBlock under the title in
+    the book card DataTemplate with TextTrimming=CharacterEllipsis; the card geometry must be updated:
+    increase BookCardButton Height and remove MaxHeight constraint on the title TextBlock to accommodate
+    the second line without deforming the WrapPanel grid'
+- id: 178
+  summary: add right-click context menu to book card with export, copy title, and delete actions
+  status: Open
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'add ContextMenu on Button.BookCardButton with three items: Export (ExportSelectedBookCommand),
+    Copy Title (Clipboard via TopLevel.GetTopLevel), separator, Move to Trash (MoveSelectedBookToTrashCommand,
+    AppDangerBrush foreground, IconTrash); on ContextRequested call SelectBookCommand first if the book
+    is not yet selected; ContextMenu must follow the popup visual rule: AppSurfaceElevatedBrush background
+    and AppAccentBorderBrush border'
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open
@@ -189,3 +263,11 @@ tasks:
   milestone: unscheduled
   note: Replace the removed ad-hoc backlog test scaffolding with a documented, repository-consistent test
     pipeline for backlog tooling, including fixture strategy, runner choice, and mutating-command isolation.
+- id: 174
+  summary: add ToolTip.Tip binding to truncated book title TextBlock on book card
+  status: Open
+  type: Feature
+  priority: Low
+  milestone: '1.3'
+  note: TextTrimming=CharacterEllipsis already set on the title TextBlock in LibraryView.axaml; add ToolTip.Tip="{Binding
+    Title}" to the same element so the full title is readable on hover without opening the details panel
