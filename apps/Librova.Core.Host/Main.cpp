@@ -31,7 +31,7 @@
 #include "Foundation/Logging.hpp"
 #include "ManagedStorage/ManagedFileStorage.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
-#include "ParserRegistry/BookParserRegistry.hpp"
+#include "Parsing/BookParserRegistry.hpp"
 #include "PipeHost/NamedPipeHost.hpp"
 #include "PipeTransport/NamedPipeChannel.hpp"
 #include "PipeTransport/PipeRequestDispatcher.hpp"

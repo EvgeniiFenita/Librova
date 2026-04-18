@@ -81,7 +81,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Application Facades** | `libs/Application/`, `libs/ApplicationJobs/`, `libs/Jobs/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle |
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
 | **Import Pipeline** | `libs/Importing/`, `libs/ZipImporting/`, `libs/ImportConversion/`, `libs/ImportSourceExpander/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion |
-| **Parsing** | `libs/Fb2Parsing/`, `libs/EpubParsing/`, `libs/ParserRegistry/` | Format-specific metadata/cover extraction; registry dispatches by format |
+| **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
 | **Persistence** | `libs/BookDatabase/`, `libs/DatabaseRuntime/`, `libs/DatabaseSchema/`, `libs/Sqlite/`, `libs/SearchIndex/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
 | **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
 | **Conversion** | `libs/ConverterRuntime/`, `libs/ConverterCommand/`, `libs/ConverterConfiguration/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
@@ -124,9 +124,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Fb2Parsing` | Parse FictionBook 2 XML; decode non-UTF-8 (Windows-1251); extract metadata + cover | `CFb2Parser`, `CFb2GenreMapper` |
-| `EpubParsing` | Parse EPUB (OPF metadata, ZIP-based); extract dc:subject as tags | `CEpubParser` |
-| `ParserRegistry` | Dispatch `IBookParser` by format | `CBookParserRegistry` |
+| `Parsing` | Parse FB2 (Windows-1251 decode) and EPUB (OPF/ZIP); genre mapping; dispatch `IBookParser` by format | `CFb2Parser`, `CFb2GenreMapper`, `CEpubParser`, `CBookParserRegistry` |
 
 ### Persistence
 
@@ -490,8 +488,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 - Tests: `tests/Unit/TestZipImportCoordinator.cpp`, `tests/Unit/TestLibraryImportFacade.cpp`, `tests/Unit/TestWriterDispatchingRepository.cpp`
 
 ### Add a new book format
-- Implement `IBookParser` in a new `libs/<FormatName>Parsing/` library
-- Register in `libs/ParserRegistry/BookParserRegistry.cpp`
+- Implement `IBookParser` in `libs/Parsing/` (new `<Format>Parser.hpp/.cpp` + register in `BookParserRegistry.cpp`)
 - Extend `EBookFormat` in `libs/Domain/BookFormat.hpp` and update all switch statements
 - Add proto enum value `BookFormat` in `proto/import_jobs.proto`; update `CLibraryCatalogProtoMapper`
 - Add test in `tests/Unit/Test<Format>Parser.cpp`
@@ -558,7 +555,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 
 | Library | Used in | Purpose |
 |---|---|---|
-| `pugixml` | `libs/Fb2Parsing/`, `libs/EpubParsing/` | XML parsing for FB2 and EPUB OPF metadata |
+| `pugixml` | `libs/Parsing/` | XML parsing for FB2 and EPUB OPF metadata |
 | `libzip` | `libs/ZipImporting/` | ZIP archive enumeration and entry extraction |
 | `sqlite3` (+ fts5 feature) | `libs/Sqlite/`, `libs/BookDatabase/`, `libs/SearchIndex/` | Embedded relational database; FTS5 full-text search |
 | `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |

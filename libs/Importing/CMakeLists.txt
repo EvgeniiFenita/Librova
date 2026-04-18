@@ -19,7 +19,7 @@ target_link_libraries(LibrovaImporting
         LibrovaDomain
         LibrovaFoundation
         LibrovaImportConversion
-        LibrovaParserRegistry
+        LibrovaParsing
     PRIVATE
         LibrovaBookDatabase
 )

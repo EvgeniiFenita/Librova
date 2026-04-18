@@ -83,8 +83,7 @@ if(BUILD_TESTING)
             LibrovaCoreHost
             LibrovaDatabaseRuntime
             LibrovaDatabaseSchema
-            LibrovaEpubParsing
-            LibrovaFb2Parsing
+            LibrovaParsing
             LibrovaImportConversion
             LibrovaImporting
             LibrovaJobs
@@ -92,7 +91,6 @@ if(BUILD_TESTING)
             LibrovaManagedFileEncoding
             LibrovaManagedPaths
             LibrovaManagedTrash
-            LibrovaParserRegistry
             LibrovaPipeClient
             LibrovaPipeHost
             LibrovaPipeTransport

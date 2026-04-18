@@ -23,7 +23,7 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaManagedPaths
         LibrovaManagedStorage
         LibrovaManagedTrash
-        LibrovaParserRegistry
+        LibrovaParsing
         LibrovaPipeHost
         LibrovaProtoServices
         LibrovaProtoMapping

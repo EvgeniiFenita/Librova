@@ -11,7 +11,7 @@
 #include "Domain/ServiceContracts.hpp"
 #include "ImportConversion/ImportConversionPolicy.hpp"
 #include "Importing/ImportPerfTracker.hpp"
-#include "ParserRegistry/BookParserRegistry.hpp"
+#include "Parsing/BookParserRegistry.hpp"
 
 namespace Librova::Importing {
 

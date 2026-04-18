@@ -1,4 +1,4 @@
-#include "Fb2Parsing/Fb2GenreMapper.hpp"
+#include "Parsing/Fb2GenreMapper.hpp"
 
 #include <unordered_map>
 

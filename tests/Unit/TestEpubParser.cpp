@@ -10,7 +10,7 @@
 
 #include <zip.h>
 
-#include "EpubParsing/EpubParser.hpp"
+#include "Parsing/EpubParser.hpp"
 
 namespace {
 

@@ -1,5 +1,5 @@
-#include "Fb2Parsing/Fb2Parser.hpp"
-#include "Fb2Parsing/Fb2GenreMapper.hpp"
+#include "Parsing/Fb2Parser.hpp"
+#include "Parsing/Fb2GenreMapper.hpp"
 
 #include <algorithm>
 #include <charconv>

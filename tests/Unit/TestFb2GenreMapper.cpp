@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Fb2Parsing/Fb2GenreMapper.hpp"
+#include "Parsing/Fb2GenreMapper.hpp"
 
 TEST_CASE("Fb2GenreMapper resolves known FB2 2.1 codes to display names", "[fb2-genre-mapper]")
 {

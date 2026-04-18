@@ -4,7 +4,7 @@
 #include <fstream>
 #include <string>
 
-#include "Fb2Parsing/Fb2Parser.hpp"
+#include "Parsing/Fb2Parser.hpp"
 
 namespace {
 

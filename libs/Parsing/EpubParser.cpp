@@ -1,4 +1,4 @@
-#include "EpubParsing/EpubParser.hpp"
+#include "Parsing/EpubParser.hpp"
 
 #include <algorithm>
 #include <charconv>

@@ -4,8 +4,8 @@
 
 #include "Domain/BookFormat.hpp"
 #include "Domain/ServiceContracts.hpp"
-#include "EpubParsing/EpubParser.hpp"
-#include "Fb2Parsing/Fb2Parser.hpp"
+#include "Parsing/EpubParser.hpp"
+#include "Parsing/Fb2Parser.hpp"
 
 namespace Librova::ParserRegistry {
 

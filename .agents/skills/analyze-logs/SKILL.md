@@ -207,7 +207,7 @@ This run also showed that **dirty real-world genre values are common**, not just
 For each code:
 
 1. Search lib.rus.ec genre reference (or just trust the code itself — usually self-descriptive).
-2. Add to `libs/Fb2Parsing/Fb2GenreMapper.cpp` in the static map.
+2. Add to `libs/Parsing/Fb2GenreMapper.cpp` in the static map.
 3. If the value is localized / malformed, decide whether it belongs in a normalization layer rather than the canonical map.
 4. Add assertion to `tests/Unit/TestFb2GenreMapper.cpp` (first `TEST_CASE`, at end of the known-codes block).
 5. Rebuild and re-run tests.
@@ -397,7 +397,7 @@ If the tail shows many repeated rows with the same `Imported/Failed/Skipped/Perc
 
 ## 13. After Fixing Genre Codes
 
-1. Add codes to `libs/Fb2Parsing/Fb2GenreMapper.cpp`
+1. Add codes to `libs/Parsing/Fb2GenreMapper.cpp`
 2. Add `REQUIRE` assertions in `tests/Unit/TestFb2GenreMapper.cpp`
 3. Build: `cmake --build --preset x64-debug --config Debug`
 4. Test: `ctest --test-dir out\build\x64-debug -C Debug --output-on-failure`

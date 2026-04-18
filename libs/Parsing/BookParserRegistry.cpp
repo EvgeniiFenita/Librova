@@ -1,12 +1,12 @@
-#include "ParserRegistry/BookParserRegistry.hpp"
+#include "Parsing/BookParserRegistry.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
 #include <string>
 
-#include "EpubParsing/EpubParser.hpp"
-#include "Fb2Parsing/Fb2Parser.hpp"
+#include "Parsing/EpubParser.hpp"
+#include "Parsing/Fb2Parser.hpp"
 
 namespace Librova::ParserRegistry {
 namespace {

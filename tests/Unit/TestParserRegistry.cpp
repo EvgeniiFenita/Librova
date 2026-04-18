@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "ParserRegistry/BookParserRegistry.hpp"
+#include "Parsing/BookParserRegistry.hpp"
 
 namespace {
 

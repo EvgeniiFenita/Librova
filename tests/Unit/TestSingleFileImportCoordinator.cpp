@@ -15,7 +15,7 @@
 #include "Importing/SingleFileImportCoordinator.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
-#include "ParserRegistry/BookParserRegistry.hpp"
+#include "Parsing/BookParserRegistry.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {
