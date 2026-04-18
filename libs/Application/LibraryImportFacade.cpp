@@ -919,8 +919,19 @@ SImportResult CLibraryImportFacade::Run(
     }
     else if (!result.ImportedBookIds.empty())
     {
-        try { m_bookRepository.OptimizeSearchIndex(); }
-        catch (...) {}
+        try
+        {
+            m_bookRepository.OptimizeSearchIndex();
+        }
+        catch (const std::exception& optimizeError)
+        {
+            if (Librova::Logging::CLogging::IsInitialized())
+            {
+                Librova::Logging::Warn(
+                    "Search-index optimization after import failed: '{}'.",
+                    optimizeError.what());
+            }
+        }
     }
 
     CleanupWorkingDirectoryNoThrow(request.WorkingDirectory);

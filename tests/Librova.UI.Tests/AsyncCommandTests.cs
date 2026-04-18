@@ -22,5 +22,17 @@ public sealed class AsyncCommandTests
         Assert.Equal("boom", capturedMessage);
         Assert.True(command.CanExecute(null));
     }
+
+    [Fact]
+    public async Task AsyncCommand_SwallowsExceptionsThrownByErrorHandler()
+    {
+        var command = new AsyncCommand(
+            () => throw new InvalidOperationException("boom"),
+            onError: _ => throw new InvalidOperationException("handler failed"));
+
+        await command.ExecuteAsyncForTests();
+
+        Assert.True(command.CanExecute(null));
+    }
 }
 

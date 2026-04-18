@@ -233,7 +233,9 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 **`ImportJobStatus` enum**: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `CANCELLING`, `ROLLING_BACK`, `COMPACTING` — 8 states, full lifecycle including post-cancel rollback phases.
 
-**`BookListItem`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `has_cover` (bool), `managed_file_name`, `size_bytes`, `added_at_unix_ms`.
+**`BookListItem`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`.
+
+**`BookDetails`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `description`, `identifier`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `content_hash_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`.
 
 **`BookListRequest`** fields: `text` (FTS query), `author`, `languages[]`, `genres[]`, `series`, `tags[]`, `format`, `sort_by` (`BookSort` enum), `direction` (`SortDirection`), `offset`, `limit`.
 
@@ -712,7 +714,7 @@ SConversionResult Convert(const SConversionRequest& request,
 3. Run `CSchemaMigrator` — create DB (version 0 → 1) or validate (version 1 = no-op); error on any other version.
 4. Construct services: `CSqliteBookRepository`, `CSqliteBookQueryRepository`, `CManagedFileStorage`, parsers, converter, facades, job manager.
 5. Start `CNamedPipeHost` — begin listening for requests.
-6. Bind lifetime to parent PID: monitor UI process; self-terminate if UI dies.
+6. Bind lifetime to parent process identity: monitor the UI process using `pid + creation time`; self-terminate if that exact process dies.
 7. Dispatch loop: `EPipeMethod` → `CLibraryJobServiceAdapter` → proto response.
 8. Shutdown: stop accepting; drain in-flight jobs; flush logs.
 
@@ -722,7 +724,7 @@ SConversionResult Convert(const SConversionRequest& request,
 2. If no library → show `FirstRunSetupViewModel` wizard.
 3. Validate library root (`LibraryRootValidation`): requires `Database/librova.db`.
 4. Probe FB2 converter (`Fb2ConverterProbe`): set `UiConverterMode`.
-5. Spawn native host (`CoreHostProcess`): pass library root, pipe name, own PID.
+5. Spawn native host (`CoreHostProcess`): pass library root, pipe name, own PID, and own process creation time.
 6. Create IPC services: `ImportJobsService`, `LibraryCatalogService`.
 7. Construct `ShellApplication` → `ShellViewModel` → show `MainWindow`.
 8. On exit: send graceful shutdown request to host; wait with timeout; force-terminate if no response.
@@ -763,7 +765,7 @@ These boundaries are frozen. Do not collapse into one process; do not move domai
 
 The transport is **Protobuf contracts over Windows named pipes**. This is the canonical runtime boundary between UI and core. There is no gRPC runtime and no P/Invoke as the primary transport — both are explicitly excluded.
 
-**Process lifetime safety:** the UI passes its own PID to the native host at startup; the host binds its lifetime to the UI session and self-terminates if the UI dies or is force-killed.
+**Process lifetime safety:** the UI passes its own PID and process creation time to the native host at startup; the host binds its lifetime to that exact UI process instance and self-terminates if it dies or is force-killed.
 
 **Normal shutdown:** the UI must request a graceful host stop first, then fall back to forced termination only if the graceful request times out.
 

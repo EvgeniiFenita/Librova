@@ -1,6 +1,7 @@
 using Librova.UI.CoreHost;
 using Xunit;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace Librova.UI.Tests;
 
@@ -19,6 +20,7 @@ public sealed class CoreHostProcessTests
             ManagedStorageStagingRoot = @"C:\Users\evgen\AppData\Local\Librova\Runtime\ABCDEF1234567890\ManagedStorageStaging",
             ShutdownEventName = @"Local\Librova.UI.Tests.Shutdown",
             ParentProcessId = 12345,
+            ParentProcessCreatedAtUnixMs = 1711807200000,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\fbc.exe",
             Fb2CngConfigPath = @"C:\Tools\fbc.yaml"
@@ -39,6 +41,7 @@ public sealed class CoreHostProcessTests
         Assert.Contains(@"""C:\Tools\fbc.exe""", arguments, StringComparison.Ordinal);
         Assert.Contains("--fb2cng-config", arguments, StringComparison.Ordinal);
         Assert.Contains("--parent-pid 12345", arguments, StringComparison.Ordinal);
+        Assert.Contains("--parent-start-unix-ms 1711807200000", arguments, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,6 +56,8 @@ public sealed class CoreHostProcessTests
             ConverterWorkingDirectory = @"C:\Рантайм\конвертер ""cwd""\",
             ManagedStorageStagingRoot = @"C:\Рантайм\стейджинг ""root""\",
             ShutdownEventName = @"Local\Librova ""shutdown""\",
+            ParentProcessId = 4242,
+            ParentProcessCreatedAtUnixMs = 1711807200123,
             ConverterMode = UiConverterMode.BuiltInFb2Cng,
             Fb2CngExecutablePath = @"C:\Tools\conv ""special""\",
             Fb2CngConfigPath = @"C:\вход\folder\cfg ""quoted"".yaml"
@@ -75,10 +80,14 @@ public sealed class CoreHostProcessTests
         Assert.Equal(options.ShutdownEventName, parsedArguments[11]);
         Assert.Equal("--library-mode", parsedArguments[12]);
         Assert.Equal("open", parsedArguments[13]);
-        Assert.Equal("--fb2cng-exe", parsedArguments[14]);
-        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[15]);
-        Assert.Equal("--fb2cng-config", parsedArguments[16]);
-        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[17]);
+        Assert.Equal("--parent-pid", parsedArguments[14]);
+        Assert.Equal("4242", parsedArguments[15]);
+        Assert.Equal("--parent-start-unix-ms", parsedArguments[16]);
+        Assert.Equal("1711807200123", parsedArguments[17]);
+        Assert.Equal("--fb2cng-exe", parsedArguments[18]);
+        Assert.Equal(options.Fb2CngExecutablePath, parsedArguments[19]);
+        Assert.Equal("--fb2cng-config", parsedArguments[20]);
+        Assert.Equal(options.Fb2CngConfigPath, parsedArguments[21]);
     }
 
     [Fact]
@@ -161,6 +170,15 @@ public sealed class CoreHostProcessTests
 
         Assert.Equal(1, jobHandle.ReleaseCount);
         Assert.Equal(1, shutdownEventHandle.ReleaseCount);
+    }
+
+    [Fact]
+    public void TryTerminate_SwallowsExceptionsFromDisposedProcess()
+    {
+        using var process = new Process();
+        process.Dispose();
+
+        CoreHostProcess.TryTerminate(process);
     }
 
     private static async Task<string> ReadAllTextWhenAvailableAsync(string path, TimeSpan timeout)

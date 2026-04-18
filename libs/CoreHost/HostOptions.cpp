@@ -45,6 +45,26 @@ namespace {
     }
 }
 
+[[nodiscard]] std::uint64_t ParsePositiveUnixMilliseconds(const std::string& value, const std::string& optionName)
+{
+    try
+    {
+        const auto parsed = std::stoull(value);
+        constexpr auto MaxSupportedUnixMilliseconds =
+            static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max());
+        if (parsed == 0 || parsed > MaxSupportedUnixMilliseconds)
+        {
+            throw std::invalid_argument("out-of-range");
+        }
+
+        return parsed;
+    }
+    catch (const std::exception&)
+    {
+        throw std::invalid_argument("Invalid numeric value for " + optionName + ".");
+    }
+}
+
 } // namespace
 
 SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
@@ -174,6 +194,18 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
             continue;
         }
 
+        if (argument == "--parent-start-unix-ms")
+        {
+            if (!HasValue(arguments, index))
+            {
+                throw std::invalid_argument("Missing value for --parent-start-unix-ms.");
+            }
+
+            options.ParentProcessCreatedAtUnixMs =
+                ParsePositiveUnixMilliseconds(arguments[++index], "--parent-start-unix-ms");
+            continue;
+        }
+
         if (argument == "--max-sessions")
         {
             if (!HasValue(arguments, index))
@@ -232,6 +264,11 @@ SHostOptions CHostOptions::Parse(const std::vector<std::string>& arguments)
     if (!options.ConverterConfiguration.IsValid())
     {
         throw std::invalid_argument("Invalid converter configuration.");
+    }
+
+    if (options.ParentProcessId.has_value() != options.ParentProcessCreatedAtUnixMs.has_value())
+    {
+        throw std::invalid_argument("--parent-pid and --parent-start-unix-ms must be provided together.");
     }
 
     return options;

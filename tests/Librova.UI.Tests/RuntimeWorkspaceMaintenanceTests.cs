@@ -1,4 +1,5 @@
 using Librova.UI.Runtime;
+using Librova.UI.Logging;
 using Xunit;
 
 namespace Librova.UI.Tests;
@@ -85,6 +86,49 @@ public sealed class RuntimeWorkspaceMaintenanceTests
         }
         finally
         {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public void PrepareForSession_LogsCleanupFailuresForOwnedDirectories()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-runtime-maintenance-log",
+            $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(libraryRoot);
+        var logPath = Path.Combine(sandboxRoot, "ui.log");
+
+        try
+        {
+            var runtimeRoot = RuntimeEnvironment.GetRuntimeWorkspaceRootForLibrary(
+                libraryRoot,
+                sandboxRoot,
+                @"C:\Override\LibrovaCoreHostApp.exe");
+            var stagingRoot = Path.Combine(runtimeRoot, "ManagedStorageStaging");
+            Directory.CreateDirectory(stagingRoot);
+            var lockedFilePath = Path.Combine(stagingRoot, "locked.tmp");
+            File.WriteAllText(lockedFilePath, "locked");
+
+            UiLogging.ReinitializeForTests(logPath);
+            using (var lockedFile = new FileStream(lockedFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                RuntimeWorkspaceMaintenance.PrepareForSession(
+                    libraryRoot,
+                    sandboxRoot,
+                    @"C:\Override\LibrovaCoreHostApp.exe");
+            }
+            UiLogging.Shutdown();
+
+            var logText = File.ReadAllText(logPath);
+            Assert.Contains("Failed to clean up owned runtime workspace directory.", logText, StringComparison.Ordinal);
+            Assert.Contains("ManagedStorageStaging", logText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
             TryDeleteDirectory(sandboxRoot);
         }
     }

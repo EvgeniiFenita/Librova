@@ -1349,3 +1349,31 @@ tasks:
   note: Hardened backlog.py with a repository-level CLI lock and atomic file replacement, added a deterministic
     concurrent archive-edit regression test, and updated backlog rules to treat backlog operations as
     serialized shared state.
+- id: 166
+  summary: fix the remaining 2026-04-18 valid review findings across delete, import, startup, and test
+    hardening
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Closed the confirmed 2026-04-18 audit findings across trash/import integrity, startup and transport
+    hardening, timing-sensitive tests, and matching documentation with full native and managed regression
+    coverage.
+- id: 167
+  summary: fix the review follow-up issues in import cleanup, details loading state, and contract docs
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Fixed the review follow-up issues by preserving import consistency on cleanup double-failure,
+    hardening details-loading state and long-running import timeout behavior in the UI, and correcting
+    the transport contract documentation.
+- id: 168
+  summary: fix the validated review findings in details ABA, host timestamp bounds, and test hardening
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.1'
+  note: Fixed the validated review findings by making details loading ABA-safe, bounding parent-start
+    timestamp parsing, replacing converter-test busy-waiting, and extending ABA and optimize-search-index
+    regression coverage.

@@ -358,12 +358,40 @@ internal sealed class ImportJobsViewModel : ObservableObject
             LastJobId = jobId;
             StatusText = $"Import job {jobId} started.";
             UiLogging.Information("Import job {JobId} started from UI shell.", jobId);
-            var result = await _importJobsService.WaitForCompletionAsync(
-                jobId,
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromMilliseconds(250),
-                ApplySnapshot,
-                _activeImportCancellation.Token);
+            ImportJobResultModel result;
+            try
+            {
+                result = await _importJobsService.WaitForCompletionAsync(
+                    jobId,
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromMilliseconds(250),
+                    ApplySnapshot,
+                    _activeImportCancellation.Token);
+            }
+            catch (TimeoutException error)
+            {
+                using var refreshCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var snapshot = await _importJobsService.TryGetSnapshotAsync(
+                    jobId,
+                    TimeSpan.FromSeconds(5),
+                    refreshCancellation.Token);
+                if (snapshot is not null)
+                {
+                    ApplySnapshot(snapshot);
+                }
+
+                StatusText = $"Import job {jobId} is still running. Refresh to check progress or cancel it manually.";
+                if (snapshot is null)
+                {
+                    ProgressSummaryText = "Background import is still running.";
+                }
+
+                UiLogging.Warning(
+                    error,
+                    "Import job {JobId} exceeded the UI wait ceiling and is still running in the background.",
+                    jobId);
+                return;
+            }
 
             ApplyTerminalResult(result);
             LogTerminalResult(jobId, result);

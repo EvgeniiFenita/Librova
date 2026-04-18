@@ -140,6 +140,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         if (options.ParentProcessId.HasValue)
         {
             builder.Append(" --parent-pid ").Append(options.ParentProcessId.Value);
+            builder.Append(" --parent-start-unix-ms ").Append(options.ParentProcessCreatedAtUnixMs!.Value);
         }
 
         if (options.ServeOneSession)
@@ -217,9 +218,10 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         ConcurrentQueue<string> startupOutput,
         CancellationToken cancellationToken)
     {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        var stopwatch = Stopwatch.StartNew();
+        var timeout = TimeSpan.FromSeconds(10);
 
-        while (DateTime.UtcNow < deadline)
+        while (stopwatch.Elapsed < timeout)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -265,7 +267,7 @@ internal sealed class CoreHostProcess : IAsyncDisposable
         }
     }
 
-    private static void TryTerminate(Process process)
+    internal static void TryTerminate(Process process)
     {
         try
         {
@@ -274,8 +276,9 @@ internal sealed class CoreHostProcess : IAsyncDisposable
                 process.Kill(entireProcessTree: true);
             }
         }
-        catch (InvalidOperationException)
+        catch (Exception error)
         {
+            UiLogging.Warning(error, "Failed to terminate core host process.");
         }
     }
 

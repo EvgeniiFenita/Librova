@@ -163,6 +163,11 @@ public:
 
     void Remove(const Librova::Domain::SBookId id) override
     {
+        if (ThrowOnRemove)
+        {
+            throw std::runtime_error("Repository remove failed.");
+        }
+
         RemovedIds.push_back(id);
     }
 
@@ -172,6 +177,7 @@ public:
     std::vector<Librova::Domain::SBookId> RemovedIds;
     bool ThrowOnAdd = false;
     bool ThrowOnForceAdd = false;
+    bool ThrowOnRemove = false;
     bool ForceAddCalled = false;
     std::optional<Librova::Domain::SBookId> DuplicateHashConflictId;
 };
@@ -744,7 +750,7 @@ TEST_CASE("Single file import rejects probable duplicates before reserving stora
     REQUIRE_FALSE(managedStorage.CommitCalled);
 }
 
-TEST_CASE("Single file import can continue after strict duplicate when explicitly allowed", "[importing]")
+TEST_CASE("Single file import still rejects strict duplicates even when probable duplicate override is enabled", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-strict-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
@@ -773,13 +779,13 @@ TEST_CASE("Single file import can continue after strict duplicate when explicitl
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
-    REQUIRE(result.IsSuccess());
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(result.DuplicateMatches.size() == 1);
     REQUIRE(result.Warnings == std::vector<std::string>({
-        "Import continued with explicit strict duplicate override."
+        "Import rejected because a strict duplicate already exists."
     }));
-    REQUIRE(bookRepository.AddedBook.has_value());
-    REQUIRE(managedStorage.CommitCalled);
+    REQUIRE_FALSE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(managedStorage.CommitCalled);
 }
 
 TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "[importing]")
@@ -996,6 +1002,42 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
     REQUIRE(bookRepository.RemovedIds.front().Value == 1);
 }
 
+TEST_CASE("Single file import reports cleanup failure when storage commit fails and catalog rollback also fails", "[importing]")
+{
+    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-cleanup-double-failure");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    bookRepository.ThrowOnRemove = true;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    managedStorage.ThrowOnCommit = true;
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Error.find("cleanup path could not remove partially persisted book 1") != std::string::npos);
+    REQUIRE(result.Error.find("Managed storage was left unchanged") != std::string::npos);
+    REQUIRE(result.DiagnosticError.find("Storage commit failed.") != std::string::npos);
+    REQUIRE(result.DiagnosticError.find("Repository remove failed.") != std::string::npos);
+    REQUIRE_FALSE(managedStorage.RollbackCalled);
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(bookRepository.AddedBook->File.ManagedPath.empty());
+    REQUIRE(bookRepository.RemovedIds.empty());
+}
+
 TEST_CASE("Single file import surfaces managed-storage rollback restore diagnostics when commit fails", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-rollback-diagnostics");
@@ -1194,7 +1236,7 @@ TEST_CASE("Single file import returns RejectedDuplicate when hash conflict detec
     REQUIRE_FALSE(managedStorage.CommitCalled);
 }
 
-TEST_CASE("Single file import commits and warns when hash conflict detected at write time but duplicates are allowed", "[importing]")
+TEST_CASE("Single file import rejects write-time hash conflicts even when probable duplicate override is enabled", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
@@ -1220,10 +1262,10 @@ TEST_CASE("Single file import commits and warns when hash conflict detected at w
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
-    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
-    REQUIRE(bookRepository.ForceAddCalled);
-    REQUIRE(managedStorage.CommitCalled);
-    REQUIRE_FALSE(managedStorage.RollbackCalled);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
+    REQUIRE_FALSE(bookRepository.ForceAddCalled);
+    REQUIRE_FALSE(managedStorage.CommitCalled);
+    REQUIRE(managedStorage.RollbackCalled);
     const bool hasStrictDuplicateWarning = std::any_of(
         result.Warnings.begin(), result.Warnings.end(),
         [](const std::string& w) { return w.find("strict duplicate") != std::string::npos; });
@@ -1261,15 +1303,15 @@ TEST_CASE("Single file import emits exactly one strict duplicate warning when Fi
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
-    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Imported);
-    REQUIRE(bookRepository.ForceAddCalled);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
+    REQUIRE_FALSE(bookRepository.ForceAddCalled);
     const auto strictCount = std::count_if(
         result.Warnings.begin(), result.Warnings.end(),
         [](const std::string& w) { return w.find("strict duplicate") != std::string::npos; });
     REQUIRE(strictCount == 1);
 }
 
-TEST_CASE("Single file import returns Failed and rolls back when ForceAdd throws after hash conflict", "[importing]")
+TEST_CASE("Single file import rejects write-time hash conflicts without attempting ForceAdd", "[importing]")
 {
     CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-force-add-throws");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
@@ -1277,7 +1319,6 @@ TEST_CASE("Single file import returns Failed and rolls back when ForceAdd throws
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
     CStubBookRepository bookRepository;
     bookRepository.DuplicateHashConflictId = Librova::Domain::SBookId{42};
-    bookRepository.ThrowOnForceAdd = true;
     CStubQueryRepository queryRepository;
     CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
     CTestProgressSink progressSink;
@@ -1296,9 +1337,9 @@ TEST_CASE("Single file import returns Failed and rolls back when ForceAdd throws
         .AllowProbableDuplicates = true
     }, progressSink, {});
 
-    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::Failed);
+    REQUIRE(result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate);
     REQUIRE(managedStorage.RollbackCalled);
     REQUIRE_FALSE(managedStorage.CommitCalled);
     REQUIRE(bookRepository.RemovedIds.empty());
+    REQUIRE_FALSE(bookRepository.ForceAddCalled);
 }
-

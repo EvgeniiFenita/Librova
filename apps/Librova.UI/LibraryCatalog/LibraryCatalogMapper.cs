@@ -6,40 +6,8 @@ namespace Librova.UI.LibraryCatalog;
 
 internal static class LibraryCatalogMapper
 {
-    private const uint Fnv1aOffsetBasis32 = 2166136261;
-    private const uint Fnv1aPrime32 = 16777619;
-
     private static InvalidOperationException CreateContractViolationException(string context) =>
         new($"Received incomplete catalog transport payload while mapping {context}.");
-
-    private static uint ComputeBookShardHash(string bookIdText)
-    {
-        uint hash = Fnv1aOffsetBasis32;
-        foreach (var ch in bookIdText)
-        {
-            hash ^= ch;
-            hash *= Fnv1aPrime32;
-        }
-
-        return hash;
-    }
-
-    private static string? BuildCoverResourcePath(long bookId, string? extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            return null;
-        }
-
-        var bookIdText = bookId.ToString("0000000000");
-        var shardHash = ComputeBookShardHash(bookIdText);
-        var bucket1 = $"{shardHash & 0xff:x2}";
-        var bucket2 = $"{(shardHash >> 8) & 0xff:x2}";
-        var normalizedExtension = extension.StartsWith('.')
-            ? extension[1..]
-            : extension;
-        return $"Objects/{bucket1}/{bucket2}/{bookIdText}.cover.{normalizedExtension}";
-    }
 
     private static InvalidOperationException CreateUnexpectedEnumValueException<TEnum>(TEnum value, string context)
         where TEnum : struct, Enum =>
@@ -82,15 +50,14 @@ internal static class LibraryCatalogMapper
         return item.ManagedFileName;
     }
 
-    private static string? GetCoverRelativePath(long bookId, bool hasCoverResource, string? extension, string context)
+    private static string? GetCoverRelativePath(bool hasCoverResource, string? coverRelativePath, string context)
     {
         if (!hasCoverResource)
         {
             return null;
         }
 
-        var coverRelativePath = BuildCoverResourcePath(bookId, extension);
-        if (coverRelativePath is null)
+        if (string.IsNullOrWhiteSpace(coverRelativePath))
         {
             throw CreateContractViolationException(context);
         }
@@ -221,9 +188,8 @@ internal static class LibraryCatalogMapper
             {
                 ManagedRelativePath = GetManagedFileName(item),
                 CoverRelativePath = GetCoverRelativePath(
-                    item.BookId,
                     item.HasCoverResourceAvailable && item.CoverResourceAvailable,
-                    item.HasCoverFileExtension ? item.CoverFileExtension : null,
+                    item.HasCoverRelativePath ? item.CoverRelativePath : null,
                     "book list item cover resource")
             },
             SizeBytes = item.SizeBytes,
@@ -256,9 +222,8 @@ internal static class LibraryCatalogMapper
             {
                 ManagedRelativePath = GetManagedFileName(item),
                 CoverRelativePath = GetCoverRelativePath(
-                    item.BookId,
                     item.HasCoverResourceAvailable && item.CoverResourceAvailable,
-                    item.HasCoverFileExtension ? item.CoverFileExtension : null,
+                    item.HasCoverRelativePath ? item.CoverRelativePath : null,
                     "book details cover resource"),
                 HasContentHash = item.HasContentHashAvailable && item.ContentHashAvailable
             },

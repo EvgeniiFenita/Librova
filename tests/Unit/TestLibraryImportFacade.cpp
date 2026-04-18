@@ -381,9 +381,20 @@ public:
         m_books.erase(id.Value);
     }
 
+    void OptimizeSearchIndex() override
+    {
+        ++OptimizeCalls;
+        if (ThrowOnOptimize)
+        {
+            throw std::runtime_error("Injected optimize failure.");
+        }
+    }
+
     std::optional<Librova::Domain::SBookId> ThrowOnRemoveId;
     std::optional<Librova::Domain::SBookId> ThrowOnGetById;
     std::vector<Librova::Domain::SBookId> RemovedIds;
+    bool ThrowOnOptimize = false;
+    int OptimizeCalls = 0;
 
 private:
     std::int64_t m_nextId = 0;
@@ -484,6 +495,124 @@ TEST_CASE("Library import facade routes regular files into single-file importer"
     REQUIRE(importer.LastRequest->Sha256Hex == std::optional<std::string>{"hash"});
     REQUIRE(importer.LastRequest->AllowProbableDuplicates);
     REQUIRE_FALSE(importer.LastRequest->ForceEpubConversion);
+    std::filesystem::remove_all(sandbox.Root);
+}
+
+TEST_CASE("Library import facade logs search-index optimization failures after successful import", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    CRollbackAwareBookRepository repository;
+    repository.ThrowOnOptimize = true;
+    const auto sandbox = CreateImportSandbox("optimize-log");
+    const auto logPath = sandbox.Root / "host.log";
+
+    Librova::Logging::CLogging::InitializeHostLogger(logPath);
+    try
+    {
+        const Librova::Application::CLibraryImportFacade facade(
+            importer,
+            zipCoordinator,
+            repository,
+            {.LibraryRoot = sandbox.Root});
+        const auto result = facade.Run({
+            .SourcePaths = {sandbox.SourcePath},
+            .WorkingDirectory = sandbox.WorkingDirectory
+        }, progressSink, {});
+
+        REQUIRE(result.IsSuccess());
+        REQUIRE(repository.OptimizeCalls == 1);
+    }
+    catch (...)
+    {
+        Librova::Logging::CLogging::Shutdown();
+        std::filesystem::remove_all(sandbox.Root);
+        throw;
+    }
+    Librova::Logging::CLogging::Shutdown();
+
+    const auto logText = ReadTextFile(logPath);
+    REQUIRE(logText.find("Search-index optimization after import failed") != std::string::npos);
+    REQUIRE(logText.find("Injected optimize failure.") != std::string::npos);
+    std::filesystem::remove_all(sandbox.Root);
+}
+
+TEST_CASE("Library import facade skips search-index optimization when import does not produce imported books", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Failed,
+        .Error = "broken"
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    CRollbackAwareBookRepository repository;
+    const auto sandbox = CreateImportSandbox("optimize-skip-on-failure");
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        repository,
+        {.LibraryRoot = sandbox.Root});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
+    }, progressSink, {});
+
+    REQUIRE_FALSE(result.IsSuccess());
+    REQUIRE(repository.OptimizeCalls == 0);
+    std::filesystem::remove_all(sandbox.Root);
+}
+
+TEST_CASE("Library import facade remains usable after logged search-index optimization failure", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    CRollbackAwareBookRepository repository;
+    repository.ThrowOnOptimize = true;
+    const auto sandbox = CreateImportSandbox("optimize-recovery");
+    const auto firstLogPath = sandbox.Root / "host-first.log";
+    const auto secondLogPath = sandbox.Root / "host-second.log";
+
+    Librova::Logging::CLogging::InitializeHostLogger(firstLogPath);
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        repository,
+        {.LibraryRoot = sandbox.Root});
+
+    const auto firstResult = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
+    }, progressSink, {});
+
+    REQUIRE(firstResult.IsSuccess());
+    REQUIRE(repository.OptimizeCalls == 1);
+
+    Librova::Logging::CLogging::Shutdown();
+
+    repository.ThrowOnOptimize = false;
+    Librova::Logging::CLogging::InitializeHostLogger(secondLogPath);
+    const auto secondResult = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory
+    }, progressSink, {});
+    Librova::Logging::CLogging::Shutdown();
+
+    REQUIRE(secondResult.IsSuccess());
+    REQUIRE(repository.OptimizeCalls == 2);
+    const auto secondLogText = ReadTextFile(secondLogPath);
+    REQUIRE(secondLogText.find("Search-index optimization after import failed") == std::string::npos);
     std::filesystem::remove_all(sandbox.Root);
 }
 

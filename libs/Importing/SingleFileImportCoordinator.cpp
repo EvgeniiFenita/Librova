@@ -18,7 +18,6 @@ namespace {
 
 constexpr auto GStrictDuplicateWarning = "Import rejected because a strict duplicate already exists.";
 constexpr auto GProbableDuplicateWarning = "Import skipped because a probable duplicate was found.";
-constexpr auto GForcedStrictDuplicateWarning = "Import continued with explicit strict duplicate override.";
 constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit probable duplicate override.";
 
 [[nodiscard]] std::string_view DuplicateReasonLabel(const Librova::Domain::EDuplicateReason reason) noexcept
@@ -381,6 +380,16 @@ bool HasProbableDuplicate(const std::vector<Librova::Domain::SDuplicateMatch>& d
     return false;
 }
 
+[[nodiscard]] std::string BuildCleanupFailureMessage(
+    const Librova::Domain::SBookId bookId,
+    const std::exception& error)
+{
+    return "Managed storage commit failed and the cleanup path could not remove partially persisted book "
+        + std::to_string(bookId.Value)
+        + " from the catalog. Managed storage was left unchanged to avoid breaking the persisted catalog entry: "
+        + error.what();
+}
+
 bool IsCancellationRequested(
     const std::stop_token stopToken,
     const Librova::Domain::IProgressSink& progressSink)
@@ -678,7 +687,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             return buildCancelledResult(parsedBook.SourceFormat, duplicates, {});
         }
 
-        if (HasStrictDuplicate(duplicates) && !request.AllowProbableDuplicates)
+        if (HasStrictDuplicate(duplicates))
         {
             LogDuplicateDecision(request, duplicates, "rejected");
             LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates);
@@ -708,17 +717,12 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         std::vector<std::string> importWarnings;
 
-        if (HasStrictDuplicate(duplicates) && request.AllowProbableDuplicates)
-        {
-            importWarnings.emplace_back(GForcedStrictDuplicateWarning);
-        }
-
         if (HasProbableDuplicate(duplicates) && request.AllowProbableDuplicates)
         {
             importWarnings.emplace_back(GForcedProbableDuplicateWarning);
         }
 
-        if (!duplicates.empty() && request.AllowProbableDuplicates)
+        if (HasProbableDuplicate(duplicates) && request.AllowProbableDuplicates)
         {
             LogDuplicateDecision(request, duplicates, "allowed-override");
             LogDuplicateCandidateDetails(request, parsedBook.Metadata, effectiveSha256Hex, duplicates);
@@ -878,65 +882,40 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         }
         catch (const Librova::Domain::CDuplicateHashException& duplicateEx)
         {
-            if (request.AllowProbableDuplicates)
+            m_managedStorage.RollbackImport(*preparedStorage);
+            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+            importWarnings.push_back(GStrictDuplicateWarning);
+
+            if (Librova::Logging::CLogging::IsInitialized())
             {
-                if (std::find(importWarnings.begin(), importWarnings.end(), GForcedStrictDuplicateWarning) == importWarnings.end())
-                {
-                    importWarnings.emplace_back(GForcedStrictDuplicateWarning);
-                }
-
-                if (Librova::Logging::CLogging::IsInitialized())
-                {
-                    Librova::Logging::Warn(
-                        "duplicate: hash collision at write-time, overriding. title='{}' hash='{}' existingBookId={} source='{}'",
-                        parsedBook.Metadata.TitleUtf8,
-                        effectiveSha256Hex.value_or("<none>"),
-                        duplicateEx.ExistingBookId().Value,
-                        sourceLabel);
-                }
-
-                {
-                    auto _ = measureStage(CImportPerfTracker::EStage::DbWriteWait);
-                    addedBookId = repo.ForceAdd(book);
-                }
+                Librova::Logging::Warn(
+                    "duplicate: rejected at write-time by hash collision. title='{}' hash='{}' existingBookId={} source='{}'",
+                    parsedBook.Metadata.TitleUtf8,
+                    effectiveSha256Hex.value_or("<none>"),
+                    duplicateEx.ExistingBookId().Value,
+                    sourceLabel);
             }
-            else
-            {
-                m_managedStorage.RollbackImport(*preparedStorage);
-                RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-                RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
-                importWarnings.push_back(GStrictDuplicateWarning);
 
-                if (Librova::Logging::CLogging::IsInitialized())
-                {
-                    Librova::Logging::Warn(
-                        "duplicate: rejected at write-time by hash collision. title='{}' hash='{}' existingBookId={} source='{}'",
-                        parsedBook.Metadata.TitleUtf8,
-                        effectiveSha256Hex.value_or("<none>"),
-                        duplicateEx.ExistingBookId().Value,
-                        sourceLabel);
-                }
+            LogDuplicateDecision(
+                request,
+                {Librova::Domain::SDuplicateMatch{
+                    .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+                    .Reason = Librova::Domain::EDuplicateReason::SameHash,
+                    .ExistingBookId = duplicateEx.ExistingBookId()
+                }},
+                "rejected-write-time-hash-collision");
 
-                LogDuplicateDecision(
-                    request,
-                    {Librova::Domain::SDuplicateMatch{
-                        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
-                        .Reason = Librova::Domain::EDuplicateReason::SameHash,
-                        .ExistingBookId = duplicateEx.ExistingBookId()
-                    }},
-                    "rejected-write-time-hash-collision");
-
-                return {
-                    .Status = ESingleFileImportStatus::RejectedDuplicate,
-                    .StoredFormat = conversionOutcome.Format,
-                    .DuplicateMatches = {Librova::Domain::SDuplicateMatch{
-                        .Severity = Librova::Domain::EDuplicateSeverity::Strict,
-                        .Reason = Librova::Domain::EDuplicateReason::SameHash,
-                        .ExistingBookId = duplicateEx.ExistingBookId()
-                    }},
-                    .Warnings = std::move(importWarnings)
-                };
-            }
+            return {
+                .Status = ESingleFileImportStatus::RejectedDuplicate,
+                .StoredFormat = conversionOutcome.Format,
+                .DuplicateMatches = {Librova::Domain::SDuplicateMatch{
+                    .Severity = Librova::Domain::EDuplicateSeverity::Strict,
+                    .Reason = Librova::Domain::EDuplicateReason::SameHash,
+                    .ExistingBookId = duplicateEx.ExistingBookId()
+                }},
+                .Warnings = std::move(importWarnings)
+            };
         }
 
         progressSink.ReportValue(95, "Committing managed files");
@@ -993,8 +972,39 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             {
                 repo.Remove(*addedBookId);
             }
-            catch (...)
+            catch (const std::exception& cleanupError)
             {
+                const std::string cleanupFailure = BuildCleanupFailureMessage(*addedBookId, cleanupError);
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    if (request.ImportJobId != 0)
+                    {
+                        Librova::Logging::Error(
+                            "Single file import cleanup failed after job={} source='{}': {}",
+                            request.ImportJobId,
+                            sourceLabel,
+                            cleanupFailure);
+                    }
+                    else
+                    {
+                        Librova::Logging::Error(
+                            "Single file import cleanup failed for source='{}': {}",
+                            sourceLabel,
+                            cleanupFailure);
+                        }
+                }
+
+                if (preparedStorage.has_value())
+                {
+                    // The catalog row is still present. Do not roll managed storage back
+                    // behind the repository's back or we leave a visible broken entry.
+                }
+
+                return {
+                    .Status = ESingleFileImportStatus::Failed,
+                    .Error = SanitizeTransportErrorMessage(cleanupFailure),
+                    .DiagnosticError = diagnosticError + " [cleanup_failure: " + cleanupFailure + "]"
+                };
             }
         }
 

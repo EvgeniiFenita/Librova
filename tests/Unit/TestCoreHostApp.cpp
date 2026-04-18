@@ -121,6 +121,21 @@ std::filesystem::path GetCmdExePath()
     return std::filesystem::path{R"(C:\Windows\System32\cmd.exe)"};
 }
 
+std::uint64_t GetProcessCreationTimeUnixMs(HANDLE processHandle)
+{
+    FILETIME creationTime{};
+    FILETIME exitTime{};
+    FILETIME kernelTime{};
+    FILETIME userTime{};
+    REQUIRE(GetProcessTimes(processHandle, &creationTime, &exitTime, &kernelTime, &userTime) != FALSE);
+
+    ULARGE_INTEGER creationTimeTicks{};
+    creationTimeTicks.LowPart = creationTime.dwLowDateTime;
+    creationTimeTicks.HighPart = creationTime.dwHighDateTime;
+    constexpr std::uint64_t WindowsToUnixEpoch100ns = 116444736000000000ULL;
+    return (creationTimeTicks.QuadPart - WindowsToUnixEpoch100ns) / 10000ULL;
+}
+
 std::wstring BuildUniqueShutdownEventName()
 {
     const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
@@ -284,16 +299,8 @@ TEST_CASE("Core host executable serves import job requests over named pipes", "[
 
     REQUIRE(jobId != 0);
 
-    std::optional<Librova::ApplicationJobs::SImportJobResult> result;
-    for (int attempt = 0; attempt < 20 && !result.has_value(); ++attempt)
-    {
-        result = client.TryGetResult(jobId, std::chrono::seconds(5));
-        if (!result.has_value())
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        }
-    }
-
+    REQUIRE(client.Wait(jobId, std::chrono::seconds(5), std::chrono::seconds(5)));
+    const auto result = client.TryGetResult(jobId, std::chrono::seconds(5));
     REQUIRE(result.has_value());
     REQUIRE(result->Snapshot.Status == Librova::ApplicationJobs::EImportJobStatus::Completed);
     REQUIRE(result->ImportResult.has_value());
@@ -328,7 +335,9 @@ TEST_CASE("Core host exits gracefully when the watched parent process terminates
         + Quote(libraryRoot)
         + L" --library-mode create"
         + L" --parent-pid "
-        + std::to_wstring(parentProcessInformation.dwProcessId);
+        + std::to_wstring(parentProcessInformation.dwProcessId)
+        + L" --parent-start-unix-ms "
+        + std::to_wstring(GetProcessCreationTimeUnixMs(parentProcessInformation.hProcess));
 
     PROCESS_INFORMATION hostProcessInformation = StartProcess(hostAppPath, std::move(hostCommandLine));
     CScopedProcess hostProcess(hostProcessInformation);
@@ -392,6 +401,7 @@ TEST_CASE("Core host rejects opening a missing managed library root", "[core-hos
     const auto libraryRoot = sandbox.GetPath() / "MissingLibrary";
     const auto pipePath = BuildUniquePipePath();
     const auto hostAppPath = GetHostAppPath();
+    const auto logFilePath = sandbox.GetPath() / "bootstrap-host.log";
 
     REQUIRE(std::filesystem::exists(hostAppPath));
 
@@ -400,12 +410,16 @@ TEST_CASE("Core host rejects opening a missing managed library root", "[core-hos
         + Quote(pipePath)
         + L" --library-root "
         + Quote(libraryRoot)
+        + L" --log-file "
+        + Quote(logFilePath)
         + L" --library-mode open";
 
     CScopedProcess process(StartProcess(hostAppPath, std::move(commandLine)));
     REQUIRE(process.WaitForExit(std::chrono::seconds(5)));
     REQUIRE(process.TryGetExitCode() == std::optional<DWORD>{1});
     REQUIRE_FALSE(std::filesystem::exists(libraryRoot));
+    REQUIRE(std::filesystem::exists(logFilePath));
+    REQUIRE(ReadTextFile(logFilePath).find("Librova.Core.Host failed") != std::string::npos);
 }
 
 TEST_CASE("Core host process supports help and version flags without runtime arguments", "[core-host][process]")

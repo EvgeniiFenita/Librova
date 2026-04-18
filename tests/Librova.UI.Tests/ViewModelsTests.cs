@@ -210,6 +210,45 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_LeavesLongRunningJobRefreshableWhenUiWaitCeilingIsReached()
+    {
+        var service = new TimeoutDuringWaitImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(42UL, viewModel.LastJobId);
+            Assert.Null(viewModel.LastResult);
+            Assert.False(viewModel.IsBusy);
+            Assert.Contains("still running", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Processed 2 of 5 files", viewModel.ProgressSummaryText, StringComparison.Ordinal);
+            Assert.Equal(1, service.TryGetSnapshotCalls);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_ShowsRollbackResidueInCancelledTerminalState()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
@@ -1296,7 +1335,7 @@ public sealed class ViewModelsTests
         viewModel.SearchText = "road";
         viewModel.Dispose();
 
-        await Task.Delay(400);
+        await AssertDoesNotCompleteWithinAsync(service.WaitForListRequestAsync(), TimeSpan.FromMilliseconds(400));
 
         Assert.Null(service.LastRequest);
     }
@@ -1886,6 +1925,98 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_IgnoresLateDetailsFromPreviousSelection()
+    {
+        var service = new DelayedDetailsLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        var firstBook = viewModel.Books[0];
+        var secondBook = viewModel.Books[1];
+
+        var firstSelectionTask = viewModel.ToggleSelectedBookAsync(firstBook);
+        await service.WaitForDetailsRequestAsync(firstBook.BookId);
+
+        var secondSelectionTask = viewModel.ToggleSelectedBookAsync(secondBook);
+        await service.WaitForDetailsRequestAsync(secondBook.BookId);
+
+        service.Release(secondBook.BookId);
+        await secondSelectionTask;
+
+        service.Release(firstBook.BookId);
+        await firstSelectionTask;
+
+        Assert.Equal(secondBook.BookId, viewModel.SelectedBook?.BookId);
+        Assert.NotNull(viewModel.SelectedBookDetails);
+        Assert.Equal(secondBook.BookId, viewModel.SelectedBookDetails!.BookId);
+        Assert.Equal("Book Two Details", viewModel.SelectedBookDetails.Title);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_KeepsLoadingStateUntilLatestDetailsRequestCompletes()
+    {
+        var service = new DelayedDetailsLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        var firstBook = viewModel.Books[0];
+        var secondBook = viewModel.Books[1];
+
+        var firstSelectionTask = viewModel.ToggleSelectedBookAsync(firstBook);
+        await service.WaitForDetailsRequestAsync(firstBook.BookId);
+        Assert.True(viewModel.IsLoadingSelectionDetails);
+
+        var secondSelectionTask = viewModel.ToggleSelectedBookAsync(secondBook);
+        await service.WaitForDetailsRequestAsync(secondBook.BookId);
+        Assert.True(viewModel.IsLoadingSelectionDetails);
+
+        service.Release(firstBook.BookId);
+        await firstSelectionTask;
+        Assert.True(viewModel.IsLoadingSelectionDetails);
+
+        service.Release(secondBook.BookId);
+        await secondSelectionTask;
+        Assert.False(viewModel.IsLoadingSelectionDetails);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_IgnoresStaleAbaDetailsResponses()
+    {
+        var service = new DelayedDetailsLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        var firstBook = viewModel.Books[0];
+        var secondBook = viewModel.Books[1];
+
+        var firstSelectionTask = viewModel.ToggleSelectedBookAsync(firstBook);
+        await service.WaitForDetailsRequestCountAsync(firstBook.BookId, 1);
+
+        var secondSelectionTask = viewModel.ToggleSelectedBookAsync(secondBook);
+        await service.WaitForDetailsRequestCountAsync(secondBook.BookId, 1);
+
+        var thirdSelectionTask = viewModel.ToggleSelectedBookAsync(firstBook);
+        await service.WaitForDetailsRequestCountAsync(firstBook.BookId, 2);
+
+        service.ReleaseRequest(firstBook.BookId, 2, "Book One Fresh Details");
+        await thirdSelectionTask;
+
+        service.ReleaseRequest(secondBook.BookId, 1, "Book Two Stale Details");
+        await secondSelectionTask;
+
+        service.ReleaseRequest(firstBook.BookId, 1, "Book One Old Details");
+        await firstSelectionTask;
+
+        Assert.Equal(firstBook.BookId, viewModel.SelectedBook?.BookId);
+        Assert.NotNull(viewModel.SelectedBookDetails);
+        Assert.Equal(firstBook.BookId, viewModel.SelectedBookDetails!.BookId);
+        Assert.Equal("Book One Fresh Details", viewModel.SelectedBookDetails.Title);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_UsesLegacyStatusTextWhenExportRpcReturnsStructuredNotFound()
     {
         var selectionService = new FakePathSelectionService
@@ -2393,6 +2524,54 @@ public sealed class ViewModelsTests
         }
     }
 
+    private sealed class TimeoutDuringWaitImportJobsService : IImportJobsService
+    {
+        public int TryGetSnapshotCalls { get; private set; }
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(null);
+
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            TryGetSnapshotCalls++;
+            return Task.FromResult<ImportJobSnapshotModel?>(new ImportJobSnapshotModel
+            {
+                JobId = jobId,
+                Status = ImportJobStatusModel.Running,
+                Message = "Still running",
+                Percent = 40,
+                TotalEntries = 5,
+                ProcessedEntries = 2,
+                ImportedEntries = 2,
+                FailedEntries = 0,
+                SkippedEntries = 0
+            });
+        }
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(42UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(false);
+
+        public Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken) =>
+            throw new TimeoutException("Timed out waiting for import job to reach a terminal state.");
+    }
+
     private sealed class FakePathSelectionService : IPathSelectionService
     {
         public IReadOnlyList<string> SelectedSourcePaths { get; init; } = [];
@@ -2617,18 +2796,25 @@ public sealed class ViewModelsTests
 
     private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMilliseconds = 3000)
     {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
-        while (DateTime.UtcNow < deadline)
+        var stopwatch = Stopwatch.StartNew();
+        using var pollTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(25));
+        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds)
         {
             if (condition())
             {
                 return;
             }
 
-            await Task.Delay(25);
+            await pollTimer.WaitForNextTickAsync();
         }
 
         Assert.True(condition(), "Timed out waiting for the expected state.");
+    }
+
+    private static async Task AssertDoesNotCompleteWithinAsync(Task task, TimeSpan timeout)
+    {
+        var completedTask = await Task.WhenAny(task, Task.Delay(timeout));
+        Assert.NotSame(task, completedTask);
     }
 
     private sealed class FakeLibraryCatalogService : ILibraryCatalogService
@@ -2801,6 +2987,147 @@ public sealed class ViewModelsTests
             });
     }
 
+    private sealed class DelayedDetailsLibraryCatalogService : ILibraryCatalogService
+    {
+        private readonly Dictionary<long, List<TaskCompletionSource<BookDetailsModel?>>> _gates = new();
+        private readonly Dictionary<(long BookId, int RequestCount), TaskCompletionSource> _requestNotifications = new();
+        private readonly Dictionary<long, int> _requestCounts = new();
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 2,
+                AvailableLanguages = ["en"],
+                Statistics = new LibraryStatisticsModel
+                {
+                    BookCount = 2
+                },
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "Book One",
+                        Authors = ["Author One"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Objects/5a/68/0000000001.book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    },
+                    new BookListItemModel
+                    {
+                        BookId = 2,
+                        Title = "Book Two",
+                        Authors = ["Author Two"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Objects/5a/69/0000000002.book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var gate = new TaskCompletionSource<BookDetailsModel?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (!_gates.TryGetValue(bookId, out var pendingRequests))
+            {
+                pendingRequests = [];
+                _gates[bookId] = pendingRequests;
+            }
+
+            pendingRequests.Add(gate);
+            var requestCount = _requestCounts.TryGetValue(bookId, out var existingCount)
+                ? existingCount + 1
+                : 1;
+            _requestCounts[bookId] = requestCount;
+
+            if (_requestNotifications.TryGetValue((bookId, requestCount), out var notification))
+            {
+                notification.TrySetResult();
+            }
+            else
+            {
+                _requestNotifications[(bookId, requestCount)] = CompletedSignal();
+            }
+
+            cancellationToken.Register(() => gate.TrySetCanceled(cancellationToken));
+            return gate.Task;
+        }
+
+        public async Task WaitForDetailsRequestAsync(long bookId)
+        {
+            await WaitForDetailsRequestCountAsync(bookId, 1);
+        }
+
+        public async Task WaitForDetailsRequestCountAsync(long bookId, int requestCount)
+        {
+            if (_requestCounts.TryGetValue(bookId, out var currentCount) && currentCount >= requestCount)
+            {
+                return;
+            }
+
+            if (!_requestNotifications.TryGetValue((bookId, requestCount), out var notification))
+            {
+                notification = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _requestNotifications[(bookId, requestCount)] = notification;
+            }
+
+            await notification.Task;
+        }
+
+        public void Release(long bookId)
+        {
+            ReleaseRequest(bookId, 1, bookId == 1 ? "Book One Details" : "Book Two Details");
+        }
+
+        public void ReleaseRequest(long bookId, int requestCount, string title)
+        {
+            _gates[bookId][requestCount - 1].TrySetResult(new BookDetailsModel
+            {
+                BookId = bookId,
+                Title = title,
+                Authors = [bookId == 1 ? "Author One" : "Author Two"],
+                Language = "en",
+                Format = BookFormatModel.Epub,
+                ManagedPath = bookId == 1
+                    ? "Objects/5a/68/0000000001.book.epub"
+                    : "Objects/5a/69/0000000002.book.epub",
+                SizeBytes = 1024,
+                Storage = new BookStorageInfoModel
+                {
+                    ManagedRelativePath = bookId == 1
+                        ? "Objects/5a/68/0000000001.book.epub"
+                        : "Objects/5a/69/0000000002.book.epub",
+                    HasContentHash = true
+                },
+                AddedAtUtc = DateTimeOffset.UtcNow
+            });
+        }
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(destinationPath);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
+
+        private static TaskCompletionSource CompletedSignal()
+        {
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs.TrySetResult();
+            return tcs;
+        }
+    }
+
     private sealed class NotFoundDetailsLibraryCatalogService : ILibraryCatalogService
     {
         private readonly FakeLibraryCatalogService _inner = new();
@@ -2881,6 +3208,8 @@ public sealed class ViewModelsTests
 
     private sealed class RecordingLibraryCatalogService : ILibraryCatalogService
     {
+        private readonly TaskCompletionSource _listRequestSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public BookListRequestModel? LastRequest { get; private set; }
         public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
         public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
@@ -2889,12 +3218,15 @@ public sealed class ViewModelsTests
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             LastRequest = request;
+            _listRequestSignal.TrySetResult();
             return Task.FromResult(new BookListPageModel
             {
                 AvailableLanguages = AvailableLanguages,
                 AvailableGenres = AvailableGenres
             });
         }
+
+        public Task WaitForListRequestAsync() => _listRequestSignal.Task;
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
@@ -4044,7 +4376,7 @@ public sealed class ViewModelsTests
         viewModel.LibraryBrowser.SearchText = "road";
         viewModel.Dispose();
 
-        await Task.Delay(400);
+        await AssertDoesNotCompleteWithinAsync(catalogService.WaitForListRequestAsync(), TimeSpan.FromMilliseconds(400));
 
         Assert.Null(catalogService.LastRequest);
     }

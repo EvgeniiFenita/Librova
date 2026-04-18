@@ -68,6 +68,7 @@ internal static class CoreHostDevelopmentDefaults
             ShutdownEventName = $@"Local\Librova.UI.Shutdown.{Environment.ProcessId}.{Environment.TickCount64}",
             LibraryOpenMode = libraryOpenMode,
             ParentProcessId = Environment.ProcessId,
+            ParentProcessCreatedAtUnixMs = CoreHostLaunchOptions.GetCurrentProcessCreatedAtUnixMs(),
             ConverterMode = hasConfiguredConverter ? UiConverterMode.BuiltInFb2Cng : UiConverterMode.Disabled,
             Fb2CngExecutablePath = hasConfiguredConverter ? preferences!.Fb2CngExecutablePath : null
         };

@@ -71,6 +71,26 @@ std::string ReadTextFile(const std::filesystem::path& path)
     return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
+template <typename TPredicate>
+void WaitForCondition(
+    TPredicate&& predicate,
+    const std::chrono::steady_clock::duration timeout,
+    const char* failureMessage)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        if (predicate())
+        {
+            return;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    }
+
+    FAIL(failureMessage);
+}
+
 Librova::ConverterCommand::SConverterCommandProfile CreatePwshProfile(
     const std::filesystem::path& scriptPath,
     const Librova::ConverterCommand::EConverterOutputMode outputMode,
@@ -171,11 +191,15 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
     const std::filesystem::path scriptPath = sandbox.GetPath() / "slow-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
+    const std::filesystem::path startedMarkerPath = sandbox.GetPath() / "converter-started.txt";
 
     WriteTextFile(
         scriptPath,
         "$source = $args[0]\n"
         "$destination = $args[1]\n"
+        "Set-Content -LiteralPath '"
+            + startedMarkerPath.generic_string()
+            + "' -Value 'started'\n"
         "Start-Sleep -Seconds 5\n"
         "New-Item -ItemType Directory -Force ([System.IO.Path]::GetDirectoryName($destination)) | Out-Null\n"
         "Copy-Item -LiteralPath $source -Destination $destination -Force\n");
@@ -202,7 +226,10 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
         }, progressSink, stopSource.get_token());
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds{200});
+    WaitForCondition(
+        [&startedMarkerPath] { return std::filesystem::exists(startedMarkerPath); },
+        std::chrono::seconds{2},
+        "Timed out waiting for converter process startup.");
     stopSource.request_stop();
     worker.join();
     const auto elapsed = std::chrono::steady_clock::now() - startTime;
@@ -251,7 +278,10 @@ TEST_CASE("External book converter removes partial output files after cancellati
         }, progressSink, stopSource.get_token());
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds{200});
+    WaitForCondition(
+        [&destinationPath] { return std::filesystem::exists(destinationPath); },
+        std::chrono::seconds{2},
+        "Timed out waiting for partial converter output.");
     stopSource.request_stop();
     worker.join();
 

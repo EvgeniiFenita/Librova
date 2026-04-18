@@ -76,6 +76,7 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     item->set_managed_file_name("book.epub");
     item->set_cover_resource_available(true);
     item->set_cover_file_extension("jpg");
+    item->set_cover_relative_path("Objects/8a/5b/0000000101.cover.jpg");
     item->set_size_bytes(4096);
     item->set_added_at_unix_ms(1711807200000LL);
 
@@ -97,6 +98,7 @@ TEST_CASE("Book list protobuf contract round-trips catalog items", "[proto]")
     REQUIRE(parsed.items(0).managed_file_name() == "book.epub");
     REQUIRE(parsed.items(0).cover_resource_available());
     REQUIRE(parsed.items(0).cover_file_extension() == "jpg");
+    REQUIRE(parsed.items(0).cover_relative_path() == "Objects/8a/5b/0000000101.cover.jpg");
 }
 
 TEST_CASE("Import error code keeps removed duplicate-decision value reserved", "[proto]")

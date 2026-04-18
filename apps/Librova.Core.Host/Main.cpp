@@ -94,6 +94,8 @@ namespace {
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(libraryRoot).DatabaseDirectory / "librova.db";
 }
 
+[[nodiscard]] std::filesystem::path BuildFallbackRuntimeWorkspaceRoot(const std::filesystem::path& libraryRoot);
+
 [[nodiscard]] std::filesystem::path GetLogFilePath(const Librova::CoreHost::SHostOptions& options)
 {
     if (options.LogFilePath.has_value())
@@ -102,6 +104,16 @@ namespace {
     }
 
     return Librova::StoragePlanning::CManagedLibraryLayout::Build(options.LibraryRoot).LogsDirectory / "host.log";
+}
+
+[[nodiscard]] std::filesystem::path GetBootstrapLogFilePath(const Librova::CoreHost::SHostOptions& options)
+{
+    if (options.LogFilePath.has_value())
+    {
+        return *options.LogFilePath;
+    }
+
+    return BuildFallbackRuntimeWorkspaceRoot(options.LibraryRoot) / "RuntimeLogs" / "host.log";
 }
 
 [[nodiscard]] std::filesystem::path BuildFallbackRuntimeWorkspaceRoot(const std::filesystem::path& libraryRoot)
@@ -122,6 +134,8 @@ void PrintUsage()
         << "  --library-mode <open|create>\n"
         << "                         Open an existing library or create a new one.\n"
         << "  --parent-pid <pid>      Bind host lifetime to the given parent process.\n"
+        << "  --parent-start-unix-ms <ms>\n"
+        << "                         Validate the watched parent process identity.\n"
         << "  --serve-one             Stop after serving a single pipe session.\n"
         << "  --max-sessions <count>  Stop after serving the specified number of sessions.\n"
         << "  --converter-working-dir <path>\n"
@@ -153,6 +167,7 @@ void TryWakePipeServer(const std::filesystem::path& pipePath) noexcept
 
 [[nodiscard]] std::jthread StartParentProcessWatchdog(
     const std::optional<std::uint32_t> parentProcessId,
+    const std::optional<std::uint64_t> parentProcessCreatedAtUnixMs,
     const std::filesystem::path& pipePath,
     SHostShutdownState& shutdownState)
 {
@@ -161,10 +176,37 @@ void TryWakePipeServer(const std::filesystem::path& pipePath) noexcept
         return {};
     }
 
-    HANDLE parentHandle = ::OpenProcess(SYNCHRONIZE, FALSE, *parentProcessId);
+    HANDLE parentHandle = ::OpenProcess(
+        SYNCHRONIZE | PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION,
+        FALSE,
+        *parentProcessId);
     if (parentHandle == nullptr)
     {
         throw std::runtime_error("Failed to open parent process handle for --parent-pid.");
+    }
+
+    FILETIME creationTime{};
+    FILETIME exitTime{};
+    FILETIME kernelTime{};
+    FILETIME userTime{};
+    if (!::GetProcessTimes(parentHandle, &creationTime, &exitTime, &kernelTime, &userTime))
+    {
+        ::CloseHandle(parentHandle);
+        throw std::runtime_error("Failed to query parent process creation time for --parent-pid.");
+    }
+
+    const ULARGE_INTEGER creationTimeTicks{
+        .LowPart = creationTime.dwLowDateTime,
+        .HighPart = creationTime.dwHighDateTime
+    };
+    constexpr std::uint64_t WindowsToUnixEpoch100ns = 116444736000000000ULL;
+    const std::uint64_t creationUnixMs =
+        (creationTimeTicks.QuadPart - WindowsToUnixEpoch100ns) / 10000ULL;
+
+    if (!parentProcessCreatedAtUnixMs.has_value() || creationUnixMs != *parentProcessCreatedAtUnixMs)
+    {
+        ::CloseHandle(parentHandle);
+        throw std::runtime_error("Parent process identity did not match --parent-pid / --parent-start-unix-ms.");
     }
 
     return std::jthread([parentHandle, parentProcessId, pipePath, &shutdownState](std::stop_token stopToken)
@@ -276,8 +318,14 @@ int main(int argc, char** argv)
             return 0;
         }
 
+        const auto bootstrapLogPath = GetBootstrapLogFilePath(options);
+        Librova::Logging::CLogging::InitializeHostLogger(bootstrapLogPath);
         Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(options.LibraryRoot, options.LibraryOpenMode);
-        Librova::Logging::CLogging::InitializeHostLogger(GetLogFilePath(options));
+        const auto steadyLogPath = GetLogFilePath(options);
+        if (steadyLogPath != bootstrapLogPath)
+        {
+            Librova::Logging::CLogging::InitializeHostLogger(steadyLogPath);
+        }
         Librova::Logging::Info(
             "Starting Librova.Core.Host for library root '{}'.",
             Librova::Unicode::PathToUtf8(options.LibraryRoot));
@@ -285,7 +333,11 @@ int main(int argc, char** argv)
 #ifdef _WIN32
         SHostShutdownState shutdownState;
         auto shutdownWatchdog = StartShutdownEventWatchdog(options.ShutdownEventName, options.PipePath, shutdownState);
-        auto parentWatchdog = StartParentProcessWatchdog(options.ParentProcessId, options.PipePath, shutdownState);
+        auto parentWatchdog = StartParentProcessWatchdog(
+            options.ParentProcessId,
+            options.ParentProcessCreatedAtUnixMs,
+            options.PipePath,
+            shutdownState);
         if (options.ShutdownEventName.has_value())
         {
             Librova::Logging::Info("Watching shutdown event '{}' for host lifetime.", *options.ShutdownEventName);

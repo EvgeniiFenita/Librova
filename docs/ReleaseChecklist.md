@@ -39,7 +39,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Drag-and-drop: folder starts import automatically **(RG)**
 - Drag-and-drop: multiple files at once
 - After import completes, the Library browser refreshes automatically **(RG)**
-- Duplicate override: `Allow duplicate import` creates a separate record in the library **(RG)**
+- Duplicate override: `Allow probable duplicates` creates a separate record only for probable duplicates; strict duplicates stay rejected **(RG)**
 - `Force conversion to EPUB during import` is visible only when a converter is configured
 
 ---

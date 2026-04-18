@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Librova.UI.Logging;
 
 namespace Librova.UI.Runtime;
 
@@ -57,11 +58,13 @@ internal static class RuntimeWorkspaceMaintenance
         {
             Directory.Delete(path, recursive: true);
         }
-        catch (IOException)
+        catch (IOException error)
         {
+            UiLogging.Warning(error, "Failed to clean up owned runtime workspace directory. Path={Path}", path);
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException error)
         {
+            UiLogging.Warning(error, "Failed to clean up owned runtime workspace directory. Path={Path}", path);
         }
     }
 

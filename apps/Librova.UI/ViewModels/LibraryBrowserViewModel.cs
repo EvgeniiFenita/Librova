@@ -41,6 +41,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private bool _isLoadingSelectionDetails;
     private bool _isFilterPanelOpen;
     private string _genreSearchText = string.Empty;
+    private int _detailsLoadVersion;
     private readonly LibrarySelectionState _selectionState = new(FormatSizeInMegabytes);
     private LibraryStatisticsModel _libraryStatistics = new();
 
@@ -439,18 +440,25 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var selectedBook = SelectedBook;
+        var detailsLoadVersion = ++_detailsLoadVersion;
         IsLoadingSelectionDetails = true;
-        StatusText = $"Loading details for '{SelectedBook.Title}'...";
+        StatusText = $"Loading details for '{selectedBook.Title}'...";
 
         try
         {
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var detailsResult = await _selectionWorkflowController.LoadDetailsAsync(
-                SelectedBook,
+                selectedBook,
                 Prepare,
                 cancellation.Token);
 
             if (IsLifetimeCancellationRequested(cancellation.Token))
+            {
+                return;
+            }
+
+            if (detailsLoadVersion != _detailsLoadVersion || SelectedBook?.BookId != selectedBook.BookId)
             {
                 return;
             }
@@ -465,7 +473,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         {
             if (!_isDisposed)
             {
-                IsLoadingSelectionDetails = false;
+                IsLoadingSelectionDetails = detailsLoadVersion == _detailsLoadVersion
+                    ? false
+                    : IsLoadingSelectionDetails;
             }
         }
     }

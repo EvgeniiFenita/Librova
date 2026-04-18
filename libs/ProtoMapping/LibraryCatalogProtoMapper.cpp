@@ -172,6 +172,7 @@ librova::v1::BookListItem CLibraryCatalogProtoMapper::ToProto(
     if (item.CoverPath.has_value())
     {
         proto.set_cover_file_extension(ToExtensionUtf8(*item.CoverPath));
+        proto.set_cover_relative_path(Librova::Unicode::PathToUtf8(*item.CoverPath));
     }
 
     return proto;
@@ -267,6 +268,7 @@ librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
     if (details.CoverPath.has_value())
     {
         proto.set_cover_file_extension(ToExtensionUtf8(*details.CoverPath));
+        proto.set_cover_relative_path(Librova::Unicode::PathToUtf8(*details.CoverPath));
     }
 
     return proto;

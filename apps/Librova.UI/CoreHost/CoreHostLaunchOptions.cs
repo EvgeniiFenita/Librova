@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Diagnostics;
 
 namespace Librova.UI.CoreHost;
 
@@ -14,6 +15,7 @@ internal sealed class CoreHostLaunchOptions
     public string? ShutdownEventName { get; init; }
     public UiLibraryOpenMode LibraryOpenMode { get; init; } = UiLibraryOpenMode.OpenExisting;
     public int? ParentProcessId { get; init; }
+    public long? ParentProcessCreatedAtUnixMs { get; init; }
     public bool ServeOneSession { get; init; }
     public int? MaxSessions { get; init; }
     public UiConverterMode ConverterMode { get; init; }
@@ -82,6 +84,16 @@ internal sealed class CoreHostLaunchOptions
             throw new InvalidOperationException("ParentProcessId must be positive when provided.");
         }
 
+        if (ParentProcessId.HasValue != ParentProcessCreatedAtUnixMs.HasValue)
+        {
+            throw new InvalidOperationException("ParentProcessId and ParentProcessCreatedAtUnixMs must be provided together.");
+        }
+
+        if (ParentProcessId.HasValue && ParentProcessCreatedAtUnixMs is <= 0)
+        {
+            throw new InvalidOperationException("ParentProcessCreatedAtUnixMs must be positive when ParentProcessId is provided.");
+        }
+
         if (!Enum.IsDefined(ConverterMode))
         {
             throw new InvalidOperationException("Converter mode must be valid.");
@@ -113,5 +125,11 @@ internal sealed class CoreHostLaunchOptions
             default:
                 throw new InvalidOperationException("Converter mode must be valid.");
         }
+    }
+
+    public static long GetCurrentProcessCreatedAtUnixMs()
+    {
+        using var process = Process.GetCurrentProcess();
+        return new DateTimeOffset(process.StartTime.ToUniversalTime()).ToUnixTimeMilliseconds();
     }
 }

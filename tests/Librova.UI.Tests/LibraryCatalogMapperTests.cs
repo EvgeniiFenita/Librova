@@ -117,7 +117,7 @@ public sealed class LibraryCatalogMapperTests
             Format = BookFormat.Epub,
             ManagedFileName = "safe-roadside.epub",
             CoverResourceAvailable = true,
-            CoverFileExtension = "jpg"
+            CoverRelativePath = "Objects/8a/5b/0000000012.cover.jpg"
         });
 
         var details = LibraryCatalogMapper.FromProto(new BookDetails
@@ -129,7 +129,7 @@ public sealed class LibraryCatalogMapperTests
             ManagedFileName = "safe-roadside.epub",
             CoverResourceAvailable = true,
             ContentHashAvailable = true,
-            CoverFileExtension = "jpg"
+            CoverRelativePath = "Objects/8a/5b/0000000012.cover.jpg"
         });
 
         Assert.Equal("safe-roadside.epub", listItem.Storage.ManagedRelativePath);
@@ -143,7 +143,7 @@ public sealed class LibraryCatalogMapperTests
     }
 
     [Fact]
-    public void Mapper_DerivesCoverShardPathFromStableBookIdHash()
+    public void Mapper_UsesTransportOwnedCoverRelativePath()
     {
         var details = LibraryCatalogMapper.FromProto(new BookDetails
         {
@@ -153,10 +153,10 @@ public sealed class LibraryCatalogMapperTests
             Format = BookFormat.Epub,
             ManagedFileName = "bucketed.epub",
             CoverResourceAvailable = true,
-            CoverFileExtension = "png"
+            CoverRelativePath = "Objects/custom/cover-path.png"
         });
 
-        Assert.Equal("Objects/3a/35/0000123456.cover.png", details.Storage.CoverRelativePath);
+        Assert.Equal("Objects/custom/cover-path.png", details.Storage.CoverRelativePath);
     }
 
     [Fact]
@@ -283,4 +283,3 @@ public sealed class LibraryCatalogMapperTests
         Assert.Empty(proto.Genres);
     }
 }
-

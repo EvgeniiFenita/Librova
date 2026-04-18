@@ -81,14 +81,14 @@ public sealed class StrongIntegrationTests
     }
 
     [Fact]
-    public async Task ShellApplication_AllowsStrictDuplicateImportAsIndependentBookWhenEnabled()
+    public async Task ShellApplication_RejectsStrictDuplicateImportEvenWhenProbableDuplicateOverrideIsEnabled()
     {
-        var sandboxRoot = CreateSandboxRoot("shell-strict-duplicate-override");
+        var sandboxRoot = CreateSandboxRoot("shell-strict-duplicate-reject");
         Directory.CreateDirectory(sandboxRoot);
 
         try
         {
-            var options = CreateHostOptions(sandboxRoot, "ShellStrictDuplicateOverride");
+            var options = CreateHostOptions(sandboxRoot, "ShellStrictDuplicateReject");
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             await using var session = await ShellBootstrap.StartSessionAsync(options, cancellation.Token);
             await using var application = CreateApplication(session, sandboxRoot);
@@ -121,15 +121,10 @@ public sealed class StrongIntegrationTests
 
             await application.Shell.LibraryBrowser.RefreshAsync();
 
-            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Count);
+            Assert.Single(application.Shell.LibraryBrowser.Books);
             Assert.All(application.Shell.LibraryBrowser.Books, book => Assert.Equal("Duplicated Book", book.Title));
-            Assert.Equal(2, application.Shell.LibraryBrowser.Books.Select(book => book.BookId).Distinct().Count());
-            Assert.All(application.Shell.LibraryBrowser.Books, book =>
-            {
-                Assert.NotEmpty(book.ManagedFileName);
-                Assert.Equal(book.ManagedFileName, book.ManagedPath);
-            });
-            Assert.Contains("Completed", application.Shell.ImportJobs.StatusText, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("duplicate", application.Shell.ImportJobs.WarningsText, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("rejected", application.Shell.ImportJobs.StatusText, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

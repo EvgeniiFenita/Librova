@@ -11,10 +11,12 @@ internal sealed class ImportJobsService : IImportJobsService
 {
     private static readonly TimeSpan RollingBackWaitTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan CompactingWaitTimeout = TimeSpan.FromSeconds(2);
+    internal static readonly TimeSpan CompletionWaitCeiling = TimeSpan.FromMinutes(5);
     private const int PercentLogStep = 10;
     private const ulong ProcessedEntriesLogStep = 25;
 
     private readonly ImportJobClient _client;
+    private readonly TimeSpan _completionWaitCeiling;
 
     public ImportJobsService(string pipePath)
         : this(new ImportJobClient(pipePath))
@@ -22,8 +24,14 @@ internal sealed class ImportJobsService : IImportJobsService
     }
 
     public ImportJobsService(ImportJobClient client)
+        : this(client, CompletionWaitCeiling)
+    {
+    }
+
+    internal ImportJobsService(ImportJobClient client, TimeSpan completionWaitCeiling)
     {
         _client = client;
+        _completionWaitCeiling = completionWaitCeiling;
     }
 
     public Task<ulong> StartAsync(
@@ -161,10 +169,17 @@ internal sealed class ImportJobsService : IImportJobsService
         int lastLoggedPercentBucket = -1;
         ulong lastLoggedProcessedBucket = ulong.MaxValue;
         var currentWaitTimeout = waitTimeout;
+        var totalWaitStopwatch = Stopwatch.StartNew();
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (totalWaitStopwatch.Elapsed >= _completionWaitCeiling)
+            {
+                throw new TimeoutException(
+                    $"Timed out waiting for import job {jobId} to reach a terminal state after {_completionWaitCeiling.TotalSeconds:0.#} seconds.");
+            }
 
             var completed = await WaitAsync(jobId, timeout, currentWaitTimeout, cancellationToken).ConfigureAwait(false);
             if (completed)

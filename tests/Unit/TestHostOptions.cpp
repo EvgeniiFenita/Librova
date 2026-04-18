@@ -117,6 +117,7 @@ TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")
         "--pipe", R"(\\.\pipe\Librova.Test)",
         "--library-root", "C:/Librova",
         "--parent-pid", "4242",
+        "--parent-start-unix-ms", "1711807200123",
         "--fb2cng-exe", "C:/tools/fbc.exe",
         "--fb2cng-config", "C:/tools/fbc.yaml",
         "--serve-one"
@@ -124,10 +125,42 @@ TEST_CASE("Host options parse built-in fb2cng configuration", "[core-host]")
 
     REQUIRE(options.MaxSessions == 1);
     REQUIRE(options.ParentProcessId == std::optional<std::uint32_t>{4242});
+    REQUIRE(options.ParentProcessCreatedAtUnixMs == std::optional<std::uint64_t>{1711807200123ULL});
     REQUIRE(options.ConverterConfiguration.Mode
         == Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng);
     REQUIRE(options.ConverterConfiguration.Fb2Cng.ExecutablePath == std::filesystem::path{"C:/tools/fbc.exe"});
     REQUIRE(options.ConverterConfiguration.Fb2Cng.ConfigPath == std::filesystem::path{"C:/tools/fbc.yaml"});
+}
+
+TEST_CASE("Host options require parent pid and creation time together", "[core-host]")
+{
+    REQUIRE_THROWS_AS(
+        Librova::CoreHost::CHostOptions::Parse({
+            "--pipe", R"(\\.\pipe\Librova.Test)",
+            "--library-root", "C:/Librova",
+            "--parent-pid", "4242"
+        }),
+        std::invalid_argument);
+
+    REQUIRE_THROWS_AS(
+        Librova::CoreHost::CHostOptions::Parse({
+            "--pipe", R"(\\.\pipe\Librova.Test)",
+            "--library-root", "C:/Librova",
+            "--parent-start-unix-ms", "1711807200123"
+        }),
+        std::invalid_argument);
+}
+
+TEST_CASE("Host options reject parent creation time above supported signed unix-millisecond range", "[core-host]")
+{
+    REQUIRE_THROWS_AS(
+        Librova::CoreHost::CHostOptions::Parse({
+            "--pipe", R"(\\.\pipe\Librova.Test)",
+            "--library-root", "C:/Librova",
+            "--parent-pid", "4242",
+            "--parent-start-unix-ms", "18446744073709551615"
+        }),
+        std::invalid_argument);
 }
 
 TEST_CASE("Host options reject missing required arguments", "[core-host]")

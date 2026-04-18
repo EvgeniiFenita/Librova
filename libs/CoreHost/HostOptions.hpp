@@ -27,6 +27,7 @@ struct SHostOptions
     std::optional<std::string> ShutdownEventName;
     ELibraryOpenMode LibraryOpenMode = ELibraryOpenMode::OpenExisting;
     std::optional<std::uint32_t> ParentProcessId;
+    std::optional<std::uint64_t> ParentProcessCreatedAtUnixMs;
     std::size_t MaxSessions = 0;
     bool ShowHelp = false;
     bool ShowVersion = false;

@@ -149,6 +149,22 @@ public sealed class CoreHostLaunchOptionsTests
     }
 
     [Fact]
+    public void Validate_RejectsParentProcessIdWithoutCreationTime()
+    {
+        var options = new CoreHostLaunchOptions
+        {
+            ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+            PipePath = @"\\.\pipe\Librova.Test",
+            LibraryRoot = @"C:\Libraries\Librova",
+            ParentProcessId = 42,
+            ConverterMode = UiConverterMode.Disabled
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Contains("ParentProcessCreatedAtUnixMs", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CreateDevelopmentDefaults_UsesProvidedPreferencesStoreForConverterSettings()
     {
         var options = CoreHostDevelopmentDefaults.Create(
@@ -170,6 +186,8 @@ public sealed class CoreHostLaunchOptionsTests
         Assert.False(string.IsNullOrWhiteSpace(options.HostLogFilePath));
         Assert.False(string.IsNullOrWhiteSpace(options.ConverterWorkingDirectory));
         Assert.False(string.IsNullOrWhiteSpace(options.ManagedStorageStagingRoot));
+        Assert.Equal(Environment.ProcessId, options.ParentProcessId);
+        Assert.True(options.ParentProcessCreatedAtUnixMs > 0);
     }
 
     private sealed class FakePreferencesStore : IUiPreferencesStore

@@ -107,6 +107,7 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     REQUIRE(response.items(0).managed_file_name() == "0000000012.book.Пикник.epub");
     REQUIRE(response.items(0).cover_resource_available());
     REQUIRE(response.items(0).cover_file_extension() == "jpg");
+    REQUIRE(response.items(0).cover_relative_path() == "Objects/8a/5b/0000000012.cover.jpg");
     REQUIRE(response.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
 }
 
@@ -141,6 +142,7 @@ TEST_CASE("Library catalog proto mapper builds book details response", "[proto-m
     REQUIRE(response.details().cover_resource_available());
     REQUIRE(response.details().content_hash_available());
     REQUIRE(response.details().cover_file_extension() == "jpg");
+    REQUIRE(response.details().cover_relative_path() == "Objects/23/7d/0000000042.cover.jpg");
 }
 
 TEST_CASE("Library catalog proto mapper carries structured not-found errors", "[proto-mapping][catalog]")
@@ -240,4 +242,3 @@ TEST_CASE("Library catalog proto mapper builds move-to-trash response", "[proto-
     REQUIRE(response.destination() == librova::v1::DELETE_DESTINATION_RECYCLE_BIN);
     REQUIRE(response.has_orphaned_files());
 }
-

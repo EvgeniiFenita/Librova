@@ -280,7 +280,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
     REQUIRE(descriptionSearch.size() == 1);
     REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Roadside Picnic");
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository lists available languages with combined filters even when current language is set", "[book-database]")
@@ -331,7 +331,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
 
     REQUIRE(languages == std::vector<std::string>({"en", "ru"}));
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository lists available tags with combined filters even when current tag is set", "[book-database]")
@@ -384,7 +384,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
 
     REQUIRE(tags == std::vector<std::string>({"adventure", "shared-tag"}));
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo equivalence", "[book-database]")
@@ -444,7 +444,7 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo
     REQUIRE(descriptionPrefixSearch.size() == 1);
     REQUIRE(descriptionPrefixSearch.front().Metadata.TitleUtf8 == "Пикник на обочине");
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-insensitive", "[book-database]")
@@ -486,7 +486,7 @@ TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-inse
     REQUIRE(descriptionSearch.size() == 1);
     REQUIRE(descriptionSearch.front().Metadata.TitleUtf8 == "Прыгоды ў горадзе");
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-text search", "[book-database]")
@@ -517,7 +517,7 @@ TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-t
     REQUIRE(books.size() == 1);
     REQUIRE(books.front().Metadata.TitleUtf8 == "Roadside Picnic");
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository hydrates multi-book search results without losing order or metadata", "[book-database]")
@@ -580,7 +580,7 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
     REQUIRE(books[1].File.ManagedPath == std::filesystem::path(u8"Objects/11/55/0000000602.book.beta.fb2"));
     REQUIRE_FALSE(books[1].CoverPath.has_value());
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized title instead of ASCII-only collation", "[book-database]")
@@ -635,7 +635,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
     REQUIRE(books[1].Metadata.TitleUtf8 == "ёж");
     REQUIRE(books[2].Metadata.TitleUtf8 == "Якорь");
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author names", "[book-database]")
@@ -690,7 +690,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
     REQUIRE(books[1].Metadata.AuthorsUtf8 == std::vector<std::string>({"ёж автор"}));
     REQUIRE(books[2].Metadata.AuthorsUtf8 == std::vector<std::string>({"Яков Автор"}));
 
-    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository);
+    CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
 
 TEST_CASE("Sqlite book query repository refreshes cached library statistics when a cover file is overwritten in place", "[book-database]")
@@ -2506,4 +2506,3 @@ TEST_CASE("Sqlite book repository Compact progress callback fires at least once 
 
     std::filesystem::remove(databasePath);
 }
-

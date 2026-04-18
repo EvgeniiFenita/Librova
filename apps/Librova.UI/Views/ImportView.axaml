@@ -91,7 +91,7 @@
                      Text="OPTIONS" />
           <StackPanel Spacing="6">
             <CheckBox IsChecked="{Binding ImportJobs.AllowProbableDuplicates}"
-                      Content="Allow duplicate import" />
+                      Content="Allow probable duplicates" />
             <TextBlock Classes="Caption"
                        Margin="28,0,0,0"
                        Text="When enabled, Librova can continue after a probable duplicate warning and store the new book as a separate managed record."

@@ -11,7 +11,14 @@
 namespace Librova::Application {
 namespace {
 
-void LogOrphanedFile(const std::string_view label, const std::filesystem::path& sourcePath, const std::exception& error) noexcept
+struct SStagedTrashEntry
+{
+    std::string Label;
+    std::filesystem::path OriginalPath;
+    std::filesystem::path TrashedPath;
+};
+
+void LogTrashStageFailure(const std::string_view label, const std::filesystem::path& sourcePath, const std::exception& error) noexcept
 {
     if (!Librova::Logging::CLogging::IsInitialized())
     {
@@ -21,7 +28,7 @@ void LogOrphanedFile(const std::string_view label, const std::filesystem::path& 
     try
     {
         Librova::Logging::Warn(
-            "Failed to move {} to trash after catalog removal; file left as orphan. Path='{}' Error='{}'.",
+            "Failed to stage {} into managed Trash before catalog removal. Path='{}' Error='{}'.",
             label,
             Librova::Unicode::PathToUtf8(sourcePath),
             error.what());
@@ -31,7 +38,7 @@ void LogOrphanedFile(const std::string_view label, const std::filesystem::path& 
         try
         {
             Librova::Logging::Warn(
-                "Failed to write orphaned-file diagnostics. Label='{}' Error='{}' LoggingError='{}'.",
+                "Failed to write trash-stage diagnostics. Label='{}' Error='{}' LoggingError='{}'.",
                 label,
                 error.what(),
                 loggingError.what());
@@ -39,6 +46,31 @@ void LogOrphanedFile(const std::string_view label, const std::filesystem::path& 
         catch (...)
         {
         }
+    }
+    catch (...)
+    {
+    }
+}
+
+void LogTrashRestoreFailure(
+    const std::string_view label,
+    const std::filesystem::path& trashedPath,
+    const std::filesystem::path& destinationPath,
+    const std::exception& error) noexcept
+{
+    if (!Librova::Logging::CLogging::IsInitialized())
+    {
+        return;
+    }
+
+    try
+    {
+        Librova::Logging::Error(
+            "Failed to restore staged {} from managed Trash after catalog removal failed. TrashedPath='{}' Destination='{}' Error='{}'.",
+            label,
+            Librova::Unicode::PathToUtf8(trashedPath),
+            Librova::Unicode::PathToUtf8(destinationPath),
+            error.what());
     }
     catch (...)
     {
@@ -94,6 +126,24 @@ void LogRecycleBinFallback(
     }
 }
 
+void RestoreStagedPathsOrThrow(
+    Librova::Domain::ITrashService& trashService,
+    const std::vector<SStagedTrashEntry>& stagedEntries)
+{
+    for (auto it = stagedEntries.rbegin(); it != stagedEntries.rend(); ++it)
+    {
+        try
+        {
+            trashService.RestoreFromTrash(it->TrashedPath, it->OriginalPath);
+        }
+        catch (const std::exception& error)
+        {
+            LogTrashRestoreFailure(it->Label, it->TrashedPath, it->OriginalPath, error);
+            throw;
+        }
+    }
+}
+
 } // namespace
 
 CLibraryTrashFacade::CLibraryTrashFacade(
@@ -130,24 +180,25 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     const bool hasMissingManagedArtifacts = !sourceBookPath.has_value()
         || (book->CoverPath.has_value() && !sourceCoverPath.has_value());
 
-    // Catalog removal is the commit point. Once this returns, the book is logically
-    // deleted regardless of what happens to the files. If this throws, no files have
-    // been touched — safe to propagate.
-    m_bookRepository.Remove(id);
-
-    // File moves are best-effort after the catalog commit. On failure the file is
-    // left as an orphan in the managed library; the catalog remains consistent.
+    std::vector<SStagedTrashEntry> stagedEntries;
     std::vector<std::filesystem::path> stagedPaths;
 
     if (sourceBookPath.has_value())
     {
         try
         {
-            stagedPaths.push_back(m_trashService.MoveToTrash(*sourceBookPath));
+            const auto trashedPath = m_trashService.MoveToTrash(*sourceBookPath);
+            stagedEntries.push_back({
+                .Label = "book",
+                .OriginalPath = *sourceBookPath,
+                .TrashedPath = trashedPath
+            });
+            stagedPaths.push_back(std::move(trashedPath));
         }
         catch (const std::exception& error)
         {
-            LogOrphanedFile("book", *sourceBookPath, error);
+            LogTrashStageFailure("book", *sourceBookPath, error);
+            throw;
         }
     }
 
@@ -155,16 +206,34 @@ std::optional<STrashedBookResult> CLibraryTrashFacade::MoveBookToTrash(const Lib
     {
         try
         {
-            stagedPaths.push_back(m_trashService.MoveToTrash(*sourceCoverPath));
+            const auto trashedPath = m_trashService.MoveToTrash(*sourceCoverPath);
+            stagedEntries.push_back({
+                .Label = "cover",
+                .OriginalPath = *sourceCoverPath,
+                .TrashedPath = trashedPath
+            });
+            stagedPaths.push_back(std::move(trashedPath));
         }
         catch (const std::exception& error)
         {
-            LogOrphanedFile("cover", *sourceCoverPath, error);
+            LogTrashStageFailure("cover", *sourceCoverPath, error);
+            RestoreStagedPathsOrThrow(m_trashService, stagedEntries);
+            throw;
         }
     }
 
+    try
+    {
+        m_bookRepository.Remove(id);
+    }
+    catch (...)
+    {
+        RestoreStagedPathsOrThrow(m_trashService, stagedEntries);
+        throw;
+    }
+
     const size_t expectedMoveCount = 1 + (sourceCoverPath.has_value() ? 1 : 0);
-    const bool hasOrphanedFiles = hasMissingManagedArtifacts || stagedPaths.size() < expectedMoveCount;
+    const bool hasOrphanedFiles = hasMissingManagedArtifacts || stagedEntries.size() < expectedMoveCount;
     if (m_recycleBinService == nullptr || stagedPaths.empty())
     {
         return STrashedBookResult{

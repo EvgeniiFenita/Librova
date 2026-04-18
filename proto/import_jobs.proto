@@ -136,6 +136,7 @@ message BookListItem {
   optional bool cover_resource_available = 15;
   optional string cover_file_extension = 16;
   repeated string genres = 17;
+  optional string cover_relative_path = 18;
 }
 
 message BookDetails {
@@ -161,6 +162,7 @@ message BookDetails {
   optional bool content_hash_available = 21;
   optional string cover_file_extension = 22;
   repeated string genres = 23;
+  optional string cover_relative_path = 24;
 }
 
 message ListBooksRequest {

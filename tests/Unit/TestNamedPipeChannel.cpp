@@ -10,8 +10,10 @@
 #include <array>
 #include <bit>
 #include <chrono>
+#include <condition_variable>
 #include <exception>
 #include <filesystem>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -21,6 +23,34 @@
 #include "TestNamedPipeReadySignal.hpp"
 
 namespace {
+
+class CTestSignal final
+{
+public:
+    void Notify()
+    {
+        {
+            std::lock_guard lock(m_mutex);
+            m_signaled = true;
+        }
+
+        m_conditionVariable.notify_all();
+    }
+
+    void Wait(const std::chrono::milliseconds timeout = std::chrono::seconds(2))
+    {
+        std::unique_lock lock(m_mutex);
+        if (!m_conditionVariable.wait_for(lock, timeout, [this] { return m_signaled; }))
+        {
+            throw std::runtime_error("Timed out while waiting for test signal.");
+        }
+    }
+
+private:
+    std::mutex m_mutex;
+    std::condition_variable m_conditionVariable;
+    bool m_signaled = false;
+};
 
 std::filesystem::path BuildTestPipePath()
 {
@@ -147,14 +177,15 @@ TEST_CASE("Named pipe channel timeout read cancels pending overlapped wait inste
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
     CTestNamedPipeReadySignal readySignal;
+    CTestSignal releaseServerWrite;
 
-    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
+    std::jthread serverThread([&pipePath, &readySignal, &releaseServerWrite, &serverFailure] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
             readySignal.NotifyReady();
             auto connection = server.WaitForClient();
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            releaseServerWrite.Wait();
             connection.WriteMessage({std::byte{0x42}});
         }
         catch (...)
@@ -176,6 +207,7 @@ TEST_CASE("Named pipe channel timeout read cancels pending overlapped wait inste
 
     const auto elapsed = std::chrono::steady_clock::now() - startTime;
     REQUIRE(elapsed < std::chrono::milliseconds(200));
+    releaseServerWrite.Notify();
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
@@ -227,14 +259,15 @@ TEST_CASE("Named pipe channel timeout write cancels pending overlapped wait inst
     const auto pipePath = BuildTestPipePath();
     std::exception_ptr serverFailure;
     CTestNamedPipeReadySignal readySignal;
+    CTestSignal releaseServerConnection;
 
-    std::jthread serverThread([&pipePath, &readySignal, &serverFailure] {
+    std::jthread serverThread([&pipePath, &readySignal, &releaseServerConnection, &serverFailure] {
         try
         {
             Librova::PipeTransport::CNamedPipeServer server(pipePath);
             readySignal.NotifyReady();
             auto connection = server.WaitForClient();
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            releaseServerConnection.Wait();
         }
         catch (...)
         {
@@ -256,6 +289,7 @@ TEST_CASE("Named pipe channel timeout write cancels pending overlapped wait inst
 
     const auto elapsed = std::chrono::steady_clock::now() - startTime;
     REQUIRE(elapsed < std::chrono::milliseconds(200));
+    releaseServerConnection.Notify();
 
     serverThread.join();
     REQUIRE(serverFailure == nullptr);

@@ -52,7 +52,17 @@ internal sealed class AsyncCommand : ICommand
             UiLogging.Error(error, "Async command execution failed. CommandType={CommandType}", GetType().Name);
             if (_onError is not null)
             {
-                await _onError(error);
+                try
+                {
+                    await _onError(error);
+                }
+                catch (Exception handlerError)
+                {
+                    UiLogging.Error(
+                        handlerError,
+                        "Async command error handler failed. CommandType={CommandType}",
+                        GetType().Name);
+                }
             }
         }
         finally
@@ -112,7 +122,17 @@ internal sealed class AsyncCommand<T> : ICommand
             UiLogging.Error(error, "Async command execution failed. CommandType={CommandType}", GetType().Name);
             if (_onError is not null)
             {
-                await _onError(error);
+                try
+                {
+                    await _onError(error);
+                }
+                catch (Exception handlerError)
+                {
+                    UiLogging.Error(
+                        handlerError,
+                        "Async command error handler failed. CommandType={CommandType}",
+                        GetType().Name);
+                }
             }
         }
         finally

@@ -87,6 +87,25 @@ public sealed partial class ImportJobsServiceTests
     }
 
     [Fact]
+    public async Task Service_StopsWaitingWhenCompletionCeilingIsReached()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var client = new NeverCompletingImportJobClient();
+        var service = new ImportJobsService(client, TimeSpan.FromMilliseconds(50));
+
+        var timeout = await Assert.ThrowsAsync<TimeoutException>(() =>
+            service.WaitForCompletionAsync(
+                99UL,
+                TimeSpan.FromMilliseconds(10),
+                TimeSpan.FromMilliseconds(10),
+                _ => { },
+                cancellation.Token));
+
+        Assert.Contains("import job 99", timeout.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(client.WaitCalls > 0);
+    }
+
+    [Fact]
     public async Task Service_PerformsEndToEndImportFlowWithoutGeneratedProtoTypes()
     {
         var sandboxRoot = Path.Combine(
@@ -717,6 +736,46 @@ public sealed partial class ImportJobsServiceTests
                         TotalEntries = 100,
                         ImportedEntries = (ulong)_totalSnapshots
                     }
+                }
+            });
+        }
+    }
+
+    private sealed class NeverCompletingImportJobClient : ImportJobClient
+    {
+        public NeverCompletingImportJobClient()
+            : base(@"\\.\pipe\Librova.UI.Tests.NeverCompleting")
+        {
+        }
+
+        public int WaitCalls { get; private set; }
+
+        public override Task<Librova.V1.WaitImportJobResponse> WaitAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            CancellationToken cancellationToken)
+        {
+            WaitCalls++;
+            return Task.FromResult(new Librova.V1.WaitImportJobResponse
+            {
+                Completed = false
+            });
+        }
+
+        public override Task<Librova.V1.GetImportJobSnapshotResponse> GetSnapshotAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new Librova.V1.GetImportJobSnapshotResponse
+            {
+                Snapshot = new Librova.V1.ImportJobSnapshot
+                {
+                    JobId = jobId,
+                    Status = Librova.V1.ImportJobStatus.Running,
+                    Percent = 50,
+                    Message = "Still running"
                 }
             });
         }
