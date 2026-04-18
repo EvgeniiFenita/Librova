@@ -298,7 +298,7 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 | `$docs-maintenance` | updating, reviewing, de-duplicating, or verifying repository documentation against code and the documentation hierarchy |
 | `$vertical-slice` | implementing a feature or workflow that crosses multiple layers |
 | `$transport-rpc` | adding or changing an IPC / Protobuf method |
-| `$epub-import` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |
+| `$import-pipeline` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |
 | `$analyze-logs` | analyzing `host.log` and `ui.log` after an import run |
 | `$review-pass` | doing a high-risk hardening pass before review or release-candidate stabilization |
 | `$win-desktop-design` | designing or refining Avalonia UI structure, look, and UX behavior |

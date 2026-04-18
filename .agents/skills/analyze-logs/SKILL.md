@@ -1,6 +1,6 @@
 ---
 name: analyze-logs
-description: "Step-by-step guide for analyzing Librova import logs (host.log + ui.log): parse errors, genre mapping gaps, log noise, encoding fallbacks, duplicate detection, and actionable fix decisions. Use whenever the user provides log files after an import run."
+description: "Step-by-step guide for analyzing Librova import logs (host.log + ui.log): parse errors, genre mapping gaps, log noise, encoding fallbacks, duplicate detection, and actionable fix decisions. Specific to Librova FB2 import logs only — do NOT use for general log analysis. Use whenever the user provides log files after an import run."
 ---
 
 # Import Log Analysis Playbook
@@ -151,6 +151,9 @@ Select-String -Path $hostLog -Pattern "zip: done job=" |
 ```
 
 The final `[import-perf] SUMMARY` is especially valuable — it can directly name bottlenecks such as `storage`, `dedup`, `db_wait`, `parse`, `zip_extract`, `cover`, `convert`.
+
+> These benchmarks apply to lib.rus.ec FB2 ZIP imports only.
+> Numbers will differ for other sources or archive layouts.
 
 **Healthy perf-summary benchmark (lib.rus.ec FB2 ZIPs):**
 - `throughput` ≥ 100 bk/s — acceptable; ≥ 150 bk/s — good

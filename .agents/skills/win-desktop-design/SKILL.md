@@ -1,13 +1,6 @@
 ---
 name: win-desktop-design
-description: >
-  A guide for designing modern Windows desktop applications using the
-  Avalonia UI + C# stack. Use this skill whenever the user asks to design,
-  describe, implement, or improve UI/UX for a Windows application in Avalonia —
-  including questions about layouts, navigation, color schemes, dark theme,
-  components, styles, XAML markup, typography, icons, animations, and the
-  "Windows 11 look". Apply even if the word "design" is not mentioned explicitly —
-  any question about the appearance or structure of an Avalonia application is enough.
+description: "Guide for visual design, layout, theming, typography, and component choice in Avalonia UI + C# desktop apps. Use when the question is primarily about appearance, UI structure, or Windows 11 look. Do NOT use for MVVM architecture, data binding logic, or IPC layer questions."
 ---
 
 # Modern Windows Desktop App Design with Avalonia UI + C#
@@ -21,6 +14,21 @@ Produce Windows-desktop-oriented Avalonia UI guidance that stays practical, cons
 - use this skill for layout, component, theming, navigation, typography, iconography, and motion questions in Avalonia apps
 - in Librova itself, treat `docs/UiDesignSystem.md` as the canonical design source and use this skill as a companion for broader design reasoning
 - do **not** use this skill to override repository-specific tokens or component rules without updating the repo design-system doc
+
+## Contents
+
+1. [Philosophy and Guidelines](#1-philosophy-and-guidelines)
+2. [Stack and Dependencies](#2-stack-and-dependencies)
+3. [Window Structure (Shell)](#3-window-structure-shell)
+4. [Colors and Themes](#4-colors-and-themes)
+5. [Typography](#5-typography)
+6. [Grid and Spacing](#6-grid-and-spacing)
+7. [Components](#7-components)
+8. [Animations and Transitions](#8-animations-and-transitions)
+9. [Icons](#9-icons)
+10. [Project Structure](#10-project-structure)
+11. [Accessibility](#11-accessibility)
+12. [Common Mistakes](#12-common-mistakes)
 
 ## 1. Philosophy and Guidelines
 

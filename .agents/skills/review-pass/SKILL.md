@@ -15,6 +15,7 @@ Run a high-signal hardening pass over risky changes before review, release, or a
 - use this skill before a release-candidate pass
 - use this skill when you want to check for documentation drift before handing work off
 - do **not** use this as a replacement for the implementation checklist of a feature; use it after the implementation work exists
+- for a combined flow: run `$vertical-slice` first for implementation, then `$review-pass` for hardening — do not reverse the order
 
 Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff when code review is the goal.
 

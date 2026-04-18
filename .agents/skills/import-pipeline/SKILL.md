@@ -1,5 +1,5 @@
 ---
-name: epub-import
+name: import-pipeline
 description: Checklist for extending the Librova import pipeline. Use when adding a new source format, modifying import stages, changing duplicate detection, extending conversion handling, or modifying directory/archive import behavior.
 ---
 

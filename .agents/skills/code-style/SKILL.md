@@ -5,6 +5,12 @@ description: Code style reference for Librova. Use when writing new C++, C#, Pro
 
 # Code Style Reference
 
+## Canonical Source
+
+Full authoritative rules: `docs/CodeStyleGuidelines.md`.
+
+This skill only highlights the rules most likely to be missed.
+
 ## Goal
 
 Resolve Librova-specific style questions quickly and defer to the full canonical guide when the short reminders are not enough.
@@ -14,12 +20,6 @@ Resolve Librova-specific style questions quickly and defer to the full canonical
 - use this skill when naming, formatting, or structure is unclear
 - use this skill during review when a rule might differ from common ecosystem defaults
 - do **not** use this as a replacement for `docs/CodeStyleGuidelines.md`; that file remains canonical
-
-## Canonical Source
-
-Full authoritative rules: `docs/CodeStyleGuidelines.md`.
-
-This skill only highlights the rules most likely to be missed.
 
 ## Most-Missed Rules
 
@@ -74,3 +74,13 @@ if (isDuplicate) {
 ## If You Need More Than This
 
 Read `docs/CodeStyleGuidelines.md` before making style-sensitive edits in unfamiliar code.
+
+## What This Skill Does Not Cover
+
+The following categories are intentionally omitted here —
+consult `docs/CodeStyleGuidelines.md` for authoritative rules:
+
+- `#include` ordering and grouping
+- namespace declaration style
+- error handling and exception conventions
+- file and directory naming

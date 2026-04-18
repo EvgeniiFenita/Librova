@@ -14,7 +14,7 @@ Deliver a feature or workflow end-to-end across every touched layer, with tests 
 - use this skill for user-visible features or workflow changes that cross multiple layers
 - use this skill for read-side or mutation flows that touch domain, transport, and UI together
 - use `$transport-rpc` instead when the change is IPC-only
-- use `$epub-import` as the domain-specific companion when the slice is mainly about import behavior
+- use `$import-pipeline` as the domain-specific companion when the slice is mainly about import behavior
 - use `$review-pass` instead for stabilization or hardening passes without new feature work
 
 ## 0. Pre-Start Gate
@@ -75,8 +75,7 @@ Use for a new section, dialog, settings panel, or first-run flow.
 
 Before marking the task done:
 
-- [ ] `Debug` and `Release` build validation complete when the task changes code
-- [ ] new tests are green
+- [ ] build and test validation complete — follow the checklist in `$review-pass` §8
 - [ ] docs updated per `AGENTS.md` document-maintenance policy
 - [ ] backlog item closed using `$backlog-update`
 - [ ] no decorative tests added
