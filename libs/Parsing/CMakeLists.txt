@@ -12,11 +12,13 @@ target_include_directories(LibrovaParsing PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
-target_link_libraries(LibrovaParsing PUBLIC
-    LibrovaDomain
-    LibrovaFoundation
-    libzip::zip
-    pugixml::pugixml
+target_link_libraries(LibrovaParsing
+    PUBLIC
+        LibrovaDomain
+    PRIVATE
+        LibrovaFoundation
+        libzip::zip
+        pugixml::pugixml
 )
 
 target_compile_features(LibrovaParsing PUBLIC cxx_std_20)

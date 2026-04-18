@@ -194,7 +194,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Side | Where mapping happens | Types |
 |---|---|---|
-| C++ inbound | `libs/ProtoMapping/` | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` — proto message → domain struct |
+| C++ inbound | `libs/Rpc/` | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` — proto message → domain struct |
 | C++ outbound | same mappers | domain struct → proto message |
 | C# inbound | `apps/Librova.UI/ImportJobs/ImportJobMapper.cs` | proto → `ImportJobSnapshotModel`, `ImportJobResultModel` |
 | C# inbound | `apps/Librova.UI/LibraryCatalog/LibraryCatalogMapper.cs` | proto → `BookListPageModel`, `BookDetailsModel` |
@@ -221,7 +221,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 ### Ordered checklist for a new RPC
 
 1. Add message types + method to `proto/import_jobs.proto`
-2. Regenerate C++ proto code (`libs/ProtoContracts/`)
+2. Regenerate C++ proto code (`libs/Rpc/`)
 3. Add method ID to `EPipeMethod` enum (append only)
 4. Register in `CPipeRequestDispatcher`
 5. Implement in `CLibraryJobServiceAdapter` (with mandatory outcome logging)
@@ -451,19 +451,19 @@ Violating any of these causes data corruption, crashes, or silent test failures.
 ### Add a new RPC method
 **Use the `$transport-rpc` skill** — it has the complete, ordered checklist for both sides (proto → C++ → C#, validation sequence, close-out).
 
-Modules involved: `proto/import_jobs.proto`, `libs/Transport/` (`EPipeMethod`), `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` (`CLibraryJobServiceAdapter`), `apps/Librova.UI/PipeTransport/`, and the relevant client/service/mapper in `ImportJobs/` or `LibraryCatalog/`.
+Modules involved: `proto/import_jobs.proto`, `libs/Transport/` (`EPipeMethod`), `libs/Rpc/` (`CLibraryJobServiceAdapter`, `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper`), `apps/Librova.UI/PipeTransport/`, and the relevant client/service/mapper in `ImportJobs/` or `LibraryCatalog/`.
 
 ### Change single-file import logic
-- `libs/Importing/SingleFileImportCoordinator.cpp/.hpp` — main orchestration
-- `libs/ImportConversion/` — conversion decision
-- `libs/Importing/ImportDiagnosticText.cpp` — user-facing error messages
+- `libs/Import/SingleFileImportCoordinator.cpp/.hpp` — main orchestration
+- `libs/Import/ImportConversionPolicy.cpp/.hpp` — conversion decision
+- `libs/Import/ImportDiagnosticText.cpp` — user-facing error messages
 - Tests: `tests/Unit/TestSingleFileImportCoordinator.cpp`
 
 ### Change parallel import (batch or ZIP)
-- ZIP: `libs/ZipImporting/ZipImportCoordinator.cpp/.hpp`
-- Batch loose files: `libs/Application/LibraryImportFacade.cpp` (workload planner) + `libs/Importing/ParallelImportHelpers.*`
-- Writer: `libs/Importing/WriterDispatchingRepository.cpp/.hpp`
-- Performance tracking: `libs/Importing/ImportPerfTracker.cpp/.hpp`
+- ZIP: `libs/Import/ZipImportCoordinator.cpp/.hpp`
+- Batch loose files: `libs/App/LibraryImportFacade.cpp` (workload planner) + `libs/Import/ParallelImportHelpers.hpp`
+- Writer: `libs/Import/WriterDispatchingRepository.cpp/.hpp`
+- Performance tracking: `libs/Import/ImportPerfTracker.cpp/.hpp`
 - Tests: `tests/Unit/TestZipImportCoordinator.cpp`, `tests/Unit/TestLibraryImportFacade.cpp`, `tests/Unit/TestWriterDispatchingRepository.cpp`
 
 ### Add a new book format
@@ -497,7 +497,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/Transport/` (`EPipeMethod`), 
 - Test: `tests/Unit/TestStbCoverImageProcessor.cpp`
 
 ### Change delete / Recycle Bin logic
-- Facade: `libs/Application/LibraryTrashFacade.cpp`
+- Facade: `libs/App/LibraryTrashFacade.cpp`
 - Trash staging: `libs/Storage/ManagedTrashService.cpp`
 - Recycle Bin: `libs/Storage/WindowsRecycleBinService.cpp`
 - Proto: `MoveBookToTrashRequest/Response` and `DeleteDestination` enum in `proto/import_jobs.proto`
@@ -537,7 +537,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/Transport/` (`EPipeMethod`), 
 | `libzip` | `libs/Import/` | ZIP archive enumeration and entry extraction |
 | `sqlite3` (+ fts5 feature) | `libs/Database/` | Embedded relational database; FTS5 full-text search |
 | `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |
-| `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
+| `protobuf` | `libs/Rpc/` | Binary serialization of IPC messages |
 | `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |
 | `stb` | `libs/Storage/` | Single-header image decode/encode (JPEG, PNG) for cover processing |
 | `bshoshany-thread-pool` (BS::thread_pool) | `libs/Import/` | Fixed-size thread pool for parallel import workers |

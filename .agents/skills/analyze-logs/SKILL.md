@@ -293,7 +293,7 @@ Select-String -Path $log -Pattern "WaitImportJob|GetImportJobSnapshot|TryGetSnap
 ```
 
 If these appear at `[info]` level → noise reduction regressed. Check:
-- `libs/ProtoServices/LibraryJobServiceAdapter.cpp` — polling calls must use `LogDebugIfInitialized`
+- `libs/Rpc/LibraryJobServiceAdapter.cpp` — polling calls must use `LogDebugIfInitialized`
 - `apps/Librova.UI/Logging/UiLogging.cs` — file sink must have `restrictedToMinimumLevel: LogEventLevel.Information`
 - `apps/Librova.UI/ImportJobs/ImportJobsService.cs` — `TryGetSnapshotAsync` and `WaitAsync(completed=false)` must call `UiLogging.Debug`
 
