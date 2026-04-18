@@ -60,8 +60,6 @@ Change the import pipeline without breaking transactional safety, cancellation s
 ## Close-Out
 
 - [ ] tests are green
-- [ ] `docs/Librova-Architecture.md` updated if import structure changed
 - [ ] `docs/Librova-Product.md` updated if user-facing import behavior changed
 - [ ] `docs/CodebaseMap.md` updated when import stages, cancellation contract, or storage behavior changed
-- [ ] relevant file under `docs/manual-tests/` updated if the UI workflow changed
-- [ ] `docs/ManualUiTestScenarios.md` registry row added or updated when a scenario changed
+- [ ] `docs/ReleaseChecklist.md` updated if the UI workflow changed

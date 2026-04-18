@@ -3,7 +3,7 @@
 This file is for `libs/`-specific context only.
 
 - For global repository rules, workflow, and document ownership, see the root `AGENTS.md`.
-- For the canonical style guide, use `$code-style` and `docs/engineering/CodeStyleGuidelines.md`.
+- For the canonical style guide, use `$code-style` and `docs/CodeStyleGuidelines.md`.
 - For module locations and task-entry points, use `docs/CodebaseMap.md`.
 
 ## Local Scope

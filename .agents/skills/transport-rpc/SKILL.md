@@ -19,7 +19,23 @@ Add or change an IPC method without drifting C++, C#, proto definitions, tests, 
 ## References
 
 - method inventory and mapping points: `docs/CodebaseMap.md` §5 IPC Boundary
-- transport invariants and verification policy: `docs/engineering/TransportInvariants.md`
+
+## Transport Invariants
+
+### Protobuf Rules
+
+- Treat `proto/import_jobs.proto` as append-only by default.
+- Never reuse protobuf field numbers.
+- Prefer additive evolution over breaking reshapes.
+- Keep DTOs transport-oriented, not storage-oriented.
+
+### Named-Pipe Method Rules
+
+- Librova ships `Librova.UI` and `Librova.Core` in lockstep for a given release; cross-version named-pipe compatibility between different checkpoints is not a supported runtime contract.
+- Within one checkpoint, native and managed named-pipe method ids must match exactly.
+- When a method is replaced or removed, update both sides in the same checkpoint and keep the change explicit in tests and docs.
+- Every new method must be added in both: native `PipeProtocol` and C# `PipeProtocol`.
+- Every new method must be accepted by parser/validation logic on both sides.
 
 ## Required Change Set
 

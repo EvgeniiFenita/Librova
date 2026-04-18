@@ -18,7 +18,7 @@ Treat the documentation set as a layered system:
 
 - `README.md` — navigation hub: which document to read for which task
 - `AGENTS.md` — global rules, workflow policy, and document-maintenance ownership
-- `docs/Librova-Product.md`, `docs/Librova-Architecture.md`, `docs/CodebaseMap.md`, `docs/engineering/*` — reference docs
+- `docs/Librova-Product.md`, `docs/CodebaseMap.md`, `docs/CodeStyleGuidelines.md` — reference docs
 - `.agents/skills/*/SKILL.md` — task procedures and checklists
 - local `AGENTS.md` files under subfolders — local context only; they should defer to this file for global policy
 
@@ -28,22 +28,21 @@ When two docs overlap, prefer the more specific authoritative reference and remo
 
 ## Mandatory Read Order
 
+Read only the sections relevant to the current change — do not load entire documents
+speculatively. Use the table in `## Document Maintenance` to identify which sections apply.
+Full reads of `docs/Librova-Product.md` and `docs/CodebaseMap.md` are justified only for
+large new features that touch multiple layers.
+
 Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
-2. `docs/CodebaseMap.md` — module map and task navigation (fast orientation: where things live, where to go for a given change)
-3. `docs/backlog.yaml` — active backlog; use `python scripts/backlog.py list` to view
-4. Use `$commit-message` skill for commit format
-5. `docs/engineering/TestStrategy.md` — what tests to add and when
-6. `docs/engineering/TransportInvariants.md` — IPC contract rules
-7. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
+2. `docs/CodebaseMap.md` — module map, task navigation, frozen architecture decisions, and IPC invariants (fast orientation: where things live, where to go for a given change)
+3. `python scripts/backlog.py list` or `python scripts/backlog.py show <id>` — active backlog
+4. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
 
 Use `$skill-name` in the CLI whenever this file says to use a skill.
 
-When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.  
-Architecture reference (frozen decisions, read when a structural question is not answered by Hard Constraints below): `docs/Librova-Architecture.md`.
-
-Before changing a user-visible UI workflow, also read `docs/ManualUiTestScenarios.md` and the relevant file under `docs/manual-tests/`.
+When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.
 
 ---
 
@@ -93,6 +92,9 @@ scripts\ValidateProto.ps1
 - Conversion cancellation is **not** ordinary converter failure; never silently fall back to storing the original FB2.
 - `build → test` must be **sequential**, never parallel when tests depend on freshly built binaries.
 - After any change under `proto/`, run `scripts/ValidateProto.ps1` before marking the checkpoint done.
+- Never open `docs/backlog.yaml` or `docs/backlog-archive.yaml` directly.
+  Use `python scripts/backlog.py list` and `python scripts/backlog.py show <id>` instead.
+  The archive file must never be loaded as upfront context.
 
 ---
 
@@ -103,21 +105,29 @@ scripts\ValidateProto.ps1
 - Check the actual repository state before assuming structure.
 - Map every new task to an open backlog item in `docs/backlog.yaml` before starting (use `python scripts/backlog.py list` or `python scripts/backlog.py add …`).
 - For all backlog operations — adding tasks, taking into work, closing, and validating — follow the `$backlog-update` skill.
+- For documentation updates, documentation drift reviews, deduplication, and doc-to-code verification, follow the `$docs-maintenance` skill.
 - When implementation state and `docs/backlog.yaml` diverge, update the backlog in the same task instead of leaving stale statuses behind.
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - Disposable runtime files, logs, and transient state go under `out/` rather than scattered across source.
 
+### Comments and documentation in code
+
+Write a comment only when the logic is non-obvious or intentionally deviates from the
+expected pattern. Do not write comments that merely restate what the code does
+(`// returns the book`, `// calls the service`, `// increments the counter`).
+Redundant comments are noise — omit them.
+
 ### Architecture and boundaries
 
-- Do not invent architecture that conflicts with frozen decisions in `docs/Librova-Architecture.md`.
+- Do not invent architecture that conflicts with frozen decisions in `docs/CodebaseMap.md §14 Architecture Decisions`.
 - Fix the true cause of a bug whenever it is reasonably reachable in the current task; do not stop at a local patch that only hides downstream symptoms while leaving the source inconsistency in place.
 - Keep domain logic out of Avalonia views and transport DTOs.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
 - In native libraries: keep `.hpp` and `.cpp` together unless a different layout is clearly necessary.
 - If SQLite schema depends on optional modules (e.g., FTS5), declare them explicitly in `vcpkg.json`.
-- **Database schema version policy**: the current schema is version 1. `CSchemaMigrator` accepts only `user_version == 0` (creates fresh DB) or `user_version == expected` (no-op). Any other version throws an incompatibility error requiring the user to delete and recreate the database. **Do not add automatic upgrade paths** unless the schema change is non-destructive and the decision is deliberate; when upgrading is appropriate, follow the dispatch pattern documented in `docs/Librova-Architecture.md § 5.2`.
+- **Database schema version policy**: the current schema is version 1. `CSchemaMigrator` accepts only `user_version == 0` (creates fresh DB) or `user_version == expected` (no-op). Any other version throws an incompatibility error requiring the user to delete and recreate the database. **Do not add automatic upgrade paths** unless the schema change is non-destructive and the decision is deliberate; when upgrading is appropriate, follow the dispatch pattern documented in `docs/CodebaseMap.md §14 Architecture Decisions`.
 - External converter integration stays user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive.
 
 ### Verification and test discipline
@@ -125,6 +135,47 @@ scripts\ValidateProto.ps1
 - Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
 - When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 - Native tests that open a `CSqliteBookRepository` or `CSqliteBookQueryRepository` must call `repository.CloseSession()` before removing the database file — Windows does not allow deleting a file with an open handle. Both classes cache a persistent SQLite connection internally.
+
+#### Test Layers
+
+**Unit Tests** — use for: local business rules, mappers, validation logic, DTO conversion, command enablement, pagination and state transitions. Unit tests should dominate by count.
+
+**Integration Tests** — use for: real SQLite behavior, filesystem staging and rollback, native host composition, named-pipe request/response, C# to native host flows through real IPC. Integration tests should exist at critical boundaries, not everywhere.
+
+**Strong Host-Backed Tests** — use sparingly for the most valuable end-to-end user flows (e.g., import through the real native host followed by browser refresh; browser query against the real native host and SQLite; export through the real native host and managed library). These tests are expensive but catch cross-layer drift.
+
+#### When a New Test Is Required
+
+Add a new test when:
+
+- a new user-facing behavior is introduced
+- a new IPC method is introduced
+- rollback or partial-failure semantics are introduced
+- a review found a bug class not covered by current tests
+- C++ and C# contracts can drift independently
+- a fix changes Unicode, encoding, path, or filesystem-boundary behavior
+- a fix changes startup, shutdown, or command-line control flow
+
+#### Fake-Test Smell
+
+Be suspicious when:
+
+- a test bypasses validation or command entry points
+- a fake implementation never models the real failure mode
+- a test checks that a method was called but not the user-visible outcome
+- a ViewModel test uses invalid paths or impossible state unless that is the scenario under test
+
+Specific regression classes that should remain covered once fixed: Unicode or Cyrillic filesystem paths; legacy text encodings such as `windows-1251`; rollback and cancellation cleanup; cross-language enum or transport drift; search-index and database side effects, not only returned DTOs; CLI parsing for non-runtime flags such as `--help` and `--version`.
+
+#### UI Test Policy
+
+- Prefer ViewModel and shell composition tests over UI automation.
+- Add UI automation only when visual/control behavior itself becomes the risk.
+- Keep dialogs behind abstractions so UI behavior remains testable without the real platform.
+
+#### Verification Order
+
+For a meaningful vertical slice, prefer: unit tests for local logic → integration tests for touched boundaries → strong host-backed test if the feature crosses `C# → pipe → C++`. Do not add a strong integration test if existing lower-level tests already fully protect the change.
 
 ### Logging and diagnostics
 
@@ -169,12 +220,12 @@ When a task completes, update docs **in the same task** if any of the following 
 | What changed | Update these files |
 |---|---|
 | Product scope or user-visible behavior | `docs/Librova-Product.md` |
-| Architecture decision | `docs/Librova-Architecture.md` |
+| Architecture decision | `docs/CodebaseMap.md` §14 Architecture Decisions |
 | Backlog item closed, added, or reprioritized | `docs/backlog.yaml` via `python scripts/backlog.py`; closed items appended to `docs/backlog-archive.yaml` via `$backlog-update` skill (append-only; do not load archive as upfront context) |
 | Repository overview or project-status summary visible from the root | `README.md` |
 | New convention or constraint | `AGENTS.md` (this file) |
 | Verified checkpoint reached | no archive checkpoint document is maintained |
-| UI workflow changed (user-visible) | `docs/ManualUiTestScenarios.md` — index only; добавляй сценарии в соответствующий файл в `docs/manual-tests/` (startup / import / library / export / delete / settings / regression); Russian; numbered steps, `Ожидаемое поведение:` blocks, UI labels in English as-is; добавляй строку в таблицу реестра в `ManualUiTestScenarios.md`; do not load as upfront context |
+| UI workflow changed (user-visible) | `docs/ReleaseChecklist.md` — update the relevant checklist item or add new one; no step-by-step scenarios needed |
 | UI styles, colours, components, or layout changed | `docs/UiDesignSystem.md` |
 | New `libs/<Module>/` added or renamed; new key class added | `docs/CodebaseMap.md` §3 C++ Modules |
 | New `apps/Librova.UI/<Folder>/` added or key C# type added | `docs/CodebaseMap.md` §4 C# Modules |
@@ -183,8 +234,6 @@ When a task completes, update docs **in the same task** if any of the following 
 | Library root layout, storage encoding, or DB schema changed | `docs/CodebaseMap.md` §7 Storage & Persistence Model |
 | Domain interface added or signature changed | `docs/CodebaseMap.md` §12 Domain Interfaces Reference |
 | New critical invariant discovered | `docs/CodebaseMap.md` §8 Critical Invariants |
-
-`docs/ManualUiTestScenarios.md` must be written in **Russian**. UI labels, button names, and on-screen strings must appear exactly as they are in the English UI.
 
 If a file stops matching implemented reality, fix it before closing the task — not later.
 
@@ -244,6 +293,7 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 | `$backlog-update` | adding, editing, validating, or closing backlog items |
 | `$commit-message` | composing a commit message after the user explicitly asked for a commit |
 | `$code-style` | resolving naming, formatting, or structure questions not already answered by local context |
+| `$docs-maintenance` | updating, reviewing, de-duplicating, or verifying repository documentation against code and the documentation hierarchy |
 | `$vertical-slice` | implementing a feature or workflow that crosses multiple layers |
 | `$transport-rpc` | adding or changing an IPC / Protobuf method |
 | `$epub-import` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |

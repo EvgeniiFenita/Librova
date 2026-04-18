@@ -55,8 +55,7 @@ Apply the read-side checklist plus:
 - [ ] cleanup of stale temp state is handled
 - [ ] logging covers long-running work and failure paths
 - [ ] `docs/Librova-Product.md` updated if user-facing behavior changed
-- [ ] relevant manual-test file under `docs/manual-tests/` updated if the workflow changed
-- [ ] `docs/ManualUiTestScenarios.md` registry row added or updated when a scenario changes
+- [ ] `docs/ReleaseChecklist.md` updated if the UI workflow changed
 
 ## 3. Transport Contract Change Slice
 
@@ -69,8 +68,7 @@ Use for a new section, dialog, settings panel, or first-run flow.
 - [ ] dialog abstraction behind an interface where platform UI would otherwise be hard to test
 - [ ] ViewModel logic covered by unit tests
 - [ ] shell composition test for the new workflow
-- [ ] relevant manual-test file under `docs/manual-tests/` updated
-- [ ] `docs/ManualUiTestScenarios.md` registry row updated
+- [ ] `docs/ReleaseChecklist.md` updated if the UI workflow changed
 - [ ] UI labels in English exactly as they appear in the source
 
 ## 5. Close-Out

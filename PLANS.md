@@ -49,8 +49,6 @@ Concrete verification criteria, for example:
 
 ## References
 - `docs/CodebaseMap.md`
-- `docs/Librova-Architecture.md`
-- `docs/engineering/TestStrategy.md`
 - relevant skill(s)
 ```
 
@@ -84,8 +82,7 @@ Implement a single vertical slice: parser output -> database -> proto -> UI filt
 
 ### Phase 3: UI
 - extend ViewModels and binding
-- update the relevant file under `docs/manual-tests/`
-- add the registry row in `docs/ManualUiTestScenarios.md`
+- update `docs/ReleaseChecklist.md` if the UI workflow changed
 
 ## Done When
 - Debug and Release build pass
@@ -97,5 +94,4 @@ Implement a single vertical slice: parser output -> database -> proto -> UI filt
 ## References
 - `docs/backlog.yaml`
 - `docs/CodebaseMap.md`
-- `docs/Librova-Architecture.md`
 ```

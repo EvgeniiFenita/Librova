@@ -3,7 +3,7 @@
 This file is for `apps/Librova.UI/`-specific context only.
 
 - For global repository rules, workflow, and document ownership, see the root `AGENTS.md`.
-- For the canonical style guide, use `$code-style` and `docs/engineering/CodeStyleGuidelines.md`.
+- For the canonical style guide, use `$code-style` and `docs/CodeStyleGuidelines.md`.
 - For UI shell layout, tokens, and component rules, use `docs/UiDesignSystem.md`.
 
 ## Local Scope
@@ -43,9 +43,4 @@ For the full build -> test workflow, including sequential validation rules, foll
 
 ## Manual Test Docs
 
-When a UI workflow changes:
-
-1. update the relevant file under `docs/manual-tests/`
-2. add or update the registry row in `docs/ManualUiTestScenarios.md`
-
-Detailed scenario text must stay in Russian, while UI labels remain in English exactly as shown in the application.
+When a UI workflow changes, update `docs/ReleaseChecklist.md` — update the relevant checklist item or add a new one.

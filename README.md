@@ -27,19 +27,11 @@ Librova is not an e-book reader. It manages the library itself: import, storage,
 | understand what Librova is supposed to do | `docs/Librova-Product.md` |
 | orient in the codebase and find the right module fast | `docs/CodebaseMap.md` |
 | follow repository-wide rules, workflow, and doc ownership | `AGENTS.md` |
-| inspect frozen architecture decisions | `docs/Librova-Architecture.md` |
-| understand test expectations | `docs/engineering/TestStrategy.md` |
-| change IPC / Protobuf transport safely | `docs/engineering/TransportInvariants.md` |
+| inspect frozen architecture decisions | `docs/CodebaseMap.md` §14 Architecture Decisions |
+| understand test expectations | `AGENTS.md` § Verification and test discipline |
+| change IPC / Protobuf transport safely | `docs/CodebaseMap.md` §5 IPC Boundary |
 | change UI appearance or layout | `docs/UiDesignSystem.md` |
-| inspect active work | `docs/backlog.yaml` or `python scripts\backlog.py list` |
-
-## Recommended Read Order Before Substantive Work
-
-1. `docs/Librova-Product.md`
-2. `docs/CodebaseMap.md`
-3. `AGENTS.md`
-4. `docs/backlog.yaml`
-5. Then the domain-specific reference you are about to touch (`TransportInvariants`, `TestStrategy`, `UiDesignSystem`, or `Librova-Architecture`)
+| inspect active work | `python scripts\backlog.py list` or `python scripts\backlog.py show <id>` |
 
 ## Common Commands
 

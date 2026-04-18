@@ -66,11 +66,9 @@ Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff
 Verify these match implemented reality:
 
 - [ ] `docs/Librova-Product.md`
-- [ ] `docs/Librova-Architecture.md`
 - [ ] `docs/CodebaseMap.md`
-- [ ] `docs/backlog.yaml`
-- [ ] `docs/ManualUiTestScenarios.md`
-- [ ] relevant file under `docs/manual-tests/` when a UI scenario changed
+- [ ] `python scripts/backlog.py list` / `python scripts/backlog.py show <id>`
+- [ ] `docs/ReleaseChecklist.md` when a UI scenario changed
 - [ ] `AGENTS.md`
 
 If any of these drifted, fix them immediately using the relevant doc owner from `AGENTS.md` instead of leaving follow-up cleanup behind.

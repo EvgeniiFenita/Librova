@@ -13,11 +13,11 @@ Resolve Librova-specific style questions quickly and defer to the full canonical
 
 - use this skill when naming, formatting, or structure is unclear
 - use this skill during review when a rule might differ from common ecosystem defaults
-- do **not** use this as a replacement for `docs/engineering/CodeStyleGuidelines.md`; that file remains canonical
+- do **not** use this as a replacement for `docs/CodeStyleGuidelines.md`; that file remains canonical
 
 ## Canonical Source
 
-Full authoritative rules: `docs/engineering/CodeStyleGuidelines.md`.
+Full authoritative rules: `docs/CodeStyleGuidelines.md`.
 
 This skill only highlights the rules most likely to be missed.
 
@@ -73,4 +73,4 @@ if (isDuplicate) {
 
 ## If You Need More Than This
 
-Read `docs/engineering/CodeStyleGuidelines.md` before making style-sensitive edits in unfamiliar code.
+Read `docs/CodeStyleGuidelines.md` before making style-sensitive edits in unfamiliar code.

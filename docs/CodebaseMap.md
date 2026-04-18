@@ -17,8 +17,8 @@ Navigation reference for agents and contributors working in the Librova reposito
 | Working on storage, DB, covers | §7 Storage & Persistence Model |
 | Unsure if a change is safe | §8 Critical Invariants |
 | Need to know where to go for a task | §9 Task Navigation |
-| Adding or reviewing code style | §11 → `$code-style` skill, `docs/engineering/CodeStyleGuidelines.md` |
-| Adding a test | §11 Test Conventions, `docs/engineering/TestStrategy.md` |
+| Adding or reviewing code style | §11 → `$code-style` skill, `docs/CodeStyleGuidelines.md` |
+| Adding a test | §11 Test Conventions, `AGENTS.md` § Verification and test discipline |
 | Reviewing domain interfaces | §12 Domain Interfaces Reference |
 
 ### Document relationships
@@ -28,13 +28,13 @@ This map is a **navigation layer**, not an authoritative specification. The auth
 | Topic | Authoritative source |
 |---|---|
 | Repository doc map | `README.md` |
-| Frozen architecture decisions | `docs/Librova-Architecture.md` |
-| IPC contract rules | `docs/engineering/TransportInvariants.md` |
-| Code style (full) | `docs/engineering/CodeStyleGuidelines.md` |
-| Test policy | `docs/engineering/TestStrategy.md` |
+| Frozen architecture decisions | this document, §14 Architecture Decisions |
+| IPC contract rules | this document, §5 IPC Boundary (IPC Invariants subsection) |
+| Code style (full) | `docs/CodeStyleGuidelines.md` |
+| Test policy | `AGENTS.md` § Verification and test discipline |
 | UI design system | `docs/UiDesignSystem.md` |
 | Product scope | `docs/Librova-Product.md` |
-| Active work | `docs/backlog.yaml` |
+| Active work | `python scripts/backlog.py list` / `python scripts/backlog.py show <id>` |
 
 When this map and an authoritative source disagree, **the authoritative source wins**. Fix the map.
 
@@ -52,7 +52,7 @@ Update `docs/CodebaseMap.md` in the **same task** (not later) when:
 | New domain interface added or existing one changed | §12 Domain Interfaces Reference |
 | New critical invariant discovered or existing one removed | §8 Critical Invariants |
 
-Do **not** duplicate decision rationale here — that belongs in `docs/Librova-Architecture.md`. This map records *what exists* and *where it lives*.
+Do **not** duplicate decision rationale here — that belongs in §14 Architecture Decisions.
 
 ---
 
@@ -98,7 +98,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `PipeTransport` | Envelope protocol: serialize/deserialize `SPipeRequestEnvelope` / `SPipeResponseEnvelope`; `EPipeMethod` enum (append-only method IDs 1–12) | `CNamedPipeChannel`, `CPipeProtocol`, `CPipeRequestDispatcher`, `EPipeMethod` |
 | `PipeHost` | Named-pipe server: accept connections, dispatch requests to adapter | `CNamedPipeHost` |
 | `PipeClient` | Named-pipe client for C++ side (used by integration tests) | `CNamedPipeClient` |
-| `ProtoContracts` | Generated Protobuf C++ code from `proto/import_jobs.proto` | all `librova::proto::*` message classes |
+| `ProtoContracts` | Generated Protobuf C++ code from `proto/import_jobs.proto` | all `librova::v1::*` message classes |
 | `ProtoMapping` | Translate proto ↔ domain structs in both directions | `CImportJobProtoMapper`, `CLibraryCatalogProtoMapper` |
 | `ProtoServices` | Route method enum → facade/manager calls; mandatory outcome logging per method | `CLibraryJobServiceAdapter` |
 | `ApplicationClient` | C++ import job client (wraps pipe channel; used in native integration tests) | `CImportJobClient` |
@@ -176,9 +176,9 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | Folder | Role | Key types |
 |---|---|---|
 | `Program.cs` / `App.axaml.cs` | Avalonia entry point; top-level exception handler | `App` |
-| `CoreHost/` | Spawn and manage native host process; resolve executable path; probe converter | `CoreHostProcess`, `CoreHostPathResolver`, `CoreHostLaunchOptions`, `Fb2ConverterProbe`, `UiConverterMode` |
-| `Shell/` | Application bootstrap; session lifecycle; preferences and state persistence; library root validation | `ShellApplication`, `ShellBootstrap`, `ShellSession`, `ShellStateStore`, `UiPreferencesStore`, `LibraryRootValidation`, `FirstRunSetupPolicy`, `ConverterValidationCoordinator` |
-| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `LibrarySelectionViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem` |
+| `CoreHost/` | Spawn and manage native host process; resolve executable path; host launch defaults | `CoreHostProcess`, `CoreHostPathResolver`, `CoreHostLaunchOptions`, `CoreHostDevelopmentDefaults`, `UiConverterMode` |
+| `Shell/` | Application bootstrap; session lifecycle; preferences and state persistence; library root validation | `ShellApplication`, `ShellBootstrap`, `ShellSession`, `ShellStateStore`, `UiPreferencesStore`, `LibraryRootValidation`, `FirstRunSetupPolicy`, `ConverterValidationCoordinator`, `Fb2ConverterProbe` |
+| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem` |
 | `Views/` | AXAML markup + code-behind | `MainWindow`, `LibraryView`, `ImportView`, `SettingsView` |
 | `Styles/` | Design-token resources | `Colors.axaml`, `Typography.axaml`, `Components.axaml` |
 | `ImportJobs/` | Import job IPC client + service + mapper + models | `IImportJobsService`, `ImportJobsService`, `ImportJobClient`, `ImportJobMapper`, `ImportJobModels`, `ImportJobDomainError` |
@@ -186,7 +186,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `PipeTransport/` | Low-level named-pipe I/O and envelope protocol (mirrors C++ side) | `NamedPipeClient`, `PipeProtocol` |
 | `Runtime/` | Version, OS environment, workspace cleanup, log sync | `ApplicationVersion`, `RuntimeEnvironment`, `RuntimeWorkspaceMaintenance`, `RuntimeLogSynchronization` |
 | `Mvvm/` | Base MVVM helpers | `AsyncCommand`, `ObservableObject` |
-| `Desktop/` | File/folder picker dialogs | `IPathSelectionService`, `DesktopPathSelectionService` |
+| `Desktop/` | File/folder picker dialogs | `IPathSelectionService`, `AvaloniaPathSelectionService`, `NullPathSelectionService` |
 | `Logging/` | Serilog initialization | `LoggingInitializer` |
 | `Styling/` | Runtime theme resource management | `UiThemeResources` |
 
@@ -256,6 +256,20 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 10. Add service method in `ImportJobsService` / `LibraryCatalogService` (with success-path logging)
 11. Add mapper in `ImportJobMapper` / `LibraryCatalogMapper`
 12. Run `scripts/ValidateProto.ps1`; rebuild both sides; run all tests
+
+### IPC Invariants
+
+**Protobuf rules:**
+- Treat `proto/import_jobs.proto` as append-only; never reuse field numbers.
+- Prefer additive evolution over breaking reshapes.
+- Keep DTOs transport-oriented, not storage-oriented.
+
+**Named-pipe method rules:**
+- `Librova.UI` and `Librova.Core` are deployed in lockstep; cross-version named-pipe compatibility between checkpoints is not a supported runtime contract.
+- Within one checkpoint, native and managed named-pipe method IDs must match exactly.
+- When a method is replaced or removed, update both sides in the same checkpoint; keep the change explicit in tests and docs.
+- Every new method must appear in both native `PipeProtocol` and C# `PipeProtocol` enums.
+- Every new method must be accepted by parser/validation logic on both sides.
 
 ---
 
@@ -474,7 +488,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 - Batch loose files: `libs/Application/LibraryImportFacade.cpp` (workload planner) + `libs/Importing/ParallelImportHelpers.*`
 - Writer: `libs/Importing/WriterDispatchingRepository.cpp/.hpp`
 - Performance tracking: `libs/Importing/ImportPerfTracker.cpp/.hpp`
-- Tests: `tests/Unit/TestZipImportCoordinator.cpp`, `tests/Unit/TestParallelImport*.cpp`
+- Tests: `tests/Unit/TestZipImportCoordinator.cpp`, `tests/Unit/TestLibraryImportFacade.cpp`, `tests/Unit/TestWriterDispatchingRepository.cpp`
 
 ### Add a new book format
 - Implement `IBookParser` in a new `libs/<FormatName>Parsing/` library
@@ -522,7 +536,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 - Configuration loading: `libs/ConverterConfiguration/`
 - CLI command building: `libs/ConverterCommand/`
 - External process execution: `libs/ConverterRuntime/ExternalBookConverter.cpp`
-- C# probe and validation: `apps/Librova.UI/CoreHost/Fb2ConverterProbe.cs`, `Shell/ConverterValidationCoordinator.cs`
+- C# probe and validation: `apps/Librova.UI/Shell/Fb2ConverterProbe.cs`, `Shell/ConverterValidationCoordinator.cs`
 - ViewModel: `ViewModels/ShellConverterPathController.cs`, `ShellConverterSettingsState.cs`
 
 ### Add a unit test (C++)
@@ -561,7 +575,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 
 ## 11. Code Conventions
 
-> **Authoritative source**: `docs/engineering/CodeStyleGuidelines.md` and the `$code-style` skill. This section is a compact quick-reference only — if anything here conflicts with those sources, those sources win.
+> **Authoritative source**: `docs/CodeStyleGuidelines.md` and the `$code-style` skill. This section is a compact quick-reference only — if anything here conflicts with those sources, those sources win.
 
 ### C++ Naming Prefixes
 
@@ -600,7 +614,7 @@ Field numbers: append-only, never reuse. Message names: `PascalCase`. Field name
 
 ### Test Conventions
 
-> Full policy: `docs/engineering/TestStrategy.md`.
+> Full policy: `AGENTS.md` § Verification and test discipline.
 
 - C++ tests: Catch2 `TEST_CASE` / `REQUIRE` / `SECTION`
 - C# tests: xUnit `[Fact]` / `[Theory]`; naming `Method_Scenario_ExpectedBehavior`
@@ -618,36 +632,35 @@ Quick reference for core abstractions in `libs/Domain/`. All implemented in high
 ```cpp
 SBookId    ReserveId();
 std::vector<SBookId> ReserveIds(size_t count);
-void       Add(const SBook& book);          // throws CDuplicateHashException on sha256 collision
-void       ForceAdd(const SBook& book);     // bypass hash check
-SBook      GetById(SBookId id);
+SBookId    Add(const SBook& book);          // throws CDuplicateHashException on sha256 collision
+SBookId    ForceAdd(const SBook& book);     // bypass hash check
+std::optional<SBook> GetById(SBookId id) const;
 void       Remove(SBookId id);
-void       RemoveBatch(const std::vector<SBookId>& ids);
-std::vector<SBatchBookResult> AddBatch(const std::vector<SBatchBookEntry>& entries);
-void       Compact();
+void       Compact(const std::function<void()>& onProgressTick = nullptr);
 void       OptimizeSearchIndex();
-void       CloseSession();                  // tests only: release file handle before deletion
+void       RemoveBatch(std::span<const SBookId> ids);
+std::vector<SBatchBookResult> AddBatch(std::span<const SBatchBookEntry> entries);
 ```
 
 ### `IBookQueryRepository` (read)
 
 ```cpp
-SBookListResult      Search(const SSearchQuery& query);
-uint64_t             CountSearchResults(const SSearchQuery& query);
-std::vector<std::string> ListAvailableLanguages(const SSearchQuery& query);
-std::vector<std::string> ListAvailableTags(const SSearchQuery& query);
-std::vector<std::string> ListAvailableGenres(const SSearchQuery& query);
-std::vector<SDuplicateMatch> FindDuplicates(const SDuplicateCandidate& candidate);
-SLibraryStatistics   GetLibraryStatistics();
+std::vector<SBook>   Search(const SSearchQuery& query) const;
+std::uint64_t        CountSearchResults(const SSearchQuery& query) const;
+std::vector<std::string> ListAvailableLanguages(const SSearchQuery& query) const;
+std::vector<std::string> ListAvailableTags(const SSearchQuery& query) const;
+std::vector<std::string> ListAvailableGenres(const SSearchQuery& query) const;
+std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) const;
+SLibraryStatistics   GetLibraryStatistics() const;
 ```
 
 ### `IProgressSink`
 
 ```cpp
 void ReportValue(int percent, std::string_view message);
-bool IsCancellationRequested();
-void BeginRollback();
-void ReportRollbackProgress(int percent);
+bool IsCancellationRequested() const;
+void BeginRollback(std::size_t totalToRollback);
+void ReportRollbackProgress(std::size_t rolledBack, std::size_t total);
 void BeginCompacting();
 ```
 
@@ -663,7 +676,7 @@ void             RollbackImport(const SPreparedStorage& prepared) noexcept;
 
 ```cpp
 bool        CanParse(EBookFormat format) const;
-SParsedBook Parse(const std::filesystem::path& path, std::string_view logicalSourceLabel);
+SParsedBook Parse(const std::filesystem::path& path, std::string_view logicalSourceLabel) const;
 ```
 
 ### `IBookConverter`
@@ -672,19 +685,19 @@ SParsedBook Parse(const std::filesystem::path& path, std::string_view logicalSou
 bool              CanConvert(EBookFormat source, EBookFormat dest) const;
 SConversionResult Convert(const SConversionRequest& request,
                           IProgressSink& progressSink,
-                          std::stop_token stopToken);
+                          std::stop_token stopToken) const;
 ```
 
 ### Key Domain Value Types
 
 | Type | Key fields |
 |---|---|
-| `SBook` | `id`, `metadata`, `fileInfo`, `optional<cover_path>`, `added_at_utc` |
-| `SBookMetadata` | `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `description`, `identifier` |
-| `SBookFileInfo` | `format` (`EBookFormat`), `storage_encoding` (`EStorageEncoding`), `managed_path`, `size_bytes`, `sha256_hex` |
-| `SParsedBook` | `metadata`, `source_format`, `cover_extension`, `cover_bytes`, `diagnostic_message` |
-| `SStoragePlan` | `book_id`, `format`, `storage_encoding`, `source_path`, optional `cover_source_path` |
-| `SPreparedStorage` | staged paths (book + cover), final paths, relative paths for DB storage |
+| `SBook` | `Id`, `Metadata`, `File`, `CoverPath`, `AddedAtUtc` |
+| `SBookMetadata` | `TitleUtf8`, `AuthorsUtf8[]`, `Language`, `SeriesUtf8`, `SeriesIndex`, `PublisherUtf8`, `Year`, `Isbn`, `TagsUtf8[]`, `GenresUtf8[]`, `DescriptionUtf8`, `Identifier` |
+| `SBookFileInfo` | `Format` (`EBookFormat`), `StorageEncoding` (`EStorageEncoding`), `ManagedPath`, `SizeBytes`, `Sha256Hex` |
+| `SParsedBook` | `Metadata`, `SourceFormat`, `CoverExtension`, `CoverBytes`, `CoverDiagnosticMessage` |
+| `SStoragePlan` | `BookId`, `Format`, `StorageEncoding`, `SourcePath`, optional `CoverSourcePath` |
+| `SPreparedStorage` | `StagedBookPath`, `StagedCoverPath`, `FinalBookPath`, `FinalCoverPath`, `RelativeBookPath`, `RelativeCoverPath` |
 
 ---
 
@@ -714,4 +727,82 @@ SConversionResult Convert(const SConversionRequest& request,
 
 ---
 
-*See also: `docs/Librova-Architecture.md` (detailed design decisions), `docs/engineering/CodeStyleGuidelines.md` (full style reference), `docs/engineering/TransportInvariants.md` (IPC contract rules), `docs/engineering/TestStrategy.md` (test scope and coverage policy).*
+*See also: `docs/CodeStyleGuidelines.md` (full style reference), `docs/UiDesignSystem.md` (UI design system).*
+
+---
+
+## 14. Architecture Decisions
+
+Frozen design decisions for Librova. When a structural question is not answered by Hard Constraints in `AGENTS.md`, read this section. Do not change decisions here without an explicit architecture discussion.
+
+### 14.1 Runtime Model
+
+Librova is a two-process desktop application.
+
+**`Librova.UI` (C# / .NET / Avalonia) owns:**
+- windowing and user interactions
+- desktop dialogs
+- ViewModels and UI-facing services
+
+**`Librova.Core` (C++20) owns:**
+- domain logic
+- import pipeline
+- parsing and format handling
+- conversion orchestration
+- persistence (SQLite + FTS5)
+- managed storage
+- async job lifecycle
+- search
+- file export and staged delete behavior (Windows Recycle Bin)
+
+These boundaries are frozen. Do not collapse into one process; do not move domain logic into the UI layer.
+
+### 14.2 IPC Boundary
+
+The transport is **Protobuf contracts over Windows named pipes**. This is the canonical runtime boundary between UI and core. There is no gRPC runtime and no P/Invoke as the primary transport — both are explicitly excluded.
+
+**Process lifetime safety:** the UI passes its own PID to the native host at startup; the host binds its lifetime to the UI session and self-terminates if the UI dies or is force-killed.
+
+**Normal shutdown:** the UI must request a graceful host stop first, then fall back to forced termination only if the graceful request times out.
+
+### 14.3 Storage Design
+
+**Write-session lifecycle:** `CSqliteBookRepository` keeps a single SQLite write connection open for the lifetime of the repository, protected by a mutex-serialised write session. In tests, call `repository.CloseSession()` before deleting the database file — Windows does not allow deleting a file with an open handle.
+
+**Import safety principles:**
+- Avoid partial visible success where possible.
+- Clean stale runtime workspace state on startup.
+- Keep rollback and failure semantics explicit — never hide partial success from callers.
+
+**Managed library invariants:**
+- Hot runtime workspace (import workspaces, converter working dirs, staging) is intentionally separate from the managed library root. These are synchronized back only where needed.
+- Managed FB2 files are stored compressed as `.book.fb2.gz` under `Objects/` as an internal storage detail; browse, export, delete, and duplicate behavior treat them as ordinary FB2 books.
+- `Trash/` provides rollback-safe staging for delete operations before Recycle Bin handoff. If the Windows handoff fails, the delete remains committed in the catalog and staged files stay in `Trash/` as an explicit managed fallback.
+
+**Library-root bootstrap modes:**
+- `Create Library` — may initialize only a new or empty target directory.
+- `Open Library` — must validate that the selected root is already a complete managed library, including `Database/librova.db`.
+- Startup recovery for a damaged library — must not silently recreate the library in place; must accept an alternative path.
+
+**Database schema version policy:** `CSchemaMigrator` accepts `user_version == 0` (fresh DB, creates schema at version 1) or `user_version == 1` (no-op). Any other version throws an incompatibility error requiring the user to delete the library database. No automatic upgrade paths are provided unless the change is non-destructive and the decision is deliberate. When upgrading is appropriate, use the dispatch pattern:
+```cpp
+if (currentVersion < 2) { UpgradeToVersion2(connection); }
+if (currentVersion < 3) { UpgradeToVersion3(connection); }
+```
+Bump `GetCurrentVersion()` in `DatabaseSchema.cpp` to match.
+
+### 14.4 Import and Conversion Rules
+
+| Source format | `force_epub_conversion` | Converter | Decision |
+|---|---|---|---|
+| EPUB | any | any | Store as EPUB (as-is) |
+| FB2 | false | any | Store as `.book.fb2.gz` (managed FB2) |
+| FB2 | true | available | Convert → store as EPUB |
+| FB2 | true | unavailable | Hard failure — do not fall back to storing the original FB2 |
+| FB2 | true | cancelled | Cancellation — distinct from converter failure |
+
+**Additional rules:**
+- FB2 metadata parsing must preserve non-UTF-8 legacy encodings that still appear in real libraries, including Windows-1251.
+- Duplicate detection rejects by default; the UI may explicitly override and store the new item as a separate managed record via `IBookRepository::ForceAdd`.
+- Conversion cancellation is never treated as ordinary converter failure; the import entry does not silently downgrade to storing the original source.
+

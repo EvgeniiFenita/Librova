@@ -167,6 +167,6 @@ They communicate through:
 
 ## 6. Related Documents
 
-- [Librova-Architecture](Librova-Architecture.md)
+- [Librova CodebaseMap](CodebaseMap.md) — module map, architecture decisions, and IPC invariants
 - [Librova Backlog](backlog.yaml) — single source of truth for all open and planned work; use `python scripts/backlog.py list` to browse
-- [ManualUiTestScenarios](ManualUiTestScenarios.md)
+- [ReleaseChecklist](ReleaseChecklist.md)

@@ -5,7 +5,7 @@ This folder contains the shared protobuf contract between `Librova.UI` and `Libr
 This file is intentionally **proto-local**. Use it for naming and toolchain reminders only.
 
 - For the current IPC method inventory, message flow, and mapping points, see `docs/CodebaseMap.md` §5.
-- For transport invariants and verification policy, see `docs/engineering/TransportInvariants.md`.
+- For transport invariants, see `docs/CodebaseMap.md` §5 IPC Boundary (IPC Invariants subsection).
 - For the ordered implementation checklist when adding or changing an IPC method, use `$transport-rpc`.
 
 ## Current Conventions
@@ -25,7 +25,8 @@ This file is intentionally **proto-local**. Use it for naming and toolchain remi
 - protobuf C++ code generation is wired into the native build through `libs/ProtoContracts`
 - application-to-transport mapping lives in `libs/ProtoMapping`
 - service-shaped protobuf request/response handling lives in `libs/ProtoServices`
-- the MVP path intentionally uses named-pipe transport and does not require gRPC runtime/code generation wiring
+- the MVP path intentionally uses named-pipe transport and does not require a gRPC runtime
+- managed protobuf class generation is wired through `Grpc.Tools` with `GrpcServices="None"`; this is code generation tooling, not a gRPC transport runtime
 - `protoc` is expected to come from the repository `vcpkg` toolchain via the `protobuf` package
 - current project-local `protoc` path for preset `x64-debug`:
   `out/build/x64-debug/vcpkg_installed/x64-windows/tools/protobuf/protoc.exe`
