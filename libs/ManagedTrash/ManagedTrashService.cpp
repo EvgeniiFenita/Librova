@@ -6,7 +6,7 @@
 
 #include "ManagedPaths/ManagedPathSafety.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedTrash {
 namespace {

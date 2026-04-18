@@ -16,8 +16,8 @@
 
 #include <pugixml.hpp>
 
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 #if defined(_WIN32)
 #include <windows.h>

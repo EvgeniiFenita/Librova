@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <string_view>
 
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ImportSourceExpander {
 

@@ -15,12 +15,11 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaConverterConfiguration
         LibrovaConverterRuntime
         LibrovaCoverProcessingStb
-        LibrovaCore
         LibrovaCoreHost
         LibrovaDatabaseRuntime
+        LibrovaFoundation
         LibrovaImporting
         LibrovaJobs
-        LibrovaLogging
         LibrovaManagedPaths
         LibrovaManagedStorage
         LibrovaManagedTrash
@@ -29,7 +28,6 @@ target_link_libraries(LibrovaCoreHostApp
         LibrovaProtoServices
         LibrovaProtoMapping
         LibrovaStoragePlanning
-        LibrovaUnicode
         LibrovaZipImporting
         LibrovaRecycleBin
 )

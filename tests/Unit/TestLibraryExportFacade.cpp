@@ -8,7 +8,7 @@
 #include "Application/LibraryExportFacade.hpp"
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 
 namespace {

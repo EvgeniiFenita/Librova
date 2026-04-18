@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "Importing/ImportPerfTracker.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 
 namespace Librova::Importing {
 

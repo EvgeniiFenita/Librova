@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>

@@ -24,8 +24,8 @@
 #include "Importing/ImportPerfTracker.hpp"
 #include "Importing/ImportDiagnosticText.hpp"
 #include "Importing/ParallelImportHelpers.hpp"
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

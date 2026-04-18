@@ -1,6 +1,6 @@
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {
 

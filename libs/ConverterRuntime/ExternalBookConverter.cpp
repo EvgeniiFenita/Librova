@@ -14,8 +14,8 @@
 #include <utility>
 #include <vector>
 
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ConverterRuntime {
 namespace {

@@ -16,7 +16,7 @@
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
 #include "ParserRegistry/BookParserRegistry.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

@@ -4,7 +4,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ConverterCommand {
 namespace {

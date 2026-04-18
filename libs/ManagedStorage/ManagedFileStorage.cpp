@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedStorage {
 namespace {

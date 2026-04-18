@@ -11,8 +11,7 @@ target_include_directories(LibrovaImportSourceExpander
 
 target_link_libraries(LibrovaImportSourceExpander
     PRIVATE
-        LibrovaLogging
-        LibrovaUnicode
+        LibrovaFoundation
 )
 
 target_compile_features(LibrovaImportSourceExpander PUBLIC cxx_std_20)

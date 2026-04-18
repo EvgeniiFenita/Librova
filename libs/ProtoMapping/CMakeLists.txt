@@ -15,8 +15,8 @@ target_link_libraries(LibrovaProtoMapping
         LibrovaApplication
         LibrovaApplicationJobs
         LibrovaDomain
+        LibrovaFoundation
         LibrovaProtoContracts
-        LibrovaUnicode
 )
 
 target_compile_features(LibrovaProtoMapping PUBLIC cxx_std_20)

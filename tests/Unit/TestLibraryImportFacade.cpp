@@ -21,7 +21,7 @@
 #include "Application/StructuredProgressMapper.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "TestStructuredProgressSink.hpp"
 
 namespace {

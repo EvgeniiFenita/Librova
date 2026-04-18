@@ -3,7 +3,7 @@
 #include <chrono>
 #include <google/protobuf/message_lite.h>
 
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 
 namespace Librova::PipeTransport {
 

@@ -9,9 +9,9 @@ target_include_directories(LibrovaManagedTrash PUBLIC
 
 target_link_libraries(LibrovaManagedTrash PUBLIC
     LibrovaDomain
+    LibrovaFoundation
     LibrovaManagedPaths
     LibrovaStoragePlanning
-    LibrovaUnicode
 )
 
 target_compile_features(LibrovaManagedTrash PUBLIC cxx_std_20)

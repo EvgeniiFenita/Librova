@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 #include "ConverterCommand/ConverterCommandBuilder.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::CoreHost {
 namespace {

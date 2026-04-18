@@ -79,17 +79,15 @@ if(BUILD_TESTING)
             LibrovaConverterRuntime
             LibrovaCoverProcessingStb
             LibrovaDomain
-            LibrovaCore
+            LibrovaFoundation
             LibrovaCoreHost
             LibrovaDatabaseRuntime
             LibrovaDatabaseSchema
             LibrovaEpubParsing
             LibrovaFb2Parsing
-            LibrovaHashing
             LibrovaImportConversion
             LibrovaImporting
             LibrovaJobs
-            LibrovaLogging
             LibrovaManagedStorage
             LibrovaManagedFileEncoding
             LibrovaManagedPaths
@@ -102,11 +100,10 @@ if(BUILD_TESTING)
             LibrovaProtoMapping
             LibrovaProtoServices
             LibrovaRecycleBin
-        LibrovaSearchIndex
-        LibrovaSqlite
-        LibrovaStoragePlanning
-        LibrovaUnicode
-        LibrovaZipImporting
+            LibrovaSearchIndex
+            LibrovaSqlite
+            LibrovaStoragePlanning
+            LibrovaZipImporting
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)

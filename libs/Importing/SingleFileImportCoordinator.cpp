@@ -10,9 +10,9 @@
 
 #include "Domain/DuplicateMatch.hpp"
 
-#include "Hashing/Sha256.hpp"
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Sha256.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

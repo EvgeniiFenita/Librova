@@ -1,4 +1,4 @@
-#include "Core/Version.hpp"
+#include "Foundation/Version.hpp"
 
 namespace Librova::Core {
 

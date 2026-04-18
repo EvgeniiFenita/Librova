@@ -22,7 +22,7 @@
 #include "SearchIndex/SearchIndexMaintenance.hpp"
 #include "Sqlite/SqliteConnection.hpp"
 #include "Sqlite/SqliteStatement.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::BookDatabase {
 namespace {

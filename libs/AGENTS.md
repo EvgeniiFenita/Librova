@@ -17,7 +17,7 @@ Libraries under `libs/` contain the C++20 domain and infrastructure slices of `L
 ## Local Reminders
 
 - Use the repository logging facade, not `std::cout` / `std::cerr`, in reusable library code.
-- Route UTF-8 / wide / path conversions through `libs/Unicode/UnicodeConversion.*`.
+- Route UTF-8 / wide / path conversions through `libs/Foundation/UnicodeConversion.*`.
 - Treat transport-facing DTOs and mappers as boundary code, not domain code.
 
 ## Native Quick Loop

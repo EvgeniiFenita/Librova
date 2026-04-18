@@ -18,9 +18,9 @@
 #include <zip.h>
 
 #include "Importing/SingleFileImportCoordinator.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "TestStructuredProgressSink.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 #include "ZipImporting/ZipImportCoordinator.hpp"
 
 namespace {

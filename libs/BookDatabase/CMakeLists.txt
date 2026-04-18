@@ -10,9 +10,9 @@ target_include_directories(LibrovaBookDatabase PUBLIC
 
 target_link_libraries(LibrovaBookDatabase PUBLIC
     LibrovaDomain
+    LibrovaFoundation
     LibrovaSearchIndex
     LibrovaSqlite
-    LibrovaUnicode
 )
 
 target_compile_features(LibrovaBookDatabase PUBLIC cxx_std_20)

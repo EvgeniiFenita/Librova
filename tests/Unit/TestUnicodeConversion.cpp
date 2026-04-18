@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 TEST_CASE("Unicode conversion converts Cyrillic paths to UTF-8", "[unicode]")
 {

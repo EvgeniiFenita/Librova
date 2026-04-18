@@ -23,8 +23,8 @@
 #include "Importing/ImportPerfTracker.hpp"
 #include "Importing/ParallelImportHelpers.hpp"
 #include "Importing/WriterDispatchingRepository.hpp"
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

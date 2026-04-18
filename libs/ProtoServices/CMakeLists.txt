@@ -12,7 +12,7 @@ target_link_libraries(LibrovaProtoServices
     PUBLIC
         LibrovaApplication
         LibrovaApplicationJobs
-        LibrovaLogging
+        LibrovaFoundation
         LibrovaProtoContracts
         LibrovaProtoMapping
 )

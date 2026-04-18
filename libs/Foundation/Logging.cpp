@@ -1,4 +1,4 @@
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 
 #include <mutex>
 #include <stdexcept>
@@ -8,7 +8,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::Logging {
 namespace {

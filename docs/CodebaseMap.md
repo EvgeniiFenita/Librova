@@ -85,7 +85,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Persistence** | `libs/BookDatabase/`, `libs/DatabaseRuntime/`, `libs/DatabaseSchema/`, `libs/Sqlite/`, `libs/SearchIndex/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
 | **Managed Storage** | `libs/ManagedStorage/`, `libs/ManagedPaths/`, `libs/ManagedTrash/`, `libs/StoragePlanning/`, `libs/ManagedFileEncoding/`, `libs/RecycleBin/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow |
 | **Conversion** | `libs/ConverterRuntime/`, `libs/ConverterCommand/`, `libs/ConverterConfiguration/`, `libs/CoverProcessingStb/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
-| **Infrastructure** | `libs/Unicode/`, `libs/Hashing/`, `libs/Logging/`, `libs/Core/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
+| **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
 
 ---
 
@@ -163,10 +163,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | Module | Role | Key types |
 |---|---|---|
 | `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
-| `Unicode` | UTF-8 ↔ UTF-16 conversions; `PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings | `CUnicodeConversion`, `PathFromUtf8()` |
-| `Hashing` | SHA-256 via Windows BCrypt API | `CSha256` |
-| `Logging` | Initialize and configure spdlog for the host process | `CLoggingInitializer` |
-| `Core` | Compile-time version constant | `Version.hpp` |
+| `Foundation` | UTF-8 ↔ UTF-16 conversions (`PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings); SHA-256 via Windows BCrypt API; spdlog initialization; compile-time version constant | `PathFromUtf8()`, `ComputeFileSha256Hex()`, `CLogging`, `CVersion` |
 | `CoreHost` | Parse CLI options; bootstrap library (schema migration, service wiring) | `CLibraryBootstrap`, `SHostOptions` |
 
 ---
@@ -446,7 +443,7 @@ Schema version policy: `user_version 0` → create fresh DB + set to 1. `user_ve
 
 Violating any of these causes data corruption, crashes, or silent test failures.
 
-1. **`PathFromUtf8()` for all UTF-8 paths.** Never construct `std::filesystem::path` from `std::string`, `const char*`, or protobuf string fields directly — `path(string)` uses the ANSI codepage and silently corrupts Cyrillic. Always call `PathFromUtf8()` from `libs/Unicode/UnicodeConversion.hpp`.
+1. **`PathFromUtf8()` for all UTF-8 paths.** Never construct `std::filesystem::path` from `std::string`, `const char*`, or protobuf string fields directly — `path(string)` uses the ANSI codepage and silently corrupts Cyrillic. Always call `PathFromUtf8()` from `libs/Foundation/UnicodeConversion.hpp`.
 
 2. **`inFlight` semaphore declared before `pool`.** In `CZipImportCoordinator` the back-pressure semaphore object must be declared before the thread pool in the same scope. The pool destructor calls `wait()` internally; worker lambdas reference `inFlight` by ref. If the semaphore is destroyed first, workers dangle.
 
@@ -564,7 +561,7 @@ Modules involved: `proto/import_jobs.proto`, `libs/PipeTransport/` (`EPipeMethod
 | `pugixml` | `libs/Fb2Parsing/`, `libs/EpubParsing/` | XML parsing for FB2 and EPUB OPF metadata |
 | `libzip` | `libs/ZipImporting/` | ZIP archive enumeration and entry extraction |
 | `sqlite3` (+ fts5 feature) | `libs/Sqlite/`, `libs/BookDatabase/`, `libs/SearchIndex/` | Embedded relational database; FTS5 full-text search |
-| `spdlog` | `libs/Logging/`; all C++ modules | Structured, async-capable logging |
+| `spdlog` | `libs/Foundation/`; all C++ modules | Structured, async-capable logging |
 | `protobuf` | `libs/ProtoContracts/`, `libs/ProtoMapping/`, `libs/ProtoServices/` | Binary serialization of IPC messages |
 | `abseil` | Pulled in transitively by protobuf | String utilities, hash maps |
 | `stb` | `libs/CoverProcessingStb/` | Single-header image decode/encode (JPEG, PNG) for cover processing |

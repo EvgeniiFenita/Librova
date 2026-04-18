@@ -1,4 +1,4 @@
-#include "Hashing/Sha256.hpp"
+#include "Foundation/Sha256.hpp"
 
 #include <iomanip>
 #include <fstream>
@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <bcrypt.h>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)

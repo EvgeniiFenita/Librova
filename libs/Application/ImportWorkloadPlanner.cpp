@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include "ImportSourceExpander/ImportDiagnostics.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

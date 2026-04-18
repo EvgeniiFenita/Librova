@@ -5,7 +5,7 @@
 #include <string>
 
 #include <sqlite3.h>
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::Sqlite {
 namespace {

@@ -11,7 +11,7 @@ target_include_directories(LibrovaManagedFileEncoding PUBLIC
 
 target_link_libraries(LibrovaManagedFileEncoding PUBLIC
     LibrovaDomain
-    LibrovaUnicode
+    LibrovaFoundation
     ZLIB::ZLIB
 )
 

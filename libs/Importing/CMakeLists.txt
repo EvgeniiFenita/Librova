@@ -17,13 +17,11 @@ target_include_directories(LibrovaImporting
 target_link_libraries(LibrovaImporting
     PUBLIC
         LibrovaDomain
+        LibrovaFoundation
         LibrovaImportConversion
         LibrovaParserRegistry
-        LibrovaUnicode
     PRIVATE
         LibrovaBookDatabase
-        LibrovaHashing
-        LibrovaLogging
 )
 
 target_compile_features(LibrovaImporting PUBLIC cxx_std_20)

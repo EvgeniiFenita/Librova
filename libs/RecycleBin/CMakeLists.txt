@@ -9,7 +9,7 @@ target_include_directories(LibrovaRecycleBin PUBLIC
 
 target_link_libraries(LibrovaRecycleBin PUBLIC
     LibrovaDomain
-    LibrovaUnicode
+    LibrovaFoundation
 )
 
 target_link_libraries(LibrovaRecycleBin PRIVATE

@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedPaths {
 

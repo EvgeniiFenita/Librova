@@ -5,10 +5,10 @@
 #include <stdexcept>
 
 #include "Domain/DomainError.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ManagedFileEncoding/ManagedFileEncoding.hpp"
 #include "ManagedPaths/ManagedPathSafety.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::Application {
 namespace {

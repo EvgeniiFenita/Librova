@@ -32,10 +32,9 @@ target_link_libraries(LibrovaApplication
         LibrovaManagedTrash
         LibrovaZipImporting
     PRIVATE
-        LibrovaLogging
+        LibrovaFoundation
         LibrovaManagedFileEncoding
         LibrovaManagedPaths
-        LibrovaUnicode
 )
 
 target_compile_features(LibrovaApplication PUBLIC cxx_std_20)

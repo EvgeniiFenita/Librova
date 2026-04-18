@@ -10,7 +10,7 @@
 
 #include <zlib.h>
 
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ManagedFileEncoding {
 namespace {

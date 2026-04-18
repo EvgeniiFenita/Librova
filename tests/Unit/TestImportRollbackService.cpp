@@ -12,9 +12,9 @@
 #include "BookDatabase/SqliteBookRepository.hpp"
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "StoragePlanning/ManagedLibraryLayout.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

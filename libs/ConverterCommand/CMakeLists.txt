@@ -8,7 +8,7 @@ target_include_directories(LibrovaConverterCommand PUBLIC
 
 target_link_libraries(LibrovaConverterCommand PUBLIC
     LibrovaDomain
-    LibrovaUnicode
+    LibrovaFoundation
 )
 
 target_compile_features(LibrovaConverterCommand PUBLIC cxx_std_20)

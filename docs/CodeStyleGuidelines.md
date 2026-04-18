@@ -186,7 +186,7 @@ Logging rules:
 - Convert between UTF-8 text and OS-native paths only at explicit infrastructure boundaries.
 - Avoid `path.string()` when Unicode correctness matters; prefer keeping values as `std::filesystem::path` or using Unicode-safe conversions.
 - If the same Unicode/path-safety helper logic is needed in more than one module, extract a shared helper instead of copying anonymous-namespace utilities.
-- Shared native UTF-8 / wide / path transcoding must live in `libs/Unicode/UnicodeConversion.*`; call that slice instead of introducing local conversion helpers.
+- Shared native UTF-8 / wide / path transcoding must live in `libs/Foundation/UnicodeConversion.*`; call that slice instead of introducing local conversion helpers.
 - **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` that carries UTF-8 content.** The constructor `std::filesystem::path(std::string)` on Windows uses the system ANSI codepage, silently corrupting non-ASCII paths (e.g. Cyrillic). Use `PathFromUtf8()` for every UTF-8→path conversion, including all protobuf `string` fields received over IPC.
 - If bytes are transcoded from a legacy encoding into UTF-8, any retained XML or text encoding declaration must be rewritten to match the new UTF-8 content.
 

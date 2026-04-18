@@ -18,10 +18,10 @@
 #include "DatabaseRuntime/SchemaMigrator.hpp"
 #include "Jobs/ImportJobManager.hpp"
 #include "Jobs/ImportJobRunner.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ManagedTrash/ManagedTrashService.hpp"
 #include "ProtoServices/LibraryJobServiceAdapter.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 

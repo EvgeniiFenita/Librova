@@ -16,11 +16,9 @@ target_include_directories(LibrovaZipImporting
 target_link_libraries(LibrovaZipImporting
     PUBLIC
         LibrovaDomain
+        LibrovaFoundation
         LibrovaImporting
-        LibrovaUnicode
         libzip::zip
-    PRIVATE
-        LibrovaLogging
 )
 
 target_compile_features(LibrovaZipImporting PUBLIC cxx_std_20)

@@ -5,10 +5,10 @@
 #include <optional>
 
 #include "Domain/DomainError.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ProtoMapping/LibraryCatalogProtoMapper.hpp"
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ProtoServices {
 namespace {

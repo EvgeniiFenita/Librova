@@ -192,7 +192,7 @@ For a meaningful vertical slice, prefer: unit tests for local logic → integrat
 ### Unicode and storage safety
 
 - If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
-- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
+- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Foundation/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
 
 ### Review and UI-specific policy
 

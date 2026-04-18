@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "Hashing/Sha256.hpp"
+#include "Foundation/Sha256.hpp"
 
 namespace {
 

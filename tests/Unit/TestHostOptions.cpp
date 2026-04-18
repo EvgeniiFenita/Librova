@@ -7,7 +7,7 @@
 
 #include "ConverterConfiguration/ConverterConfiguration.hpp"
 #include "CoreHost/HostOptions.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 TEST_CASE("Host options parse required pipe and library root", "[core-host]")
 {

@@ -3,9 +3,9 @@
 #include <chrono>
 #include <stdexcept>
 
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "ProtoMapping/ImportJobProtoMapper.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::ProtoMapping {
 namespace {

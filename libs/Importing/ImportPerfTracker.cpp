@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <string>
 
-#include "Logging/Logging.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace Librova::Importing {
 

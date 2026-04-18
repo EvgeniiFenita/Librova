@@ -13,9 +13,9 @@ target_include_directories(LibrovaCoreHost
 target_link_libraries(LibrovaCoreHost
     PUBLIC
         LibrovaConverterConfiguration
+        LibrovaFoundation
         LibrovaManagedPaths
         LibrovaStoragePlanning
-        LibrovaUnicode
 )
 
 target_compile_features(LibrovaCoreHost PUBLIC cxx_std_20)
