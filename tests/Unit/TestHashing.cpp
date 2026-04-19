@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -46,7 +47,7 @@ private:
 
 TEST_CASE("SHA-256 of known content produces correct hex digest", "[hashing]")
 {
-    const auto path = std::filesystem::temp_directory_path() / "librova-hash-test-hello.bin";
+    const auto path = MakeUniqueTestPath(L"librova-hash-test-hello.bin");
     CScopedTempFile tempFile(path);
     WriteTextFile(path, "hello");
 
@@ -57,7 +58,7 @@ TEST_CASE("SHA-256 of known content produces correct hex digest", "[hashing]")
 
 TEST_CASE("SHA-256 of empty file produces correct hex digest", "[hashing]")
 {
-    const auto path = std::filesystem::temp_directory_path() / "librova-hash-test-empty.bin";
+    const auto path = MakeUniqueTestPath(L"librova-hash-test-empty.bin");
     CScopedTempFile tempFile(path);
     WriteTextFile(path, "");
 
@@ -68,7 +69,7 @@ TEST_CASE("SHA-256 of empty file produces correct hex digest", "[hashing]")
 
 TEST_CASE("SHA-256 hex digest is 64 lowercase hex characters", "[hashing]")
 {
-    const auto path = std::filesystem::temp_directory_path() / "librova-hash-test-len.bin";
+    const auto path = MakeUniqueTestPath(L"librova-hash-test-len.bin");
     CScopedTempFile tempFile(path);
     WriteTextFile(path, "test content for length check");
 
@@ -82,7 +83,7 @@ TEST_CASE("SHA-256 hex digest is 64 lowercase hex characters", "[hashing]")
 
 TEST_CASE("SHA-256 throws for non-existent file", "[hashing]")
 {
-    const auto path = std::filesystem::temp_directory_path() / "librova-hash-test-missing-xyz.bin";
+    const auto path = MakeUniqueTestPath(L"librova-hash-test-missing-xyz.bin");
     REQUIRE_THROWS_AS(Librova::Hashing::ComputeFileSha256Hex(path), std::runtime_error);
 }
 

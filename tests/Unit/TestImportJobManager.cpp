@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -108,7 +109,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox(const std::string_view scenario)
 {
-    const auto root = std::filesystem::temp_directory_path() / ("librova-job-manager-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-job-manager");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";

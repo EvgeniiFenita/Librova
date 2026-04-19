@@ -4,33 +4,9 @@
 #include <fstream>
 
 #include "Parsing/BookParserRegistry.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
-
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 {
@@ -53,7 +29,7 @@ TEST_CASE("Parser registry detects supported book formats from extension", "[par
 
 TEST_CASE("Parser registry routes FB2 parsing through the matching parser", "[parser-registry]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-parser-registry");
+    CTestWorkspace sandbox(L"librova-parser-registry");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "sample.fb2";
 
     WriteTextFile(

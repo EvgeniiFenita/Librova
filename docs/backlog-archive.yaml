@@ -1435,3 +1435,13 @@ tasks:
   note: Added DragOver CSS class toggling in ImportView.axaml.cs via DragEnter/DragLeave/Drop handlers;
     added Border.DropZone.DragOver style (AppAccentBrush border + AppAccentMutedBrush background) with
     150ms brush transitions in Components.axaml
+- id: 160
+  summary: audit test isolation and enable safe parallel execution across native and managed suites
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.3'
+  note: Added TestWorkspace.hpp with MakeUniqueTestPath()/CTestWorkspace RAII helper; replaced all hardcoded
+    temp_directory_path paths and CScopedDirectory class definitions across 30+ test files; enabled ctest
+    -j N parallelism; native and managed test suites now run concurrently in Run-Tests.ps1. All 459 native
+    and 301 managed tests pass with -j 4.

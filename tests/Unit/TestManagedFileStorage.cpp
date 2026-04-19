@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -6,6 +6,7 @@
 
 #include "Storage/ManagedFileEncoding.hpp"
 #include "Storage/ManagedFileStorage.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
@@ -22,32 +23,7 @@ std::string ReadTextFile(const std::filesystem::path& path)
     return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
-
-std::filesystem::path BuildManagedStorageStagingRoot(const CScopedDirectory& sandbox)
+std::filesystem::path BuildManagedStorageStagingRoot(const CTestWorkspace& sandbox)
 {
     return sandbox.GetPath() / "Runtime" / "ManagedStorageStaging";
 }
@@ -56,7 +32,7 @@ std::filesystem::path BuildManagedStorageStagingRoot(const CScopedDirectory& san
 
 TEST_CASE("Managed file storage stages source and cover files before commit", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-stage");
+    CTestWorkspace sandbox(L"librova-managed-storage-stage");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.fb2";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
@@ -92,7 +68,7 @@ TEST_CASE("Managed file storage stages source and cover files before commit", "[
 
 TEST_CASE("Managed file storage commit finalizes staged files and removes temp staging", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-commit");
+    CTestWorkspace sandbox(L"librova-managed-storage-commit");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.png";
 
@@ -122,7 +98,7 @@ TEST_CASE("Managed file storage commit finalizes staged files and removes temp s
 
 TEST_CASE("Managed file storage compresses FB2 files for managed storage when requested", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-compressed");
+    CTestWorkspace sandbox(L"librova-managed-storage-compressed");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.fb2";
 
     WriteTextFile(
@@ -158,7 +134,7 @@ TEST_CASE("Managed file storage compresses FB2 files for managed storage when re
 
 TEST_CASE("Managed file storage rollback removes staged files and leaves final targets absent", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-rollback");
+    CTestWorkspace sandbox(L"librova-managed-storage-rollback");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
 
     WriteTextFile(sourceBookPath, "rollback-content");
@@ -185,7 +161,7 @@ TEST_CASE("Managed file storage rollback removes staged files and leaves final t
 
 TEST_CASE("Managed file storage rollback preserves top-level Objects directory when it becomes empty", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-preserve-covers");
+    CTestWorkspace sandbox(L"librova-managed-storage-preserve-covers");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
@@ -216,7 +192,7 @@ TEST_CASE("Managed file storage rollback preserves top-level Objects directory w
 
 TEST_CASE("Managed file storage rollback removes shard residue when only Thumbs.db remains", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-thumbs");
+    CTestWorkspace sandbox(L"librova-managed-storage-thumbs");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
 
     WriteTextFile(sourceBookPath, "rollback-content");
@@ -241,7 +217,7 @@ TEST_CASE("Managed file storage rollback removes shard residue when only Thumbs.
 
 TEST_CASE("Managed file storage restores staging state when commit fails after moving the book", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-commit-failure");
+    CTestWorkspace sandbox(L"librova-managed-storage-commit-failure");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
@@ -274,7 +250,7 @@ TEST_CASE("Managed file storage restores staging state when commit fails after m
 
 TEST_CASE("Managed file storage rollback removes final paths left by a partial commit", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-partial-rollback");
+    CTestWorkspace sandbox(L"librova-managed-storage-partial-rollback");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
@@ -317,8 +293,7 @@ TEST_CASE("Managed file storage PrepareImport produces forward-slash relative pa
     // use forward slashes (via generic_string()) so that ManagedPath is portable
     // across comparisons and SQLite storage even when the library root contains
     // non-ASCII (Cyrillic) directory names.
-    const auto cyrillicRoot = std::filesystem::temp_directory_path() / u8"librova-\u0411\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0430-test";
-    CScopedDirectory sandbox(cyrillicRoot);
+    CTestWorkspace sandbox(L"librova-\u0411\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0430-test");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
 
     WriteTextFile(sourceBookPath, "epub-content");
@@ -340,7 +315,7 @@ TEST_CASE("Managed file storage PrepareImport produces forward-slash relative pa
 
 TEST_CASE("Managed file storage cleans staging directory when preparation fails", "[managed-storage]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-prepare-failure");
+    CTestWorkspace sandbox(L"librova-managed-storage-prepare-failure");
     const std::filesystem::path missingSourceBookPath = sandbox.GetPath() / "input" / "missing.fb2";
     const auto expectedStagingDirectory = BuildManagedStorageStagingRoot(sandbox) / "0000000089";
 
@@ -362,7 +337,7 @@ TEST_CASE("Managed file storage CommitImport overwrites stale cover at destinati
 {
     // Regression: destination collisions — a stale cover left by a prior failed import
     // at the final cover path must be overwritten, not cause CommitImport to abort.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-cover-overwrite");
+    CTestWorkspace sandbox(L"librova-managed-storage-cover-overwrite");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.jpg";
 
@@ -399,7 +374,7 @@ TEST_CASE("Managed file storage CommitImport succeeds via copy+delete when stagi
     // atomic rename fails. Here staging and library are under the same sandbox root
     // (same device, rename always works) — this verifies that the refactored MoveFile
     // still produces the correct final layout whether it took the rename or copy+delete path.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-managed-storage-movefile");
+    CTestWorkspace sandbox(L"librova-managed-storage-movefile");
     const std::filesystem::path sourceBookPath = sandbox.GetPath() / "input" / "book.epub";
     const std::filesystem::path sourceCoverPath = sandbox.GetPath() / "input" / "cover.png";
 

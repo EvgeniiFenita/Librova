@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <array>
@@ -15,6 +15,7 @@
 #include "Database/SchemaMigrator.hpp"
 #include "Database/SqliteConnection.hpp"
 #include "Database/SqliteStatement.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
@@ -29,7 +30,7 @@ void CloseRepositoriesAndRemoveDatabase(const std::filesystem::path& databasePat
 
 TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -101,7 +102,7 @@ TEST_CASE("Sqlite book repository round-trips book metadata and files", "[book-d
 
 TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-reserve.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-reserve.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -133,7 +134,7 @@ TEST_CASE("Sqlite book repository reserves sequential book ids", "[book-database
 
 TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-remove.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-remove.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -184,7 +185,7 @@ TEST_CASE("Sqlite book repository removes stored books", "[book-database]")
 
 TEST_CASE("Sqlite book repository inserts exactly one search-index row per added book", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-search-index.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-search-index.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -217,7 +218,7 @@ TEST_CASE("Sqlite book repository inserts exactly one search-index row per added
 
 TEST_CASE("Sqlite book query repository applies structured filters and FTS text search", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-search.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-search.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -285,7 +286,7 @@ TEST_CASE("Sqlite book query repository applies structured filters and FTS text 
 
 TEST_CASE("Sqlite book query repository lists available languages with combined filters even when current language is set", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-language-filters.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-language-filters.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -336,7 +337,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
 
 TEST_CASE("Sqlite book query repository lists available tags with combined filters even when current tag is set", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-tag-filters.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-tag-filters.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -389,7 +390,7 @@ TEST_CASE("Sqlite book query repository lists available tags with combined filte
 
 TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo equivalence", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-cyrillic.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -449,7 +450,7 @@ TEST_CASE("Sqlite book query repository supports Cyrillic prefix search and e yo
 
 TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-insensitive", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-extended-cyrillic.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-extended-cyrillic.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -491,7 +492,7 @@ TEST_CASE("Sqlite book query repository keeps extended Cyrillic search case-inse
 
 TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-text search", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-fts-syntax.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-fts-syntax.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -522,7 +523,7 @@ TEST_CASE("Sqlite book query repository ignores FTS syntax punctuation in free-t
 
 TEST_CASE("Sqlite book query repository hydrates multi-book search results without losing order or metadata", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-bulk-hydration.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-bulk-hydration.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -585,7 +586,7 @@ TEST_CASE("Sqlite book query repository hydrates multi-book search results witho
 
 TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized title instead of ASCII-only collation", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic-sort.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-cyrillic-sort.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -640,7 +641,7 @@ TEST_CASE("Sqlite book query repository sorts Cyrillic titles by normalized titl
 
 TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author names", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-cyrillic-author-sort.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-cyrillic-author-sort.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -695,7 +696,7 @@ TEST_CASE("Sqlite book query repository sorts by normalized Cyrillic author name
 
 TEST_CASE("Sqlite book query repository refreshes cached library statistics when a cover file is overwritten in place", "[book-database]")
 {
-    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-book-query-statistics-cache";
+    const auto libraryRoot = MakeUniqueTestPath(L"librova-book-query-statistics-cache");
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
     std::filesystem::remove_all(libraryRoot);
     std::filesystem::create_directories(databasePath.parent_path());
@@ -747,7 +748,7 @@ TEST_CASE("Sqlite book query repository refreshes cached library statistics when
 
 TEST_CASE("Sqlite book query repository serializes concurrent library statistics requests on a shared instance", "[book-database]")
 {
-    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-book-query-statistics-concurrency";
+    const auto libraryRoot = MakeUniqueTestPath(L"librova-book-query-statistics-concurrency");
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
     std::filesystem::remove_all(libraryRoot);
     std::filesystem::create_directories(databasePath.parent_path());
@@ -840,7 +841,7 @@ TEST_CASE("Sqlite book query repository serializes concurrent library statistics
 
 TEST_CASE("Sqlite book query repository classifies strict and probable duplicates", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-duplicates.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-duplicates.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -898,7 +899,7 @@ TEST_CASE("Sqlite book query repository classifies strict and probable duplicate
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the full normalized author set", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-probable-author-set.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-probable-author-set.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -946,7 +947,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
 
 TEST_CASE("Sqlite book query repository probable duplicate detection requires the normalized title as well as the author set", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-probable-title-match.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-probable-title-match.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -980,7 +981,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection requires th
 
 TEST_CASE("Sqlite book query repository probable duplicate detection keeps duplicate-author candidate semantics unchanged", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-duplicate-author-candidate.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-duplicate-author-candidate.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1014,7 +1015,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection keeps dupli
 
 TEST_CASE("Sqlite book query repository returns all probable duplicate matches for the same normalized title and authors", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-multiple-probable-duplicates.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-multiple-probable-duplicates.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1064,7 +1065,7 @@ TEST_CASE("Sqlite book query repository returns all probable duplicate matches f
 
 TEST_CASE("Sqlite book query repository probable duplicate detection stays case-insensitive for extended Cyrillic", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-query-extended-cyrillic-duplicates.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-query-extended-cyrillic-duplicates.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1101,7 +1102,7 @@ TEST_CASE("Sqlite book query repository probable duplicate detection stays case-
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when series differ", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-series.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-edition-series.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1137,7 +1138,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when publishers differ", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-publisher.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-edition-publisher.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1173,7 +1174,7 @@ TEST_CASE("Sqlite book query repository does not flag as probable duplicate when
 
 TEST_CASE("Sqlite book query repository does not flag as probable duplicate when ISBNs differ", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-isbn.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-edition-isbn.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1211,7 +1212,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but p
 {
     // Regression: ISBN match should still be found even when publisher differs —
     // ISBN collisions in anthology sources mean this yields a Probable match, not Strict.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-pub.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-pub.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1255,7 +1256,7 @@ TEST_CASE("Sqlite book query repository still finds a match when same ISBN but s
 {
     // Regression: ISBN match should still be found even when series differs —
     // ISBN collisions in anthology sources mean this yields a Probable match, not Strict.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-series.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-series.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1299,7 +1300,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 {
     // Regression: lib.rus.ec assigns anthology ISBNs to individual stories.
     // A story by a different author should NOT be rejected as a duplicate of the anthology.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-anthology.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-anthology.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1338,7 +1339,7 @@ TEST_CASE("Sqlite book query repository flags as duplicate when same ISBN and sa
 {
     // Same core title that differs only in trailing punctuation ("Охотники за умами." vs
     // "Охотники за умами") plus same author: stripped-title tier catches it as an edition variant.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-retitled.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-retitled.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1382,7 +1383,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
     // the collection.  "Деревня" (Бунин) is the first story stored; "Суходол" is another
     // story by the same author from the same anthology.  Author-only ISBN credibility would
     // block "Суходол" — but they are distinct works and both must be importable.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-bunin-anthology.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-bunin-anthology.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1421,7 +1422,7 @@ TEST_CASE("Sqlite book query repository flags annotation-variant title as duplic
 {
     // "Серебряная дорога [litres]" vs "Серебряная дорога" — same book, different source
     // annotation.  Stripped core title matches + same author → SameIsbn (Probable).
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-litres-variant.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-litres-variant.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1463,7 +1464,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 {
     // "[litres]" annotation stripped → same core title, but different author.
     // Without a shared author the match is not credible.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-litres-diffauthor.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-litres-diffauthor.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1501,7 +1502,7 @@ TEST_CASE("Sqlite book query repository does not flag as duplicate when same ISB
 {
     // Regression: substring search would match "Иван" inside "Иванов" → false positive.
     // Author comparison must be exact (split by "; " separator).
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-authorprefix.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-authorprefix.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1540,7 +1541,7 @@ TEST_CASE("Sqlite book query repository still finds by title-author when ISBN ma
 {
     // Key invariant: when IsIsbnMatchCredible rejects an ISBN match, the book ID must NOT
     // enter seenIds, so SameNormalizedTitleAndAuthors can still catch it.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-isbn-fallthrough.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-isbn-fallthrough.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1624,7 +1625,7 @@ TEST_CASE("Sqlite book query repository still finds by title-author when ISBN ma
 
 TEST_CASE("Sqlite book query repository flags as probable duplicate when same-title-author book has no distinguishing metadata", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-no-meta.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-edition-no-meta.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1660,7 +1661,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when same-ti
 
 TEST_CASE("Sqlite book query repository flags as probable duplicate when one side lacks series and the other has it", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-dup-edition-one-sided-series.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-dup-edition-one-sided-series.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1698,7 +1699,7 @@ TEST_CASE("Sqlite book query repository flags as probable duplicate when one sid
 
 TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after normalization", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-dedup.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-dedup.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1745,7 +1746,7 @@ TEST_CASE("Sqlite book repository tolerates duplicate authors and tags after nor
 
 TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256_hex already exists", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-hash-conflict.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-hash-conflict.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1799,7 +1800,7 @@ TEST_CASE("Sqlite book repository Add throws CDuplicateHashException when sha256
 
 TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already exists", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-force-add.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-force-add.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1840,7 +1841,7 @@ TEST_CASE("Sqlite book repository ForceAdd inserts book when sha256_hex already 
 
 TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-genres.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-genres.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1919,7 +1920,7 @@ TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-databas
 
 TEST_CASE("Sqlite book repository genre filter returns only matching books", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-genre-filter.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-genre-filter.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1958,7 +1959,7 @@ TEST_CASE("Sqlite book repository genre filter returns only matching books", "[b
 
 TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even when another book has empty sha256_hex", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-empty-hash.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-empty-hash.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -1986,7 +1987,7 @@ TEST_CASE("Sqlite book repository Add does not throw for empty sha256_hex even w
 
 TEST_CASE("Sqlite book repository keeps a reusable session open until the repository instance is destroyed", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-reusable-session.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-reusable-session.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2023,7 +2024,7 @@ TEST_CASE("Sqlite book repository stores managed_path and cover_path with forwar
     // which always produces forward slashes. This test proves the contract survives
     // round-trips through the database layer even when the in-memory path was
     // constructed with native backslash separators on Windows.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-path-format.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-path-format.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2077,7 +2078,7 @@ TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the 
     // to commit. When the loser then executes SELECT sha256_hex inside its own
     // transaction it finds the already-inserted row and throws CDuplicateHashException
     // rather than inserting a second copy.
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-concurrent-hash.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-concurrent-hash.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2144,7 +2145,7 @@ TEST_CASE("Sqlite book repository Add is safe under concurrent inserts with the 
 
 TEST_CASE("Sqlite book repository serializes concurrent Add calls on a shared instance", "[book-database]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-book-repository-shared-instance.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-shared-instance.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2200,8 +2201,7 @@ TEST_CASE("Sqlite book repository serializes concurrent Add calls on a shared in
 
 TEST_CASE("Sqlite book repository Compact reclaims FTS5 shadow-table space after bulk remove", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-book-repository-compact.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-book-repository-compact.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2288,8 +2288,7 @@ Librova::Domain::IBookRepository::SBatchBookEntry MakeBatchEntry(
 
 TEST_CASE("Sqlite book repository AddBatch imports all entries and returns valid ids", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-addbatch-all.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-addbatch-all.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2318,8 +2317,7 @@ TEST_CASE("Sqlite book repository AddBatch imports all entries and returns valid
 
 TEST_CASE("Sqlite book repository AddBatch rejects SHA duplicate without affecting other entries", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-addbatch-dup.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-addbatch-dup.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2357,8 +2355,7 @@ TEST_CASE("Sqlite book repository AddBatch rejects SHA duplicate without affecti
 
 TEST_CASE("Sqlite book repository AddBatch with empty span returns empty results without error", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-addbatch-empty.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-addbatch-empty.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2374,8 +2371,7 @@ TEST_CASE("Sqlite book repository AddBatch with empty span returns empty results
 
 TEST_CASE("Sqlite book repository AddBatch ForceAdd bypasses duplicate hash check", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-addbatch-forceadd.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-addbatch-forceadd.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2410,8 +2406,7 @@ TEST_CASE("Sqlite book repository AddBatch ForceAdd bypasses duplicate hash chec
 
 TEST_CASE("Sqlite book repository RemoveBatch deletes all specified books atomically", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-removebatch.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-removebatch.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2449,8 +2444,7 @@ TEST_CASE("Sqlite book repository RemoveBatch deletes all specified books atomic
 
 TEST_CASE("Sqlite book repository RemoveBatch with empty span is a no-op", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-removebatch-empty.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-removebatch-empty.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -2464,8 +2458,7 @@ TEST_CASE("Sqlite book repository RemoveBatch with empty span is a no-op", "[boo
 
 TEST_CASE("Sqlite book repository Compact progress callback fires at least once for non-trivial work", "[book-database]")
 {
-    const std::filesystem::path databasePath =
-        std::filesystem::temp_directory_path() / "librova-compact-progress.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-compact-progress.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 

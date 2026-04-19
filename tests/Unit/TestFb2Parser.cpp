@@ -5,33 +5,9 @@
 #include <string>
 
 #include "Parsing/Fb2Parser.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
-
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 {
@@ -43,7 +19,7 @@ void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 
 TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser");
+    CTestWorkspace sandbox(L"librova-fb2-parser");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "sample.fb2";
 
     WriteTextFile(
@@ -110,7 +86,7 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
 
 TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid");
+    CTestWorkspace sandbox(L"librova-fb2-parser-invalid");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid.fb2";
 
     WriteTextFile(
@@ -130,7 +106,7 @@ TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
 
 TEST_CASE("FB2 parser includes XML preview when the file is empty", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-empty");
+    CTestWorkspace sandbox(L"librova-fb2-parser-empty");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "empty.fb2";
     WriteTextFile(fb2Path, "");
 
@@ -151,7 +127,7 @@ TEST_CASE("FB2 parser includes XML preview when the file is empty", "[fb2-parsin
 
 TEST_CASE("FB2 parser uses 'Anonimous' fallback when all title-info author nodes are empty", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-empty-author");
+    CTestWorkspace sandbox(L"librova-fb2-parser-empty-author");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "empty-author.fb2";
 
     WriteTextFile(
@@ -184,7 +160,7 @@ TEST_CASE("FB2 parser uses 'Anonimous' fallback when all title-info author nodes
 
 TEST_CASE("FB2 parser uses 'Anonimous' fallback when title-info has no author node at all", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-no-author-node");
+    CTestWorkspace sandbox(L"librova-fb2-parser-no-author-node");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "no-author-node.fb2";
 
     WriteTextFile(
@@ -210,7 +186,7 @@ TEST_CASE("FB2 parser uses 'Anonimous' fallback when title-info has no author no
 
 TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251");
+    CTestWorkspace sandbox(L"librova-fb2-parser-cp1251");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "cp1251.fb2";
 
     const std::string fb2Text =
@@ -240,7 +216,7 @@ TEST_CASE("FB2 parser decodes windows-1251 metadata as UTF-8", "[fb2-parsing]")
 
 TEST_CASE("FB2 parser decodes windows-1251 metadata when XML declaration uses single quotes", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251-single-quotes");
+    CTestWorkspace sandbox(L"librova-fb2-parser-cp1251-single-quotes");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "cp1251-single-quotes.fb2";
 
     const std::string fb2Text =
@@ -270,7 +246,7 @@ TEST_CASE("FB2 parser decodes windows-1251 metadata when XML declaration uses si
 
 TEST_CASE("FB2 parser decodes windows-1251 metadata when XML declaration uses uppercase encoding", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251-uppercase");
+    CTestWorkspace sandbox(L"librova-fb2-parser-cp1251-uppercase");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "cp1251-uppercase.fb2";
 
     const std::string fb2Text =
@@ -300,7 +276,7 @@ TEST_CASE("FB2 parser decodes windows-1251 metadata when XML declaration uses up
 
 TEST_CASE("FB2 parser accepts dot-separated sequence numbers independently from process locale", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-sequence-number");
+    CTestWorkspace sandbox(L"librova-fb2-parser-sequence-number");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "sequence-number.fb2";
 
     WriteTextFile(
@@ -329,7 +305,7 @@ TEST_CASE("FB2 parser accepts dot-separated sequence numbers independently from 
 
 TEST_CASE("FB2 parser strips UTF-8 BOM and parses correctly", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-bom");
+    CTestWorkspace sandbox(L"librova-fb2-parser-bom");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "bom.fb2";
 
     // UTF-8 BOM (EF BB BF) prepended to a valid UTF-8 FB2 file.
@@ -369,7 +345,7 @@ TEST_CASE("FB2 parser falls back to CP1251 for misdeclared UTF-8 files", "[fb2-p
     // Simulates a real-world file with no encoding declaration (or silently
     // misdeclared as UTF-8) but containing raw CP1251 bytes.
     // Affects ~100–180 books per lib.rus.ec 6000-book batch based on import log analysis.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-cp1251-fallback");
+    CTestWorkspace sandbox(L"librova-fb2-parser-cp1251-fallback");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "misdeclared.fb2";
 
     const std::string fb2Text =
@@ -402,7 +378,7 @@ TEST_CASE("FB2 parser recovers metadata from file with malformed body XML", "[fb
 {
     // Simulates lib.rus.ec files where body text contains unescaped '<' (e.g. "<...>" ellipsis,
     // "<:>" separators). The <description> comes before <body> so parse_recover salvages metadata.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-recover");
+    CTestWorkspace sandbox(L"librova-fb2-parser-recover");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "malformed-body.fb2";
 
     WriteTextFile(
@@ -436,7 +412,7 @@ TEST_CASE("FB2 parser recovers metadata from file with malformed body XML", "[fb
 
 TEST_CASE("FB2 parser skips non-integer publish year with warning and still imports book", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid-year");
+    CTestWorkspace sandbox(L"librova-fb2-parser-invalid-year");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid-year.fb2";
 
     WriteTextFile(
@@ -466,7 +442,7 @@ TEST_CASE("FB2 parser skips non-integer publish year with warning and still impo
 
 TEST_CASE("FB2 parser skips non-numeric sequence number with warning and still imports book", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-invalid-seq");
+    CTestWorkspace sandbox(L"librova-fb2-parser-invalid-seq");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "invalid-seq.fb2";
 
     WriteTextFile(
@@ -496,7 +472,7 @@ TEST_CASE("FB2 parser skips non-numeric sequence number with warning and still i
 
 TEST_CASE("FB2 parser accepts missing lang node and imports book with empty language", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-no-lang");
+    CTestWorkspace sandbox(L"librova-fb2-parser-no-lang");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "no-lang.fb2";
 
     WriteTextFile(
@@ -522,7 +498,7 @@ TEST_CASE("FB2 parser accepts missing lang node and imports book with empty lang
 
 TEST_CASE("FB2 parser splits comma-concatenated genre node value into multiple genres", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-comma-genres");
+    CTestWorkspace sandbox(L"librova-fb2-parser-comma-genres");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "comma-genres.fb2";
 
     WriteTextFile(
@@ -550,7 +526,7 @@ TEST_CASE("FB2 parser splits comma-concatenated genre node value into multiple g
 
 TEST_CASE("FB2 parser preserves unknown token as-is when splitting comma-concatenated genre value", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-comma-unknown-genre");
+    CTestWorkspace sandbox(L"librova-fb2-parser-comma-unknown-genre");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "comma-unknown-genre.fb2";
 
     WriteTextFile(
@@ -582,7 +558,7 @@ TEST_CASE("FB2 parser handles UTF-16 LE encoded file", "[fb2-parsing]")
 {
     // Simulates lib.rus.ec files that begin with 0xFF 0xFE BOM and contain raw UTF-16 LE bytes.
     // pugixml receives raw UTF-16 and fails with "Could not determine tag type" without this fix.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-utf16le");
+    CTestWorkspace sandbox(L"librova-fb2-parser-utf16le");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "utf16le.fb2";
 
     const std::wstring wideContent =
@@ -618,7 +594,7 @@ TEST_CASE("FB2 parser handles UTF-16 LE encoded file", "[fb2-parsing]")
 
 TEST_CASE("FB2 parser handles UTF-16 BE encoded file", "[fb2-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-fb2-parser-utf16be");
+    CTestWorkspace sandbox(L"librova-fb2-parser-utf16be");
     const std::filesystem::path fb2Path = sandbox.GetPath() / "utf16be.fb2";
 
     const std::wstring wideContent =

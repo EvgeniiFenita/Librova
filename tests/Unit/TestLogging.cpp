@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -6,32 +6,10 @@
 
 #include "Foundation/Logging.hpp"
 
+#include "TestWorkspace.hpp"
+
 namespace {
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 [[nodiscard]] std::string ReadAllText(const std::filesystem::path& path)
 {
@@ -43,7 +21,7 @@ private:
 
 TEST_CASE("Logging initializes host logger and writes records into file", "[logging]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-logging-кириллица");
+    CTestWorkspace sandbox(L"librova-logging-кириллица");
     const auto logFilePath = sandbox.GetPath() / "Logs" / "host.log";
 
     Librova::Logging::CLogging::InitializeHostLogger(logFilePath);

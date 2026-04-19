@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -64,7 +65,7 @@ Librova::Domain::SBook MakeBook(
 
 TEST_CASE("Library catalog facade returns mapped list items from sqlite read side", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -127,7 +128,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
 
 TEST_CASE("Library catalog facade respects pagination and structured filters", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-pagination.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog-pagination.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -191,7 +192,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
 
 TEST_CASE("Library catalog facade sorts by title descending when direction is Descending", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-sort-direction.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-sort-direction.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -293,7 +294,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
 
 TEST_CASE("Library catalog facade returns full book details by id", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-details.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog-details.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -337,7 +338,7 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
 
 TEST_CASE("Library catalog facade returns aggregate library statistics", "[application][catalog]")
 {
-    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-library-catalog-statistics";
+    const auto libraryRoot = MakeUniqueTestPath(L"librova-library-catalog-statistics");
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
     std::filesystem::remove_all(libraryRoot);
     std::filesystem::create_directories(databasePath.parent_path());
@@ -388,7 +389,7 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
 
 TEST_CASE("Library catalog facade filters books by multiple languages", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-language.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-multi-language.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -424,7 +425,7 @@ TEST_CASE("Library catalog facade filters books by multiple languages", "[applic
 
 TEST_CASE("Library catalog facade filters books by multiple genres with OR semantics", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-genre.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-multi-genre.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -468,7 +469,7 @@ TEST_CASE("Library catalog facade filters books by multiple genres with OR seman
 
 TEST_CASE("Library catalog facade applies independent genre and tag filters", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-genre-tag-combined.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-genre-tag-combined.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -515,5 +516,4 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
     std::filesystem::remove(databasePath);
 }
-
 

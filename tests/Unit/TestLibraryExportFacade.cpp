@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <filesystem>
@@ -13,31 +14,6 @@
 
 namespace {
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 std::string ReadAllText(const std::filesystem::path& path)
 {
@@ -113,7 +89,7 @@ Librova::Domain::SBook CreateBook(
 
 TEST_CASE("LibraryExportFacade exports managed book file to requested destination", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export");
+    CTestWorkspace sandbox(L"librova-library-export");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/5a/68/0000000001.book.epub";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "roadside-picnic.epub";
@@ -140,7 +116,7 @@ TEST_CASE("LibraryExportFacade exports managed book file to requested destinatio
 
 TEST_CASE("LibraryExportFacade rejects unsafe managed paths", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-unsafe");
+    CTestWorkspace sandbox(L"librova-library-export-unsafe");
     const auto databasePath = sandbox.GetPath() / "librova-library-export-unsafe.db";
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
     Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
@@ -157,7 +133,7 @@ TEST_CASE("LibraryExportFacade rejects unsafe managed paths", "[application][exp
 
 TEST_CASE("LibraryExportFacade rejects export destinations inside the managed library", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-inside-library");
+    CTestWorkspace sandbox(L"librova-library-export-inside-library");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/64/58/0000000010.book.epub";
     const auto destinationPath = sourcePath;
@@ -183,7 +159,7 @@ TEST_CASE("LibraryExportFacade rejects export destinations inside the managed li
 
 TEST_CASE("LibraryExportFacade accepts absolute managed path under library root", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-absolute");
+    CTestWorkspace sandbox(L"librova-library-export-absolute");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/c7/66/0000000002.book.fb2";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.fb2";
@@ -208,7 +184,7 @@ TEST_CASE("LibraryExportFacade accepts absolute managed path under library root"
 
 TEST_CASE("LibraryExportFacade rejects symlinked managed path escaping library root", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-symlink");
+    CTestWorkspace sandbox(L"librova-library-export-symlink");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto outsideRoot = sandbox.GetPath() / "Outside";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
@@ -244,7 +220,7 @@ TEST_CASE("LibraryExportFacade rejects symlinked managed path escaping library r
 
 TEST_CASE("LibraryExportFacade overwrites an existing destination file", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-overwrite");
+    CTestWorkspace sandbox(L"librova-library-export-overwrite");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/a1/63/0000000004.book.epub";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
@@ -286,7 +262,7 @@ TEST_CASE("LibraryExportFacade overwrites an existing destination file", "[appli
 
 TEST_CASE("LibraryExportFacade converts FB2 export to EPUB when converter is configured", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-converted");
+    CTestWorkspace sandbox(L"librova-library-export-converted");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/0e/62/0000000005.book.fb2";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
@@ -319,7 +295,7 @@ TEST_CASE("LibraryExportFacade converts FB2 export to EPUB when converter is con
 
 TEST_CASE("LibraryExportFacade transparently decompresses managed FB2 on direct export", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-compressed-fb2");
+    CTestWorkspace sandbox(L"librova-library-export-compressed-fb2");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto plainSourcePath = sandbox.GetPath() / "input" / "source.fb2";
     const auto managedSourcePath = libraryRoot / "Objects/e8/5e/0000000007.book.fb2";
@@ -353,7 +329,7 @@ TEST_CASE("LibraryExportFacade transparently decompresses managed FB2 on direct 
 
 TEST_CASE("LibraryExportFacade decodes compressed managed FB2 before EPUB conversion", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-compressed-converted");
+    CTestWorkspace sandbox(L"librova-library-export-compressed-converted");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto plainSourcePath = sandbox.GetPath() / "input" / "source.fb2";
     const auto managedSourcePath = libraryRoot / "Objects/55/5d/0000000008.book.fb2";
@@ -393,7 +369,7 @@ TEST_CASE("LibraryExportFacade decodes compressed managed FB2 before EPUB conver
 
 TEST_CASE("LibraryExportFacade rejects converted FB2 export when converter is not configured", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-converted-missing");
+    CTestWorkspace sandbox(L"librova-library-export-converted-missing");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto sourcePath = libraryRoot / "Objects/7b/60/0000000006.book.fb2";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
@@ -421,7 +397,7 @@ TEST_CASE("LibraryExportFacade rejects converted FB2 export when converter is no
 
 TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression fails", "[application][export]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-library-export-broken-compressed-fb2");
+    CTestWorkspace sandbox(L"librova-library-export-broken-compressed-fb2");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     const auto managedSourcePath = libraryRoot / "Objects/f7/59/0000000011.book.fb2";
     const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";

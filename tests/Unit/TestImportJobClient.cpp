@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <exception>
@@ -24,9 +25,7 @@ namespace {
 
 std::filesystem::path BuildTestPipePath()
 {
-    const auto uniqueId = std::to_wstring(
-        static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.AppClient.Test.)"} + uniqueId};
+    return MakeUniquePipePath(LR"(\\.\pipe\Librova.AppClient.Test)");
 }
 
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -121,7 +120,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox()
 {
-    const auto root = std::filesystem::temp_directory_path() / "librova-app-client-import";
+    const auto root = MakeUniqueTestPath(L"librova-app-client-import");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -205,4 +204,3 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(sandbox.Root);
 }
-

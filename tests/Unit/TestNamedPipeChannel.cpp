@@ -21,6 +21,7 @@
 #include "Transport/NamedPipeChannel.hpp"
 #include "Transport/PipeProtocol.hpp"
 #include "TestNamedPipeReadySignal.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
@@ -54,9 +55,7 @@ private:
 
 std::filesystem::path BuildTestPipePath()
 {
-    const auto uniqueId = std::to_wstring(
-        static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.Test.)"} + uniqueId};
+    return MakeUniquePipePath(LR"(\\.\pipe\Librova.Test)");
 }
 
 } // namespace
@@ -294,4 +293,3 @@ TEST_CASE("Named pipe channel timeout write cancels pending overlapped wait inst
     serverThread.join();
     REQUIRE(serverFailure == nullptr);
 }
-

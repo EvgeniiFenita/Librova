@@ -11,37 +11,12 @@
 #include <zip.h>
 
 #include "Parsing/EpubParser.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
 constexpr std::string_view GValidEpubBase64 =
     "UEsDBBQAAAAIAJdWflxvYassFgAAABQAAAAIAAAAbWltZXR5cGVLLCjIyUxOLMnMz9NPLShN0q7KLAAAUEsDBBQAAAAIAJdWflwCqdJqrgAAAPsAAAAWAAAATUVUQS1JTkYvY29udGFpbmVyLnhtbF2OwQrCMBBE735F2KvU6k1C04KgVwX1A9Z0W4PJbmhSqX8v9iDi8cHMvKmaKXj1pCE5YQOb1RoUsZXWcW/gejkUW2jqRWWFMzqm4S87Bc/JwDiwFkwuacZASWerJRK3YsdAnPUc098RqBdKVYNI7pyn9KEfVt3ofREx3w0c97vTufwUifNKYgcqUOuwyK9IBjBG7yxmJ1wK3WIqItoH9rScgody1pQ/nmqemj/Ub1BLAwQUAAAACACXVn5cC8nkJuoBAABwAwAAEQAAAE9FQlBTL2NvbnRlbnQub3BmlZNNbtswEIX3OQXBbWHRTlI4MSRl1xO0B2DEkcxEohiKit2d7Rbttt12U/QG6k8Ax4V9huGNCtGynCCrbgSM5r2Pw3lgeDUvcnIPppKliugoGFICKimFVFlE3719M7igV/FJqHlyyzM4Kk9bZa3kXQ0DKUBZmUowEb0uy1spKJkXuaoiOrVWTxibzWaBFDoNSpOx0+FwzEqd0viEkLAAywW3fO+YiKQ36drk3iASBjkUoGzFRsGIeSMhoUgmVtocYvyOa9zgtv0S3GJDcIc/cec+4xq3+BCyXto7EwPclibGL26BG2zwD67xkeAPt3IL9wF/Y+M+4ab96e0H/UvAV9y5Ba7d8j/MOVdZzTOITe0Ffd0rjkslUvR7jWujJrK6VpPL8cXr0Xh4OTw7Oz/3jKPjSBFQJUZqK0sV4zf8i41buqXfVkPcEnf4Cx/cyi1xgzt8JO4jNrh1K69bed3aw5+C9vQ2OKJ4ARFNynswlCSlsqBsVw9kwTOgzKfMDjHHPnOuZAqV7UjSQuEv2QEomRpII2phblky5dqCGQXzqS1ySgoQkg/sew0R5VrnMuHtUMy3X82LfH/ic+xxnA7ti4r5TnCjs+dc32U3GrJ+/CcTh5WW6pBUe4iBlEjhuYcbdLZOGbLu/cT/AFBLAwQUAAAACACXVn5cJWuDMUMAAABKAAAAGQAAAE9FQlBTL3RleHQvY2hhcHRlcjEueGh0bWyzySjJzVGoyM3JK7ZVyigpKbDS1y8vL9crN9bLL0rXN7S0tNSvAKlRsrNJyk+ptLMpsAtJLS6x0S+ws9GHiOiD5O0AUEsDBBQAAAAIAJdWflxbcZxGBQAAAAMAAAAWAAAAT0VCUFMvaW1hZ2VzL2NvdmVyLmpwZ2NUdgUAUEsBAhQAFAAAAAgAl1Z+XG9hqywWAAAAFAAAAAgAAAAAAAAAAAAAAAAAAAAAAG1pbWV0eXBlUEsBAhQAFAAAAAgAl1Z+XAKp0mquAAAA+wAAABYAAAAAAAAAAAAAAAAAPAAAAE1FVEEtSU5GL2NvbnRhaW5lci54bWxQSwECFAAUAAAACACXVn5cC8nkJuoBAABwAwAAEQAAAAAAAAAAAAAAAAAeAQAAT0VCUFMvY29udGVudC5vcGZQSwECFAAUAAAACACXVn5cJWuDMUMAAABKAAAAGQAAAAAAAAAAAAAAAAA3AwAAT0VCUFMvdGV4dC9jaGFwdGVyMS54aHRtbFBLAQIUABQAAAAIAJdWflxbcZxGBQAAAAMAAAAWAAAAAAAAAAAAAAAAALEDAABPRUJQUy9pbWFnZXMvY292ZXIuanBnUEsFBgAAAAAFAAUARAEAAOoDAAAAAA==";
-
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
-
 void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string& text)
 {
     void* buffer = std::malloc(text.size());
@@ -208,7 +183,7 @@ std::filesystem::path CreateCustomEpub(
 
 TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser");
+    CTestWorkspace sandbox(L"librova-epub-parser");
     const std::filesystem::path epubPath = CreateSampleEpub(sandbox.GetPath() / "sample.epub");
 
     const Librova::EpubParsing::CEpubParser parser;
@@ -227,7 +202,7 @@ TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "
 
 TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-invalid");
+    CTestWorkspace sandbox(L"librova-epub-parser-invalid");
     const std::filesystem::path epubPath = sandbox.GetPath() / "invalid.epub";
 
     int errorCode = ZIP_ER_OK;
@@ -261,7 +236,7 @@ TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
 
 TEST_CASE("EPUB parser opens Unicode file paths on Windows", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-unicode");
+    CTestWorkspace sandbox(L"librova-epub-parser-unicode");
     const std::filesystem::path epubPath = CreateSampleEpub(sandbox.GetPath() / std::filesystem::path{u8"фантастика.epub"});
 
     const Librova::EpubParsing::CEpubParser parser;
@@ -273,7 +248,7 @@ TEST_CASE("EPUB parser opens Unicode file paths on Windows", "[epub-parsing]")
 
 TEST_CASE("EPUB parser extracts subjects and collection series metadata", "[epub-parsing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-epub-parser-series-tags");
+    CTestWorkspace sandbox(L"librova-epub-parser-series-tags");
     const std::filesystem::path epubPath = CreateCustomEpub(
         sandbox.GetPath() / "series-tags.epub",
         R"(<?xml version="1.0" encoding="UTF-8"?>

@@ -3,7 +3,8 @@ param(
     [string]$Configuration = "Debug",
     [switch]$SkipConfigure,
     [switch]$SkipNative,
-    [switch]$SkipManaged
+    [switch]$SkipManaged,
+    [int]$ParallelJobs = [Math]::Max(1, [int]$env:NUMBER_OF_PROCESSORS)
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,17 +51,49 @@ try {
             throw "Native build failed with exit code $buildExitCode."
         }
 
-        Write-Host "==> Running native tests ($Configuration)"
-        & ctest --test-dir $nativePresetRoot -C $Configuration --output-on-failure 2>&1 | Where-Object {
+        if (-not $SkipManaged) {
+            # Build managed suite now so both test runs can start at the same time.
+            if (Test-Path -LiteralPath $hostExecutable) {
+                $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExecutable
+            }
+
+            Write-Host "==> Building managed UI tests ($Configuration)"
+            dotnet build $uiTestsProject -c $Configuration --nologo --verbosity quiet -tl:off
+            Assert-LastExitCode "Managed build"
+        }
+
+        # Capture env snapshot for the background job (Start-Job runs in a child runspace).
+        $hostExe = $env:LIBROVA_CORE_HOST_EXECUTABLE
+
+        Write-Host "==> Running native tests ($Configuration, -j $ParallelJobs)"
+        $ctestJob = Start-Job -ScriptBlock {
+            param($testDir, $config, $j)
+            $output = & ctest --test-dir $testDir -C $config --output-on-failure -j $j 2>&1
+            [PSCustomObject]@{ Lines = [string[]]$output; ExitCode = $LASTEXITCODE }
+        } -ArgumentList $nativePresetRoot, $Configuration, $ParallelJobs
+
+        if (-not $SkipManaged) {
+            Write-Host "==> Running managed UI tests ($Configuration)"
+            $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExe
+            dotnet test $uiTestsProject --no-build -c $Configuration --nologo -tl:off -- --no-progress
+            $managedExitCode = $LASTEXITCODE
+        }
+
+        $ctestResult = Receive-Job -Job $ctestJob -Wait -AutoRemoveJob
+        $ctestResult.Lines | Where-Object {
             ($_ -notmatch '^\s*Start\s+\d+:') -and
             ($_ -notmatch '^\s*\d+/\d+\s+Test\s+#\d+:.*\bPassed\b')
-        }
-        if ($LASTEXITCODE -ne 0) {
-            throw "Native tests failed with exit code $LASTEXITCODE."
-        }
-    }
+        } | ForEach-Object { Write-Host $_ }
 
-    if (-not $SkipManaged) {
+        if ($ctestResult.ExitCode -ne 0) {
+            throw "Native tests failed with exit code $($ctestResult.ExitCode)."
+        }
+
+        if (-not $SkipManaged -and $managedExitCode -ne 0) {
+            throw "Managed tests failed with exit code $managedExitCode."
+        }
+    } elseif (-not $SkipManaged) {
+        # Only managed suite requested (native skipped).
         if (Test-Path -LiteralPath $hostExecutable) {
             $env:LIBROVA_CORE_HOST_EXECUTABLE = $hostExecutable
         }

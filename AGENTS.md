@@ -78,7 +78,7 @@ scripts\Run-Librova.ps1
 scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 ```
 
-> `build → test` must always be **sequential** — never run tests against a stale build.
+> `build → test` must always stay ordered: finish the required build first, then start tests against that fresh build. Independent test suites may run in parallel only after the build step completes.
 
 ---
 
@@ -93,7 +93,7 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - CMake is the **canonical native build system**. Visual Studio solutions are for developer convenience only.
 - Do not introduce gRPC runtime dependencies without an explicit architecture decision.
 - Conversion cancellation is **not** ordinary converter failure; never silently fall back to storing the original FB2.
-- `build → test` must be **sequential**, never parallel when tests depend on freshly built binaries.
+- `build → test` must stay **ordered**: never run tests against stale binaries. Parallel test execution is allowed only after the required build step completes.
 - After any change under `proto/`, run `scripts/ValidateProto.ps1` before marking the checkpoint done.
 - Never open `docs/backlog.yaml` or `docs/backlog-archive.yaml` directly.
   Use `python scripts/backlog.py list` and `python scripts/backlog.py show <id>` instead.

@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <filesystem>
@@ -18,32 +18,10 @@
 #include "Parsing/BookParserRegistry.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
+#include "TestWorkspace.hpp"
+
 namespace {
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 {
@@ -371,7 +349,7 @@ public:
 
 TEST_CASE("Single file import imports FB2 without conversion when forced conversion is disabled", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback");
+    CTestWorkspace sandbox(L"librova-importing-fallback");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -416,7 +394,7 @@ TEST_CASE("Single file import imports FB2 without conversion when forced convers
 
 TEST_CASE("Single file import keeps plain storage when forced EPUB conversion is enabled", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-plain-storage");
+    CTestWorkspace sandbox(L"librova-importing-forced-epub-plain-storage");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -457,7 +435,7 @@ TEST_CASE("Single file import keeps plain storage when forced EPUB conversion is
 
 TEST_CASE("Single file import uses repository override when provided", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-repository-override");
+    CTestWorkspace sandbox(L"librova-importing-repository-override");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -489,7 +467,7 @@ TEST_CASE("Single file import uses repository override when provided", "[importi
 
 TEST_CASE("Single file import fails when forced EPUB conversion is enabled but converter is unavailable", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-unavailable");
+    CTestWorkspace sandbox(L"librova-importing-forced-epub-unavailable");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -521,7 +499,7 @@ TEST_CASE("Single file import fails when forced EPUB conversion is enabled but c
 
 TEST_CASE("Single file import fails when forced EPUB conversion returns an error", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-forced-epub-failed");
+    CTestWorkspace sandbox(L"librova-importing-forced-epub-failed");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -560,7 +538,7 @@ TEST_CASE("Single file import fails when forced EPUB conversion returns an error
 
 TEST_CASE("Single file import stores compressed managed file size for fallback FB2", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-fallback-compressed-size");
+    CTestWorkspace sandbox(L"librova-importing-fallback-compressed-size");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -592,7 +570,7 @@ TEST_CASE("Single file import stores compressed managed file size for fallback F
 
 TEST_CASE("Single file import stores optimized cover bytes returned by the cover processor", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cover-optimized");
+    CTestWorkspace sandbox(L"librova-importing-cover-optimized");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -643,7 +621,7 @@ TEST_CASE("Single file import stores optimized cover bytes returned by the cover
 
 TEST_CASE("Single file import falls back to original cover bytes when cover optimization fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cover-fallback");
+    CTestWorkspace sandbox(L"librova-importing-cover-fallback");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -683,7 +661,7 @@ TEST_CASE("Single file import falls back to original cover bytes when cover opti
 
 TEST_CASE("Single file import rejects strict duplicates before reserving storage", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-strict-duplicate");
+    CTestWorkspace sandbox(L"librova-importing-strict-duplicate");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -718,7 +696,7 @@ TEST_CASE("Single file import rejects strict duplicates before reserving storage
 
 TEST_CASE("Single file import rejects probable duplicates before reserving storage", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-probable-duplicate");
+    CTestWorkspace sandbox(L"librova-importing-probable-duplicate");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -752,7 +730,7 @@ TEST_CASE("Single file import rejects probable duplicates before reserving stora
 
 TEST_CASE("Single file import still rejects strict duplicates even when probable duplicate override is enabled", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-strict-force");
+    CTestWorkspace sandbox(L"librova-importing-strict-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -790,7 +768,7 @@ TEST_CASE("Single file import still rejects strict duplicates even when probable
 
 TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-conversion");
+    CTestWorkspace sandbox(L"librova-importing-conversion");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
     const auto convertedPath = sandbox.GetPath() / "work" / "converted.epub";
     WriteTextFile(convertedPath, "converted-epub");
@@ -833,7 +811,7 @@ TEST_CASE("Single file import stores converted EPUB when conversion succeeds", "
 
 TEST_CASE("Single file import can continue after probable duplicate when explicitly allowed", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-probable-force");
+    CTestWorkspace sandbox(L"librova-importing-probable-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -871,7 +849,7 @@ TEST_CASE("Single file import can continue after probable duplicate when explici
 
 TEST_CASE("Single file import removes temporary converter output on cancellation", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-cancel-cleanup");
+    CTestWorkspace sandbox(L"librova-importing-cancel-cleanup");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
     const auto convertedPath = sandbox.GetPath() / "work" / "converted.epub";
     WriteTextFile(convertedPath, "partial-output");
@@ -910,7 +888,7 @@ TEST_CASE("Single file import removes temporary converter output on cancellation
 
 TEST_CASE("Single file import stops on cancellation before storage prepare", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-early-cancel");
+    CTestWorkspace sandbox(L"librova-importing-early-cancel");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -939,7 +917,7 @@ TEST_CASE("Single file import stops on cancellation before storage prepare", "[i
 
 TEST_CASE("Single file import rolls back prepared storage when repository add fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-add-failure");
+    CTestWorkspace sandbox(L"librova-importing-add-failure");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -971,7 +949,7 @@ TEST_CASE("Single file import rolls back prepared storage when repository add fa
 
 TEST_CASE("Single file import removes persisted book when storage commit fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-failure");
+    CTestWorkspace sandbox(L"librova-importing-commit-failure");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1004,7 +982,7 @@ TEST_CASE("Single file import removes persisted book when storage commit fails",
 
 TEST_CASE("Single file import reports cleanup failure when storage commit fails and catalog rollback also fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-cleanup-double-failure");
+    CTestWorkspace sandbox(L"librova-importing-commit-cleanup-double-failure");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1040,7 +1018,7 @@ TEST_CASE("Single file import reports cleanup failure when storage commit fails 
 
 TEST_CASE("Single file import surfaces managed-storage rollback restore diagnostics when commit fails", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-commit-rollback-diagnostics");
+    CTestWorkspace sandbox(L"librova-importing-commit-rollback-diagnostics");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1076,7 +1054,7 @@ TEST_CASE("Single file import surfaces managed-storage rollback restore diagnost
 
 TEST_CASE("Single file import stores library-relative paths in book record", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-relative-paths");
+    CTestWorkspace sandbox(L"librova-importing-relative-paths");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1108,7 +1086,7 @@ TEST_CASE("Single file import stores library-relative paths in book record", "[i
 
 TEST_CASE("Single file import keeps detailed parser diagnostics out of transport-facing error text", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-parser-diagnostics");
+    CTestWorkspace sandbox(L"librova-importing-parser-diagnostics");
     const auto sourcePath = sandbox.GetPath() / "invalid.fb2";
     WriteTextFile(sourcePath, "");
 
@@ -1137,7 +1115,7 @@ TEST_CASE("Single file import keeps detailed parser diagnostics out of transport
 
 TEST_CASE("Single file import computes and stores SHA-256 when not provided by caller", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-auto-hash");
+    CTestWorkspace sandbox(L"librova-importing-auto-hash");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1173,7 +1151,7 @@ TEST_CASE("Single file import succeeds and stores empty hash when caller provide
     // Covers the graceful-degradation contract: when sha256 is empty (as it would be
     // if auto-computation failed at runtime), the import must not fail — it simply
     // skips write-side hash deduplication for that book.
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-empty-hash");
+    CTestWorkspace sandbox(L"librova-importing-empty-hash");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1202,7 +1180,7 @@ TEST_CASE("Single file import succeeds and stores empty hash when caller provide
 
 TEST_CASE("Single file import returns RejectedDuplicate when hash conflict detected at write time", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-reject");
+    CTestWorkspace sandbox(L"librova-importing-late-hash-reject");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1238,7 +1216,7 @@ TEST_CASE("Single file import returns RejectedDuplicate when hash conflict detec
 
 TEST_CASE("Single file import rejects write-time hash conflicts even when probable duplicate override is enabled", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-late-hash-force");
+    CTestWorkspace sandbox(L"librova-importing-late-hash-force");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1274,7 +1252,7 @@ TEST_CASE("Single file import rejects write-time hash conflicts even when probab
 
 TEST_CASE("Single file import emits exactly one strict duplicate warning when FindDuplicates and late hash check both fire", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-double-warning-guard");
+    CTestWorkspace sandbox(L"librova-importing-double-warning-guard");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
@@ -1313,7 +1291,7 @@ TEST_CASE("Single file import emits exactly one strict duplicate warning when Fi
 
 TEST_CASE("Single file import rejects write-time hash conflicts without attempting ForceAdd", "[importing]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-importing-force-add-throws");
+    CTestWorkspace sandbox(L"librova-importing-force-add-throws");
     const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
 
     const Librova::ParserRegistry::CBookParserRegistry parserRegistry;

@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <filesystem>
@@ -8,44 +8,16 @@
 
 #include "App/LibraryBootstrap.hpp"
 
+#include "TestWorkspace.hpp"
+
 namespace {
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 void WriteTextFile(const std::filesystem::path& path, const std::string& text)
 {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     output << text;
-}
-
-std::filesystem::path BuildUniqueSandboxPath(const std::wstring_view prefix)
-{
-    const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64());
-    return std::filesystem::temp_directory_path() / std::filesystem::path{std::wstring(prefix) + L"." + suffix};
 }
 
 void PrepareExistingLibraryRoot(const std::filesystem::path& libraryRoot)
@@ -61,7 +33,7 @@ void PrepareExistingLibraryRoot(const std::filesystem::path& libraryRoot)
 
 TEST_CASE("Library bootstrap creates library layout for a new library root", "[core-host]")
 {
-    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-library-bootstrap"));
+    CTestWorkspace sandbox(L"librova-library-bootstrap");
     const auto libraryRoot = sandbox.GetPath() / "Library";
 
     Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
@@ -77,7 +49,7 @@ TEST_CASE("Library bootstrap creates library layout for a new library root", "[c
 
 TEST_CASE("Library bootstrap opens an existing managed library without requiring Temp", "[core-host]")
 {
-    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-library-bootstrap-existing"));
+    CTestWorkspace sandbox(L"librova-library-bootstrap-existing");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     PrepareExistingLibraryRoot(libraryRoot);
 
@@ -91,7 +63,7 @@ TEST_CASE("Library bootstrap opens an existing managed library without requiring
 
 TEST_CASE("Library bootstrap rejects opening a missing managed library", "[core-host]")
 {
-    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-library-bootstrap-open-missing"));
+    CTestWorkspace sandbox(L"librova-library-bootstrap-open-missing");
     const auto libraryRoot = sandbox.GetPath() / "MissingLibrary";
 
     REQUIRE_THROWS_WITH(
@@ -103,7 +75,7 @@ TEST_CASE("Library bootstrap rejects opening a missing managed library", "[core-
 
 TEST_CASE("Library bootstrap rejects creating a library in a non-empty directory", "[core-host]")
 {
-    CScopedDirectory sandbox(BuildUniqueSandboxPath(L"librova-library-bootstrap-create-non-empty"));
+    CTestWorkspace sandbox(L"librova-library-bootstrap-create-non-empty");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     WriteTextFile(libraryRoot / "existing.txt", "occupied");
 

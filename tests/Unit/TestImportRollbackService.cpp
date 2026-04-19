@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -32,8 +33,7 @@ struct SRollbackSandbox
 
 SRollbackSandbox CreateRollbackSandbox(std::string_view scenario)
 {
-    const auto root = std::filesystem::temp_directory_path()
-        / ("librova-rollback-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-rollback");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root / "Objects");
     std::filesystem::create_directories(root / "Logs");

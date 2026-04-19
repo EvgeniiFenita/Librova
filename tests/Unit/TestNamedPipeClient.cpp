@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <exception>
@@ -24,9 +25,7 @@ namespace {
 
 std::filesystem::path BuildTestPipePath()
 {
-    const auto uniqueId = std::to_wstring(
-        static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.Client.Test.)"} + uniqueId};
+    return MakeUniquePipePath(LR"(\\.\pipe\Librova.Client.Test)");
 }
 
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -163,7 +162,7 @@ Librova::Domain::IBookRepository& GetEmptyBookRepository()
 
 std::filesystem::path CreateImportSourcePath()
 {
-    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-client-import";
+    const auto root = MakeUniqueTestPath(L"librova-pipe-client-import");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -385,7 +384,7 @@ TEST_CASE("Named pipe client performs typed ValidateImportSources call through h
     readySignal.Wait();
 
     Librova::PipeClient::CNamedPipeClient client(pipePath);
-    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-client-validate";
+    const auto root = MakeUniqueTestPath(L"librova-pipe-client-validate");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto unsupportedPath = root / "notes.txt";
@@ -406,4 +405,3 @@ TEST_CASE("Named pipe client performs typed ValidateImportSources call through h
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(root);
 }
-
