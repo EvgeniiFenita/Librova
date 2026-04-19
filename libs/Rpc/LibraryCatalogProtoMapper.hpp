@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include "App/LibraryCatalogFacade.hpp"
 #include "App/LibraryExportFacade.hpp"
 #include "App/LibraryTrashFacade.hpp"
@@ -46,7 +48,7 @@ public:
 
 private:
     [[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);
-    [[nodiscard]] static std::filesystem::path PathFromUtf8(const std::string& value);
+    [[nodiscard]] static std::filesystem::path PathFromUtf8(std::string_view value);
     [[nodiscard]] static Librova::Domain::EBookFormat FromProto(librova::v1::BookFormat format);
     [[nodiscard]] static Librova::Domain::EBookSort FromProto(librova::v1::BookSort sort) noexcept;
     [[nodiscard]] static Librova::Domain::ESortDirection FromProto(librova::v1::BookSortDirection dir) noexcept;

@@ -1,5 +1,6 @@
 #include "App/ImportJobManager.hpp"
 
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -18,9 +19,8 @@ CImportJobManager::~CImportJobManager()
         const std::scoped_lock lock(m_jobsMutex);
         records.reserve(m_jobs.size());
 
-        for (const auto& [jobId, record] : m_jobs)
+        for (const auto& record : m_jobs | std::views::values)
         {
-            (void)jobId;
             records.push_back(record);
         }
     }

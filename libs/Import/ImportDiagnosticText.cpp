@@ -4,7 +4,7 @@ namespace Librova::Importing {
 
 std::string CImportDiagnosticText::JoinWarningsAndError(
     const std::vector<std::string>& warnings,
-    const std::string& error)
+    const std::string_view error)
 {
     std::string combined;
 

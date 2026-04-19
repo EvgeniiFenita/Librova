@@ -1403,3 +1403,12 @@ tasks:
   milestone: '1.2'
   note: 'Decided not to implement: centralising std::filesystem calls behind a facade was deemed unnecessary
     overhead. Closed without implementation.'
+- id: 173
+  summary: audit entire C++ codebase for underused C++20 features and eliminate pre-standard workarounds
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'Audited all C++ sources; applied 11 improvements: string_view params (5 functions), std::format
+    in HostOptions, std::ranges::transform/all_of/views::values, string_view concatenation removing redundant
+    copies, [[nodiscard]] on HasTable. Build clean, 459/459 native tests pass.'

@@ -1,5 +1,6 @@
 #include "App/HostOptions.hpp"
 
+#include <format>
 #include <limits>
 #include <stdexcept>
 
@@ -14,7 +15,7 @@ namespace {
     return index + 1 < arguments.size();
 }
 
-[[nodiscard]] std::size_t ParsePositiveSize(const std::string& value, const std::string& optionName)
+[[nodiscard]] std::size_t ParsePositiveSize(const std::string& value, const std::string_view optionName)
 {
     try
     {
@@ -23,11 +24,11 @@ namespace {
     }
     catch (const std::exception&)
     {
-        throw std::invalid_argument("Invalid numeric value for " + optionName + ".");
+        throw std::invalid_argument(std::format("Invalid numeric value for {}.", optionName));
     }
 }
 
-[[nodiscard]] std::uint32_t ParsePositiveProcessId(const std::string& value, const std::string& optionName)
+[[nodiscard]] std::uint32_t ParsePositiveProcessId(const std::string& value, const std::string_view optionName)
 {
     try
     {
@@ -41,11 +42,11 @@ namespace {
     }
     catch (const std::exception&)
     {
-        throw std::invalid_argument("Invalid numeric value for " + optionName + ".");
+        throw std::invalid_argument(std::format("Invalid numeric value for {}.", optionName));
     }
 }
 
-[[nodiscard]] std::uint64_t ParsePositiveUnixMilliseconds(const std::string& value, const std::string& optionName)
+[[nodiscard]] std::uint64_t ParsePositiveUnixMilliseconds(const std::string& value, const std::string_view optionName)
 {
     try
     {
@@ -61,7 +62,7 @@ namespace {
     }
     catch (const std::exception&)
     {
-        throw std::invalid_argument("Invalid numeric value for " + optionName + ".");
+        throw std::invalid_argument(std::format("Invalid numeric value for {}.", optionName));
     }
 }
 

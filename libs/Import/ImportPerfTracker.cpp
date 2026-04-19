@@ -53,7 +53,7 @@ void LogPeriodic(
             : 0;
         if (i > 0)
             stageLine += " | ";
-        stageLine += std::string(CImportPerfTracker::kStageNames[i]);
+        stageLine += CImportPerfTracker::kStageNames[i];
         stageLine += "=";
         stageLine += std::to_string(avgMs);
         stageLine += "ms";
@@ -88,7 +88,7 @@ void LogPeriodic(
             : 0;
         if (!bottleneckLine.empty())
             bottleneckLine += " ";
-        bottleneckLine += std::string(CImportPerfTracker::kStageNames[entry.Idx]);
+        bottleneckLine += CImportPerfTracker::kStageNames[entry.Idx];
         bottleneckLine += "=";
         bottleneckLine += std::to_string(pct);
         bottleneckLine += "%";
@@ -285,7 +285,7 @@ void CImportPerfTracker::LogSummary(
                 ? static_cast<uint32_t>(entry.TotalMs * 100 / workerTotalMs) : 0;
             if (!bottleneckLine.empty())
                 bottleneckLine += " ";
-            bottleneckLine += std::string(kStageNames[entry.Idx]);
+            bottleneckLine += kStageNames[entry.Idx];
             bottleneckLine += "=";
             bottleneckLine += std::to_string(pct);
             bottleneckLine += "%";
@@ -380,7 +380,7 @@ void CImportPerfTracker::LogArchiveSummary(
         {
             const std::uint64_t avgMs = deltaCount[i] > 0 ? NsToMs(deltaNs[i]) / deltaCount[i] : 0;
             if (i > 0) stageLine += " | ";
-            stageLine += std::string(kStageNames[i]);
+            stageLine += kStageNames[i];
             stageLine += "=";
             stageLine += std::to_string(avgMs);
             stageLine += "ms";
@@ -401,7 +401,7 @@ void CImportPerfTracker::LogArchiveSummary(
             const std::uint32_t pct = workerTotalMs > 0
                 ? static_cast<std::uint32_t>(e.TotalMs * 100 / workerTotalMs) : 0;
             if (!bottleneckLine.empty()) bottleneckLine += " ";
-            bottleneckLine += std::string(kStageNames[e.Idx]);
+            bottleneckLine += kStageNames[e.Idx];
             bottleneckLine += "=";
             bottleneckLine += std::to_string(pct);
             bottleneckLine += "%";

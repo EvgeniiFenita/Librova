@@ -81,7 +81,7 @@ void AppendU64(std::vector<std::byte>& bytes, const std::uint64_t value)
     return {.Value = std::move(value)};
 }
 
-void AppendString(std::vector<std::byte>& bytes, const std::string& value)
+void AppendString(std::vector<std::byte>& bytes, const std::string_view value)
 {
     if (value.size() > std::numeric_limits<std::uint32_t>::max())
     {

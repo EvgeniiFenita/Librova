@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <ranges>
 #include <system_error>
 #include <unordered_set>
 
@@ -109,7 +110,7 @@ void LogRollbackPerfSummaryIfInitialized(
                 phaseLine += " | ";
             }
 
-            phaseLine += std::string(kRollbackPhaseNames[i]);
+            phaseLine += kRollbackPhaseNames[i];
             phaseLine += "=";
             phaseLine += std::to_string(totalMs);
             phaseLine += "ms";
@@ -131,7 +132,7 @@ void LogRollbackPerfSummaryIfInitialized(
                 bottleneckLine += " ";
             }
 
-            bottleneckLine += std::string(kRollbackPhaseNames[entry.Idx]);
+            bottleneckLine += kRollbackPhaseNames[entry.Idx];
             bottleneckLine += "=";
             bottleneckLine += std::to_string(pct);
             bottleneckLine += "%";
@@ -434,10 +435,8 @@ SRollbackResult CImportRollbackService::RollbackImportedBooks(
 
     std::vector<Librova::Domain::SBookId> reachableIds;
     reachableIds.reserve(bookPaths.size());
-    for (const auto& bp : bookPaths)
-    {
-        reachableIds.push_back(bp.Id);
-    }
+    std::ranges::transform(bookPaths, std::back_inserter(reachableIds),
+        [](const SBookPaths& bp) { return bp.Id; });
 
     if (!reachableIds.empty())
     {

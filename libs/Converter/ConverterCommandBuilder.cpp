@@ -23,7 +23,7 @@ std::string ToConverterFormat(const Librova::Domain::EBookFormat format)
 }
 
 std::string ExpandTemplate(
-    const std::string& argumentTemplate,
+    const std::string_view argumentTemplate,
     const std::unordered_map<std::string, std::string>& replacements)
 {
     std::string resolvedArgument;
@@ -39,13 +39,13 @@ std::string ExpandTemplate(
 
         const std::size_t placeholderEnd = argumentTemplate.find('}', index);
 
-        if (placeholderEnd == std::string::npos)
+        if (placeholderEnd == std::string_view::npos)
         {
             resolvedArgument.push_back(argumentTemplate[index]);
             continue;
         }
 
-        const std::string placeholder = argumentTemplate.substr(index, placeholderEnd - index + 1);
+        const std::string placeholder(argumentTemplate.substr(index, placeholderEnd - index + 1));
 
         if (const auto replacementIterator = replacements.find(placeholder); replacementIterator != replacements.end())
         {

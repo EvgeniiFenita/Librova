@@ -361,7 +361,7 @@ std::string CLibraryCatalogProtoMapper::PathToUtf8(const std::filesystem::path& 
     return Librova::Unicode::PathToUtf8(path);
 }
 
-std::filesystem::path CLibraryCatalogProtoMapper::PathFromUtf8(const std::string& value)
+std::filesystem::path CLibraryCatalogProtoMapper::PathFromUtf8(const std::string_view value)
 {
     return Librova::Unicode::PathFromUtf8(value);
 }

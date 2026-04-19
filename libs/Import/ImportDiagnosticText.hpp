@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Librova::Importing {
@@ -10,7 +11,7 @@ class CImportDiagnosticText final
 public:
     [[nodiscard]] static std::string JoinWarningsAndError(
         const std::vector<std::string>& warnings,
-        const std::string& error);
+        std::string_view error);
 };
 
 } // namespace Librova::Importing

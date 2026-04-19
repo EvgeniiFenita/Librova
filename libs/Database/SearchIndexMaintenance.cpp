@@ -43,7 +43,7 @@ std::string BuildNormalizedDescription(const std::optional<std::string>& descrip
     return Librova::Domain::NormalizeText(*description);
 }
 
-bool HasTable(
+[[nodiscard]] bool HasTable(
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::string_view tableName)
 {
