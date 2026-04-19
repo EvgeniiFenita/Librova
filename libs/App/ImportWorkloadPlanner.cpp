@@ -1,25 +1,16 @@
 #include "App/ImportWorkloadPlanner.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <string_view>
 
 #include "Import/ImportDiagnostics.hpp"
+#include "Foundation/StringUtils.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 
-[[nodiscard]] std::string ToLower(std::string value)
-{
-    std::ranges::transform(value, value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
-}
-
 [[nodiscard]] bool IsZipStandalonePath(const std::filesystem::path& path)
 {
-    return ToLower(path.extension().string()) == ".zip";
+    return Librova::Foundation::ToLower(path.extension().string()) == ".zip";
 }
 
 } // namespace

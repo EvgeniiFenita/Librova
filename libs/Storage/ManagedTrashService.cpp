@@ -1,9 +1,9 @@
 #include "Storage/ManagedTrashService.hpp"
 
-#include <system_error>
 #include <stdexcept>
 #include <string>
 
+#include "Foundation/FileSystemUtils.hpp"
 #include "Storage/ManagedPathSafety.hpp"
 #include "Storage/ManagedLibraryLayout.hpp"
 #include "Foundation/UnicodeConversion.hpp"
@@ -18,18 +18,6 @@ namespace {
     std::error_code errorCode;
     std::filesystem::rename(sourcePath, destinationPath, errorCode);
     return errorCode;
-}
-
-void EnsureDirectory(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    std::filesystem::create_directories(path, errorCode);
-
-    if (errorCode)
-    {
-        throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
-    }
 }
 
 void MoveFile(
@@ -111,7 +99,7 @@ std::filesystem::path CManagedTrashService::MoveToTrash(const std::filesystem::p
     }
 
     const auto destinationPath = BuildTrashDestination(sourcePath);
-    EnsureDirectory(destinationPath.parent_path());
+    Librova::Foundation::EnsureDirectory(destinationPath.parent_path());
     const auto movedPath = MoveFileToCollisionSafeDestination(sourcePath, destinationPath, m_moveOperation);
     const auto objectsRoot = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot).ObjectsDirectory;
     (void)Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(sourcePath.parent_path(), objectsRoot);
@@ -127,7 +115,7 @@ void CManagedTrashService::RestoreFromTrash(
         throw std::invalid_argument("Trash restore paths must not be empty.");
     }
 
-    EnsureDirectory(destinationPath.parent_path());
+    Librova::Foundation::EnsureDirectory(destinationPath.parent_path());
     MoveFile(trashedPath, destinationPath, m_moveOperation);
     const auto trashObjectsRoot =
         Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot).TrashDirectory / "Objects";

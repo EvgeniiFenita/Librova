@@ -1,20 +1,18 @@
 #include "Database/SqliteBookQueryRepository.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <format>
 #include <optional>
-#include <cctype>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "Database/SqliteEntityHelpers.hpp"
+#include "Database/SqliteTimePoint.hpp"
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
 #include "Domain/StorageEncoding.hpp"
@@ -90,136 +88,46 @@ std::string BuildFtsQuery(const std::string_view text)
     return query;
 }
 
-std::chrono::system_clock::time_point ParseTimePoint(const std::string_view value)
-{
-    std::istringstream input{std::string{value}};
-    std::chrono::sys_seconds parsedValue{};
-    input >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", parsedValue);
-
-    if (input.fail())
-    {
-        throw std::runtime_error(std::string{"Failed to parse sqlite timestamp: "} + std::string{value});
-    }
-
-    return parsedValue;
-}
-
-std::string BuildIdInClause(const std::size_t count)
-{
-    std::string sql = "(";
-
-    for (std::size_t index = 0; index < count; ++index)
-    {
-        if (index > 0)
-        {
-            sql += ", ";
-        }
-
-        sql += "?";
-    }
-
-    sql += ")";
-    return sql;
-}
-
-void BindBookIds(Librova::Sqlite::CSqliteStatement& statement, const std::vector<std::int64_t>& bookIds, int firstParameterIndex = 1)
-{
-    int parameterIndex = firstParameterIndex;
-
-    for (const std::int64_t bookId : bookIds)
-    {
-        statement.BindInt64(parameterIndex++, bookId);
-    }
-}
-
 std::unordered_map<std::int64_t, std::vector<std::string>> ReadAuthorsByBookId(
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::vector<std::int64_t>& bookIds)
 {
-    if (bookIds.empty())
-    {
-        return {};
-    }
-
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        std::format(
-            "SELECT ba.book_id, a.display_name "
-            "FROM book_authors ba "
-            "INNER JOIN authors a ON a.id = ba.author_id "
-            "WHERE ba.book_id IN {} "
-            "ORDER BY ba.book_id ASC, ba.author_order ASC;",
-            BuildIdInClause(bookIds.size())));
-    BindBookIds(statement, bookIds);
-
-    std::unordered_map<std::int64_t, std::vector<std::string>> authorsByBookId;
-
-    while (statement.Step())
-    {
-        authorsByBookId[statement.GetColumnInt64(0)].push_back(statement.GetColumnText(1));
-    }
-
-    return authorsByBookId;
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT ba.book_id, a.display_name "
+        "FROM book_authors ba "
+        "INNER JOIN authors a ON a.id = ba.author_id "
+        "WHERE ba.book_id IN {} "
+        "ORDER BY ba.book_id ASC, ba.author_order ASC;",
+        bookIds);
 }
 
 std::unordered_map<std::int64_t, std::vector<std::string>> ReadTagsByBookId(
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::vector<std::int64_t>& bookIds)
 {
-    if (bookIds.empty())
-    {
-        return {};
-    }
-
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        std::format(
-            "SELECT bt.book_id, t.display_name "
-            "FROM book_tags bt "
-            "INNER JOIN tags t ON t.id = bt.tag_id "
-            "WHERE bt.book_id IN {} "
-            "ORDER BY bt.book_id ASC, t.display_name ASC;",
-            BuildIdInClause(bookIds.size())));
-    BindBookIds(statement, bookIds);
-
-    std::unordered_map<std::int64_t, std::vector<std::string>> tagsByBookId;
-
-    while (statement.Step())
-    {
-        tagsByBookId[statement.GetColumnInt64(0)].push_back(statement.GetColumnText(1));
-    }
-
-    return tagsByBookId;
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT bt.book_id, t.display_name "
+        "FROM book_tags bt "
+        "INNER JOIN tags t ON t.id = bt.tag_id "
+        "WHERE bt.book_id IN {} "
+        "ORDER BY bt.book_id ASC, t.display_name ASC;",
+        bookIds);
 }
 
 std::unordered_map<std::int64_t, std::vector<std::string>> ReadGenresByBookId(
     const Librova::Sqlite::CSqliteConnection& connection,
     const std::vector<std::int64_t>& bookIds)
 {
-    if (bookIds.empty())
-    {
-        return {};
-    }
-
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        std::format(
-            "SELECT bg.book_id, g.display_name "
-            "FROM book_genres bg "
-            "INNER JOIN genres g ON g.id = bg.genre_id "
-            "WHERE bg.book_id IN {} "
-            "ORDER BY bg.book_id ASC, g.display_name ASC;",
-            BuildIdInClause(bookIds.size())));
-    BindBookIds(statement, bookIds);
-
-    std::unordered_map<std::int64_t, std::vector<std::string>> genresByBookId;
-
-    while (statement.Step())
-    {
-        genresByBookId[statement.GetColumnInt64(0)].push_back(statement.GetColumnText(1));
-    }
-
-    return genresByBookId;
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT bg.book_id, g.display_name "
+        "FROM book_genres bg "
+        "INNER JOIN genres g ON g.id = bg.genre_id "
+        "WHERE bg.book_id IN {} "
+        "ORDER BY bg.book_id ASC, g.display_name ASC;",
+        bookIds);
 }
 
 std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
@@ -240,8 +148,12 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
         std::format(
             "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
             "FROM books WHERE id IN {};",
-            BuildIdInClause(bookIds.size())));
-    BindBookIds(statement, bookIds);
+            Librova::Sqlite::BuildIdInClause(bookIds.size())));
+
+    for (int i = 0; i < static_cast<int>(bookIds.size()); ++i)
+    {
+        statement.BindInt64(i + 1, bookIds[static_cast<std::size_t>(i)]);
+    }
 
     std::unordered_map<std::int64_t, Librova::Domain::SBook> booksById;
     booksById.reserve(bookIds.size());
@@ -290,7 +202,7 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
             : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(13)));
         book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(14));
         book.File.Sha256Hex = statement.GetColumnText(15);
-        book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(16));
+        book.AddedAtUtc = Librova::Sqlite::ParseTimePoint(statement.GetColumnText(16));
 
         booksById.emplace(book.Id.Value, std::move(book));
     }
@@ -298,53 +210,8 @@ std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
     return booksById;
 }
 
-void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& parameterIndex, const Librova::Domain::SSearchQuery& query)
+void AppendFilterJoins(std::string& sql, const Librova::Domain::SSearchQuery& query)
 {
-    if (query.HasText())
-    {
-        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
-    }
-
-    for (const std::string& language : query.Languages)
-    {
-        statement.BindText(parameterIndex++, language);
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, *query.SeriesUtf8);
-    }
-
-    for (const std::string& tag : query.TagsUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
-    }
-
-    for (const std::string& genre : query.GenresUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
-    }
-
-    if (query.Format.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::ToString(*query.Format));
-    }
-
-    statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Limit));
-    statement.BindInt64(parameterIndex, static_cast<std::int64_t>(query.Offset));
-}
-
-std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
-{
-    std::string sql =
-        "SELECT DISTINCT b.id "
-        "FROM books b ";
-
     if (query.HasText())
     {
         sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
@@ -356,20 +223,14 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
             "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
             "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
     }
+}
 
-    if (query.SortBy.value_or(Librova::Domain::EBookSort::Title) == Librova::Domain::EBookSort::Author)
-    {
-        sql +=
-            "LEFT JOIN ("
-            "SELECT ba_sort.book_id, MIN(a_sort.normalized_name) AS first_author_normalized "
-            "FROM book_authors ba_sort "
-            "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
-            "GROUP BY ba_sort.book_id"
-            ") author_sort ON author_sort.book_id = b.id ";
-    }
-
-    sql += "WHERE 1 = 1 ";
-
+void AppendFilterAndConditions(
+    std::string& sql,
+    const Librova::Domain::SSearchQuery& query,
+    const bool includeLanguages,
+    const bool includeGenres)
+{
     if (query.HasText())
     {
         sql += "AND search_index MATCH ? ";
@@ -380,10 +241,10 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
         sql += "AND a_filter.normalized_name = ? ";
     }
 
-    if (!query.Languages.empty())
+    if (includeLanguages && !query.Languages.empty())
     {
         sql += "AND b.language IN ";
-        sql += BuildIdInClause(query.Languages.size());
+        sql += Librova::Sqlite::BuildIdInClause(query.Languages.size());
         sql += " ";
     }
 
@@ -402,13 +263,13 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
             ") ";
     }
 
-    if (!query.GenresUtf8.empty())
+    if (includeGenres && !query.GenresUtf8.empty())
     {
         sql += "AND EXISTS ("
                "SELECT 1 FROM book_genres bg_genre "
                "INNER JOIN genres g_genre ON g_genre.id = bg_genre.genre_id "
                "WHERE bg_genre.book_id = b.id AND g_genre.normalized_name IN ";
-        sql += BuildIdInClause(query.GenresUtf8.size());
+        sql += Librova::Sqlite::BuildIdInClause(query.GenresUtf8.size());
         sql += ") ";
     }
 
@@ -416,6 +277,85 @@ std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
     {
         sql += "AND b.preferred_format = ? ";
     }
+}
+
+void BindFilterWhereParams(
+    Librova::Sqlite::CSqliteStatement& statement,
+    int& parameterIndex,
+    const Librova::Domain::SSearchQuery& query,
+    const bool includeLanguages,
+    const bool includeGenres)
+{
+    if (query.HasText())
+    {
+        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
+    }
+
+    if (includeLanguages)
+    {
+        for (const std::string& language : query.Languages)
+        {
+            statement.BindText(parameterIndex++, language);
+        }
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, *query.SeriesUtf8);
+    }
+
+    for (const std::string& tag : query.TagsUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    if (includeGenres)
+    {
+        for (const std::string& genre : query.GenresUtf8)
+        {
+            statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
+        }
+    }
+
+    if (query.Format.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::ToString(*query.Format));
+    }
+}
+
+void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& parameterIndex, const Librova::Domain::SSearchQuery& query)
+{
+    BindFilterWhereParams(statement, parameterIndex, query, true, true);
+    statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Limit));
+    statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Offset));
+}
+
+std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT DISTINCT b.id "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+
+    if (query.SortBy.value_or(Librova::Domain::EBookSort::Title) == Librova::Domain::EBookSort::Author)
+    {
+        sql +=
+            "LEFT JOIN ("
+            "SELECT ba_sort.book_id, MIN(a_sort.normalized_name) AS first_author_normalized "
+            "FROM book_authors ba_sort "
+            "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
+            "GROUP BY ba_sort.book_id"
+            ") author_sort ON author_sort.book_id = b.id ";
+    }
+
+    sql += "WHERE 1 = 1 ";
+    AppendFilterAndConditions(sql, query, true, true);
 
     const std::string_view dir =
         query.SortDirection == Librova::Domain::ESortDirection::Descending ? "DESC" : "ASC";
@@ -449,67 +389,9 @@ std::string BuildSearchCountSql(const Librova::Domain::SSearchQuery& query)
         "SELECT COUNT(DISTINCT b.id) "
         "FROM books b ";
 
-    if (query.HasText())
-    {
-        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql +=
-            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
-            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
-    }
-
+    AppendFilterJoins(sql, query);
     sql += "WHERE 1 = 1 ";
-
-    if (query.HasText())
-    {
-        sql += "AND search_index MATCH ? ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql += "AND a_filter.normalized_name = ? ";
-    }
-
-    if (!query.Languages.empty())
-    {
-        sql += "AND b.language IN ";
-        sql += BuildIdInClause(query.Languages.size());
-        sql += " ";
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        sql += "AND b.series = ? ";
-    }
-
-    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
-    {
-        sql +=
-            "AND EXISTS ("
-            "SELECT 1 FROM book_tags bt_filter "
-            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
-            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
-            ") ";
-    }
-
-    if (!query.GenresUtf8.empty())
-    {
-        sql += "AND EXISTS ("
-               "SELECT 1 FROM book_genres bg_genre "
-               "INNER JOIN genres g_genre ON g_genre.id = bg_genre.genre_id "
-               "WHERE bg_genre.book_id = b.id AND g_genre.normalized_name IN ";
-        sql += BuildIdInClause(query.GenresUtf8.size());
-        sql += ") ";
-    }
-
-    if (query.Format.has_value())
-    {
-        sql += "AND b.preferred_format = ? ";
-    }
-
+    AppendFilterAndConditions(sql, query, true, true);
     sql += ";";
     return sql;
 }
@@ -520,60 +402,9 @@ std::string BuildAvailableLanguagesSql(const Librova::Domain::SSearchQuery& quer
         "SELECT DISTINCT b.language "
         "FROM books b ";
 
-    if (query.HasText())
-    {
-        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql +=
-            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
-            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
-    }
-
+    AppendFilterJoins(sql, query);
     sql += "WHERE b.language <> '' ";
-
-    if (query.HasText())
-    {
-        sql += "AND search_index MATCH ? ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql += "AND a_filter.normalized_name = ? ";
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        sql += "AND b.series = ? ";
-    }
-
-    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
-    {
-        sql +=
-            "AND EXISTS ("
-            "SELECT 1 FROM book_tags bt_filter "
-            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
-            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
-            ") ";
-    }
-
-    if (!query.GenresUtf8.empty())
-    {
-        sql += "AND EXISTS ("
-               "SELECT 1 FROM book_genres bg_genre "
-               "INNER JOIN genres g_genre ON g_genre.id = bg_genre.genre_id "
-               "WHERE bg_genre.book_id = b.id AND g_genre.normalized_name IN ";
-        sql += BuildIdInClause(query.GenresUtf8.size());
-        sql += ") ";
-    }
-
-    if (query.Format.has_value())
-    {
-        sql += "AND b.preferred_format = ? ";
-    }
-
+    AppendFilterAndConditions(sql, query, false, true);
     sql += "ORDER BY b.language COLLATE NOCASE ASC;";
     return sql;
 }
@@ -584,60 +415,12 @@ std::string BuildAvailableTagsSql(const Librova::Domain::SSearchQuery& query)
         "SELECT DISTINCT t.display_name "
         "FROM books b ";
 
-    if (query.HasText())
-    {
-        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql +=
-            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
-            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
-    }
-
+    AppendFilterJoins(sql, query);
     sql +=
         "INNER JOIN book_tags bt_list ON bt_list.book_id = b.id "
         "INNER JOIN tags t ON t.id = bt_list.tag_id "
         "WHERE t.display_name <> '' ";
-
-    if (query.HasText())
-    {
-        sql += "AND search_index MATCH ? ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql += "AND a_filter.normalized_name = ? ";
-    }
-
-    if (!query.Languages.empty())
-    {
-        sql += "AND b.language IN ";
-        sql += BuildIdInClause(query.Languages.size());
-        sql += " ";
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        sql += "AND b.series = ? ";
-    }
-
-    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
-    {
-        sql +=
-            "AND EXISTS ("
-            "SELECT 1 FROM book_tags bt_filter "
-            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
-            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
-            ") ";
-    }
-
-    if (query.Format.has_value())
-    {
-        sql += "AND b.preferred_format = ? ";
-    }
-
+    AppendFilterAndConditions(sql, query, true, false);
     sql += "ORDER BY t.display_name COLLATE NOCASE ASC;";
     return sql;
 }
@@ -647,41 +430,7 @@ void BindSearchCountFilters(
     const Librova::Domain::SSearchQuery& query)
 {
     int parameterIndex = 1;
-
-    if (query.HasText())
-    {
-        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
-    }
-
-    for (const std::string& language : query.Languages)
-    {
-        statement.BindText(parameterIndex++, language);
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, *query.SeriesUtf8);
-    }
-
-    for (const std::string& tag : query.TagsUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
-    }
-
-    for (const std::string& genre : query.GenresUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
-    }
-
-    if (query.Format.has_value())
-    {
-        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
-    }
+    BindFilterWhereParams(statement, parameterIndex, query, true, true);
 }
 
 void BindAvailableLanguageFilters(
@@ -689,36 +438,7 @@ void BindAvailableLanguageFilters(
     const Librova::Domain::SSearchQuery& query)
 {
     int parameterIndex = 1;
-
-    if (query.HasText())
-    {
-        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, *query.SeriesUtf8);
-    }
-
-    for (const std::string& tag : query.TagsUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
-    }
-
-    for (const std::string& genre : query.GenresUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
-    }
-
-    if (query.Format.has_value())
-    {
-        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
-    }
+    BindFilterWhereParams(statement, parameterIndex, query, false, true);
 }
 
 void BindAvailableTagFilters(
@@ -726,36 +446,7 @@ void BindAvailableTagFilters(
     const Librova::Domain::SSearchQuery& query)
 {
     int parameterIndex = 1;
-
-    if (query.HasText())
-    {
-        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
-    }
-
-    for (const std::string& language : query.Languages)
-    {
-        statement.BindText(parameterIndex++, language);
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, *query.SeriesUtf8);
-    }
-
-    for (const std::string& tag : query.TagsUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
-    }
-
-    if (query.Format.has_value())
-    {
-        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
-    }
+    BindFilterWhereParams(statement, parameterIndex, query, true, false);
 }
 
 void AppendDuplicateMatches(
@@ -1063,7 +754,7 @@ std::vector<SProbableCandidateRow> FindProbableDuplicateCandidates(
         "INNER JOIN authors a ON a.id = ba.author_id "
         "INNER JOIN books b ON b.id = ba.book_id "
         "WHERE a.normalized_name IN ";
-    sql += BuildIdInClause(normalizedAuthors.size());
+    sql += Librova::Sqlite::BuildIdInClause(normalizedAuthors.size());
     sql +=
         " AND b.normalized_title = ? "
         " GROUP BY ba.book_id "
@@ -1194,95 +885,18 @@ std::vector<std::string> CSqliteBookQueryRepository::ListAvailableGenres(const L
         "SELECT DISTINCT g.display_name "
         "FROM books b ";
 
-    if (query.HasText())
-    {
-        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql +=
-            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
-            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
-    }
-
+    AppendFilterJoins(sql, query);
     sql +=
         "INNER JOIN book_genres bg_list ON bg_list.book_id = b.id "
         "INNER JOIN genres g ON g.id = bg_list.genre_id "
         "WHERE g.display_name <> '' ";
-
-    if (query.HasText())
-    {
-        sql += "AND search_index MATCH ? ";
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        sql += "AND a_filter.normalized_name = ? ";
-    }
-
-    if (!query.Languages.empty())
-    {
-        sql += "AND b.language IN ";
-        sql += BuildIdInClause(query.Languages.size());
-        sql += " ";
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        sql += "AND b.series = ? ";
-    }
-
-    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
-    {
-        sql +=
-            "AND EXISTS ("
-            "SELECT 1 FROM book_tags bt_filter "
-            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
-            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
-            ") ";
-    }
-
-    if (query.Format.has_value())
-    {
-        sql += "AND b.preferred_format = ? ";
-    }
-
+    AppendFilterAndConditions(sql, query, true, false);
     sql += "ORDER BY g.display_name COLLATE NOCASE ASC;";
 
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
 
     int parameterIndex = 1;
-
-    if (query.HasText())
-    {
-        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
-    }
-
-    if (query.AuthorUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
-    }
-
-    for (const std::string& language : query.Languages)
-    {
-        statement.BindText(parameterIndex++, language);
-    }
-
-    if (query.SeriesUtf8.has_value())
-    {
-        statement.BindText(parameterIndex++, *query.SeriesUtf8);
-    }
-
-    for (const std::string& tag : query.TagsUtf8)
-    {
-        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
-    }
-
-    if (query.Format.has_value())
-    {
-        statement.BindText(parameterIndex, Librova::Domain::ToString(*query.Format));
-    }
+    BindFilterWhereParams(statement, parameterIndex, query, true, false);
 
     std::vector<std::string> genres;
     while (statement.Step())

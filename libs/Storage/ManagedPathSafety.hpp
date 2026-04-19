@@ -13,7 +13,7 @@ struct SDirectoryCleanupResidue
     std::string Reason;
 };
 
-[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path);
+[[nodiscard]] bool IsSafeRelativeManagedPath(const std::filesystem::path& path, bool requireNoRootComponents = false);
 
 [[nodiscard]] std::optional<std::filesystem::path> TryResolvePathWithinRoot(
     const std::filesystem::path& root,

@@ -1,8 +1,6 @@
 #include "App/LibraryImportFacade.hpp"
 
-#include <algorithm>
 #include <condition_variable>
-#include <cctype>
 #include <cmath>
 #include <deque>
 #include <functional>
@@ -23,27 +21,12 @@
 #include "Import/ImportPerfTracker.hpp"
 #include "Import/ParallelImportHelpers.hpp"
 #include "Import/WriterDispatchingRepository.hpp"
+#include "Foundation/FileSystemUtils.hpp"
 #include "Foundation/Logging.hpp"
+#include "Foundation/StringUtils.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
-namespace {
-
-[[nodiscard]] std::string ToLower(std::string value)
-{
-    std::ranges::transform(value, value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
-}
-
-[[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
-{
-    return Librova::Importing::CImportDiagnosticText::JoinWarningsAndError(
-        result.Warnings,
-        result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
-}
-
-[[nodiscard]] Librova::Application::ENoSuccessfulImportReason CombineNoSuccessfulImportReason(
+namespace {[[nodiscard]] Librova::Application::ENoSuccessfulImportReason CombineNoSuccessfulImportReason(
     const Librova::Application::ENoSuccessfulImportReason currentReason,
     const Librova::Application::ENoSuccessfulImportReason nextReason) noexcept
 {
@@ -130,17 +113,6 @@ void CleanupEmptyParentsNoThrow(const std::filesystem::path& path, const std::fi
     }
 }
 
-void RemovePathNoThrow(const std::filesystem::path& path) noexcept
-{
-    if (path.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove_all(path, errorCode);
-}
-
 void CleanupEntryWorkspaceNoThrow(
     const std::filesystem::path& workingDirectory,
     const std::filesystem::path& entryWorkingDirectory) noexcept
@@ -151,9 +123,9 @@ void CleanupEntryWorkspaceNoThrow(
     }
 
     const auto entriesRoot = (workingDirectory / "entries").lexically_normal();
-    RemovePathNoThrow(entryWorkingDirectory);
+    Librova::Foundation::RemovePathNoThrow(entryWorkingDirectory);
     CleanupEmptyParentsNoThrow(entryWorkingDirectory, entriesRoot);
-    RemovePathNoThrow(entriesRoot);
+    Librova::Foundation::RemovePathNoThrow(entriesRoot);
 }
 
 void CleanupWorkingDirectoryNoThrow(const std::filesystem::path& workingDirectory) noexcept
@@ -176,9 +148,9 @@ void CleanupWorkingDirectoryNoThrow(const std::filesystem::path& workingDirector
         return;
     }
 
-    RemovePathNoThrow(normalizedWorkingDirectory / "entries");
-    RemovePathNoThrow(normalizedWorkingDirectory / "extracted");
-    RemovePathNoThrow(normalizedWorkingDirectory);
+    Librova::Foundation::RemovePathNoThrow(normalizedWorkingDirectory / "entries");
+    Librova::Foundation::RemovePathNoThrow(normalizedWorkingDirectory / "extracted");
+    Librova::Foundation::RemovePathNoThrow(normalizedWorkingDirectory);
 }
 
 } // namespace
@@ -201,7 +173,7 @@ CLibraryImportFacade::CLibraryImportFacade(
 
 bool CLibraryImportFacade::IsZipPath(const std::filesystem::path& path)
 {
-    return ToLower(path.extension().string()) == ".zip";
+    return Librova::Foundation::ToLower(path.extension().string()) == ".zip";
 }
 
 namespace {
@@ -228,7 +200,7 @@ namespace {
 
     if (candidates.size() == 1
         && Librova::ImportSourceExpander::CImportSourceExpander::IsSupportedStandaloneImportPath(candidates.front())
-        && ToLower(candidates.front().extension().string()) == ".zip")
+        && Librova::Foundation::ToLower(candidates.front().extension().string()) == ".zip")
     {
         return Librova::Application::EImportMode::ZipArchive;
     }
@@ -430,7 +402,14 @@ SImportResult CLibraryImportFacade::Run(
             }
 
             Librova::ImportSourceExpander::LogImportSourceIssueIfInitialized(
-                sourcePath, stage, outcome, status, GetSingleFileLogReason(singleFileResult));
+                sourcePath,
+                stage,
+                outcome,
+                status,
+                Librova::Importing::CImportDiagnosticText::GetSingleFileLogReason(
+                    singleFileResult.Warnings,
+                    singleFileResult.Error,
+                    singleFileResult.DiagnosticError));
         };
 
         if (singleFileResult.IsSuccess())
@@ -631,13 +610,13 @@ SImportResult CLibraryImportFacade::Run(
                             .PerfTracker             = std::ref(perf),
                             .RepositoryOverride      = std::ref(writerRepo),
                         }, nullSink, stopToken);
-                        RemovePathNoThrow(entryWorkDir);
+                        Librova::Foundation::RemovePathNoThrow(entryWorkDir);
                         NoteBookProcessed(perf, entryResult.SingleFileResult);
                         queueProgressEvent(BuildSingleFileProgressEvent(entryResult.SingleFileResult));
                     }
                     catch (const std::exception& ex)
                     {
-                        RemovePathNoThrow(entryWorkDir);
+                        Librova::Foundation::RemovePathNoThrow(entryWorkDir);
                         entryResult.ExceptionThrown  = true;
                         entryResult.ExceptionMessage = ex.what();
                         NoteBookProcessedForException(perf);
@@ -689,7 +668,7 @@ SImportResult CLibraryImportFacade::Run(
                 "Import cancelled");
         }
 
-        RemovePathNoThrow(request.WorkingDirectory / "entries");
+        Librova::Foundation::RemovePathNoThrow(request.WorkingDirectory / "entries");
     };
 
     for (std::size_t sourceIndex = 0; sourceIndex < expandedSources.Candidates.size();)

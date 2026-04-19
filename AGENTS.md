@@ -116,6 +116,15 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - Disposable runtime files, logs, and transient state go under `out/` rather than scattered across source.
 
+### Reuse before adding helpers
+
+- Before adding any new helper, utility function, local lambda, or small abstraction, search the repository for an existing implementation with the same responsibility.
+- Prefer reusing or extending the existing helper when the behavior already matches or can be generalized without weakening ownership boundaries.
+- If duplicate infrastructure helpers are discovered while working, consolidate them in the same task instead of adding another copy or leaving parallel implementations behind.
+- Only add a new helper when no suitable implementation exists, or when reuse would create the wrong abstraction or boundary; in that case, make the difference explicit in naming and final rationale.
+- Apply this rule especially to string utilities, filesystem and path helpers, Unicode conversion, SQLite helpers and transactions, logging wrappers, mapping code, and diagnostic formatting helpers.
+- Do not introduce file-local "just for this file" duplicates of existing helpers unless the behavior is intentionally different and that difference is obvious from the name and call site.
+
 ### Comments and documentation in code
 
 Write a comment only when the logic is non-obvious or intentionally deviates from the

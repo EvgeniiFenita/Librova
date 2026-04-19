@@ -10,9 +10,14 @@
 
 namespace Librova::ManagedPaths {
 
-bool IsSafeRelativeManagedPath(const std::filesystem::path& path)
+bool IsSafeRelativeManagedPath(const std::filesystem::path& path, const bool requireNoRootComponents)
 {
     if (path.empty() || path.is_absolute())
+    {
+        return false;
+    }
+
+    if (requireNoRootComponents && (path.has_root_name() || path.has_root_directory()))
     {
         return false;
     }

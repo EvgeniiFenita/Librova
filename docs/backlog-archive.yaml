@@ -1412,3 +1412,17 @@ tasks:
   note: 'Audited all C++ sources; applied 11 improvements: string_view params (5 functions), std::format
     in HostOptions, std::ranges::transform/all_of/views::values, string_view concatenation removing redundant
     copies, [[nodiscard]] on HasTable. Build clean, 459/459 native tests pass.'
+- id: 182
+  summary: 'C++ deduplication: consolidate Foundation and Database shared utilities'
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: unscheduled
+  note: Created Foundation::ToLower (StringUtils), Foundation::EnsureDirectory/RemovePathNoThrow (FileSystemUtils),
+    Logging::*IfInitialized templates. Created Database::SqliteEntityHelpers (BuildIdInClause, ResolveEntityId,
+    ReadRelatedEntityNames/Batch), SqliteTimePoint, SqliteTransaction. Unified SQL filter builder/binder
+    helpers (AppendFilterJoins, AppendFilterAndConditions, BindFilterWhereParams) in SqliteBookQueryRepository.
+    Removed remaining duplicate job/no-job log branches in SingleFileImportCoordinator, kept ImportDiagnosticText
+    decoupled from coordinator types, and finished storage-side cleanup by replacing leftover generic
+    directory helpers in ManagedFileStorage with Foundation utilities while preserving warning-level cleanup
+    logging. All 459 native + 301 managed tests pass.

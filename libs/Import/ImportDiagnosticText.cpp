@@ -36,4 +36,14 @@ std::string CImportDiagnosticText::JoinWarningsAndError(
     return combined;
 }
 
+std::string CImportDiagnosticText::GetSingleFileLogReason(
+    const std::vector<std::string>& warnings,
+    const std::string_view error,
+    const std::string_view diagnosticError)
+{
+    return JoinWarningsAndError(
+        warnings,
+        diagnosticError.empty() ? error : diagnosticError);
+}
+
 } // namespace Librova::Importing

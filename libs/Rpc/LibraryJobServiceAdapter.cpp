@@ -47,33 +47,6 @@ namespace {
     return BuildDomainError(Librova::Domain::EDomainErrorCode::IntegrityIssue, message);
 }
 
-template <typename... TArgs>
-void LogInfoIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
-{
-    if (Librova::Logging::CLogging::IsInitialized())
-    {
-        Librova::Logging::Info(format, std::forward<TArgs>(args)...);
-    }
-}
-
-template <typename... TArgs>
-void LogDebugIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
-{
-    if (Librova::Logging::CLogging::IsInitialized())
-    {
-        Librova::Logging::Debug(format, std::forward<TArgs>(args)...);
-    }
-}
-
-template <typename... TArgs>
-void LogWarnIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
-{
-    if (Librova::Logging::CLogging::IsInitialized())
-    {
-        Librova::Logging::Warn(format, std::forward<TArgs>(args)...);
-    }
-}
-
 } // namespace
 
 CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
@@ -93,7 +66,7 @@ CLibraryJobServiceAdapter::CLibraryJobServiceAdapter(
 librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
     const librova::v1::StartImportRequest& request) const
 {
-    LogInfoIfInitialized(
+    Librova::Logging::InfoIfInitialized(
         "StartImport requested. SourceCount={} WorkingDirectory='{}' AllowProbableDuplicates={}.",
         request.import().source_paths_size(),
         request.import().working_directory(),
@@ -101,7 +74,7 @@ librova::v1::StartImportResponse CLibraryJobServiceAdapter::StartImport(
 
     const auto importRequest = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(request.import());
     const auto jobId = m_importJobService.Start(importRequest);
-    LogInfoIfInitialized("StartImport queued job {}.", jobId);
+    Librova::Logging::InfoIfInitialized("StartImport queued job {}.", jobId);
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoStartResponse(jobId);
 }
 
@@ -110,7 +83,7 @@ librova::v1::ListBooksResponse CLibraryJobServiceAdapter::ListBooks(
 {
     const auto bookListRequest = Librova::ProtoMapping::CLibraryCatalogProtoMapper::FromProto(request.query());
     const auto result = m_libraryCatalogFacade.ListBooks(bookListRequest);
-    LogInfoIfInitialized(
+    Librova::Logging::InfoIfInitialized(
         "ListBooks returned {} item(s) with TotalCount={}. Query='{}' Languages={} Genres={} Offset={} Limit={}.",
         result.Items.size(),
         result.TotalCount,
@@ -130,11 +103,11 @@ librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
         const auto details = m_libraryCatalogFacade.GetBookDetails(Librova::Domain::SBookId{request.book_id()});
         if (details.has_value())
         {
-            LogInfoIfInitialized("GetBookDetails returned details for book {}.", request.book_id());
+            Librova::Logging::InfoIfInitialized("GetBookDetails returned details for book {}.", request.book_id());
         }
         else
         {
-            LogWarnIfInitialized("GetBookDetails requested unknown book {}.", request.book_id());
+            Librova::Logging::WarnIfInitialized("GetBookDetails requested unknown book {}.", request.book_id());
         }
 
         const auto notFoundError = details.has_value()
@@ -147,7 +120,7 @@ librova::v1::GetBookDetailsResponse CLibraryJobServiceAdapter::GetBookDetails(
     }
     catch (const std::exception& error)
     {
-        LogWarnIfInitialized("GetBookDetails failed for book {}. Error='{}'.", request.book_id(), error.what());
+        Librova::Logging::WarnIfInitialized("GetBookDetails failed for book {}. Error='{}'.", request.book_id(), error.what());
         const auto mappedError = MapCatalogExceptionToError(error);
         return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
             static_cast<const Librova::Application::SBookDetails*>(nullptr),
@@ -160,7 +133,7 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
 {
     try
     {
-        LogInfoIfInitialized(
+        Librova::Logging::InfoIfInitialized(
             "ExportBook requested for book {} to '{}' with format {}.",
             request.book_id(),
             request.destination_path(),
@@ -171,14 +144,14 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
 
         if (exportedPath.has_value())
         {
-            LogInfoIfInitialized(
+            Librova::Logging::InfoIfInitialized(
                 "ExportBook completed for book {} to '{}'.",
                 exportRequest.BookId.Value,
                 exportedPath->string());
         }
         else
         {
-            LogWarnIfInitialized("ExportBook requested unknown book {}.", exportRequest.BookId.Value);
+            Librova::Logging::WarnIfInitialized("ExportBook requested unknown book {}.", exportRequest.BookId.Value);
         }
 
         const auto notFoundError = exportedPath.has_value()
@@ -192,7 +165,7 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
     }
     catch (const std::exception& error)
     {
-        LogWarnIfInitialized("ExportBook failed for book {}. Error='{}'.", request.book_id(), error.what());
+        Librova::Logging::WarnIfInitialized("ExportBook failed for book {}. Error='{}'.", request.book_id(), error.what());
         const auto mappedError = MapCatalogExceptionToError(error);
         return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
             static_cast<const std::filesystem::path*>(nullptr),
@@ -205,7 +178,7 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
 {
     try
     {
-        LogInfoIfInitialized(
+        Librova::Logging::InfoIfInitialized(
             "MoveBookToTrash requested for book {}.",
             request.book_id());
 
@@ -213,7 +186,7 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
 
         if (result.has_value())
         {
-            LogInfoIfInitialized(
+            Librova::Logging::InfoIfInitialized(
                 "MoveBookToTrash completed for book {} with destination {}{}.",
                 request.book_id(),
                 result->Destination == Librova::Application::ETrashDestination::RecycleBin
@@ -223,7 +196,7 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
         }
         else
         {
-            LogWarnIfInitialized("MoveBookToTrash requested unknown book {}.", request.book_id());
+            Librova::Logging::WarnIfInitialized("MoveBookToTrash requested unknown book {}.", request.book_id());
         }
 
         const auto notFoundError = result.has_value()
@@ -237,7 +210,7 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
     }
     catch (const std::exception& error)
     {
-        LogWarnIfInitialized("MoveBookToTrash failed for book {}. Error='{}'.", request.book_id(), error.what());
+        Librova::Logging::WarnIfInitialized("MoveBookToTrash failed for book {}. Error='{}'.", request.book_id(), error.what());
         const auto mappedError = MapCatalogExceptionToError(error);
         return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoResponse(
             static_cast<const Librova::Application::STrashedBookResult*>(nullptr),
@@ -251,14 +224,14 @@ librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJo
     const auto snapshot = m_importJobService.TryGetSnapshot(request.job_id());
     if (snapshot.has_value())
     {
-        LogDebugIfInitialized(
+        Librova::Logging::DebugIfInitialized(
             "GetImportJobSnapshot returned status {} for job {}.",
             static_cast<int>(snapshot->Status),
             request.job_id());
     }
     else
     {
-        LogWarnIfInitialized("GetImportJobSnapshot requested unknown job {}.", request.job_id());
+        Librova::Logging::WarnIfInitialized("GetImportJobSnapshot requested unknown job {}.", request.job_id());
     }
 
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoSnapshotResponse(
@@ -273,7 +246,7 @@ librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobR
     {
         if (result->Error.has_value())
         {
-            LogWarnIfInitialized(
+            Librova::Logging::WarnIfInitialized(
                 "Import job {} completed with status {} and error '{}'.",
                 request.job_id(),
                 static_cast<int>(result->Snapshot.Status),
@@ -281,7 +254,7 @@ librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobR
         }
         else
         {
-            LogInfoIfInitialized(
+            Librova::Logging::InfoIfInitialized(
                 "Import job {} completed with status {}. Imported={} Failed={} Skipped={}.",
                 request.job_id(),
                 static_cast<int>(result->Snapshot.Status),
@@ -292,7 +265,7 @@ librova::v1::GetImportJobResultResponse CLibraryJobServiceAdapter::GetImportJobR
     }
     else
     {
-        LogWarnIfInitialized("GetImportJobResult requested unknown job {}.", request.job_id());
+        Librova::Logging::WarnIfInitialized("GetImportJobResult requested unknown job {}.", request.job_id());
     }
 
     return Librova::ProtoMapping::CImportJobProtoMapper::ToProtoResultResponse(
@@ -306,11 +279,11 @@ librova::v1::WaitImportJobResponse CLibraryJobServiceAdapter::WaitImportJob(
     response.set_completed(m_importJobService.Wait(request.job_id(), std::chrono::milliseconds(request.timeout_ms())));
     if (response.completed())
     {
-        LogInfoIfInitialized("WaitImportJob for job {} completed=true.", request.job_id());
+        Librova::Logging::InfoIfInitialized("WaitImportJob for job {} completed=true.", request.job_id());
     }
     else
     {
-        LogDebugIfInitialized("WaitImportJob for job {} completed=false.", request.job_id());
+        Librova::Logging::DebugIfInitialized("WaitImportJob for job {} completed=false.", request.job_id());
     }
     return response;
 }
@@ -326,7 +299,7 @@ librova::v1::ValidateImportSourcesResponse CLibraryJobServiceAdapter::ValidateIm
     }
 
     const auto validation = m_libraryImportFacade.ValidateImportSources(sourcePaths);
-    LogInfoIfInitialized(
+    Librova::Logging::InfoIfInitialized(
         "ValidateImportSources: SourceCount={} blocking={}",
         request.source_paths_size(),
         validation.BlockingMessage.value_or("<none>"));
@@ -349,11 +322,11 @@ librova::v1::CancelImportJobResponse CLibraryJobServiceAdapter::CancelImportJob(
     {
         *response.mutable_error() = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(
             BuildNotFoundError(std::format("Import job {} was not found for cancellation.", request.job_id())));
-        LogWarnIfInitialized("CancelImportJob requested unknown job {}.", request.job_id());
+        Librova::Logging::WarnIfInitialized("CancelImportJob requested unknown job {}.", request.job_id());
     }
     else
     {
-        LogInfoIfInitialized("CancelImportJob for job {} accepted={}.", request.job_id(), response.accepted());
+        Librova::Logging::InfoIfInitialized("CancelImportJob for job {} accepted={}.", request.job_id(), response.accepted());
     }
 
     return response;
@@ -369,11 +342,11 @@ librova::v1::RemoveImportJobResponse CLibraryJobServiceAdapter::RemoveImportJob(
     {
         *response.mutable_error() = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(
             BuildNotFoundError(std::format("Import job {} was not found for removal.", request.job_id())));
-        LogWarnIfInitialized("RemoveImportJob requested unknown job {}.", request.job_id());
+        Librova::Logging::WarnIfInitialized("RemoveImportJob requested unknown job {}.", request.job_id());
     }
     else
     {
-        LogInfoIfInitialized("RemoveImportJob for job {} removed={}.", request.job_id(), response.removed());
+        Librova::Logging::InfoIfInitialized("RemoveImportJob for job {} removed={}.", request.job_id(), response.removed());
     }
 
     return response;

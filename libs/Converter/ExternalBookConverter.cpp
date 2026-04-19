@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "Foundation/FileSystemUtils.hpp"
 #include "Foundation/Logging.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
@@ -409,29 +410,6 @@ void MoveFile(const std::filesystem::path& sourcePath, const std::filesystem::pa
     }
 }
 
-void EnsureDirectory(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    std::filesystem::create_directories(path, errorCode);
-
-    if (errorCode)
-    {
-        throw std::runtime_error(
-            std::string{"Failed to create converter directory: "} + Librova::Unicode::PathToUtf8(path));
-    }
-}
-
-void RemoveDirectoryNoThrow(const std::filesystem::path& path) noexcept
-{
-    if (path.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove_all(path, errorCode);
-}
-
 void CleanupProducedFiles(
     const std::filesystem::path& directoryPath,
     const std::unordered_set<std::filesystem::path>& beforeSnapshot,
@@ -558,7 +536,7 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
     const Librova::ConverterCommand::SResolvedConverterCommand command =
         Librova::ConverterCommand::CConverterCommandBuilder::Build(m_settings.CommandProfile, request);
 
-    EnsureDirectory(command.ExpectedOutputDirectory);
+    Librova::Foundation::EnsureDirectory(command.ExpectedOutputDirectory);
     {
         std::error_code ec;
         std::filesystem::remove(command.ExpectedOutputPath, ec);
@@ -572,7 +550,7 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
         m_settings.WorkingDirectory.empty()
             ? command.ExpectedOutputDirectory
             : m_settings.WorkingDirectory / command.ExpectedOutputPath.stem();
-    EnsureDirectory(processWorkingDirectory);
+    Librova::Foundation::EnsureDirectory(processWorkingDirectory);
 
     struct CWorkingDirectoryCleanup
     {
@@ -583,7 +561,7 @@ Librova::Domain::SConversionResult CExternalBookConverter::Convert(
         {
             if (active)
             {
-                RemoveDirectoryNoThrow(path);
+                Librova::Foundation::RemovePathNoThrow(path);
             }
         }
     } workingDirectoryCleanup{processWorkingDirectory, !m_settings.WorkingDirectory.empty()};

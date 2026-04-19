@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "Domain/MetadataNormalization.hpp"
+#include "Database/SqliteEntityHelpers.hpp"
 #include "Database/SqliteStatement.hpp"
+#include "Domain/MetadataNormalization.hpp"
 
 namespace Librova::SearchIndex {
 namespace {
@@ -110,53 +111,38 @@ struct SBookSearchMetadata
     {
         if (hasAuthors)
         {
-            Librova::Sqlite::CSqliteStatement authorsStatement(
-                connection.GetNativeHandle(),
+            book.Metadata.AuthorsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+                connection,
                 "SELECT a.display_name "
                 "FROM book_authors ba "
                 "INNER JOIN authors a ON a.id = ba.author_id "
                 "WHERE ba.book_id = ? "
-                "ORDER BY ba.author_order ASC;");
-            authorsStatement.BindInt64(1, book.BookId);
-
-            while (authorsStatement.Step())
-            {
-                book.Metadata.AuthorsUtf8.push_back(authorsStatement.GetColumnText(0));
-            }
+                "ORDER BY ba.author_order ASC;",
+                book.BookId);
         }
 
         if (hasTags)
         {
-            Librova::Sqlite::CSqliteStatement tagsStatement(
-                connection.GetNativeHandle(),
+            book.Metadata.TagsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+                connection,
                 "SELECT t.display_name "
                 "FROM book_tags bt "
                 "INNER JOIN tags t ON t.id = bt.tag_id "
                 "WHERE bt.book_id = ? "
-                "ORDER BY t.display_name ASC;");
-            tagsStatement.BindInt64(1, book.BookId);
-
-            while (tagsStatement.Step())
-            {
-                book.Metadata.TagsUtf8.push_back(tagsStatement.GetColumnText(0));
-            }
+                "ORDER BY t.display_name ASC;",
+                book.BookId);
         }
 
         if (hasGenres)
         {
-            Librova::Sqlite::CSqliteStatement genresStatement(
-                connection.GetNativeHandle(),
+            book.Metadata.GenresUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+                connection,
                 "SELECT g.display_name "
                 "FROM book_genres bg "
                 "INNER JOIN genres g ON g.id = bg.genre_id "
                 "WHERE bg.book_id = ? "
-                "ORDER BY g.display_name ASC;");
-            genresStatement.BindInt64(1, book.BookId);
-
-            while (genresStatement.Step())
-            {
-                book.Metadata.GenresUtf8.push_back(genresStatement.GetColumnText(0));
-            }
+                "ORDER BY g.display_name ASC;",
+                book.BookId);
         }
     }
 

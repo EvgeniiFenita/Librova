@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -10,8 +11,9 @@
 
 #include "Domain/DuplicateMatch.hpp"
 
-#include "Foundation/Sha256.hpp"
+#include "Foundation/FileSystemUtils.hpp"
 #include "Foundation/Logging.hpp"
+#include "Foundation/Sha256.hpp"
 #include "Foundation/UnicodeConversion.hpp"
 
 namespace {
@@ -82,6 +84,15 @@ constexpr auto GForcedProbableDuplicateWarning = "Import continued with explicit
     return probableMatch != matches.end() ? &*probableMatch : nullptr;
 }
 
+[[nodiscard]] std::string JobPrefix(const Librova::Importing::SSingleFileImportRequest& request)
+{
+    if (request.ImportJobId == 0)
+    {
+        return {};
+    }
+    return std::format("job={} ", request.ImportJobId);
+}
+
 void LogDuplicateCandidateDetails(
     const Librova::Importing::SSingleFileImportRequest& request,
     const Librova::Domain::SBookMetadata& metadata,
@@ -112,35 +123,18 @@ void LogDuplicateCandidateDetails(
             break;
         }
 
-        if (request.ImportJobId != 0)
-        {
-            Librova::Logging::Debug(
-                "Duplicate candidate fields: job={} source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                request.ImportJobId,
-                sourceLabel,
-                metadata.TitleUtf8,
-                authorsStr,
-                DuplicateSeverityLabel(match.Severity),
-                DuplicateReasonLabel(match.Reason),
-                matchDetail,
-                match.ExistingBookId.Value,
-                match.ExistingTitle,
-                match.ExistingAuthors);
-        }
-        else
-        {
-            Librova::Logging::Debug(
-                "Duplicate candidate fields: source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
-                sourceLabel,
-                metadata.TitleUtf8,
-                authorsStr,
-                DuplicateSeverityLabel(match.Severity),
-                DuplicateReasonLabel(match.Reason),
-                matchDetail,
-                match.ExistingBookId.Value,
-                match.ExistingTitle,
-                match.ExistingAuthors);
-        }
+        Librova::Logging::Debug(
+            "Duplicate candidate fields: {}source='{}' title='{}' authors='{}' severity='{}' reason='{}' matchValue='{}' existingBookId={} existingTitle='{}' existingAuthors='{}'",
+            JobPrefix(request),
+            sourceLabel,
+            metadata.TitleUtf8,
+            authorsStr,
+            DuplicateSeverityLabel(match.Severity),
+            DuplicateReasonLabel(match.Reason),
+            matchDetail,
+            match.ExistingBookId.Value,
+            match.ExistingTitle,
+            match.ExistingAuthors);
     }
 }
 
@@ -163,29 +157,15 @@ void LogDuplicateDecision(
     const std::string sourceLabel = GetLogicalSourceLabel(request);
     const auto additionalMatches = matches.size() > 0 ? matches.size() - 1 : 0;
 
-    if (request.ImportJobId != 0)
-    {
-        Librova::Logging::Info(
-            "duplicate: decision job={} source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-            request.ImportJobId,
-            sourceLabel,
-            outcome,
-            DuplicateSeverityLabel(decisiveMatch->Severity),
-            DuplicateReasonLabel(decisiveMatch->Reason),
-            decisiveMatch->ExistingBookId.Value,
-            additionalMatches);
-    }
-    else
-    {
-        Librova::Logging::Info(
-            "duplicate: decision source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
-            sourceLabel,
-            outcome,
-            DuplicateSeverityLabel(decisiveMatch->Severity),
-            DuplicateReasonLabel(decisiveMatch->Reason),
-            decisiveMatch->ExistingBookId.Value,
-            additionalMatches);
-    }
+    Librova::Logging::Info(
+        "duplicate: decision {}source='{}' outcome='{}' decisiveSeverity='{}' decisiveReason='{}' decisiveExistingBookId={} additionalMatches={}",
+        JobPrefix(request),
+        sourceLabel,
+        outcome,
+        DuplicateSeverityLabel(decisiveMatch->Severity),
+        DuplicateReasonLabel(decisiveMatch->Reason),
+        decisiveMatch->ExistingBookId.Value,
+        additionalMatches);
 }
 
 void LogCoverOutcome(
@@ -204,51 +184,25 @@ void LogCoverOutcome(
     const std::string sourceLabel = GetLogicalSourceLabel(request);
     if (warningLevel)
     {
-        if (request.ImportJobId != 0)
-        {
-            Librova::Logging::Warn(
-                "cover: final job={} source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
-                request.ImportJobId,
-                sourceLabel,
-                outcome,
-                reason,
-                extension,
-                bytes);
-        }
-        else
-        {
-            Librova::Logging::Warn(
-                "cover: final source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
-                sourceLabel,
-                outcome,
-                reason,
-                extension,
-                bytes);
-        }
+        Librova::Logging::Warn(
+            "cover: final {}source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
+            JobPrefix(request),
+            sourceLabel,
+            outcome,
+            reason,
+            extension,
+            bytes);
         return;
     }
 
-    if (request.ImportJobId != 0)
-    {
-        Librova::Logging::Debug(
-            "cover: final job={} source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
-            request.ImportJobId,
-            sourceLabel,
-            outcome,
-            reason,
-            extension,
-            bytes);
-    }
-    else
-    {
-        Librova::Logging::Debug(
-            "cover: final source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
-            sourceLabel,
-            outcome,
-            reason,
-            extension,
-            bytes);
-    }
+    Librova::Logging::Debug(
+        "cover: final {}source='{}' outcome='{}' reason='{}' ext='{}' bytes={}",
+        JobPrefix(request),
+        sourceLabel,
+        outcome,
+        reason,
+        extension,
+        bytes);
 }
 
 [[nodiscard]] std::string_view ConversionStatusLabel(const Librova::Domain::EConversionStatus status) noexcept
@@ -279,27 +233,14 @@ void LogConversionOutcome(
     const auto warningText = result.Warnings.empty() ? "<none>" : result.Warnings.front();
     const auto outputPath = result.HasOutput() ? Librova::Unicode::PathToUtf8(result.OutputPath) : std::string{"<none>"};
 
-    if (request.ImportJobId != 0)
-    {
-        Librova::Logging::Info(
-            "convert: done job={} source='{}' outcome='{}' warnings={} firstWarning='{}' output='{}'",
-            request.ImportJobId,
-            sourceLabel,
-            ConversionStatusLabel(result.Status),
-            result.Warnings.size(),
-            warningText,
-            outputPath);
-    }
-    else
-    {
-        Librova::Logging::Info(
-            "convert: done source='{}' outcome='{}' warnings={} firstWarning='{}' output='{}'",
-            sourceLabel,
-            ConversionStatusLabel(result.Status),
-            result.Warnings.size(),
-            warningText,
-            outputPath);
-    }
+    Librova::Logging::Info(
+        "convert: done {}source='{}' outcome='{}' warnings={} firstWarning='{}' output='{}'",
+        JobPrefix(request),
+        sourceLabel,
+        ConversionStatusLabel(result.Status),
+        result.Warnings.size(),
+        warningText,
+        outputPath);
 }
 
 constexpr std::uint32_t GManagedCoverMaxWidth = 456;
@@ -308,18 +249,6 @@ constexpr std::uint32_t GManagedCoverFallbackMaxWidth = 400;
 constexpr std::uint32_t GManagedCoverFallbackMaxHeight = 600;
 constexpr std::uint32_t GManagedCoverTargetMaxBytes = 120u * 1024u;
 
-void EnsureDirectory(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    std::filesystem::create_directories(path, errorCode);
-
-    if (errorCode)
-    {
-        throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
-    }
-}
-
 std::filesystem::path WriteCoverTempFile(
     const std::filesystem::path& workingDirectory,
     const Librova::Domain::SBookId bookId,
@@ -327,7 +256,7 @@ std::filesystem::path WriteCoverTempFile(
     const std::vector<std::byte>& bytes)
 {
     const std::filesystem::path tempDirectory = workingDirectory / "covers";
-    EnsureDirectory(tempDirectory);
+    Librova::Foundation::EnsureDirectory(tempDirectory);
 
     const std::filesystem::path coverPath =
         tempDirectory / std::filesystem::path{"cover-" + std::to_string(bookId.Value)}.replace_extension(extension);
@@ -341,17 +270,6 @@ std::filesystem::path WriteCoverTempFile(
 
     output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     return coverPath;
-}
-
-void RemovePathNoThrow(const std::filesystem::path& path) noexcept
-{
-    if (path.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove_all(path, errorCode);
 }
 
 bool HasStrictDuplicate(const std::vector<Librova::Domain::SDuplicateMatch>& duplicates)
@@ -589,8 +507,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 m_managedStorage.RollbackImport(*preparedStorage);
             }
 
-            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
 
             return SSingleFileImportResult{
                 .Status = ESingleFileImportStatus::Cancelled,
@@ -608,8 +526,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 m_managedStorage.RollbackImport(*preparedStorage);
             }
 
-            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
 
             return SSingleFileImportResult{
                 .Status = ESingleFileImportStatus::Failed,
@@ -746,21 +664,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
             if (Librova::Logging::CLogging::IsInitialized())
             {
-                if (request.ImportJobId != 0)
-                {
-                    Librova::Logging::Info(
-                        "convert: start job={} source='{}' format={}",
-                        request.ImportJobId,
-                        sourceLabel,
-                        static_cast<int>(parsedBook.SourceFormat));
-                }
-                else
-                {
-                    Librova::Logging::Info(
-                        "convert: start source='{}' format={}",
-                        sourceLabel,
-                        static_cast<int>(parsedBook.SourceFormat));
-                }
+                Librova::Logging::Info(
+                    "convert: start {}source='{}' format={}",
+                    JobPrefix(request),
+                    sourceLabel,
+                    static_cast<int>(parsedBook.SourceFormat));
             }
 
             conversionResult = m_converter->Convert(*conversionPlan.Request, progressSink, stopToken);
@@ -883,8 +791,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         catch (const Librova::Domain::CDuplicateHashException& duplicateEx)
         {
             m_managedStorage.RollbackImport(*preparedStorage);
-            RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-            RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+            Librova::Foundation::RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
             importWarnings.push_back(GStrictDuplicateWarning);
 
             if (Librova::Logging::CLogging::IsInitialized())
@@ -924,8 +832,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             m_managedStorage.CommitImport(*preparedStorage);
         }
 
-        RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-        RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+        Librova::Foundation::RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+        Librova::Foundation::RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
         progressSink.ReportValue(100, "Import completed");
 
         return {
@@ -949,21 +857,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         if (Librova::Logging::CLogging::IsInitialized())
         {
-            if (request.ImportJobId != 0)
-            {
-                Librova::Logging::Error(
-                    "Single file import failed: job={} source='{}' reason='{}'",
-                    request.ImportJobId,
-                    sourceLabel,
-                    diagnosticError);
-            }
-            else
-            {
-                Librova::Logging::Error(
-                    "Single file import failed: source='{}' reason='{}'",
-                    sourceLabel,
-                    diagnosticError);
-            }
+            Librova::Logging::Error(
+                "Single file import failed: {}source='{}' reason='{}'",
+                JobPrefix(request),
+                sourceLabel,
+                diagnosticError);
         }
 
         if (addedBookId.has_value())
@@ -977,21 +875,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 const std::string cleanupFailure = BuildCleanupFailureMessage(*addedBookId, cleanupError);
                 if (Librova::Logging::CLogging::IsInitialized())
                 {
-                    if (request.ImportJobId != 0)
-                    {
-                        Librova::Logging::Error(
-                            "Single file import cleanup failed after job={} source='{}': {}",
-                            request.ImportJobId,
-                            sourceLabel,
-                            cleanupFailure);
-                    }
-                    else
-                    {
-                        Librova::Logging::Error(
-                            "Single file import cleanup failed for source='{}': {}",
-                            sourceLabel,
-                            cleanupFailure);
-                        }
+                    Librova::Logging::Error(
+                        "Single file import cleanup failed after {}source='{}': {}",
+                        JobPrefix(request),
+                        sourceLabel,
+                        cleanupFailure);
                 }
 
                 if (preparedStorage.has_value())
@@ -1013,8 +901,8 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
             m_managedStorage.RollbackImport(*preparedStorage);
         }
 
-        RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
-        RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
+        Librova::Foundation::RemovePathNoThrow(temporaryConvertedPath.value_or(std::filesystem::path{}));
+        Librova::Foundation::RemovePathNoThrow(temporaryCoverPath.value_or(std::filesystem::path{}));
 
         return {
             .Status = ESingleFileImportStatus::Failed,

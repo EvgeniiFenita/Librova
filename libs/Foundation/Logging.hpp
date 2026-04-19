@@ -50,4 +50,31 @@ void Critical(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
     CLogging::GetLogger()->critical(format, std::forward<TArgs>(args)...);
 }
 
+template <typename... TArgs>
+void InfoIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (CLogging::IsInitialized())
+    {
+        Info(format, std::forward<TArgs>(args)...);
+    }
+}
+
+template <typename... TArgs>
+void DebugIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (CLogging::IsInitialized())
+    {
+        Debug(format, std::forward<TArgs>(args)...);
+    }
+}
+
+template <typename... TArgs>
+void WarnIfInitialized(spdlog::format_string_t<TArgs...> format, TArgs&&... args)
+{
+    if (CLogging::IsInitialized())
+    {
+        Warn(format, std::forward<TArgs>(args)...);
+    }
+}
+
 } // namespace Librova::Logging

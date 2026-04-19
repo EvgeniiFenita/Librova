@@ -82,10 +82,10 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **Domain** | `libs/Domain/` | Pure value types, interfaces, error types — no I/O, no framework dependencies |
 | **Import Pipeline** | `libs/Import/` | Single-file coordinator, parallel ZIP orchestrator, conversion policy, source expansion, diagnostics |
 | **Parsing** | `libs/Parsing/` | Format-specific metadata/cover extraction; registry dispatches by format |
-| **Persistence** | `libs/Database/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers |
+| **Persistence** | `libs/Database/` | SQLite repositories, schema migration, FTS5 maintenance, RAII connection wrappers, shared SQL utilities (`SqliteEntityHelpers`, `SqliteTimePoint`, `SqliteTransaction`) |
 | **Managed Storage** | `libs/Storage/` | Stage/commit/rollback book files and covers; sharded object layout; trash workflow; cover decode/resize/re-encode |
 | **Conversion** | `libs/Converter/` | Spawn external FB2→EPUB converter; cover decode/resize/re-encode |
-| **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant |
+| **Infrastructure** | `libs/Foundation/` | UTF-8↔UTF-16 conversions, SHA-256 (BCrypt), spdlog init, version constant, shared string utilities (`StringUtils`), shared filesystem utilities (`FileSystemUtils`) |
 
 ---
 
@@ -121,7 +121,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Database` | SQLite RAII wrappers; SQL DDL constants; schema migration (v0→1); FTS5 index maintenance; SQLite book repositories; genre helpers | `CSqliteConnection`, `CSqliteStatement`, `CDatabaseSchema`, `CSchemaMigrator`, `CSearchIndexMaintenance`, `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
+| `Database` | SQLite RAII wrappers; SQL DDL constants; schema migration (v0→1); FTS5 index maintenance; SQLite book repositories; genre helpers; shared SQL utilities in `Librova::Sqlite` namespace (`BuildIdInClause`, `ResolveEntityId`, `ReadRelatedEntityNames`, `ParseTimePoint`, `SerializeTimePoint`, `CSqliteTransaction`) | `CSqliteConnection`, `CSqliteStatement`, `CDatabaseSchema`, `CSchemaMigrator`, `CSearchIndexMaintenance`, `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
 
 ### Managed Storage
 
@@ -140,7 +140,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | Module | Role | Key types |
 |---|---|---|
 | `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
-| `Foundation` | UTF-8 ↔ UTF-16 conversions (`PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings); SHA-256 via Windows BCrypt API; spdlog initialization; compile-time version constant | `PathFromUtf8()`, `ComputeFileSha256Hex()`, `CLogging`, `CVersion` |
+| `Foundation` | UTF-8 ↔ UTF-16 conversions (`PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings); SHA-256 via Windows BCrypt API; spdlog initialization and `*IfInitialized` log helpers; compile-time version constant; `ToLower` string utility; `EnsureDirectory` / `RemovePathNoThrow` filesystem helpers | `PathFromUtf8()`, `ComputeFileSha256Hex()`, `CLogging`, `CVersion`, `ToLower`, `EnsureDirectory`, `RemovePathNoThrow` |
 | `CoreHost` | Parse CLI options; bootstrap library (schema migration, service wiring) | `CLibraryBootstrap`, `SHostOptions` |
 
 ---

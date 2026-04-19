@@ -1,8 +1,6 @@
 #include "Import/ZipImportCoordinator.hpp"
 
-#include <algorithm>
 #include <atomic>
-#include <cctype>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -21,22 +19,16 @@
 #include <zip.h>
 #include <BS_thread_pool.hpp>
 
-#include "Import/ImportPerfTracker.hpp"
 #include "Import/ImportDiagnosticText.hpp"
+#include "Import/ImportPerfTracker.hpp"
 #include "Import/ParallelImportHelpers.hpp"
+#include "Foundation/FileSystemUtils.hpp"
 #include "Foundation/Logging.hpp"
+#include "Foundation/StringUtils.hpp"
 #include "Foundation/UnicodeConversion.hpp"
+#include "Storage/ManagedPathSafety.hpp"
 
-namespace {
-
-[[nodiscard]] std::string GetSingleFileLogReason(const Librova::Importing::SSingleFileImportResult& result)
-{
-    return Librova::Importing::CImportDiagnosticText::JoinWarningsAndError(
-        result.Warnings,
-        result.DiagnosticError.empty() ? result.Error : result.DiagnosticError);
-}
-
-[[nodiscard]] bool IsSkippedSingleFileResult(const Librova::Importing::SSingleFileImportResult& result) noexcept
+namespace {[[nodiscard]] bool IsSkippedSingleFileResult(const Librova::Importing::SSingleFileImportResult& result) noexcept
 {
     return result.Status == Librova::Importing::ESingleFileImportStatus::RejectedDuplicate
         || result.Status == Librova::Importing::ESingleFileImportStatus::UnsupportedFormat;
@@ -220,12 +212,9 @@ private:
 static_assert(!std::is_copy_constructible_v<CZipArchive>);
 static_assert(!std::is_move_constructible_v<CZipArchive>);
 
-[[nodiscard]] std::string ToLower(std::string value)
+[[nodiscard]] bool IsNestedArchive(const std::filesystem::path& entryPath)
 {
-    std::ranges::transform(value, value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
+    return Librova::Foundation::ToLower(entryPath.extension().string()) == ".zip";
 }
 
 [[nodiscard]] bool IsDirectoryEntry(const std::string_view entryPath)
@@ -258,56 +247,15 @@ std::size_t CountPlannedEntries(
     return plannedEntries;
 }
 
-[[nodiscard]] bool IsNestedArchive(const std::filesystem::path& entryPath)
-{
-    return ToLower(entryPath.extension().string()) == ".zip";
-}
-
 [[nodiscard]] bool IsSupportedBookEntry(const std::filesystem::path& entryPath)
 {
-    const std::string extension = ToLower(entryPath.extension().string());
+    const std::string extension = Librova::Foundation::ToLower(entryPath.extension().string());
     return extension == ".epub" || extension == ".fb2";
 }
 
 [[nodiscard]] bool IsSafeRelativeEntryPath(const std::filesystem::path& entryPath)
 {
-    if (entryPath.empty() || entryPath.is_absolute() || entryPath.has_root_name() || entryPath.has_root_directory())
-    {
-        return false;
-    }
-
-    for (const auto& part : entryPath)
-    {
-        if (part == "..")
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void EnsureDirectory(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    std::filesystem::create_directories(path, errorCode);
-
-    if (errorCode)
-    {
-        throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path));
-    }
-}
-
-void RemovePathNoThrow(const std::filesystem::path& path) noexcept
-{
-    if (path.empty())
-    {
-        return;
-    }
-
-    std::error_code errorCode;
-    std::filesystem::remove_all(path, errorCode);
+    return Librova::ManagedPaths::IsSafeRelativeManagedPath(entryPath, true);
 }
 
 void RemoveEmptyDirectoriesUpToRootNoThrow(
@@ -352,7 +300,7 @@ void CleanupExtractedEntryNoThrow(
     }
 
     const std::filesystem::path extractedRoot = workingDirectory / "extracted";
-    RemovePathNoThrow(extractedPath);
+    Librova::Foundation::RemovePathNoThrow(extractedPath);
     RemoveEmptyDirectoriesUpToRootNoThrow(extractedRoot, extractedPath.parent_path());
 }
 
@@ -366,9 +314,9 @@ void CleanupEntryWorkspaceNoThrow(
     }
 
     const std::filesystem::path entriesRoot = workingDirectory / "entries";
-    RemovePathNoThrow(entryWorkingDirectory);
+    Librova::Foundation::RemovePathNoThrow(entryWorkingDirectory);
     RemoveEmptyDirectoriesUpToRootNoThrow(entriesRoot, entryWorkingDirectory.parent_path());
-    RemovePathNoThrow(entriesRoot);
+    Librova::Foundation::RemovePathNoThrow(entriesRoot);
 }
 
 std::filesystem::path ExtractEntryToWorkspace(
@@ -386,7 +334,7 @@ std::filesystem::path ExtractEntryToWorkspace(
     }
 
     const std::filesystem::path destinationPath = workingDirectory / "extracted" / relativePath;
-    EnsureDirectory(destinationPath.parent_path());
+    Librova::Foundation::EnsureDirectory(destinationPath.parent_path());
 
     const std::vector<std::byte> bytes = archive.ReadBytes(index);
     std::ofstream output(destinationPath, std::ios::binary);
@@ -768,7 +716,7 @@ SZipImportResult CZipImportCoordinator::Run(
                     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - entryStart);
                     CleanupExtractedEntryNoThrow(request.WorkingDirectory, extractedPath);
-                    RemovePathNoThrow(entryWorkDir);
+                    Librova::Foundation::RemovePathNoThrow(entryWorkDir);
                     LogZipEntryIssueIfInitialized(
                         request.JobId,
                         request.ZipPath, entryPath, "single-file-import",
@@ -784,7 +732,7 @@ SZipImportResult CZipImportCoordinator::Run(
                 }
 
                 CleanupExtractedEntryNoThrow(request.WorkingDirectory, extractedPath);
-                RemovePathNoThrow(entryWorkDir);
+                Librova::Foundation::RemovePathNoThrow(entryWorkDir);
 
                 const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - entryStart);
@@ -806,7 +754,10 @@ SZipImportResult CZipImportCoordinator::Run(
                         request.ZipPath, entryPath,
                         GetSingleFileStage(singleResult), "failed",
                         GetSingleFileStatus(singleResult),
-                        GetSingleFileLogReason(singleResult));
+                        Librova::Importing::CImportDiagnosticText::GetSingleFileLogReason(
+                            singleResult.Warnings,
+                            singleResult.Error,
+                            singleResult.DiagnosticError));
                 }
                 else if (IsSkippedSingleFileResult(singleResult))
                 {
@@ -815,7 +766,10 @@ SZipImportResult CZipImportCoordinator::Run(
                         request.ZipPath, entryPath,
                         GetSingleFileStage(singleResult), "skipped",
                         GetSingleFileStatus(singleResult),
-                        GetSingleFileLogReason(singleResult));
+                        Librova::Importing::CImportDiagnosticText::GetSingleFileLogReason(
+                            singleResult.Warnings,
+                            singleResult.Error,
+                            singleResult.DiagnosticError));
                 }
 
                 const auto entryStatus = imported
@@ -857,8 +811,8 @@ SZipImportResult CZipImportCoordinator::Run(
     }
 
     // All workers have finished (all Phase 2 fut.get() calls returned); safe to clean up.
-    RemovePathNoThrow(request.WorkingDirectory / "extracted");
-    RemovePathNoThrow(request.WorkingDirectory / "entries");
+    Librova::Foundation::RemovePathNoThrow(request.WorkingDirectory / "extracted");
+    Librova::Foundation::RemovePathNoThrow(request.WorkingDirectory / "entries");
 
     if (shouldLogSummary)
     {

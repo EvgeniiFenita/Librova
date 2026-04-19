@@ -8,7 +8,12 @@ add_library(LibrovaDatabase STATIC
     SearchIndexMaintenance.cpp
     SqliteBookQueryRepository.cpp
     SqliteBookRepository.cpp
+    SqliteEntityHelpers.cpp
+    SqliteEntityHelpers.hpp
     SqliteGenreHelpers.cpp
+    SqliteTimePoint.cpp
+    SqliteTimePoint.hpp
+    SqliteTransaction.hpp
 )
 
 target_include_directories(LibrovaDatabase PUBLIC

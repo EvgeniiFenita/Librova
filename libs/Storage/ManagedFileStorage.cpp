@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "Foundation/FileSystemUtils.hpp"
 #include "Foundation/Logging.hpp"
 #include "Storage/ManagedPathSafety.hpp"
 #include "Storage/ManagedFileEncoding.hpp"
@@ -17,20 +18,7 @@
 namespace Librova::ManagedStorage {
 namespace {
 
-void EnsureDirectory(const std::filesystem::path& path)
-{
-    std::error_code errorCode;
-    std::filesystem::create_directories(path, errorCode);
-
-    if (errorCode)
-    {
-        throw std::runtime_error(
-            std::string{"Failed to create directory: "} + Librova::Unicode::PathToUtf8(path)
-            + ": " + errorCode.message());
-    }
-}
-
-void RemovePathNoThrow(const std::filesystem::path& path) noexcept
+void RemovePathWithWarningNoThrow(const std::filesystem::path& path) noexcept
 {
     if (path.empty())
     {
@@ -252,12 +240,12 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
         plan.StorageEncoding);
 
     std::call_once(m_rootDirsEnsuredOnce, [&] {
-        EnsureDirectory(layout.ObjectsDirectory);
-        EnsureDirectory(m_stagingRoot);
+        Librova::Foundation::EnsureDirectory(layout.ObjectsDirectory);
+        Librova::Foundation::EnsureDirectory(m_stagingRoot);
     });
 
-    RemovePathNoThrow(stagingDirectory);
-    EnsureDirectory(stagingDirectory);
+    RemovePathWithWarningNoThrow(stagingDirectory);
+    Librova::Foundation::EnsureDirectory(stagingDirectory);
 
     try
     {
@@ -294,7 +282,7 @@ Librova::Domain::SPreparedStorage CManagedFileStorage::PrepareImport(const Libro
     }
     catch (...)
     {
-        RemovePathNoThrow(stagingDirectory);
+        RemovePathWithWarningNoThrow(stagingDirectory);
         throw;
     }
 }
@@ -311,7 +299,7 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
 
     try
     {
-        EnsureDirectory(preparedStorage.FinalBookPath.parent_path());
+        Librova::Foundation::EnsureDirectory(preparedStorage.FinalBookPath.parent_path());
         MoveFile(preparedStorage.StagedBookPath, preparedStorage.FinalBookPath);
         movedBook = true;
 
@@ -322,12 +310,12 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
                 throw std::invalid_argument("Prepared storage must contain a final cover path when a cover is staged.");
             }
 
-            EnsureDirectory(preparedStorage.FinalCoverPath->parent_path());
+            Librova::Foundation::EnsureDirectory(preparedStorage.FinalCoverPath->parent_path());
             MoveFile(*preparedStorage.StagedCoverPath, *preparedStorage.FinalCoverPath);
             movedCover = true;
         }
 
-        RemovePathNoThrow(preparedStorage.StagedBookPath.parent_path());
+        RemovePathWithWarningNoThrow(preparedStorage.StagedBookPath.parent_path());
     }
     catch (...)
     {
@@ -338,7 +326,7 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
         {
             try
             {
-                EnsureDirectory(preparedStorage.StagedCoverPath->parent_path());
+                Librova::Foundation::EnsureDirectory(preparedStorage.StagedCoverPath->parent_path());
                 MoveFile(*preparedStorage.FinalCoverPath, *preparedStorage.StagedCoverPath);
             }
             catch (const std::exception& error)
@@ -364,7 +352,7 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
         {
             try
             {
-                EnsureDirectory(preparedStorage.StagedBookPath.parent_path());
+                Librova::Foundation::EnsureDirectory(preparedStorage.StagedBookPath.parent_path());
                 MoveFile(preparedStorage.FinalBookPath, preparedStorage.StagedBookPath);
             }
             catch (const std::exception& error)
@@ -404,17 +392,17 @@ void CManagedFileStorage::RollbackImport(const Librova::Domain::SPreparedStorage
     const std::filesystem::path managedObjectDirectory = preparedStorage.FinalBookPath.parent_path();
     const auto layout = Librova::StoragePlanning::CManagedLibraryLayout::Build(m_libraryRoot);
 
-    RemovePathNoThrow(preparedStorage.StagedBookPath);
-    RemovePathNoThrow(preparedStorage.FinalBookPath);
+    RemovePathWithWarningNoThrow(preparedStorage.StagedBookPath);
+    RemovePathWithWarningNoThrow(preparedStorage.FinalBookPath);
 
     if (preparedStorage.StagedCoverPath.has_value())
     {
-        RemovePathNoThrow(*preparedStorage.StagedCoverPath);
+        RemovePathWithWarningNoThrow(*preparedStorage.StagedCoverPath);
     }
 
     if (preparedStorage.FinalCoverPath.has_value())
     {
-        RemovePathNoThrow(*preparedStorage.FinalCoverPath);
+        RemovePathWithWarningNoThrow(*preparedStorage.FinalCoverPath);
     }
 
     (void)Librova::ManagedPaths::CleanupEmptyDirectoriesUpTo(stagingDirectory, m_stagingRoot);

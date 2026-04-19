@@ -1,23 +1,10 @@
 #include "Import/ImportSourceExpander.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <set>
 
 #include "Import/ImportDiagnostics.hpp"
+#include "Foundation/StringUtils.hpp"
 #include "Foundation/UnicodeConversion.hpp"
-
-namespace {
-
-[[nodiscard]] std::string ToLower(std::string value)
-{
-    std::ranges::transform(value, value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
-}
-
-} // namespace
 
 namespace Librova::ImportSourceExpander {
 
@@ -131,7 +118,7 @@ SExpandedImportSources CImportSourceExpander::Expand(const std::vector<std::file
 
 bool CImportSourceExpander::IsSupportedStandaloneImportPath(const std::filesystem::path& path)
 {
-    const auto extension = ToLower(path.extension().string());
+    const auto extension = Librova::Foundation::ToLower(path.extension().string());
     return extension == ".fb2" || extension == ".epub" || extension == ".zip";
 }
 

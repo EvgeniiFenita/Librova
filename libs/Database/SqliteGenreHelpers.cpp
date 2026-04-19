@@ -1,10 +1,10 @@
 #include "Database/SqliteGenreHelpers.hpp"
 
-#include <stdexcept>
 #include <unordered_set>
 
-#include "Domain/MetadataNormalization.hpp"
+#include "Database/SqliteEntityHelpers.hpp"
 #include "Database/SqliteStatement.hpp"
+#include "Domain/MetadataNormalization.hpp"
 
 namespace Librova::BookDatabase {
 
@@ -13,27 +13,7 @@ std::int64_t CSqliteGenreHelpers::ResolveGenreId(
     std::string_view normalizedName,
     std::string_view displayName)
 {
-    {
-        Librova::Sqlite::CSqliteStatement insertStatement(
-            connection.GetNativeHandle(),
-            "INSERT INTO genres (normalized_name, display_name) VALUES (?, ?) "
-            "ON CONFLICT(normalized_name) DO NOTHING;");
-        insertStatement.BindText(1, normalizedName);
-        insertStatement.BindText(2, displayName);
-        static_cast<void>(insertStatement.Step());
-    }
-
-    Librova::Sqlite::CSqliteStatement selectStatement(
-        connection.GetNativeHandle(),
-        "SELECT id FROM genres WHERE normalized_name = ?;");
-    selectStatement.BindText(1, normalizedName);
-
-    if (!selectStatement.Step())
-    {
-        throw std::runtime_error("Failed to resolve genre id after insert.");
-    }
-
-    return selectStatement.GetColumnInt64(0);
+    return Librova::Sqlite::ResolveEntityId(connection, "genres", normalizedName, displayName);
 }
 
 void CSqliteGenreHelpers::InsertGenres(

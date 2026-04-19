@@ -1,11 +1,8 @@
 #include "Database/SqliteBookRepository.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
-#include <format>
 #include <optional>
-#include <sstream>
 #include <unordered_set>
 #include <stdexcept>
 #include <string>
@@ -15,7 +12,10 @@
 
 #include <sqlite3.h>
 
+#include "Database/SqliteEntityHelpers.hpp"
 #include "Database/SqliteGenreHelpers.hpp"
+#include "Database/SqliteTimePoint.hpp"
+#include "Database/SqliteTransaction.hpp"
 #include "Domain/BookFormat.hpp"
 #include "Domain/MetadataNormalization.hpp"
 #include "Domain/StorageEncoding.hpp"
@@ -26,115 +26,6 @@
 
 namespace Librova::BookDatabase {
 namespace {
-
-std::string SerializeTimePoint(const std::chrono::system_clock::time_point value)
-{
-    return std::format("{:%Y-%m-%dT%H:%M:%SZ}", std::chrono::floor<std::chrono::seconds>(value));
-}
-
-std::chrono::system_clock::time_point ParseTimePoint(const std::string_view value)
-{
-    std::istringstream input{std::string{value}};
-    std::chrono::sys_seconds parsedValue{};
-    input >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", parsedValue);
-
-    if (input.fail())
-    {
-        throw std::runtime_error(std::string{"Failed to parse sqlite timestamp: "} + std::string{value});
-    }
-
-    return parsedValue;
-}
-
-class CSqliteTransaction final
-{
-public:
-    explicit CSqliteTransaction(const Librova::Sqlite::CSqliteConnection& connection)
-        : m_connection(connection)
-    {
-        m_connection.Execute("BEGIN IMMEDIATE;");
-    }
-
-    ~CSqliteTransaction()
-    {
-        if (!m_completed)
-        {
-            try
-            {
-                m_connection.Execute("ROLLBACK;");
-            }
-            catch (...)
-            {
-            }
-        }
-    }
-
-    void Commit()
-    {
-        m_connection.Execute("COMMIT;");
-        m_completed = true;
-    }
-
-private:
-    const Librova::Sqlite::CSqliteConnection& m_connection;
-    bool m_completed = false;
-};
-
-std::int64_t ResolveAuthorId(
-    const Librova::Sqlite::CSqliteConnection& connection,
-    const std::string_view normalizedName,
-    const std::string_view displayName)
-{
-    {
-        Librova::Sqlite::CSqliteStatement insertStatement(
-            connection.GetNativeHandle(),
-            "INSERT INTO authors (normalized_name, display_name) VALUES (?, ?) "
-            "ON CONFLICT(normalized_name) DO NOTHING;");
-        insertStatement.BindText(1, normalizedName);
-        insertStatement.BindText(2, displayName);
-        static_cast<void>(insertStatement.Step());
-    }
-
-    Librova::Sqlite::CSqliteStatement selectStatement(
-        connection.GetNativeHandle(),
-        "SELECT id FROM authors WHERE normalized_name = ?;");
-    selectStatement.BindText(1, normalizedName);
-
-    if (!selectStatement.Step())
-    {
-        throw std::runtime_error("Failed to resolve author id after insert.");
-    }
-
-    return selectStatement.GetColumnInt64(0);
-}
-
-std::int64_t ResolveTagId(
-    const Librova::Sqlite::CSqliteConnection& connection,
-    const std::string_view normalizedName,
-    const std::string_view displayName)
-{
-    {
-        Librova::Sqlite::CSqliteStatement insertStatement(
-            connection.GetNativeHandle(),
-            "INSERT INTO tags (normalized_name, display_name) VALUES (?, ?) "
-            "ON CONFLICT(normalized_name) DO NOTHING;");
-        insertStatement.BindText(1, normalizedName);
-        insertStatement.BindText(2, displayName);
-        static_cast<void>(insertStatement.Step());
-    }
-
-    Librova::Sqlite::CSqliteStatement selectStatement(
-        connection.GetNativeHandle(),
-        "SELECT id FROM tags WHERE normalized_name = ?;");
-    selectStatement.BindText(1, normalizedName);
-
-    if (!selectStatement.Step())
-    {
-        throw std::runtime_error("Failed to resolve tag id after insert.");
-    }
-
-    return selectStatement.GetColumnInt64(0);
-}
 
 void InsertAuthors(
     const Librova::Sqlite::CSqliteConnection& connection,
@@ -152,7 +43,8 @@ void InsertAuthors(
             continue;
         }
 
-        const std::int64_t authorId = ResolveAuthorId(connection, normalizedAuthor, authors[index]);
+        const std::int64_t authorId = Librova::Sqlite::ResolveEntityId(
+            connection, "authors", normalizedAuthor, authors[index]);
 
         Librova::Sqlite::CSqliteStatement linkStatement(
             connection.GetNativeHandle(),
@@ -180,7 +72,8 @@ void InsertTags(
             continue;
         }
 
-        const std::int64_t tagId = ResolveTagId(connection, normalizedTag, tag);
+        const std::int64_t tagId = Librova::Sqlite::ResolveEntityId(
+            connection, "tags", normalizedTag, tag);
 
         Librova::Sqlite::CSqliteStatement linkStatement(
             connection.GetNativeHandle(),
@@ -189,71 +82,6 @@ void InsertTags(
         linkStatement.BindInt64(2, tagId);
         static_cast<void>(linkStatement.Step());
     }
-}
-
-std::vector<std::string> ReadAuthors(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
-{
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        "SELECT a.display_name "
-        "FROM book_authors ba "
-        "INNER JOIN authors a ON a.id = ba.author_id "
-        "WHERE ba.book_id = ? "
-        "ORDER BY ba.author_order ASC;");
-    statement.BindInt64(1, bookId);
-
-    std::vector<std::string> authors;
-
-    while (statement.Step())
-    {
-        authors.push_back(statement.GetColumnText(0));
-    }
-
-    return authors;
-}
-
-std::vector<std::string> ReadTags(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
-{
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        "SELECT t.display_name "
-        "FROM book_tags bt "
-        "INNER JOIN tags t ON t.id = bt.tag_id "
-        "WHERE bt.book_id = ? "
-        "ORDER BY t.display_name ASC;");
-    statement.BindInt64(1, bookId);
-
-    std::vector<std::string> tags;
-
-    while (statement.Step())
-    {
-        tags.push_back(statement.GetColumnText(0));
-    }
-
-    return tags;
-}
-
-using Librova::BookDatabase::CSqliteGenreHelpers;
-
-std::vector<std::string> ReadGenres(const Librova::Sqlite::CSqliteConnection& connection, const std::int64_t bookId)
-{
-    Librova::Sqlite::CSqliteStatement statement(
-        connection.GetNativeHandle(),
-        "SELECT g.display_name "
-        "FROM book_genres bg "
-        "INNER JOIN genres g ON g.id = bg.genre_id "
-        "WHERE bg.book_id = ? "
-        "ORDER BY g.display_name ASC;");
-    statement.BindInt64(1, bookId);
-
-    std::vector<std::string> genres;
-
-    while (statement.Step())
-    {
-        genres.push_back(statement.GetColumnText(0));
-    }
-
-    return genres;
 }
 
 std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
@@ -281,9 +109,30 @@ std::optional<Librova::Domain::SBookMetadata> ReadStoredMetadata(
     metadata.Isbn = statement.IsColumnNull(6) ? std::nullopt : std::make_optional(statement.GetColumnText(6));
     metadata.DescriptionUtf8 = statement.IsColumnNull(7) ? std::nullopt : std::make_optional(statement.GetColumnText(7));
     metadata.Identifier = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
-    metadata.AuthorsUtf8 = ReadAuthors(connection, id.Value);
-    metadata.TagsUtf8 = ReadTags(connection, id.Value);
-    metadata.GenresUtf8 = ReadGenres(connection, id.Value);
+    metadata.AuthorsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT a.display_name "
+        "FROM book_authors ba "
+        "INNER JOIN authors a ON a.id = ba.author_id "
+        "WHERE ba.book_id = ? "
+        "ORDER BY ba.author_order ASC;",
+        id.Value);
+    metadata.TagsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT t.display_name "
+        "FROM book_tags bt "
+        "INNER JOIN tags t ON t.id = bt.tag_id "
+        "WHERE bt.book_id = ? "
+        "ORDER BY t.display_name ASC;",
+        id.Value);
+    metadata.GenresUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT g.display_name "
+        "FROM book_genres bg "
+        "INNER JOIN genres g ON g.id = bg.genre_id "
+        "WHERE bg.book_id = ? "
+        "ORDER BY g.display_name ASC;",
+        id.Value);
 
     return metadata;
 }
@@ -294,7 +143,7 @@ std::int64_t DoAddBook(
 {
     const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(book.Metadata.Isbn);
     const std::string normalizedTitle = Librova::Domain::NormalizeText(book.Metadata.TitleUtf8);
-    const std::string addedAtUtc = SerializeTimePoint(book.AddedAtUtc);
+    const std::string addedAtUtc = Librova::Sqlite::SerializeTimePoint(book.AddedAtUtc);
     const std::string managedPath = Librova::Unicode::PathToUtf8(book.File.ManagedPath);
     const std::optional<std::string> coverPath = book.CoverPath.has_value()
         ? std::make_optional(Librova::Unicode::PathToUtf8(*book.CoverPath))
@@ -396,7 +245,7 @@ Librova::Domain::SBookId CSqliteBookRepository::Add(const Librova::Domain::SBook
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
 
     if (!book.File.Sha256Hex.empty())
     {
@@ -421,7 +270,7 @@ Librova::Domain::SBookId CSqliteBookRepository::ForceAdd(const Librova::Domain::
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
     const Librova::Domain::SBookId bookId{DoAddBook(connection, book)};
     transaction.Commit();
     return bookId;
@@ -431,7 +280,7 @@ Librova::Domain::SBookId CSqliteBookRepository::ReserveId()
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
     Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
         "SELECT next_id FROM book_id_sequence WHERE singleton = 1;");
@@ -465,7 +314,7 @@ std::vector<Librova::Domain::SBookId> CSqliteBookRepository::ReserveIds(const st
 
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
     Librova::Sqlite::CSqliteStatement selectStatement(
         connection.GetNativeHandle(),
         "SELECT next_id FROM book_id_sequence WHERE singleton = 1;");
@@ -528,16 +377,37 @@ std::optional<Librova::Domain::SBook> CSqliteBookRepository::GetById(const Libro
     book.Metadata.Isbn = statement.IsColumnNull(7) ? std::nullopt : std::make_optional(statement.GetColumnText(7));
     book.Metadata.DescriptionUtf8 = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
     book.Metadata.Identifier = statement.IsColumnNull(9) ? std::nullopt : std::make_optional(statement.GetColumnText(9));
-    book.Metadata.AuthorsUtf8 = ReadAuthors(connection, book.Id.Value);
-    book.Metadata.TagsUtf8 = ReadTags(connection, book.Id.Value);
-    book.Metadata.GenresUtf8 = ReadGenres(connection, book.Id.Value);
+    book.Metadata.AuthorsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT a.display_name "
+        "FROM book_authors ba "
+        "INNER JOIN authors a ON a.id = ba.author_id "
+        "WHERE ba.book_id = ? "
+        "ORDER BY ba.author_order ASC;",
+        book.Id.Value);
+    book.Metadata.TagsUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT t.display_name "
+        "FROM book_tags bt "
+        "INNER JOIN tags t ON t.id = bt.tag_id "
+        "WHERE bt.book_id = ? "
+        "ORDER BY t.display_name ASC;",
+        book.Id.Value);
+    book.Metadata.GenresUtf8 = Librova::Sqlite::ReadRelatedEntityNames(
+        connection,
+        "SELECT g.display_name "
+        "FROM book_genres bg "
+        "INNER JOIN genres g ON g.id = bg.genre_id "
+        "WHERE bg.book_id = ? "
+        "ORDER BY g.display_name ASC;",
+        book.Id.Value);
     book.File.Format = *format;
     book.File.StorageEncoding = *storageEncoding;
     book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(12));
     book.CoverPath = statement.IsColumnNull(13) ? std::nullopt : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(13)));
     book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(14));
     book.File.Sha256Hex = statement.GetColumnText(15);
-    book.AddedAtUtc = ParseTimePoint(statement.GetColumnText(16));
+    book.AddedAtUtc = Librova::Sqlite::ParseTimePoint(statement.GetColumnText(16));
 
     return book;
 }
@@ -546,7 +416,7 @@ void CSqliteBookRepository::Remove(const Librova::Domain::SBookId id)
 {
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
     const std::optional<Librova::Domain::SBookMetadata> existingMetadata = ReadStoredMetadata(connection, id);
 
     if (existingMetadata.has_value())
@@ -609,7 +479,7 @@ void CSqliteBookRepository::RemoveBatch(std::span<const Librova::Domain::SBookId
 
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
 
     // Delete books without per-book FTS5 maintenance. The caller is responsible
     // for calling Compact() to rebuild the search index afterwards.
@@ -649,7 +519,7 @@ CSqliteBookRepository::AddBatch(std::span<const SBatchBookEntry> entries)
 
     const std::scoped_lock lock(m_operationMutex);
     auto& connection = GetOrCreateConnection();
-    CSqliteTransaction transaction(connection);
+    Librova::Sqlite::CSqliteTransaction transaction(connection);
 
     for (std::size_t i = 0; i < entries.size(); ++i)
     {

@@ -1,10 +1,14 @@
 find_package(spdlog CONFIG REQUIRED)
 
 add_library(LibrovaFoundation STATIC
+    FileSystemUtils.cpp
+    FileSystemUtils.hpp
     Logging.cpp
     Logging.hpp
     Sha256.cpp
     Sha256.hpp
+    StringUtils.cpp
+    StringUtils.hpp
     UnicodeConversion.cpp
     UnicodeConversion.hpp
     Version.cpp

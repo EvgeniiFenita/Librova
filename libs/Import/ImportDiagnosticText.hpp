@@ -12,6 +12,11 @@ public:
     [[nodiscard]] static std::string JoinWarningsAndError(
         const std::vector<std::string>& warnings,
         std::string_view error);
+
+    [[nodiscard]] static std::string GetSingleFileLogReason(
+        const std::vector<std::string>& warnings,
+        std::string_view error,
+        std::string_view diagnosticError);
 };
 
 } // namespace Librova::Importing
