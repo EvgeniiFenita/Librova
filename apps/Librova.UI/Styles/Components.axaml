@@ -95,6 +95,16 @@
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}" />
     <Setter Property="Padding" Value="32,40" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.DropZone.DragOver">
+    <Setter Property="Background" Value="{DynamicResource AppAccentMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
   </Style>
   <Style Selector="Border.DropZone:disabled">
     <Setter Property="Opacity" Value="0.45" />

@@ -33,7 +33,7 @@ public sealed class MainWindowTests
     }
 
     [Fact]
-    public void GetDropEffect_ReturnsCopy_ForResolvedLocalSourceList()
+    public void GetDropEffect_ReturnsCopy_ForAnyNonEmptySourceList()
     {
         var effect = MainWindow.GetDropEffect([@"C:\Books\One.fb2"]);
 

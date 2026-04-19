@@ -40,6 +40,8 @@
 
       <!-- Drop zone card -->
       <Border Classes="DropZone"
+              Name="DropZoneBorder"
+              DragDrop.AllowDrop="True"
               IsEnabled="{Binding ImportJobs.CanAcceptNewSources}">
         <StackPanel Spacing="20"
                     HorizontalAlignment="Center"

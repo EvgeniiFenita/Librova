@@ -1426,3 +1426,12 @@ tasks:
     decoupled from coordinator types, and finished storage-side cleanup by replacing leftover generic
     directory helpers in ManagedFileStorage with Foundation utilities while preserving warning-level cleanup
     logging. All 459 native + 301 managed tests pass.
+- id: 175
+  summary: add drag-over visual highlight to Import DropZone border
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Added DragOver CSS class toggling in ImportView.axaml.cs via DragEnter/DragLeave/Drop handlers;
+    added Border.DropZone.DragOver style (AppAccentBrush border + AppAccentMutedBrush background) with
+    150ms brush transitions in Components.axaml
