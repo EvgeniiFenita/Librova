@@ -1,4 +1,4 @@
-﻿#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include "TestWorkspace.hpp"
 
 #include <chrono>
@@ -57,7 +57,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -67,7 +67,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }

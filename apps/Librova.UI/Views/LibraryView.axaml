@@ -140,8 +140,15 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="viewModels:FilterFacetItem">
                         <ToggleButton Classes="GenreChip"
-                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                      Content="{Binding Value}" />
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding Value}" />
+                            <TextBlock Text="{Binding BookCount, StringFormat='({0})'}"
+                                       Opacity="0.55"
+                                       FontSize="10"
+                                       VerticalAlignment="Center" />
+                          </StackPanel>
+                        </ToggleButton>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -166,8 +173,15 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="viewModels:FilterFacetItem">
                         <ToggleButton Classes="GenreChip"
-                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                      Content="{Binding Value}" />
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding Value}" />
+                            <TextBlock Text="{Binding BookCount, StringFormat='({0})'}"
+                                       Opacity="0.55"
+                                       FontSize="10"
+                                       VerticalAlignment="Center" />
+                          </StackPanel>
+                        </ToggleButton>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

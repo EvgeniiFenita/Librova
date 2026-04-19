@@ -321,7 +321,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
     ignoredBook.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026} + std::chrono::hours{2};
     static_cast<void>(writeRepository.Add(ignoredBook));
 
-    const std::vector<std::string> languages = queryRepository.ListAvailableLanguages({
+    const std::vector<Librova::Domain::SFacetItem> languages = queryRepository.ListAvailableLanguages({
         .TextUtf8 = "shared",
         .AuthorUtf8 = std::string{"Common Author"},
         .Languages = {"en"},
@@ -330,7 +330,7 @@ TEST_CASE("Sqlite book query repository lists available languages with combined 
         .Format = Librova::Domain::EBookFormat::Epub
     });
 
-    REQUIRE(languages == std::vector<std::string>({"en", "ru"}));
+    REQUIRE(languages == std::vector<Librova::Domain::SFacetItem>({{"en", 1}, {"ru", 1}}));
 
     CloseRepositoriesAndRemoveDatabase(databasePath, writeRepository, queryRepository);
 }
@@ -1887,8 +1887,8 @@ TEST_CASE("Sqlite book repository persists and retrieves genres", "[book-databas
     Librova::Domain::SSearchQuery query;
     const auto genres = readRepo.ListAvailableGenres(query);
     REQUIRE(genres.size() == 2);
-    REQUIRE(std::find(genres.begin(), genres.end(), "Science Fiction") != genres.end());
-    REQUIRE(std::find(genres.begin(), genres.end(), "Adventure") != genres.end());
+    REQUIRE(std::find_if(genres.begin(), genres.end(), [](const auto& f){ return f.Value == "Science Fiction"; }) != genres.end());
+    REQUIRE(std::find_if(genres.begin(), genres.end(), [](const auto& f){ return f.Value == "Adventure"; }) != genres.end());
 
     // Verify EPUB book gets 'epub_subject' source_type
     Librova::Domain::SBook epubBook;

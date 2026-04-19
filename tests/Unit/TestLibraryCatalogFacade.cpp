@@ -1,4 +1,4 @@
-﻿#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include "TestWorkspace.hpp"
 
 #include <chrono>
@@ -110,8 +110,8 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
         REQUIRE_FALSE(result.IsEmpty());
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 1);
-        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
-        REQUIRE(result.AvailableGenres == std::vector<std::string>({"translated", "zone"}));
+        REQUIRE(result.AvailableLanguages == std::vector<Librova::Domain::SFacetItem>({{"en", 1}}));
+        REQUIRE(result.AvailableGenres == std::vector<Librova::Domain::SFacetItem>({{"translated", 1}, {"zone", 1}}));
         REQUIRE(result.Statistics.BookCount == 2);
         REQUIRE(result.Statistics.TotalManagedBookSizeBytes == 8192);
         REQUIRE(result.Statistics.TotalLibrarySizeBytes > 8192);
@@ -181,8 +181,8 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
 
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 2);
-        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
-        REQUIRE(result.AvailableGenres == std::vector<std::string>({"selected"}));
+        REQUIRE(result.AvailableLanguages == std::vector<Librova::Domain::SFacetItem>({{"en", 2}, {"ru", 1}}));
+        REQUIRE(result.AvailableGenres == std::vector<Librova::Domain::SFacetItem>({{"selected", 2}}));
         REQUIRE(result.Statistics.BookCount == 3);
         REQUIRE(result.Items.front().TitleUtf8 == "Beta");
     }
@@ -254,7 +254,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
             return 0;
         }
 
-        [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+        [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }
@@ -264,7 +264,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
             return {};
         }
 
-        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+        [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }

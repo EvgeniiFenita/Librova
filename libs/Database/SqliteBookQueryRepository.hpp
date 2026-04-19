@@ -18,9 +18,9 @@ public:
 
     [[nodiscard]] std::vector<Librova::Domain::SBook> Search(const Librova::Domain::SSearchQuery& query) const override;
     [[nodiscard]] std::uint64_t CountSearchResults(const Librova::Domain::SSearchQuery& query) const override;
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery& query) const override;
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery& query) const override;
     [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery& query) const override;
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const override;
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const override;
     [[nodiscard]] std::vector<Librova::Domain::SDuplicateMatch> FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const override;
     [[nodiscard]] Librova::Domain::IBookQueryRepository::SLibraryStatistics GetLibraryStatistics() const override;
 

@@ -1268,8 +1268,8 @@ public sealed class ViewModelsTests
     {
         var service = new RecordingLibraryCatalogService
         {
-            AvailableLanguages = ["en", "ru"],
-            AvailableGenres = ["sci-fi", "adventure"]
+            AvailableLanguages = [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)],
+            AvailableGenres = [new FacetItemModel("sci-fi", 0), new FacetItemModel("adventure", 0)]
         };
         var viewModel = new LibraryBrowserViewModel(service)
         {
@@ -1370,10 +1370,39 @@ public sealed class ViewModelsTests
         Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
 
         viewModel.GenreFacets.Single(f => f.Value == "sci-fi").IsSelected = true;
-        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Tags.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Genres.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
 
         Assert.Contains("adventure", viewModel.GenreFacets.Select(f => f.Value));
         Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_AggregatesFacetCountsForCaseInsensitiveDuplicates()
+    {
+        var service = new RecordingLibraryCatalogService
+        {
+            AvailableLanguages =
+            [
+                new FacetItemModel("en", 2),
+                new FacetItemModel("EN", 3)
+            ],
+            AvailableGenres =
+            [
+                new FacetItemModel("Sci-Fi", 4),
+                new FacetItemModel("sci-fi", 1)
+            ]
+        };
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        var languageFacet = Assert.Single(viewModel.LanguageFacets);
+        Assert.Equal("en", languageFacet.Value, ignoreCase: true);
+        Assert.Equal(5u, languageFacet.BookCount);
+
+        var genreFacet = Assert.Single(viewModel.GenreFacets);
+        Assert.Equal("Sci-Fi", genreFacet.Value, ignoreCase: true);
+        Assert.Equal(5u, genreFacet.BookCount);
     }
 
     [Fact]
@@ -2855,7 +2884,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = Statistics,
                 Items =
                 [
@@ -2952,7 +2981,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = new LibraryStatisticsModel
                 {
                     BookCount = 1
@@ -3019,7 +3048,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 2,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = new LibraryStatisticsModel
                 {
                     BookCount = 2
@@ -3234,8 +3263,8 @@ public sealed class ViewModelsTests
 
         public BookListRequestModel? LastRequest { get; private set; }
         public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
-        public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
-        public IReadOnlyList<string> AvailableGenres { get; init; } = [];
+        public IReadOnlyList<FacetItemModel> AvailableLanguages { get; init; } = [];
+        public IReadOnlyList<FacetItemModel> AvailableGenres { get; init; } = [];
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -3283,6 +3312,7 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
                 Tags = ["sci-fi"],
+                Genres = ["sci-fi"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Objects/5a/68/0000000001.book.roadside.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3294,6 +3324,7 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
                 Language = "ru",
                 Tags = ["adventure"],
+                Genres = ["adventure"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Objects/c7/66/0000000002.book.monday.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3323,7 +3354,7 @@ public sealed class ViewModelsTests
 
             if (request.Genres.Count > 0)
             {
-                filtered = filtered.Where(book => book.Tags.Any(tag => request.Genres.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                filtered = filtered.Where(book => book.Genres.Any(genre => request.Genres.Contains(genre, StringComparer.OrdinalIgnoreCase)));
             }
 
             var filteredItems = filtered.ToArray();
@@ -3334,11 +3365,13 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .Select(lang => new FacetItemModel(lang, 0))
                     .ToArray(),
                 AvailableGenres = AllBooks
-                    .SelectMany(book => book.Tags)
+                    .SelectMany(book => book.Genres)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(genre => genre, StringComparer.OrdinalIgnoreCase)
+                    .Select(genre => new FacetItemModel(genre, 0))
                     .ToArray(),
                 Items = filteredItems,
                 Statistics = Statistics
@@ -3405,15 +3438,15 @@ public sealed class ViewModelsTests
                     || request.Languages.Contains(book.Language, StringComparer.OrdinalIgnoreCase))
                 .ToArray();
 
-            IReadOnlyList<string> availableLanguages = request.Languages.Count == 0
-                ? ["en", "ru"]
-                : ["en"];
+            IReadOnlyList<FacetItemModel> availableLanguages = request.Languages.Count == 0
+                ? [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)]
+                : [new FacetItemModel("en", 0)];
 
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)filteredItems.Length,
                 AvailableLanguages = availableLanguages,
-                AvailableGenres = ["adventure", "classic"],
+                AvailableGenres = [new FacetItemModel("adventure", 0), new FacetItemModel("classic", 0)],
                 Items = filteredItems
             });
         }
@@ -3443,7 +3476,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3503,7 +3536,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3549,7 +3582,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3611,7 +3644,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3674,7 +3707,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3719,7 +3752,7 @@ public sealed class ViewModelsTests
                 return Task.FromResult(new BookListPageModel
                 {
                     TotalCount = 3,
-                    AvailableLanguages = ["en"],
+                    AvailableLanguages = [new FacetItemModel("en", 0)],
                     Items =
                     [
                         new BookListItemModel
@@ -3749,7 +3782,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = 3,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3795,7 +3828,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = 2,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3850,7 +3883,7 @@ public sealed class ViewModelsTests
                 return Task.FromResult(new BookListPageModel
                 {
                     TotalCount = 3,
-                    AvailableLanguages = ["en"],
+                    AvailableLanguages = [new FacetItemModel("en", 0)],
                     Items =
                     [
                         new BookListItemModel
@@ -3905,6 +3938,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author One"],
                 Language = "en",
                 Tags = ["adventure"],
+                Genres = ["adventure"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3943,8 +3977,8 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en", "ru"],
-                AvailableGenres = ["adventure", "sci-fi"],
+                AvailableLanguages = [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)],
+                AvailableGenres = [new FacetItemModel("adventure", 0), new FacetItemModel("sci-fi", 0)],
                 Items = items
             });
         }
@@ -3985,6 +4019,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author Three"],
                 Language = "ru",
                 Tags = ["sci-fi"],
+                Genres = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Objects/c7/66/0000000002.book.gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -4004,11 +4039,13 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .Select(lang => new FacetItemModel(lang, 0))
                     .ToArray(),
                 AvailableGenres = _books
-                    .SelectMany(book => book.Tags)
+                    .SelectMany(book => book.Genres)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(genre => genre, StringComparer.OrdinalIgnoreCase)
+                    .Select(genre => new FacetItemModel(genre, 0))
                     .ToArray(),
                 Items = items
             });
@@ -4092,7 +4129,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = items,
                 Statistics = new LibraryStatisticsModel
                 {
@@ -4138,7 +4175,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = _books.ToArray()
             });
 
@@ -4180,7 +4217,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = _books.ToArray()
             });
 
@@ -4215,7 +4252,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel

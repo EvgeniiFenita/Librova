@@ -1445,3 +1445,30 @@ tasks:
     temp_directory_path paths and CScopedDirectory class definitions across 30+ test files; enabled ctest
     -j N parallelism; native and managed test suites now run concurrently in Run-Tests.ps1. All 459 native
     and 301 managed tests pass with -j 4.
+- id: 184
+  summary: show book count next to each language and genre option in the filter dropdowns
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'Implemented full vertical slice: SQL GROUP BY COUNT for languages and genres, SFacetItem domain
+    struct, FacetItem proto message, C++ and C# mappers, FilterFacetItem.BookCount ViewModel property,
+    LibraryBrowseRefreshResult updated, UI chip templates with count badge. All 759 tests pass.'
+- id: 185
+  summary: Improve GenreChip selected state contrast
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'Implemented: selected bg AppAccentBorderBrush (#3D2C0A), border AppAccentBrush (#F5A623) explicitly
+    on /template/ ContentPresenter (Fluent theme override), text AppAccentBrightBrush (#FFD07A), FontWeight
+    SemiBold. Unselected border bumped to AppBorderStrongBrush (#3A2E18).'
+- id: 186
+  summary: fix facet count review regressions in catalog filters
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.3'
+  note: 'Fixed catalog filter facet regressions: LibraryBrowserViewModel now aggregates case-insensitive
+    duplicate facet values without crashing and ViewModel test doubles now use real Genres data plus regression
+    coverage for mixed-case facet counts.'

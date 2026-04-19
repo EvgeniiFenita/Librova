@@ -146,7 +146,7 @@ Defined in `Components.axaml`.
 | `MetricPillAccent` | Medium | 14,8 | AccentSurface + AccentBorder | Accent-tinted stat pill (book count in toolbar) |
 | `SortGroup` | Medium | — | SurfaceAlt + Border, `ClipToBounds=True` | Unified capsule wrapping sort key ComboBox + direction button; child `ComboBox.AppComboBox` and `Button.IconAction` lose their own borders inside this container |
 | `CoverMatte` | 12 (hard) | — | Matte | Book cover rounded frame |
-| `ToggleButton.GenreChip` | Large (18, pill) | 8,4 | SurfaceAlt + Border | Genre filter pill; checked → AccentMuted bg + AccentBorder border + Accent text |
+| `ToggleButton.GenreChip` | Large (18, pill) | 8,4 | SurfaceAlt + Border | Genre filter pill; checked → AccentBorder bg + Accent border + AccentBright text, `SemiBold` |
 
 ---
 
@@ -428,9 +428,9 @@ Empty selection ≡ no filter applied (all values pass through). Both facets use
 
 ### FilterFacetItem
 
-`sealed class FilterFacetItem : INotifyPropertyChanged` — `Value: string` (display / filter value), `IsSelected: bool` (two-way bound to `ToggleButton.GenreChip`). ViewModel subscribes to each item's `PropertyChanged` on add, unsubscribes on remove; selection changes trigger `OnFacetSelectionChanged` which updates `LibraryBrowseQueryState` and schedules a debounced refresh.
+`sealed class FilterFacetItem : INotifyPropertyChanged` — `Value: string` (display / filter value), `BookCount: uint` (count badge shown beside the facet label), `IsSelected: bool` (two-way bound to `ToggleButton.GenreChip`). ViewModel subscribes to each item's `PropertyChanged` on add, unsubscribes on remove; selection changes trigger `OnFacetSelectionChanged` which updates `LibraryBrowseQueryState` and schedules a debounced refresh.
 
-`SynchronizeFacets(newValues, facets, subscribe, unsubscribe)` helper preserves `IsSelected` state for items already in the collection — avoids reset flicker when the server refreshes available values.
+`SynchronizeFacets(facets, facetModels, desiredValues, selectedValues)` preserves `IsSelected` state for items already in the collection, updates each item's `BookCount`, and aggregates duplicate facet values case-insensitively before applying counts — avoids reset flicker and keeps mixed-case server values from crashing the filter refresh.
 
 ### Styles
 
@@ -445,12 +445,12 @@ Empty selection ≡ no filter applied (all values pass through). Both facets use
 | `ToggleButton.FilterButton:checked:pointerover PathIcon` | `AppAccentBrightBrush` |
 | `Border.FilterPopup` | `AppSurfaceElevatedBrush` bg (`#2E2414`, warm amber elevated), `AppAccentBorderBrush` amber border, `Radius.Large` (12) — popup выделяется тёплой рамкой без тени (BoxShadow не используется: Avalonia Popup рендерит прямоугольную тень внутри PopupRoot, не уважая CornerRadius) |
 | `TextBlock.FilterSectionHeader` | `FontSize.Xs` (11), uppercase labels, `TextMutedBrush`, 0,0,0,6 margin |
-| `ToggleButton.GenreChip` | Default: `AppSurfaceAltBrush` bg, `AppBorderBrush` border, `AppTextSecondaryBrush` text, `Radius.Large` (18, pill), `Padding=8,4`, `FontSize.Sm` (13), `Margin=0,3,4,3`, `HorizontalAlignment=Left` |
-| `ToggleButton.GenreChip:checked` | `AppAccentMutedBrush` bg, `AppAccentBorderBrush` border, `AppAccentBrush` text |
+| `ToggleButton.GenreChip` | Default: `AppSurfaceAltBrush` bg, `AppBorderStrongBrush` border, `AppTextSecondaryBrush` text, `Radius.Large` (18, pill), `Padding=8,4`, `FontSize.Sm` (13), `Margin=0,3,4,3`, `HorizontalAlignment=Left` |
+| `ToggleButton.GenreChip:checked` | `AppAccentBorderBrush` bg, `AppAccentBrush` border, `AppAccentBrightBrush` text, `SemiBold` |
 | `ToggleButton.GenreChip:checked:pointerover` | `AppAccentSurfaceHoverBrush` bg, `AppAccentBrightBrush` text |
 | `ToggleButton.GenreChip:pointerover` | `AppSurfaceHoverBrush` bg, `AppTextPrimaryBrush` text |
 | `ToggleButton.GenreChip:pressed` | `AppSurfaceMutedBrush` bg, `AppTextPrimaryBrush` text |
-| `ToggleButton.GenreChip:checked:pressed` | `AppAccentSurfaceBrush` bg, `AppAccentDimBrush` text |
+| `ToggleButton.GenreChip:checked:pressed` | `AppAccentMutedBrush` bg, `AppAccentBrush` text |
 | `ToggleButton.GenreChip:focus-visible` | `AppAccentBrightBrush` border, `BorderThickness=2` — amber ring for keyboard navigation |
 | `ToggleButton.GenreChip:disabled` | `Opacity=0.4` — keeps original background, uniform fade |
 | `Button.FilterClearButton` | Transparent bg, `AppAccentBrush` text, no border; hover → `AppAccentBrightBrush`; pressed → `AppAccentDimBrush` |

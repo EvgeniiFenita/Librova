@@ -60,8 +60,8 @@ struct SBookListResult
 {
     std::vector<SBookListItem> Items;
     std::uint64_t TotalCount = 0;
-    std::vector<std::string> AvailableLanguages;
-    std::vector<std::string> AvailableGenres;
+    std::vector<Librova::Domain::SFacetItem> AvailableLanguages;
+    std::vector<Librova::Domain::SFacetItem> AvailableGenres;
     SLibraryStatistics Statistics;
 
     [[nodiscard]] bool IsEmpty() const noexcept

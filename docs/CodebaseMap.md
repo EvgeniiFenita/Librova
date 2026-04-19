@@ -156,7 +156,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `Views/` | AXAML markup + code-behind | `MainWindow`, `LibraryView`, `ImportView`, `SettingsView` |
 | `Styles/` | Design-token resources | `Colors.axaml`, `Typography.axaml`, `Components.axaml` |
 | `ImportJobs/` | Import job IPC client + service + mapper + models | `IImportJobsService`, `ImportJobsService`, `ImportJobClient`, `ImportJobMapper`, `ImportJobModels`, `ImportJobDomainError` |
-| `LibraryCatalog/` | Catalog query IPC client + service + mapper + models | `ILibraryCatalogService`, `LibraryCatalogService`, `LibraryCatalogClient`, `LibraryCatalogMapper`, `LibraryCatalogModels`, `NullLibraryCatalogService` |
+| `LibraryCatalog/` | Catalog query IPC client + service + mapper + models | `ILibraryCatalogService`, `LibraryCatalogService`, `LibraryCatalogClient`, `LibraryCatalogMapper`, `LibraryCatalogModels`, `FacetItemModel`, `NullLibraryCatalogService` |
 | `PipeTransport/` | Low-level named-pipe I/O and envelope protocol (mirrors C++ side) | `NamedPipeClient`, `PipeProtocol` |
 | `Runtime/` | Version, OS environment, workspace cleanup, log sync | `ApplicationVersion`, `RuntimeEnvironment`, `RuntimeWorkspaceMaintenance`, `RuntimeLogSynchronization` |
 | `Mvvm/` | Base MVVM helpers | `AsyncCommand`, `ObservableObject` |
@@ -621,13 +621,13 @@ std::vector<SBatchBookResult> AddBatch(std::span<const SBatchBookEntry> entries)
 ### `IBookQueryRepository` (read)
 
 ```cpp
-std::vector<SBook>   Search(const SSearchQuery& query) const;
-std::uint64_t        CountSearchResults(const SSearchQuery& query) const;
-std::vector<std::string> ListAvailableLanguages(const SSearchQuery& query) const;
+std::vector<SBook>       Search(const SSearchQuery& query) const;
+std::uint64_t            CountSearchResults(const SSearchQuery& query) const;
+std::vector<SFacetItem>  ListAvailableLanguages(const SSearchQuery& query) const;
 std::vector<std::string> ListAvailableTags(const SSearchQuery& query) const;
-std::vector<std::string> ListAvailableGenres(const SSearchQuery& query) const;
+std::vector<SFacetItem>  ListAvailableGenres(const SSearchQuery& query) const;
 std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) const;
-SLibraryStatistics   GetLibraryStatistics() const;
+SLibraryStatistics       GetLibraryStatistics() const;
 ```
 
 ### `IProgressSink`

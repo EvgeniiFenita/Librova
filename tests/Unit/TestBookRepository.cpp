@@ -64,9 +64,9 @@ public:
         return static_cast<std::uint64_t>(Search(query).size());
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
-        return {"en"};
+        return {{"en", 1}};
     }
 
     [[nodiscard]] std::vector<std::string> ListAvailableTags(const Librova::Domain::SSearchQuery&) const override
@@ -74,7 +74,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }

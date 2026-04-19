@@ -898,24 +898,26 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         RaisePropertyChanged(nameof(CanExportSelectedBookAsEpub));
     }
 
-    private void UpdateAvailableLanguages(IEnumerable<string> availableLanguages)
+    private void UpdateAvailableLanguages(IEnumerable<FacetItemModel> availableLanguages)
     {
-        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableLanguages, _browseState.SelectedLanguages);
-        SynchronizeFacets(LanguageFacets, desired, _browseState.SelectedLanguages);
+        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableLanguages.Select(f => f.Value), _browseState.SelectedLanguages);
+        SynchronizeFacets(LanguageFacets, availableLanguages, desired, _browseState.SelectedLanguages);
     }
 
-    private void UpdateAvailableGenres(IEnumerable<string> availableGenres)
+    private void UpdateAvailableGenres(IEnumerable<FacetItemModel> availableGenres)
     {
-        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableGenres, _browseState.SelectedGenres);
-        SynchronizeFacets(GenreFacets, desired, _browseState.SelectedGenres);
+        var desired = LibraryBrowseQueryState.BuildAvailableValues(availableGenres.Select(f => f.Value), _browseState.SelectedGenres);
+        SynchronizeFacets(GenreFacets, availableGenres, desired, _browseState.SelectedGenres);
         RaisePropertyChanged(nameof(FilteredGenreFacets));
     }
 
     private void SynchronizeFacets(
         ObservableCollection<FilterFacetItem> facets,
+        IEnumerable<FacetItemModel> facetModels,
         IReadOnlyList<string> desiredValues,
         IReadOnlyList<string> selectedValues)
     {
+        var countLookup = BuildFacetCountLookup(facetModels);
         var selectedLookup = new HashSet<string>(selectedValues, StringComparer.OrdinalIgnoreCase);
 
         for (var i = facets.Count - 1; i >= 0; i--)
@@ -940,18 +942,28 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 }
             }
 
+            var count = countLookup.TryGetValue(value, out var c) ? c : 0u;
+
             if (existingIndex < 0)
             {
-                var item = new FilterFacetItem(value)
+                var item = new FilterFacetItem(value, count)
                 {
                     IsSelected = selectedLookup.Contains(value)
                 };
                 item.PropertyChanged += OnFacetSelectionChanged;
                 facets.Insert(di, item);
             }
-            else if (existingIndex != di)
+            else
             {
-                facets.Move(existingIndex, di);
+                if (existingIndex != di)
+                {
+                    facets.Move(existingIndex, di);
+                }
+
+                if (facets[di].BookCount != count)
+                {
+                    facets[di].BookCount = count;
+                }
             }
 
             if (facets[di].IsSelected != selectedLookup.Contains(facets[di].Value))
@@ -959,6 +971,29 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 facets[di].IsSelected = selectedLookup.Contains(facets[di].Value);
             }
         }
+    }
+
+    private static Dictionary<string, uint> BuildFacetCountLookup(IEnumerable<FacetItemModel> facetModels)
+    {
+        var countLookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var facet in facetModels)
+        {
+            if (string.IsNullOrWhiteSpace(facet.Value))
+            {
+                continue;
+            }
+
+            if (countLookup.TryGetValue(facet.Value, out var existingCount))
+            {
+                countLookup[facet.Value] = checked(existingCount + facet.Count);
+                continue;
+            }
+
+            countLookup.Add(facet.Value, facet.Count);
+        }
+
+        return countLookup;
     }
 
     private void OnFacetSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

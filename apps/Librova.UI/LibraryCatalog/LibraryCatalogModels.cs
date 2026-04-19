@@ -58,12 +58,14 @@ internal sealed class BookListRequestModel
     public ulong Limit { get; init; } = 50;
 }
 
+internal sealed record FacetItemModel(string Value, uint Count);
+
 internal sealed class BookListPageModel
 {
     public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
     public ulong TotalCount { get; init; }
-    public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
-    public IReadOnlyList<string> AvailableGenres { get; init; } = [];
+    public IReadOnlyList<FacetItemModel> AvailableLanguages { get; init; } = [];
+    public IReadOnlyList<FacetItemModel> AvailableGenres { get; init; } = [];
     public LibraryStatisticsModel? Statistics { get; init; } = new();
 }
 

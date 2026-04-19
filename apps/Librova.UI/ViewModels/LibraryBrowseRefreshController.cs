@@ -86,6 +86,6 @@ internal sealed class LibraryBrowseRefreshController
 internal sealed record LibraryBrowseRefreshResult(
     IReadOnlyList<BookListItemModel> VisibleItems,
     ulong TotalCount,
-    IReadOnlyList<string> AvailableLanguages,
-    IReadOnlyList<string> AvailableGenres,
+    IReadOnlyList<FacetItemModel> AvailableLanguages,
+    IReadOnlyList<FacetItemModel> AvailableGenres,
     LibraryStatisticsModel? Statistics);

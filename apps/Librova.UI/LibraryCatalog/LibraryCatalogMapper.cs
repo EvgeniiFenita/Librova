@@ -127,8 +127,8 @@ internal static class LibraryCatalogMapper
         {
             Items = response.Items.Select(FromProto).ToArray(),
             TotalCount = response.TotalCount,
-            AvailableLanguages = response.AvailableLanguages.ToArray(),
-            AvailableGenres = response.AvailableGenres.ToArray(),
+            AvailableLanguages = response.AvailableLanguages.Select(f => new FacetItemModel(f.Value, f.Count)).ToArray(),
+            AvailableGenres = response.AvailableGenres.Select(f => new FacetItemModel(f.Value, f.Count)).ToArray(),
             Statistics = response.Statistics is null ? null : FromProto(response.Statistics)
         };
 

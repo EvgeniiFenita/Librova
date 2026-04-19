@@ -15,6 +15,15 @@
 
 namespace Librova::Domain {
 
+// Paired value + count returned from facet list queries.
+struct SFacetItem
+{
+    std::string Value;
+    std::uint32_t Count = 0;
+
+    [[nodiscard]] bool operator==(const SFacetItem&) const noexcept = default;
+};
+
 // Thrown by IBookRepository::Add when the incoming sha256_hex already exists
 // in the catalog. The caller decides whether to reject or retry via ForceAdd.
 class CDuplicateHashException final : public std::runtime_error
@@ -105,9 +114,9 @@ public:
 
     virtual std::vector<SBook> Search(const SSearchQuery& query) const = 0;
     [[nodiscard]] virtual std::uint64_t CountSearchResults(const SSearchQuery& query) const = 0;
-    [[nodiscard]] virtual std::vector<std::string> ListAvailableLanguages(const SSearchQuery& query) const = 0;
+    [[nodiscard]] virtual std::vector<SFacetItem> ListAvailableLanguages(const SSearchQuery& query) const = 0;
     [[nodiscard]] virtual std::vector<std::string> ListAvailableTags(const SSearchQuery& query) const = 0;
-    [[nodiscard]] virtual std::vector<std::string> ListAvailableGenres(const SSearchQuery& query) const = 0;
+    [[nodiscard]] virtual std::vector<SFacetItem> ListAvailableGenres(const SSearchQuery& query) const = 0;
     virtual std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) const = 0;
     [[nodiscard]] virtual SLibraryStatistics GetLibraryStatistics() const = 0;
 };

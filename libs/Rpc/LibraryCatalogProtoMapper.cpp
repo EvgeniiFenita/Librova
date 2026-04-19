@@ -184,13 +184,17 @@ librova::v1::ListBooksResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     librova::v1::ListBooksResponse response;
     response.set_total_count(result.TotalCount);
     *response.mutable_statistics() = ToProto(result.Statistics);
-    for (const std::string& language : result.AvailableLanguages)
+    for (const Librova::Domain::SFacetItem& item : result.AvailableLanguages)
     {
-        response.add_available_languages(language);
+        auto* facet = response.add_available_languages();
+        facet->set_value(item.Value);
+        facet->set_count(item.Count);
     }
-    for (const std::string& genre : result.AvailableGenres)
+    for (const Librova::Domain::SFacetItem& item : result.AvailableGenres)
     {
-        response.add_available_genres(genre);
+        auto* facet = response.add_available_genres();
+        facet->set_value(item.Value);
+        facet->set_count(item.Count);
     }
 
     for (const Librova::Application::SBookListItem& item : result.Items)

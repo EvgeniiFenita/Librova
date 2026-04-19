@@ -399,13 +399,13 @@ std::string BuildSearchCountSql(const Librova::Domain::SSearchQuery& query)
 std::string BuildAvailableLanguagesSql(const Librova::Domain::SSearchQuery& query)
 {
     std::string sql =
-        "SELECT DISTINCT b.language "
+        "SELECT b.language, COUNT(*) "
         "FROM books b ";
 
     AppendFilterJoins(sql, query);
     sql += "WHERE b.language <> '' ";
     AppendFilterAndConditions(sql, query, false, true);
-    sql += "ORDER BY b.language COLLATE NOCASE ASC;";
+    sql += "GROUP BY b.language ORDER BY b.language COLLATE NOCASE ASC;";
     return sql;
 }
 
@@ -847,16 +847,19 @@ std::uint64_t CSqliteBookQueryRepository::CountSearchResults(const Librova::Doma
     return static_cast<std::uint64_t>(statement.GetColumnInt64(0));
 }
 
-std::vector<std::string> CSqliteBookQueryRepository::ListAvailableLanguages(const Librova::Domain::SSearchQuery& query) const
+std::vector<Librova::Domain::SFacetItem> CSqliteBookQueryRepository::ListAvailableLanguages(const Librova::Domain::SSearchQuery& query) const
 {
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildAvailableLanguagesSql(query));
     BindAvailableLanguageFilters(statement, query);
 
-    std::vector<std::string> languages;
+    std::vector<Librova::Domain::SFacetItem> languages;
     while (statement.Step())
     {
-        languages.push_back(statement.GetColumnText(0));
+        languages.push_back({
+            .Value = statement.GetColumnText(0),
+            .Count = static_cast<std::uint32_t>(statement.GetColumnInt64(1))
+        });
     }
 
     return languages;
@@ -877,12 +880,12 @@ std::vector<std::string> CSqliteBookQueryRepository::ListAvailableTags(const Lib
     return tags;
 }
 
-std::vector<std::string> CSqliteBookQueryRepository::ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const
+std::vector<Librova::Domain::SFacetItem> CSqliteBookQueryRepository::ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const
 {
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
 
     std::string sql =
-        "SELECT DISTINCT g.display_name "
+        "SELECT g.display_name, COUNT(*) "
         "FROM books b ";
 
     AppendFilterJoins(sql, query);
@@ -891,17 +894,20 @@ std::vector<std::string> CSqliteBookQueryRepository::ListAvailableGenres(const L
         "INNER JOIN genres g ON g.id = bg_list.genre_id "
         "WHERE g.display_name <> '' ";
     AppendFilterAndConditions(sql, query, true, false);
-    sql += "ORDER BY g.display_name COLLATE NOCASE ASC;";
+    sql += "GROUP BY g.display_name ORDER BY g.display_name COLLATE NOCASE ASC;";
 
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
 
     int parameterIndex = 1;
     BindFilterWhereParams(statement, parameterIndex, query, true, false);
 
-    std::vector<std::string> genres;
+    std::vector<Librova::Domain::SFacetItem> genres;
     while (statement.Step())
     {
-        genres.push_back(statement.GetColumnText(0));
+        genres.push_back({
+            .Value = statement.GetColumnText(0),
+            .Count = static_cast<std::uint32_t>(statement.GetColumnInt64(1))
+        });
     }
 
     return genres;

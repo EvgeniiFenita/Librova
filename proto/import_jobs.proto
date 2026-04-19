@@ -169,12 +169,17 @@ message ListBooksRequest {
   BookListRequest query = 1;
 }
 
+message FacetItem {
+  string value = 1;
+  uint32 count = 2;
+}
+
 message ListBooksResponse {
   repeated BookListItem items = 1;
   uint64 total_count = 2;
-  repeated string available_languages = 3;
+  repeated FacetItem available_languages = 3;
   LibraryStatistics statistics = 4;
-  repeated string available_genres = 5;
+  repeated FacetItem available_genres = 5;
 }
 
 message GetBookDetailsRequest {

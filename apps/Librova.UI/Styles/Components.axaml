@@ -750,7 +750,7 @@
   <Style Selector="ToggleButton.GenreChip">
     <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Large}" />
     <Setter Property="Padding" Value="8,4" />
@@ -770,13 +770,15 @@
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="ToggleButton.GenreChip:checked">
-    <Setter Property="Background" Value="{DynamicResource AppAccentMutedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="ToggleButton.GenreChip:checked /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AppAccentMutedBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
@@ -789,8 +791,8 @@
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="ToggleButton.GenreChip:checked:pressed /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource AppAccentDimBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppAccentMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
   </Style>
   <Style Selector="ToggleButton.GenreChip:focus-visible">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrightBrush}" />
