@@ -1472,3 +1472,11 @@ tasks:
   note: 'Fixed catalog filter facet regressions: LibraryBrowserViewModel now aggregates case-insensitive
     duplicate facet values without crashing and ViewModel test doubles now use real Genres data plus regression
     coverage for mixed-case facet counts.'
+- id: 171
+  summary: auto-navigate to Library tab after a successful import completes
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: ShellImportWorkflowController.HandleImportCompletedSuccessfullyAsync now calls _setCurrentSection(Library)
+    after browser refresh; covered by two unit tests.

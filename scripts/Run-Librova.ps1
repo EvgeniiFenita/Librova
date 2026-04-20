@@ -22,6 +22,25 @@ $uiStateFile = Join-Path $runtimeRoot "ui-shell-state.json"
 $uiPreferencesFile = Join-Path $runtimeRoot "ui-preferences.json"
 $hostExecutable = Join-Path $repoRoot "out\build\$Preset\apps\Librova.Core.Host\$Configuration\LibrovaCoreHostApp.exe"
 $uiExecutable = Join-Path $repoRoot "out\dotnet\bin\Librova.UI\$Configuration\net10.0\Librova.UI.exe"
+$startupProbeDelayMilliseconds = 2000
+
+function Get-UiLogPath {
+    if ($FirstRun -or $SecondRun) {
+        return $bootstrapUiLogFile
+    }
+
+    return $libraryUiLogFile
+}
+
+function Write-UiLogTail([string]$label, [string]$path) {
+    if (-not (Test-Path -LiteralPath $path)) {
+        Write-Host "    $label log:   (not found) $path"
+        return
+    }
+
+    Write-Host "    $label log:   $path"
+    Get-Content -LiteralPath $path -Tail 40 | ForEach-Object { Write-Host "      $_" }
+}
 
 Push-Location $repoRoot
 try {
@@ -102,6 +121,20 @@ try {
     }
 
     $process = Start-Process -FilePath $uiExecutable -WorkingDirectory $repoRoot -PassThru
+    Start-Sleep -Milliseconds $startupProbeDelayMilliseconds
+    $process.Refresh()
+
+    if ($process.HasExited) {
+        $uiLogPath = Get-UiLogPath
+        Write-Host ("==> Librova UI exited during startup. PID: {0}" -f $process.Id)
+        if ($process.ExitCode -ne 0) {
+            Write-Host ("    Exit code:   {0}" -f $process.ExitCode)
+        }
+
+        Write-UiLogTail "UI" $uiLogPath
+        throw "Librova UI exited before startup completed."
+    }
+
     Write-Host ("==> Librova UI started. PID: {0}" -f $process.Id)
 }
 finally {

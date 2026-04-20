@@ -2174,6 +2174,74 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_DoesNotEmitSuccessEventForCancelledImport()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new CancellationResidueImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var invoked = 0;
+            viewModel.ImportCompletedSuccessfully += _ =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
+            Assert.Equal(0, invoked);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_DoesNotEmitSuccessEventWhenZeroEntriesImported()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new EmptyImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "empty.zip"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var invoked = 0;
+            viewModel.ImportCompletedSuccessfully += _ =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(0UL, viewModel.LastResult?.Summary?.ImportedEntries ?? 0UL);
+            Assert.Equal(0, invoked);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_DefaultSortKeyIsTitle()
     {
         var viewModel = new LibraryBrowserViewModel();
@@ -2661,7 +2729,7 @@ public sealed class ViewModelsTests
                 Snapshot = new ImportJobSnapshotModel
                 {
                     JobId = jobId,
-                    Status = ImportJobStatusModel.Failed,
+                    Status = ImportJobStatusModel.Completed,
                     Message = "Import completed without importing any supported books.",
                     Percent = 0,
                     TotalEntries = 0,
@@ -2957,6 +3025,26 @@ public sealed class ViewModelsTests
     {
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult(new BookListPageModel());
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
+    private sealed class FailingRefreshLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromException<BookListPageModel>(new InvalidOperationException("refresh failed"));
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
@@ -4279,6 +4367,128 @@ public sealed class ViewModelsTests
 
         public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
+    // ── ShellImportWorkflowController tests ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ShellImportWorkflowController_SwitchesToLibrarySectionAfterSuccessfulImport()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 1,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 1, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Library, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_SwitchesToLibrarySectionEvenWhenUserNavigatedAway()
+    {
+        var currentSection = ShellSection.Settings;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 3,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 3, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Library, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_DoesNotSwitchSectionWhenImportHasErrors()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 3,
+                FailedEntries = 2
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 3, FailedEntries = 2 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Import, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_DoesNotSwitchSectionWhenLibraryRefreshFails()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new FailingRefreshLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 1,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 1, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Import, currentSection);
     }
 
     // ── ShellViewModel / converter probe tests ──────────────────────────────────────────────

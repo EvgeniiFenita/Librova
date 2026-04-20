@@ -1,5 +1,6 @@
 using Librova.UI.ImportJobs;
 using Librova.UI.LibraryCatalog;
+using Librova.UI.Logging;
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -37,8 +38,22 @@ internal sealed class ShellImportWorkflowController
         _saveSortPreference = saveSortPreference;
     }
 
-    public Task HandleImportCompletedSuccessfullyAsync(ImportJobResultModel result) =>
-        _libraryBrowser.RefreshAsync();
+    public async Task HandleImportCompletedSuccessfullyAsync(ImportJobResultModel result)
+    {
+        try
+        {
+            await _libraryBrowser.RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            UiLogging.Error(ex, "Library refresh failed after successful import.");
+            return;
+        }
+        if ((result.Summary?.FailedEntries ?? 0) == 0)
+        {
+            _setCurrentSection(ShellSection.Library);
+        }
+    }
 
     public void HandleImportJobsPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {

@@ -175,18 +175,6 @@ tasks:
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
     Eliminates per-book CreateProcess overhead for EPUB conversion. Deferred from #60 to avoid complexity
     in the parallel import slice.'
-- id: 171
-  summary: auto-navigate to Library tab after a successful import completes
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.2'
-  note: when the import pipeline finishes and at least one book was committed (i.e. no full rollback),
-    the shell must automatically switch the active tab to the Library view so the user sees the result
-    without a manual click; if the user already navigated away from the import area during the run, the
-    redirect should still happen on completion; implement the state transition at the ViewModel level,
-    not in the view, and cover it with a unit test; do not redirect when the import ends in a full cancel-and-discard
-    rollback.
 - id: 176
   summary: add keyboard shortcuts for core library actions
   status: Open
