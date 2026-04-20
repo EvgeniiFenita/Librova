@@ -41,9 +41,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private bool _isLoadingSelectionDetails;
     private bool _isFilterPanelOpen;
     private string _genreSearchText = string.Empty;
+    private EmptyStateKind _emptyStateKind;
     private int _detailsLoadVersion;
     private readonly LibrarySelectionState _selectionState = new(FormatSizeInMegabytes);
     private LibraryStatisticsModel _libraryStatistics = new();
+    private readonly Action? _navigateToImport;
 
     public LibraryBrowserViewModel(
         ILibraryCatalogService? libraryCatalogService = null,
@@ -52,12 +54,14 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         ICoverImageLoader? coverImageLoader = null,
         bool hasConfiguredConverter = false,
         BookSortModel? initialSortKey = null,
-        bool initialSortDescending = false)
+        bool initialSortDescending = false,
+        Action? navigateToImport = null)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
         _coverPresentationService = new LibraryCoverPresentationService(libraryRoot, coverImageLoader);
         _hasConfiguredConverter = hasConfiguredConverter;
+        _navigateToImport = navigateToImport;
         _browseState = new LibraryBrowseQueryState(
             SortKeyOption.For(initialSortKey ?? BookSortModel.Title),
             initialSortDescending);
@@ -72,6 +76,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
         ClearAllFiltersCommand = new AsyncCommand(ClearAllFiltersAsync, () => true, HandleCommandErrorAsync);
+        GoToImportCommand = new AsyncCommand(GoToImportAsync, () => _navigateToImport is not null, HandleCommandErrorAsync);
         LanguageFacets.CollectionChanged += (_, _) =>
         {
             RaisePropertyChanged(nameof(FilteredGenreFacets));
@@ -101,6 +106,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public AsyncCommand CloseSelectionCommand { get; }
     public AsyncCommand ToggleSortDirectionCommand { get; }
     public AsyncCommand ClearAllFiltersCommand { get; }
+    public AsyncCommand GoToImportCommand { get; }
 
     public string SearchText
     {
@@ -113,6 +119,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             }
             _browseState.SearchText = value;
             RaisePropertyChanged();
+            RaisePropertyChanged(nameof(HasActiveFilters));
             ScheduleRefresh();
         }
     }
@@ -347,17 +354,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public bool ShowExportAsEpubHint => HasSelectedBook && _selectionState.SelectedBookFormat is BookFormatModel.Fb2 && !_hasConfiguredConverter;
     public string ExportAsEpubHintText => "Configure a converter in Settings to enable EPUB export.";
     public bool CanExportSelectedBookAsEpub => !IsBusy && ShowExportAsEpubAction;
-    public bool ShowEmptyState => !HasBooks;
+    public bool ShowEmptyState => _emptyStateKind != EmptyStateKind.None;
+    public bool ShowGoToImportButton => _emptyStateKind == EmptyStateKind.LibraryEmpty;
+    public bool ShowClearFiltersButton => _emptyStateKind == EmptyStateKind.NoResults;
     public bool ShowLoadMoreIndicator => HasBooks && IsLoadingMore;
     public string BookCountText => FormatBookCount(_browseState.TotalBookCount);
     public string LibraryStatisticsText =>
         _isLibraryStatisticsUnavailable
             ? "Library summary unavailable."
             : $"Library: {FormatBookCount(_libraryStatistics.BookCount)}, {FormatSizeInMegabytes(_libraryStatistics.TotalLibrarySizeBytes)}";
-    public string EmptyStateTitle => HasActiveFilters ? "Nothing found" : "Library is empty";
-    public string EmptyStateDescription => HasActiveFilters
-        ? "Try a different search query or clear the active language / genre filters."
-        : "Import books to start building your library.";
+    public string EmptyStateTitle => _emptyStateKind == EmptyStateKind.NoResults ? "Nothing found" : "Library is empty";
     public string SelectedBookTitle => _selectionState.SelectedBookTitle;
     public string SelectedBookAuthorText => _selectionState.SelectedBookAuthorText;
     public string SelectedBookAnnotationText => _selectionState.SelectedBookAnnotationText;
@@ -581,11 +587,39 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         }
     }
 
+    private EmptyStateKind ComputeEmptyStateKind() =>
+        HasBooks ? EmptyStateKind.None :
+        HasActiveFilters ? EmptyStateKind.NoResults :
+        EmptyStateKind.LibraryEmpty;
+
+    private void ApplyEmptyState(EmptyStateKind kind)
+    {
+        if (_emptyStateKind == kind) return;
+        _emptyStateKind = kind;
+        RaisePropertyChanged(nameof(ShowEmptyState));
+        RaisePropertyChanged(nameof(ShowGoToImportButton));
+        RaisePropertyChanged(nameof(ShowClearFiltersButton));
+        RaisePropertyChanged(nameof(EmptyStateTitle));
+    }
+
     private void ScheduleRefresh()
     {
         if (_isDisposed)
         {
             return;
+        }
+
+        // Pending-state transition rules:
+        // - LibraryEmpty + filters now active  → show NoResults immediately (no debounce needed for this visual)
+        // - LibraryEmpty / NoResults + filters cleared → hide empty state (books may reappear after refresh)
+        // - NoResults + filters still active   → keep NoResults; no flicker on each keystroke
+        if (_emptyStateKind == EmptyStateKind.LibraryEmpty)
+        {
+            ApplyEmptyState(HasActiveFilters ? EmptyStateKind.NoResults : EmptyStateKind.None);
+        }
+        else if (_emptyStateKind == EmptyStateKind.NoResults && !HasActiveFilters)
+        {
+            ApplyEmptyState(EmptyStateKind.None);
         }
 
         CancelAndDispose(ref _refreshDebounce);
@@ -704,11 +738,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             UpdateAvailableLanguages(refreshResult.AvailableLanguages);
             UpdateAvailableGenres(refreshResult.AvailableGenres);
             RaisePropertyChanged(nameof(HasBooks));
-            RaisePropertyChanged(nameof(ShowEmptyState));
+            ApplyEmptyState(ComputeEmptyStateKind());
             RaisePropertyChanged(nameof(BookCountText));
             RaisePropertyChanged(nameof(LibraryStatisticsText));
-            RaisePropertyChanged(nameof(EmptyStateTitle));
-            RaisePropertyChanged(nameof(EmptyStateDescription));
             StatusText = BuildRefreshStatusText(Books.Count, _browseState.TotalBookCount, _isLibraryStatisticsUnavailable);
         }
         finally
@@ -801,11 +833,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
         SyncHasMoreResults(previousHasMoreResults);
         RaisePropertyChanged(nameof(HasBooks));
-        RaisePropertyChanged(nameof(ShowEmptyState));
+        ApplyEmptyState(ComputeEmptyStateKind());
         RaisePropertyChanged(nameof(BookCountText));
         RaisePropertyChanged(nameof(LibraryStatisticsText));
-        RaisePropertyChanged(nameof(EmptyStateTitle));
-        RaisePropertyChanged(nameof(EmptyStateDescription));
         StatusText = BuildRefreshStatusText(Books.Count, _browseState.TotalBookCount, _isLibraryStatisticsUnavailable);
         return Task.CompletedTask;
     }
@@ -880,8 +910,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     {
         RaisePropertyChanged(nameof(HasSelectedBook));
         RaisePropertyChanged(nameof(ShowDetailsPanel));
-        RaisePropertyChanged(nameof(EmptyStateTitle));
-        RaisePropertyChanged(nameof(EmptyStateDescription));
         RaisePropertyChanged(nameof(SelectedBookTitle));
         RaisePropertyChanged(nameof(SelectedBookAuthorText));
         RaisePropertyChanged(nameof(SelectedBookMetadataPairs));
@@ -1017,8 +1045,6 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         RaisePropertyChanged(nameof(FilterButtonLabel));
         RaisePropertyChanged(nameof(ActiveFilterCountText));
         RaisePropertyChanged(nameof(BookCountText));
-        RaisePropertyChanged(nameof(EmptyStateTitle));
-        RaisePropertyChanged(nameof(EmptyStateDescription));
         ScheduleRefresh();
     }
 
@@ -1043,9 +1069,13 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         RaisePropertyChanged(nameof(FilterButtonLabel));
         RaisePropertyChanged(nameof(ActiveFilterCountText));
         RaisePropertyChanged(nameof(BookCountText));
-        RaisePropertyChanged(nameof(EmptyStateTitle));
-        RaisePropertyChanged(nameof(EmptyStateDescription));
         ScheduleRefresh();
+        return Task.CompletedTask;
+    }
+
+    private Task GoToImportAsync()
+    {
+        _navigateToImport?.Invoke();
         return Task.CompletedTask;
     }
 

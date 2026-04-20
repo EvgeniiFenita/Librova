@@ -84,17 +84,6 @@ tasks:
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
 
     '
-- id: 179
-  summary: add Go to Import CTA button to empty library state
-  status: Open
-  type: Feature
-  priority: Major
-  milestone: '1.2'
-  note: in Library empty state (no books, no active filters) add a PrimaryAction button Go to Import below
-    the description; add ShowGoToImportButton (= ShowEmptyState and not HasActiveFilters), GoToImportCommand,
-    and a shell navigation callback to LibraryBrowserViewModel constructor; in Nothing found state (filters
-    active, zero results) hide the CTA and show a SecondaryAction Clear Filters button bound to existing
-    ClearAllFiltersCommand
 - id: 180
   summary: add live search suggestions dropdown to the library search field
   status: Open

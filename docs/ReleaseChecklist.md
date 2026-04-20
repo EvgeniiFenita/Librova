@@ -47,7 +47,9 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 ## Library Browser
 
 - Book grid is visible and infinite scroll works **(RG)**
-- Empty state is shown for an empty library
+- Empty library: book illustration + "Go to Import" button are shown **(RG)**
+- No-results state: search or filter returns 0 books — magnifier illustration + "Nothing found" shown, no button **(RG)**
+- No flicker when clearing the search field: empty state does not flash between states
 - Book details: metadata, annotation, and size in MB are visible **(RG)**
 - Details panel does not overlap the grid
 - With the details panel open: at least 2 card columns and at least 2 visible rows

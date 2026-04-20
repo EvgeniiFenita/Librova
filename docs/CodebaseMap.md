@@ -152,7 +152,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `Program.cs` / `App.axaml.cs` | Avalonia entry point; top-level exception handler | `App` |
 | `CoreHost/` | Spawn and manage native host process; resolve executable path; host launch defaults | `CoreHostProcess`, `CoreHostPathResolver`, `CoreHostLaunchOptions`, `CoreHostDevelopmentDefaults`, `UiConverterMode` |
 | `Shell/` | Application bootstrap; session lifecycle; preferences and state persistence; library root validation | `ShellApplication`, `ShellBootstrap`, `ShellSession`, `ShellStateStore`, `UiPreferencesStore`, `LibraryRootValidation`, `FirstRunSetupPolicy`, `ConverterValidationCoordinator`, `Fb2ConverterProbe` |
-| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem` |
+| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem`, `EmptyStateKind` |
 | `Views/` | AXAML markup + code-behind | `MainWindow`, `LibraryView`, `ImportView`, `SettingsView` |
 | `Styles/` | Design-token resources | `Colors.axaml`, `Typography.axaml`, `Components.axaml` |
 | `ImportJobs/` | Import job IPC client + service + mapper + models | `IImportJobsService`, `ImportJobsService`, `ImportJobClient`, `ImportJobMapper`, `ImportJobModels`, `ImportJobDomainError` |

@@ -235,6 +235,47 @@
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
   </Style>
 
+  <!-- Outline-amber CTA (empty-state call-to-action) — warm leather gradient fill -->
+  <Style Selector="Button.OutlineAccent">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EmptyStateCtaBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="26,0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource EmptyStateCtaBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource EmptyStateCtaBorderHoverBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:pointerover /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource EmptyStateCtaBackgroundHoverBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:pointerover TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:pointerover PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector="Button.OutlineAccent:disabled /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource EmptyStateCtaBackgroundBrush}" />
+  </Style>
+
   <!-- Destructive (delete / trash) -->
   <Style Selector="Button.DestructiveAction">
     <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />

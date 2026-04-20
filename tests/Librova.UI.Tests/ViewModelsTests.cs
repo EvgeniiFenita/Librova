@@ -1071,6 +1071,64 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ShowGoToImportButton_TrueWhenLibraryEmptyAndNoFilters()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.True(viewModel.ShowGoToImportButton);
+        Assert.False(viewModel.ShowClearFiltersButton);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowClearFiltersButton_TrueWhenFiltersActiveAndEmpty()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
+        {
+            SearchText = "some query"
+        };
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.False(viewModel.ShowGoToImportButton);
+        Assert.True(viewModel.ShowClearFiltersButton);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_GoToImportCommand_InvokesNavigateCallback()
+    {
+        var navigated = false;
+        var viewModel = new LibraryBrowserViewModel(
+            new EmptyLibraryCatalogService(),
+            navigateToImport: () => navigated = true);
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        await viewModel.GoToImportCommand.ExecuteAsyncForTests();
+
+        Assert.True(navigated);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowGoToImportButton_FalseWhileScheduledRefreshPending()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        Assert.True(viewModel.ShowGoToImportButton);
+
+        // ScheduleRefresh() transitions to None immediately — GoToImport button hides.
+        viewModel.SearchText = "tolkien";
+        Assert.False(viewModel.ShowGoToImportButton);
+
+        // Clearing search re-schedules; button stays hidden until refresh completes.
+        viewModel.SearchText = string.Empty;
+        Assert.False(viewModel.ShowGoToImportButton);
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        Assert.True(viewModel.ShowGoToImportButton);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_UsesGradientPlaceholderBackgroundWhenCoverIsMissing()
     {
         var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());

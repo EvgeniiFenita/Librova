@@ -76,6 +76,26 @@
   <Color x:Key="Color.AccentGlow">#38F5A623</Color>
   <Color x:Key="Color.AccentSelection">#40F5A623</Color>
 
+  <!-- Empty-state illustration / CTA palette -->
+  <Color x:Key="Color.EmptyStateGlow">#30F5A623</Color>
+  <Color x:Key="Color.EmptyStateGlowSoft">#25F5A623</Color>
+  <Color x:Key="Color.EmptyStateLeather">#2A1A06</Color>
+  <Color x:Key="Color.EmptyStateParchment">#CDB882</Color>
+  <Color x:Key="Color.EmptyStateLine">#7A5C38</Color>
+  <Color x:Key="Color.EmptyStateLeaf1">#C8B070</Color>
+  <Color x:Key="Color.EmptyStateLeaf1Border">#A89050</Color>
+  <Color x:Key="Color.EmptyStateLeaf2">#D8C080</Color>
+  <Color x:Key="Color.EmptyStateLeaf2Border">#B8A060</Color>
+  <Color x:Key="Color.EmptyStateLeaf3">#EAD090</Color>
+  <Color x:Key="Color.EmptyStateLeaf3Border">#C8A864</Color>
+  <Color x:Key="Color.EmptyStateSpine">#1A1006</Color>
+  <Color x:Key="Color.EmptyStateSpineHighlight">#3A2810</Color>
+  <Color x:Key="Color.EmptyStateSearchHandle">#1A0E04</Color>
+  <Color x:Key="Color.EmptyStateSearchCross">#3A1A06</Color>
+  <Color x:Key="Color.EmptyStateAccentRing">#55F5A623</Color>
+  <Color x:Key="Color.EmptyStateCtaBorder">#9A6A38</Color>
+  <Color x:Key="Color.EmptyStateCtaBorderHover">#B8823E</Color>
+
   <!-- ═══════════════ BRUSHES ═══════════════ -->
 
   <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource Color.Background}" />
@@ -123,6 +143,36 @@
   <SolidColorBrush x:Key="AppDangerHoverBgBrush"    Color="{StaticResource Color.DangerHoverBg}" />
   <SolidColorBrush x:Key="AppNavActiveBrush"        Color="{StaticResource Color.NavActive}" />
   <SolidColorBrush x:Key="AppNavActiveHoverBrush"   Color="{StaticResource Color.NavActiveHover}" />
+  <SolidColorBrush x:Key="EmptyStateGlowBrush" Color="{StaticResource Color.EmptyStateGlow}" />
+  <SolidColorBrush x:Key="EmptyStateGlowSoftBrush" Color="{StaticResource Color.EmptyStateGlowSoft}" />
+  <SolidColorBrush x:Key="EmptyStateLeatherBrush" Color="{StaticResource Color.EmptyStateLeather}" />
+  <SolidColorBrush x:Key="EmptyStateParchmentBrush" Color="{StaticResource Color.EmptyStateParchment}" />
+  <SolidColorBrush x:Key="EmptyStateLineBrush" Color="{StaticResource Color.EmptyStateLine}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf1Brush" Color="{StaticResource Color.EmptyStateLeaf1}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf1BorderBrush" Color="{StaticResource Color.EmptyStateLeaf1Border}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf2Brush" Color="{StaticResource Color.EmptyStateLeaf2}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf2BorderBrush" Color="{StaticResource Color.EmptyStateLeaf2Border}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf3Brush" Color="{StaticResource Color.EmptyStateLeaf3}" />
+  <SolidColorBrush x:Key="EmptyStateLeaf3BorderBrush" Color="{StaticResource Color.EmptyStateLeaf3Border}" />
+  <SolidColorBrush x:Key="EmptyStateSpineBrush" Color="{StaticResource Color.EmptyStateSpine}" />
+  <SolidColorBrush x:Key="EmptyStateSpineHighlightBrush" Color="{StaticResource Color.EmptyStateSpineHighlight}" />
+  <SolidColorBrush x:Key="EmptyStateSearchHandleBrush" Color="{StaticResource Color.EmptyStateSearchHandle}" />
+  <SolidColorBrush x:Key="EmptyStateSearchCrossBrush" Color="{StaticResource Color.EmptyStateSearchCross}" />
+  <SolidColorBrush x:Key="EmptyStateAccentRingBrush" Color="{StaticResource Color.EmptyStateAccentRing}" />
+  <SolidColorBrush x:Key="EmptyStateCtaBorderBrush" Color="{StaticResource Color.EmptyStateCtaBorder}" />
+  <SolidColorBrush x:Key="EmptyStateCtaBorderHoverBrush" Color="{StaticResource Color.EmptyStateCtaBorderHover}" />
+
+  <!-- Empty-state CTA gradients use explicit color stops because Avalonia cannot
+       compose GradientStop.Color from Color resources. Keep them aligned with the
+       empty-state palette above. -->
+  <LinearGradientBrush x:Key="EmptyStateCtaBackgroundBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Color="#7A5228" Offset="0" />
+    <GradientStop Color="#4E3412" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="EmptyStateCtaBackgroundHoverBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Color="#8C6030" Offset="0" />
+    <GradientStop Color="#5C3E18" Offset="1" />
+  </LinearGradientBrush>
 
   <!-- ═══════════════ LAYOUT TOKENS ═══════════════ -->
 

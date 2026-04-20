@@ -1480,3 +1480,11 @@ tasks:
   milestone: '1.2'
   note: ShellImportWorkflowController.HandleImportCompletedSuccessfullyAsync now calls _setCurrentSection(Library)
     after browser refresh; covered by two unit tests.
+- id: 179
+  summary: add Go to Import CTA button to empty library state
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.2'
+  note: Added a book-stack empty-library illustration and a Go to Import CTA; introduced ShowGoToImportButton
+    plus a navigateToImport callback wired from ShellViewModel; no CTA is shown in the no-results state.
