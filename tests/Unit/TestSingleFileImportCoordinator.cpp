@@ -1321,3 +1321,38 @@ TEST_CASE("Single file import rejects write-time hash conflicts without attempti
     REQUIRE(bookRepository.RemovedIds.empty());
     REQUIRE_FALSE(bookRepository.ForceAddCalled);
 }
+
+TEST_CASE("Single file import skips cover storage when ImportCovers is false", "[importing]")
+{
+    CTestWorkspace sandbox(L"librova-importing-no-covers");
+    const auto sourcePath = CreateFb2Fixture(sandbox.GetPath() / "source.fb2");
+
+    const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
+    CStubBookRepository bookRepository;
+    CStubQueryRepository queryRepository;
+    CStubManagedStorage managedStorage(sandbox.GetPath() / "library");
+    CStubCoverImageProcessor coverImageProcessor;
+    CTestProgressSink progressSink;
+
+    const Librova::Importing::CSingleFileImportCoordinator coordinator(
+        parserRegistry,
+        bookRepository,
+        queryRepository,
+        managedStorage,
+        nullptr,
+        &coverImageProcessor);
+
+    const auto result = coordinator.Run({
+        .SourcePath = sourcePath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ImportCovers = false
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(bookRepository.AddedBook.has_value());
+    REQUIRE_FALSE(bookRepository.AddedBook->CoverPath.has_value());
+    REQUIRE(managedStorage.LastPlan.has_value());
+    REQUIRE_FALSE(managedStorage.LastPlan->CoverSourcePath.has_value());
+    REQUIRE(managedStorage.CommitCalled);
+    REQUIRE_FALSE(coverImageProcessor.LastRequest.has_value());
+}

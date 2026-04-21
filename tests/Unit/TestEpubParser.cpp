@@ -200,6 +200,23 @@ TEST_CASE("EPUB parser extracts metadata and cover from a valid EPUB package", "
     REQUIRE(parsedBook.CoverBytes == std::vector<std::byte>({std::byte{0x01}, std::byte{0x23}, std::byte{0x45}}));
 }
 
+TEST_CASE("EPUB parser skips cover entry extraction when disabled", "[epub-parsing]")
+{
+    CTestWorkspace sandbox(L"librova-epub-parser-no-cover-extract");
+    const std::filesystem::path epubPath = CreateSampleEpub(sandbox.GetPath() / "sample.epub");
+
+    const Librova::EpubParsing::CEpubParser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(
+        epubPath,
+        {},
+        {.ExtractCover = false});
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Пикник на обочине");
+    REQUIRE_FALSE(parsedBook.CoverExtension.has_value());
+    REQUIRE(parsedBook.CoverBytes.empty());
+    REQUIRE_FALSE(parsedBook.CoverDiagnosticMessage.has_value());
+}
+
 TEST_CASE("EPUB parser rejects malformed package metadata", "[epub-parsing]")
 {
     CTestWorkspace sandbox(L"librova-epub-parser-invalid");
@@ -295,4 +312,3 @@ TEST_CASE("EPUB parser extracts subjects and collection series metadata", "[epub
     REQUIRE(parsedBook.Metadata.Identifier == std::optional<std::string>{"urn:isbn:9780316129084"});
     REQUIRE(parsedBook.Metadata.DescriptionUtf8 == std::optional<std::string>{"Humanity has spread across the solar system."});
 }
-

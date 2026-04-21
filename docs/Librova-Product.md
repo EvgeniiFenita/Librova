@@ -75,6 +75,7 @@ The import flow includes:
 - duplicate detection;
 - explicit user opt-in when Librova allows a duplicate to be imported as a separate managed record;
 - optional conversion `FB2 -> EPUB`, exposed as a checkbox in `Import` only when the current session has a configured converter;
+- optional cover import, exposed as an `Import covers` checkbox in `Import`, checked by default; when unchecked, the pipeline skips cover extraction and storage for the entire batch and imported books have no cover thumbnail;
 - staging before commit;
 - database write;
 - managed storage placement.

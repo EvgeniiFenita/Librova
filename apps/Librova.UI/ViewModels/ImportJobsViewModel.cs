@@ -23,6 +23,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool _allowProbableDuplicates;
     private bool _forceEpubConversionOnImport;
     private bool _hasConfiguredConverter;
+    private bool _importCovers = true;
     private string _statusText = "Idle";
     private string _sourceValidationMessage = string.Empty;
     private string _workingDirectoryValidationMessage = string.Empty;
@@ -196,6 +197,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public bool ShowForceEpubConversionOption => HasConfiguredConverter;
 
+    public bool ImportCovers
+    {
+        get => _importCovers;
+        set => SetProperty(ref _importCovers, value);
+    }
+
     public ulong? LastJobId
     {
         get => _lastJobId;
@@ -350,7 +357,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     SourcePaths = SourcePaths.ToArray(),
                     WorkingDirectory = WorkingDirectory,
                     AllowProbableDuplicates = AllowProbableDuplicates,
-                    ForceEpubConversionOnImport = ForceEpubConversionOnImport
+                    ForceEpubConversionOnImport = ForceEpubConversionOnImport,
+                    ImportCovers = ImportCovers
                 },
                 TimeSpan.FromSeconds(5),
                 _activeImportCancellation.Token);

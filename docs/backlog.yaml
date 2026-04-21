@@ -128,18 +128,6 @@ tasks:
     for a few seconds then advance; the fact display must be hidden once the import completes or is cancelled.
 
     '
-- id: 127
-  summary: add an Import covers checkbox to the import dialog, checked by default
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.2'
-  note: 'when unchecked, the import pipeline must skip cover extraction and storage entirely for the whole
-    batch — no cover file is written to disk and no cover reference is stored in the database; this reduces
-    disk usage and import time for users who do not need cover art; the setting applies only to the current
-    import session and is not persisted globally.
-
-    '
 - id: 64
   summary: allow the user to assign or replace a cover image for any managed book by selecting an image
     file from the filesystem

@@ -108,6 +108,14 @@
                        Text="When enabled, FB2 imports use the configured converter and store the managed book as EPUB. When disabled, FB2 files stay FB2 even if a converter is configured."
                        TextWrapping="Wrap" />
           </StackPanel>
+          <StackPanel Spacing="6">
+            <CheckBox IsChecked="{Binding ImportJobs.ImportCovers}"
+                      Content="Import covers" />
+            <TextBlock Classes="Caption"
+                       Margin="28,0,0,0"
+                       Text="When enabled, cover images are extracted from books and stored in the library. Uncheck to skip cover extraction and reduce import time and disk usage."
+                       TextWrapping="Wrap" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

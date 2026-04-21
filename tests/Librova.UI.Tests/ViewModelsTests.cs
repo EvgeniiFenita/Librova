@@ -745,6 +745,42 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_StartImportPassesImportCoversFlag()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work"),
+                ImportCovers = false
+            };
+
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
+
+            Assert.NotNull(service.LastStartRequest);
+            Assert.False(service.LastStartRequest!.ImportCovers);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void ImportJobsViewModel_HidesForcedEpubConversionOptionWithoutConfiguredConverter()
     {
         var viewModel = new ImportJobsViewModel(new FakeImportJobsService());

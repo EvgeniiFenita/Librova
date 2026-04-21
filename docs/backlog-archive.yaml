@@ -1488,3 +1488,12 @@ tasks:
   milestone: '1.2'
   note: Added a book-stack empty-library illustration and a Go to Import CTA; introduced ShowGoToImportButton
     plus a navigateToImport callback wired from ShellViewModel; no CTA is shown in the no-results state.
+- id: 127
+  summary: add an Import covers checkbox to the import dialog, checked by default
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: Added import_covers optional bool to proto, threaded ImportCovers through C++ domain/facade and
+    C# model/mapper/ViewModel, added the Import covers checkbox, and enforced disabled cover import by
+    parsing without cover extraction before storage.

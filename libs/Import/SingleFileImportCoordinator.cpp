@@ -572,7 +572,10 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
         progressSink.ReportValue(15, "Parsing source book");
         const Librova::Domain::SParsedBook parsedBook = [&]{
             auto _ = measureStage(CImportPerfTracker::EStage::Parse);
-            return m_parserRegistry.Parse(request.SourcePath, sourceLabel);
+            return m_parserRegistry.Parse(
+                request.SourcePath,
+                sourceLabel,
+                {.ExtractCover = request.ImportCovers});
         }();
 
         std::optional<std::string> effectiveSha256Hex = request.Sha256Hex;
@@ -710,7 +713,11 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
                 conversionOutcome.Error);
         }
 
-        if (parsedBook.HasCover())
+        if (!request.ImportCovers)
+        {
+            LogCoverOutcome(request, "skipped", "disabled-by-request");
+        }
+        else if (parsedBook.HasCover())
         {
             auto _ = measureStage(CImportPerfTracker::EStage::Cover);
             try

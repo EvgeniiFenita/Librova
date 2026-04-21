@@ -41,6 +41,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - After import completes, the Library browser refreshes automatically **(RG)**
 - Duplicate override: `Allow probable duplicates` creates a separate record only for probable duplicates; strict duplicates stay rejected **(RG)**
 - `Force conversion to EPUB during import` is visible only when a converter is configured
+- `Import covers` checkbox is checked by default; when unchecked, imported books have no cover thumbnail and no cover file is stored
 
 ---
 

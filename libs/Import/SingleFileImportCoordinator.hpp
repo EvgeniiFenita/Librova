@@ -34,7 +34,8 @@ struct SSingleFileImportRequest
     std::uint64_t ImportJobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
-    std::optional<std::reference_wrapper<CImportPerfTracker>> PerfTracker; // optional; pass std::ref(perf) for per-stage measurements
+    bool ImportCovers = true;
+    std::optional<std::reference_wrapper<Librova::Importing::CImportPerfTracker>> PerfTracker; // optional; pass std::ref(perf) for per-stage measurements
     std::optional<std::reference_wrapper<Librova::Domain::IBookRepository>> RepositoryOverride; // optional; overrides m_bookRepository for writes
 
     [[nodiscard]] bool IsValid() const noexcept

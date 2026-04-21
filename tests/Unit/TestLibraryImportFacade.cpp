@@ -861,6 +861,34 @@ TEST_CASE("Library import facade forwards forced EPUB conversion to single-file 
     std::filesystem::remove_all(sandbox.Root);
 }
 
+TEST_CASE("Library import facade forwards disabled cover import to single-file imports", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    const auto sandbox = CreateImportSandbox("single-file-no-covers");
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox.Root});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory,
+        .ImportCovers = false
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(importer.LastRequest.has_value());
+    REQUIRE_FALSE(importer.LastRequest->ImportCovers);
+    std::filesystem::remove_all(sandbox.Root);
+}
+
 TEST_CASE("Library import facade expands directories recursively", "[application][import]")
 {
     CStubSingleFileImporter importer;
@@ -1694,4 +1722,3 @@ TEST_CASE("Library import facade logs one run-level import perf summary that inc
 
     std::filesystem::remove_all(sandbox);
 }
-

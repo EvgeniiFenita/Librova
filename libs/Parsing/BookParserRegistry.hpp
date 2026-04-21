@@ -18,7 +18,8 @@ public:
     [[nodiscard]] const Librova::Domain::IBookParser& GetParser(Librova::Domain::EBookFormat format) const;
     [[nodiscard]] Librova::Domain::SParsedBook Parse(
         const std::filesystem::path& filePath,
-        std::string_view logicalSourceLabel = {}) const;
+        std::string_view logicalSourceLabel = {},
+        const Librova::Domain::SBookParseOptions& options = {}) const;
 
 private:
     Librova::EpubParsing::CEpubParser m_epubParser;

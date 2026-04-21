@@ -707,6 +707,7 @@ SZipImportResult CZipImportCoordinator::Run(
                         .ImportJobId             = request.JobId,
                         .AllowProbableDuplicates = request.AllowProbableDuplicates,
                         .ForceEpubConversion     = request.ForceEpubConversion,
+                        .ImportCovers            = request.ImportCovers,
                         .PerfTracker             = std::ref(perf),
                         .RepositoryOverride      = request.WriterRepository,
                     }, nullSink, stopToken);

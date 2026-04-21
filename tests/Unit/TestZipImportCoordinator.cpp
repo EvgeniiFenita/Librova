@@ -401,6 +401,26 @@ TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted e
     REQUIRE(importer.Calls[1].ForceEpubConversion);
 }
 
+TEST_CASE("ZIP import coordinator forwards disabled cover import to extracted entries", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-no-covers");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ImportCovers = false
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 4);
+    REQUIRE(importer.Calls.size() == 2);
+    REQUIRE_FALSE(importer.Calls[0].ImportCovers);
+    REQUIRE_FALSE(importer.Calls[1].ImportCovers);
+}
+
 TEST_CASE("ZIP import coordinator forwards writer repository override to extracted entries", "[zip-import]")
 {
     CTestWorkspace sandbox(L"librova-zip-import-writer-repository");
@@ -705,4 +725,3 @@ TEST_CASE("ZIP import coordinator reports progress for completed entries before 
 
     REQUIRE(result.ImportedCount() == 2);
 }
-

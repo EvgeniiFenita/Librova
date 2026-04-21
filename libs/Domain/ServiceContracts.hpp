@@ -27,6 +27,11 @@ struct SParsedBook
     }
 };
 
+struct SBookParseOptions
+{
+    bool ExtractCover = true;
+};
+
 struct SConversionRequest
 {
     std::filesystem::path SourcePath;
@@ -192,7 +197,8 @@ public:
     virtual bool CanParse(EBookFormat format) const = 0;
     virtual SParsedBook Parse(
         const std::filesystem::path& filePath,
-        std::string_view logicalSourceLabel = {}) const = 0;
+        std::string_view logicalSourceLabel = {},
+        const SBookParseOptions& options = {}) const = 0;
 };
 
 class IBookConverter

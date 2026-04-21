@@ -139,7 +139,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
+| `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `SBookParseOptions`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
 | `Foundation` | UTF-8 ↔ UTF-16 conversions (`PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings); SHA-256 via Windows BCrypt API; spdlog initialization and `*IfInitialized` log helpers; compile-time version constant; `ToLower` string utility; `EnsureDirectory` / `RemovePathNoThrow` filesystem helpers | `PathFromUtf8()`, `ComputeFileSha256Hex()`, `CLogging`, `CVersion`, `ToLower`, `EnsureDirectory`, `RemovePathNoThrow` |
 | `CoreHost` | Parse CLI options; bootstrap library (schema migration, service wiring) | `CLibraryBootstrap`, `SHostOptions` |
 
@@ -201,7 +201,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 ### Key Message Types
 
-**`StartImportRequest`** fields: `source_paths[]`, `working_directory`, optional `sha256_hex`, `allow_probable_duplicates` (bool), `force_epub_conversion` (bool).
+**`StartImportRequest`** fields: `source_paths[]`, `working_directory`, optional `sha256_hex`, `allow_probable_duplicates` (bool), `force_epub_conversion` (bool), `import_covers` (optional bool, default true — when false, the pipeline skips cover extraction and storage for the entire batch).
 
 **`ImportJobSnapshot`** fields: `job_id`, `status` (`ImportJobStatus` enum), `percent` (0–100), `total_entries`, `processed_entries`, `imported_entries`, `failed_entries`, `skipped_entries`, `warnings[]`.
 
@@ -305,7 +305,7 @@ Ordering guarantee: result order == ZIP entry order, despite parallel worker com
 4. Plan conversion (`CImportConversionPolicy`)
 5. Execute conversion if needed (`IBookConverter`)
 6. Prepare managed storage — stage bytes (`IManagedStorage::PrepareImport`)
-7. Process cover — decode/resize/re-encode (`ICoverImageProcessor`)
+7. Process cover — decode/resize/re-encode (`ICoverImageProcessor`); skipped entirely when `ImportCovers=false`
 8. Write DB entry (`IBookRepository::Add` via writer dispatcher)
 9. Commit storage (`IManagedStorage::CommitImport`)
 10. On failure at any step: rollback staged bytes (`IManagedStorage::RollbackImport`)
@@ -652,7 +652,10 @@ void             RollbackImport(const SPreparedStorage& prepared) noexcept;
 
 ```cpp
 bool        CanParse(EBookFormat format) const;
-SParsedBook Parse(const std::filesystem::path& path, std::string_view logicalSourceLabel) const;
+SParsedBook Parse(
+    const std::filesystem::path& path,
+    std::string_view logicalSourceLabel,
+    const SBookParseOptions& options) const;
 ```
 
 ### `IBookConverter`

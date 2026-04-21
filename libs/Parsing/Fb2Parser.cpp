@@ -722,7 +722,8 @@ bool CFb2Parser::CanParse(const Librova::Domain::EBookFormat format) const
 
 Librova::Domain::SParsedBook CFb2Parser::Parse(
     const std::filesystem::path& filePath,
-    const std::string_view logicalSourceLabel) const
+    const std::string_view logicalSourceLabel,
+    const Librova::Domain::SBookParseOptions& options) const
 {
     const std::string sourceLabel = logicalSourceLabel.empty()
         ? Librova::Unicode::PathToUtf8(filePath)
@@ -918,6 +919,11 @@ Librova::Domain::SParsedBook CFb2Parser::Parse(
         {
             parsedBook.Metadata.Identifier = identifier;
         }
+    }
+
+    if (!options.ExtractCover)
+    {
+        return parsedBook;
     }
 
     if (const std::optional<std::string> coverBinaryId = TryGetCoverBinaryId(titleInfoNode))

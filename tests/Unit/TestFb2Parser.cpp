@@ -84,6 +84,43 @@ TEST_CASE("FB2 parser extracts metadata and embedded cover", "[fb2-parsing]")
     REQUIRE(parsedBook.CoverBytes == std::vector<std::byte>({std::byte{0x01}, std::byte{0x23}, std::byte{0x45}}));
 }
 
+TEST_CASE("FB2 parser skips embedded cover extraction when disabled", "[fb2-parsing]")
+{
+    CTestWorkspace sandbox(L"librova-fb2-parser-no-cover-extract");
+    const std::filesystem::path fb2Path = sandbox.GetPath() / "sample.fb2";
+
+    WriteTextFile(
+        fb2Path,
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns:l="http://www.w3.org/1999/xlink">
+  <description>
+    <title-info>
+      <book-title>Roadside Picnic</book-title>
+      <author>
+        <first-name>Arkady</first-name>
+        <last-name>Strugatsky</last-name>
+      </author>
+      <lang>en</lang>
+      <coverpage>
+        <image l:href="#cover-image"/>
+      </coverpage>
+    </title-info>
+  </description>
+  <binary id="cover-image" content-type="image/jpeg">ASNF</binary>
+</FictionBook>)");
+
+    const Librova::Fb2Parsing::CFb2Parser parser;
+    const Librova::Domain::SParsedBook parsedBook = parser.Parse(
+        fb2Path,
+        {},
+        {.ExtractCover = false});
+
+    REQUIRE(parsedBook.Metadata.TitleUtf8 == "Roadside Picnic");
+    REQUIRE_FALSE(parsedBook.CoverExtension.has_value());
+    REQUIRE(parsedBook.CoverBytes.empty());
+    REQUIRE_FALSE(parsedBook.CoverDiagnosticMessage.has_value());
+}
+
 TEST_CASE("FB2 parser rejects malformed metadata", "[fb2-parsing]")
 {
     CTestWorkspace sandbox(L"librova-fb2-parser-invalid");
@@ -631,4 +668,3 @@ TEST_CASE("FB2 parser handles UTF-16 BE encoded file", "[fb2-parsing]")
     REQUIRE(parsedBook.Metadata.Language == "ru");
 }
 #endif
-

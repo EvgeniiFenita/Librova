@@ -18,7 +18,8 @@ Librova::Application::SImportRequest CImportJobProtoMapper::FromProto(const libr
         .WorkingDirectory = PathFromUtf8(request.working_directory()),
         .Sha256Hex = request.has_sha256_hex() ? std::optional<std::string>{request.sha256_hex()} : std::nullopt,
         .AllowProbableDuplicates = request.allow_probable_duplicates(),
-        .ForceEpubConversion = request.force_epub_conversion()
+        .ForceEpubConversion = request.force_epub_conversion(),
+        .ImportCovers = request.has_import_covers() ? request.import_covers() : true
     };
 }
 
@@ -96,6 +97,7 @@ librova::v1::ImportRequest CImportJobProtoMapper::ToProto(const Librova::Applica
 
     message.set_allow_probable_duplicates(request.AllowProbableDuplicates);
     message.set_force_epub_conversion(request.ForceEpubConversion);
+    message.set_import_covers(request.ImportCovers);
     return message;
 }
 

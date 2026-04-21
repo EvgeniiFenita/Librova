@@ -291,7 +291,7 @@ During import (`IsImportInProgress = true`) the UI is locked:
 - Buttons (`AccentAction`, `SecondaryAction`, `DestructiveAction`): `Opacity=0.4` on button + ContentPresenter keeps original bg, text muted to `TextMuted`
 - Library card in sidebar (`Border.AppPanelMuted`) — `IsEnabled` bound to `!Shell.IsImportInProgress`; dims to 0.45 opacity and prevents Open/New button interaction
 - Drop zone in `ImportView` (`Border.DropZone`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims to 0.45 opacity, disables the picker buttons, and must not accept drag-over/drop while an import is already running
-- OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims both checkboxes (Allow probable duplicates, Force conversion to EPUB) via parent propagation
+- OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims all import option checkboxes (Allow probable duplicates, Force conversion to EPUB, Import covers) via parent propagation
 - Only the "Cancel" button remains active
 
 ### Lockout class — generic region lock-out

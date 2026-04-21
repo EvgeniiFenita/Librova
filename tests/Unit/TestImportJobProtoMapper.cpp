@@ -12,7 +12,8 @@ TEST_CASE("Import job proto mapper round-trips import request paths and optional
         .WorkingDirectory = std::filesystem::path{u8"C:/work/Каталог"},
         .Sha256Hex = std::string{"abc123"},
         .AllowProbableDuplicates = true,
-        .ForceEpubConversion = true
+        .ForceEpubConversion = true,
+        .ImportCovers = true
     };
 
     const auto proto = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(request);
@@ -23,6 +24,7 @@ TEST_CASE("Import job proto mapper round-trips import request paths and optional
     REQUIRE(restored.Sha256Hex == request.Sha256Hex);
     REQUIRE(restored.AllowProbableDuplicates == request.AllowProbableDuplicates);
     REQUIRE(restored.ForceEpubConversion == request.ForceEpubConversion);
+    REQUIRE(restored.ImportCovers == request.ImportCovers);
 }
 
 TEST_CASE("Import job proto mapper maps job result into transport DTO", "[proto-mapping]")
@@ -108,6 +110,32 @@ TEST_CASE("Import job proto mapper populates optional snapshot and result respon
     REQUIRE(resultResponse.has_result());
     REQUIRE(resultResponse.result().snapshot().job_id() == 9);
     REQUIRE_FALSE(emptyResultResponse.has_result());
+}
+
+TEST_CASE("Import job proto mapper round-trips ImportCovers=false", "[proto-mapping]")
+{
+    const Librova::Application::SImportRequest request{
+        .SourcePaths = {std::filesystem::path{u8"C:/books/test.fb2"}},
+        .WorkingDirectory = std::filesystem::path{u8"C:/work"},
+        .ImportCovers = false
+    };
+
+    const auto proto = Librova::ProtoMapping::CImportJobProtoMapper::ToProto(request);
+    const auto restored = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(proto);
+
+    REQUIRE(restored.ImportCovers == false);
+}
+
+TEST_CASE("Proto mapper defaults ImportCovers to true when field is absent", "[proto-mapping]")
+{
+    librova::v1::ImportRequest proto;
+    proto.add_source_paths("C:/books/test.fb2");
+    proto.set_working_directory("C:/work");
+    // import_covers intentionally not set — must default to true
+
+    const auto restored = Librova::ProtoMapping::CImportJobProtoMapper::FromProto(proto);
+
+    REQUIRE(restored.ImportCovers == true);
 }
 
 TEST_CASE("Import job proto mapper round-trips Cancelling, RollingBack, and Compacting statuses", "[proto-mapping]")

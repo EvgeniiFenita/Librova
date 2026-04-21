@@ -444,7 +444,8 @@ bool CEpubParser::CanParse(const Librova::Domain::EBookFormat format) const
 
 Librova::Domain::SParsedBook CEpubParser::Parse(
     const std::filesystem::path& filePath,
-    const std::string_view logicalSourceLabel) const
+    const std::string_view logicalSourceLabel,
+    const Librova::Domain::SBookParseOptions& options) const
 {
     const std::string sourceLabel = logicalSourceLabel.empty()
         ? Librova::Unicode::PathToUtf8(filePath)
@@ -526,6 +527,11 @@ Librova::Domain::SParsedBook CEpubParser::Parse(
         {
             parsedBook.Metadata.DescriptionUtf8 = description;
         }
+    }
+
+    if (!options.ExtractCover)
+    {
+        return parsedBook;
     }
 
     const std::optional<std::string> coverRelativePath = TryFindCoverPath(packageNode);

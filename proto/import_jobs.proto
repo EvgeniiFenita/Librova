@@ -8,6 +8,7 @@ message ImportRequest {
   optional string sha256_hex = 3;
   bool allow_probable_duplicates = 4;
   bool force_epub_conversion = 5;
+  optional bool import_covers = 6;
 }
 
 enum BookFormat {

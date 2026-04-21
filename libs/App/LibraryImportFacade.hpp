@@ -40,6 +40,7 @@ struct SImportRequest
     std::uint64_t JobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
+    bool ImportCovers = true;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

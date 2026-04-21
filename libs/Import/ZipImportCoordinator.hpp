@@ -30,7 +30,8 @@ struct SZipImportRequest
     std::uint64_t JobId = 0;
     bool AllowProbableDuplicates = false;
     bool ForceEpubConversion = false;
-    std::vector<Librova::Domain::SBookId> ReservedBookIds;
+    bool ImportCovers = true;
+    std::vector<Librova::Domain::SBookId> ReservedBookIds; // optional pre-reserved IDs; mapped by import index
     std::optional<std::reference_wrapper<Librova::Domain::IBookRepository>> WriterRepository; // optional writer-dispatching repo for parallel writes
     std::optional<std::reference_wrapper<Librova::Importing::CImportPerfTracker>> PerfTracker;
 

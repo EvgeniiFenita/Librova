@@ -40,7 +40,8 @@ internal static class ImportJobMapper
         {
             WorkingDirectory = model.WorkingDirectory,
             AllowProbableDuplicates = model.AllowProbableDuplicates,
-            ForceEpubConversion = model.ForceEpubConversionOnImport
+            ForceEpubConversion = model.ForceEpubConversionOnImport,
+            ImportCovers = model.ImportCovers
         };
         request.SourcePaths.AddRange(model.SourcePaths);
 

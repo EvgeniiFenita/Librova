@@ -481,6 +481,7 @@ SImportResult CLibraryImportFacade::Run(
                     .ImportJobId            = request.JobId,
                     .AllowProbableDuplicates = request.AllowProbableDuplicates,
                     .ForceEpubConversion     = request.ForceEpubConversion,
+                    .ImportCovers            = request.ImportCovers,
                     .PerfTracker             = std::ref(perf),
                     .RepositoryOverride      = result.Summary.Mode == EImportMode::Batch
                         ? std::optional<std::reference_wrapper<Librova::Domain::IBookRepository>>{std::ref(writerRepo)}
@@ -607,6 +608,7 @@ SImportResult CLibraryImportFacade::Run(
                             .ImportJobId             = request.JobId,
                             .AllowProbableDuplicates = request.AllowProbableDuplicates,
                             .ForceEpubConversion     = request.ForceEpubConversion,
+                            .ImportCovers            = request.ImportCovers,
                             .PerfTracker             = std::ref(perf),
                             .RepositoryOverride      = std::ref(writerRepo),
                         }, nullSink, stopToken);
@@ -698,6 +700,7 @@ SImportResult CLibraryImportFacade::Run(
                     .JobId = request.JobId,
                     .AllowProbableDuplicates = request.AllowProbableDuplicates,
                     .ForceEpubConversion = request.ForceEpubConversion,
+                    .ImportCovers = request.ImportCovers,
                     .ReservedBookIds = m_bookRepository.ReserveIds(reservedZipIdCount),
                     .WriterRepository = std::ref(writerRepo),
                     .PerfTracker = std::ref(perf),
