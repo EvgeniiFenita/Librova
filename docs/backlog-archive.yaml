@@ -1497,3 +1497,12 @@ tasks:
   note: Added import_covers optional bool to proto, threaded ImportCovers through C++ domain/facade and
     C# model/mapper/ViewModel, added the Import covers checkbox, and enforced disabled cover import by
     parsing without cover extraction before storage.
+- id: 176
+  summary: add keyboard shortcuts for core library actions
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'Added library-section keyboard shortcuts at the MainWindow key handler: Esc closes the selected-book
+    details panel, Delete moves the selected book to Recycle Bin, and Delete is ignored from text inputs.
+    Markup and ViewModel tests added.'

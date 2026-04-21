@@ -152,16 +152,6 @@ tasks:
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
     Eliminates per-book CreateProcess overhead for EPUB conversion. Deferred from #60 to avoid complexity
     in the parallel import slice.'
-- id: 176
-  summary: add keyboard shortcuts for core library actions
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.2'
-  note: 'add KeyBindings in MainWindow.axaml (window-level): Esc -> Shell.LibraryBrowser.CloseSelectionCommand,
-    Delete -> Shell.LibraryBrowser.MoveSelectedBookToTrashCommand, Ctrl+I -> Shell.ShowImportSectionCommand,
-    Ctrl+F -> focus search field; no ViewModel changes required; add a Keyboard Shortcuts reference table
-    in the Settings view using AppPanelMuted'
 - id: 177
   summary: show author text as second line on book card
   status: Open

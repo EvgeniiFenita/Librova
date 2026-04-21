@@ -4879,4 +4879,30 @@ public sealed class ViewModelsTests
         var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ProbeError };
         Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
     }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_CloseSelectionCommand_IsDisabled_WhenNoBookIsSelected()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+
+        Assert.False(viewModel.CloseSelectionCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_CloseSelectionCommand_ClearsSelection_WhenBookIsSelected()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.True(viewModel.CloseSelectionCommand.CanExecute(null));
+
+        await viewModel.CloseSelectionCommand.ExecuteAsyncForTests();
+
+        Assert.Null(viewModel.SelectedBook);
+        Assert.False(viewModel.CloseSelectionCommand.CanExecute(null));
+    }
 }

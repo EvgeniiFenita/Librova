@@ -67,6 +67,9 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Covers: real cover keeps its aspect ratio
 - Covers: placeholder letter is not clipped, including Cyrillic letters
 - FB2 with `windows-1251` shows title/author without corruption **(RG)**
+- `Esc` with a selected book closes the details panel (clears selection); does nothing when no book is selected
+- `Delete` with a selected book moves the book to the Recycle Bin; does nothing when no book is selected
+- `Delete` in the search field deletes text and does not trigger the trash command
 
 ---
 
