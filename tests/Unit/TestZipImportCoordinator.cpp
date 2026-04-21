@@ -238,6 +238,35 @@ void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string
     }
 }
 
+void AddZipEntryWithFlags(
+    zip_t* archive,
+    const std::string& entryPath,
+    const std::string& text,
+    const zip_flags_t flags)
+{
+    void* buffer = std::malloc(text.size());
+
+    if (buffer == nullptr)
+    {
+        throw std::runtime_error("Failed to allocate zip buffer.");
+    }
+
+    std::memcpy(buffer, text.data(), text.size());
+    zip_source_t* source = zip_source_buffer(archive, buffer, text.size(), 1);
+
+    if (source == nullptr)
+    {
+        std::free(buffer);
+        throw std::runtime_error("Failed to allocate zip source.");
+    }
+
+    if (zip_file_add(archive, entryPath.c_str(), source, ZIP_FL_OVERWRITE | flags) < 0)
+    {
+        zip_source_free(source);
+        throw std::runtime_error("Failed to add zip entry.");
+    }
+}
+
 std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
@@ -318,6 +347,53 @@ std::filesystem::path CreateCyrillicZipFixture(const std::filesystem::path& outp
     }
 
     AddZipEntry(archive, "папка/книга.fb2", "<fb2/>");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
+std::filesystem::path CreateCp866CyrillicZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    const std::string cp866EntryName{
+        "\xAF\xA0\xAF\xAA\xA0/\xAA\xAD\xA8\xA3\xA0.fb2",
+        15};
+    AddZipEntryWithFlags(archive, cp866EntryName, "<fb2/>", ZIP_FL_ENC_RAW);
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
+std::filesystem::path CreateUnsupportedOnlyZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "notes.txt", "ignore-me");
+    AddZipEntry(archive, "document.pdf", "%PDF");
+    AddZipEntry(archive, "folder/", "");
 
     if (zip_close(archive) != 0)
     {
@@ -688,6 +764,46 @@ TEST_CASE("ZIP import coordinator preserves UTF-8 entry names when building file
     REQUIRE(importer.Calls.size() == 1);
     REQUIRE(importer.Calls[0].SourcePath.filename() == Librova::Unicode::PathFromUtf8("книга.fb2"));
     REQUIRE(result.Entries[0].ArchivePath == Librova::Unicode::PathFromUtf8("папка\\книга.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator decodes CP866 Cyrillic entry names", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-cp866-entry");
+    const std::filesystem::path zipPath = CreateCp866CyrillicZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 1);
+    REQUIRE(importer.Calls.size() == 1);
+    REQUIRE(importer.Calls[0].SourcePath.filename() == Librova::Unicode::PathFromUtf8("книга.fb2"));
+    REQUIRE(result.Entries[0].ArchivePath == Librova::Unicode::PathFromUtf8("папка\\книга.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator skips archives with no supported book entries", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-unsupported-only");
+    const std::filesystem::path zipPath = CreateUnsupportedOnlyZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(importer.Calls.empty());
+    REQUIRE(result.ImportedCount() == 0);
+    REQUIRE(result.Entries.size() == 2);
+    REQUIRE(std::ranges::all_of(result.Entries, [](const auto& entry) {
+        return entry.Status == Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry;
+    }));
 }
 
 TEST_CASE("ZIP import coordinator reports progress for completed entries before the first slot finishes", "[zip-import][progress]")

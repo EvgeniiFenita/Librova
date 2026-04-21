@@ -37,6 +37,26 @@ TEST_CASE("Managed trash service moves managed file under library trash while pr
     std::filesystem::remove_all(sandbox);
 }
 
+TEST_CASE("Managed trash service accepts a non-canonical library root", "[managed-trash]")
+{
+    const auto sandbox = MakeUniqueTestPath(L"librova-managed-trash-noncanonical-root");
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Parent/Library/Objects/5a/68");
+
+    const auto libraryRoot = sandbox / "Parent" / ".." / "Parent" / "Library";
+    const auto sourcePath = sandbox / "Parent/Library/Objects/5a/68/0000000001.book.epub";
+    std::ofstream(sourcePath, std::ios::binary) << "epub";
+
+    Librova::ManagedTrash::CManagedTrashService service(libraryRoot);
+    const auto trashedPath = service.MoveToTrash(sourcePath);
+
+    REQUIRE_FALSE(std::filesystem::exists(sourcePath));
+    REQUIRE(std::filesystem::exists(trashedPath));
+    REQUIRE(trashedPath == sandbox / "Parent/Library/Trash/Objects/5a/68/0000000001.book.epub");
+
+    std::filesystem::remove_all(sandbox);
+}
+
 TEST_CASE("Managed trash service restores managed file from trash", "[managed-trash]")
 {
     const auto sandbox = MakeUniqueTestPath(L"librova-managed-trash-restore");

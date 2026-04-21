@@ -271,10 +271,11 @@ Always ≥ 1 (prevents deadlock on single-core); ≤ 8 (prevents I/O saturation)
 
 **Phase 1 — Extract & Submit (main thread only):**
 1. Iterate ZIP entries sequentially (`zip_t*` is not thread-safe).
-2. Skip immediately (no I/O, no semaphore): directories, nested archives, unsafe paths, unsupported formats.
-3. Check cancellation + semaphore back-pressure (`inFlight.acquire()` — blocks main thread if temp space full).
-4. Extract entry bytes to `working_dir/entries/<zip_index>/` (index, not filename).
-5. Submit worker lambda to thread pool; store `std::future` in slot vector at original entry index.
+2. Decode entry names to UTF-8 before path handling; legacy CP866 Cyrillic names are accepted when the archive does not mark names as UTF-8.
+3. Skip immediately (no I/O, no semaphore): directories, nested archives, unsafe paths, unsupported formats.
+4. Check cancellation + semaphore back-pressure (`inFlight.acquire()` — blocks main thread if temp space full).
+5. Extract entry bytes to `working_dir/entries/<zip_index>/` (index, not filename).
+6. Submit worker lambda to thread pool; store `std::future` in slot vector at original entry index.
 
 **Phase 2 — Finalise in Order (main thread):**
 1. Drain completion notifications from progress queue (workers push as they finish).
@@ -445,6 +446,8 @@ Violating any of these causes data corruption, crashes, or silent test failures.
 12. **Rollback is explicit, not silent.** When import is cancelled after workers have committed books, `CLibraryImportFacade` collects all imported IDs and invokes `CImportRollbackService::RollbackImportedBooks()`. Partial success is always visible to the caller; it is never hidden.
 
 13. **Export destination replacement is staged.** `CLibraryExportFacade` writes direct exports and converted exports to a temporary sibling path first. It must not write converter or decompression output directly over the requested destination, because partial failures must preserve any existing user file.
+
+14. **ZIP entry names are UTF-8 before path conversion.** `CZipImportCoordinator` must convert archive entry names to UTF-8, including the legacy CP866 Cyrillic fallback for unmarked Windows-created archives, before calling `PathFromUtf8()` or applying safe-relative-path checks.
 
 ---
 

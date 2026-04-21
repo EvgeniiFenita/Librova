@@ -286,6 +286,43 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_DisposeCancelsActiveImportWait()
+    {
+        var service = new BlockingCompletionImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var runTask = viewModel.StartImportAsync();
+            await service.WaitForCompletionWaitStartAsync();
+            viewModel.Dispose();
+
+            await WaitForConditionAsync(() => service.CancellationObserved);
+            await runTask;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportJobsViewModel_ShowsRollbackResidueInCancelledTerminalState()
     {
         var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
@@ -2871,6 +2908,57 @@ public sealed class ViewModelsTests
             Action<ImportJobSnapshotModel>? onProgress,
             CancellationToken cancellationToken) =>
             throw new InvalidOperationException("This service is only used for source validation.");
+    }
+
+    private sealed class BlockingCompletionImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _completionWaitStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool CancellationObserved { get; private set; }
+
+        public Task WaitForCompletionWaitStartAsync() => _completionWaitStarted.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(null);
+
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(null);
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(1UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(false);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            _completionWaitStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+
+            throw new InvalidOperationException("This service never reaches a terminal result.");
+        }
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Librova.UI.Logging;
 
 namespace Librova.UI.Runtime;
 
@@ -52,11 +53,28 @@ internal static class RuntimeLogSynchronization
         {
             File.Delete(runtimeLogPath);
         }
-        catch (IOException)
+        catch (IOException error)
         {
+            LogRuntimeDeleteFailure(error, runtimeLogPath);
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException error)
         {
+            LogRuntimeDeleteFailure(error, runtimeLogPath);
         }
+    }
+
+    private static void LogRuntimeDeleteFailure(Exception error, string runtimeLogPath)
+    {
+        if (UiLogging.CurrentLogFilePath is not null)
+        {
+            UiLogging.Warning(
+                error,
+                "Failed to delete runtime log after sync; old entries may persist. Path={Path}",
+                runtimeLogPath);
+            return;
+        }
+
+        Console.Error.WriteLine(
+            $"Failed to delete runtime log after sync; old entries may persist. Path={runtimeLogPath}. {error.Message}");
     }
 }

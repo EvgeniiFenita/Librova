@@ -62,7 +62,6 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
     // Each UpgradeToVersionN operates inside the transaction opened below.
     // Remember to bump GetCurrentVersion() in DatabaseSchema.cpp accordingly.
     // -----------------------------------------------------------------------
-    connection.Execute("PRAGMA foreign_keys = ON;");
     connection.Execute("PRAGMA journal_mode = WAL;");
     connection.Execute("BEGIN IMMEDIATE;");
 

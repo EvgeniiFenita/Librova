@@ -367,7 +367,21 @@ internal sealed class CoreHostProcess : IAsyncDisposable
                 return;
             }
 
-            if (!AssignProcessToJobObject(jobHandle, process.Handle))
+            IntPtr processHandle;
+            try
+            {
+                processHandle = process.Handle;
+            }
+            catch (InvalidOperationException error)
+            {
+                UiLogging.Warning(
+                    error,
+                    "Failed to access core host process handle for Windows job assignment.");
+                jobHandle.Dispose();
+                return;
+            }
+
+            if (!AssignProcessToJobObject(jobHandle, processHandle))
             {
                 UiLogging.Warning("Failed to assign core host to Windows job object. ProcessId={ProcessId} Error={ErrorCode}", process.Id, Marshal.GetLastWin32Error());
                 jobHandle.Dispose();

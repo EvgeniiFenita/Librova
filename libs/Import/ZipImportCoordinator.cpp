@@ -1,5 +1,6 @@
 #include "Import/ZipImportCoordinator.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -128,6 +129,57 @@ void LogZipEntryIssueIfInitialized(
         reason);
 }
 
+[[nodiscard]] bool ContainsNonAsciiByte(const std::string_view value) noexcept
+{
+    return std::ranges::any_of(value, [](const unsigned char ch) {
+        return ch >= 0x80;
+    });
+}
+
+[[nodiscard]] bool ContainsCyrillicText(const std::string_view utf8Value)
+{
+#ifdef _WIN32
+    const auto wideValue = Librova::Unicode::Utf8ToWide(utf8Value);
+    return std::ranges::any_of(wideValue, [](const wchar_t ch) {
+        return (ch >= L'\u0400' && ch <= L'\u04FF')
+            || (ch >= L'\u0500' && ch <= L'\u052F');
+    });
+#else
+    (void)utf8Value;
+    return false;
+#endif
+}
+
+[[nodiscard]] std::string DecodeZipEntryName(
+    const std::string_view guessedName,
+    const std::string_view rawName)
+{
+    if (Librova::Unicode::IsValidUtf8(rawName))
+    {
+        return std::string{rawName};
+    }
+
+    if (ContainsNonAsciiByte(rawName))
+    {
+        try
+        {
+            const auto cp866Name = Librova::Unicode::CodePageToUtf8(
+                rawName,
+                866,
+                "Failed to decode ZIP entry name from CP866.");
+            if (ContainsCyrillicText(cp866Name))
+            {
+                return cp866Name;
+            }
+        }
+        catch (const std::exception&)
+        {
+        }
+    }
+
+    return std::string{guessedName};
+}
+
 class CZipArchive final
 {
 public:
@@ -167,14 +219,15 @@ public:
 
     [[nodiscard]] std::string GetEntryName(const zip_uint64_t index) const
     {
-        const char* name = zip_get_name(m_archive, index, ZIP_FL_ENC_GUESS);
+        const char* guessedName = zip_get_name(m_archive, index, ZIP_FL_ENC_GUESS);
+        const char* rawName = zip_get_name(m_archive, index, ZIP_FL_ENC_RAW);
 
-        if (name == nullptr)
+        if (guessedName == nullptr || rawName == nullptr)
         {
             throw std::runtime_error("Failed to read ZIP entry name.");
         }
 
-        return name;
+        return DecodeZipEntryName(guessedName, rawName);
     }
 
     [[nodiscard]] std::vector<std::byte> ReadBytes(const zip_uint64_t index) const

@@ -9,6 +9,8 @@
 namespace Librova::PipeTransport {
 namespace {
 
+static_assert(kNextPipeMethodId == 13);
+
 constexpr std::uint32_t RequestMagic = 0x4C465250; // LFRP
 constexpr std::uint32_t ResponseMagic = 0x4C465253; // LFRS
 constexpr std::uint32_t ProtocolVersion = 1;

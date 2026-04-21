@@ -37,6 +37,18 @@ void MoveFile(
     }
 }
 
+[[nodiscard]] std::filesystem::path CanonicalizeLibraryRoot(const std::filesystem::path& libraryRoot)
+{
+    std::error_code errorCode;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(libraryRoot, errorCode);
+    if (errorCode)
+    {
+        throw std::runtime_error("Managed trash library root could not be canonicalized.");
+    }
+
+    return canonicalRoot.lexically_normal();
+}
+
 [[nodiscard]] std::filesystem::path BuildCollisionCandidatePath(const std::filesystem::path& path, const int index)
 {
     if (index == 0)
@@ -85,7 +97,7 @@ void MoveFile(
 CManagedTrashService::CManagedTrashService(
     std::filesystem::path libraryRoot,
     TMoveOperation moveOperation)
-    : m_libraryRoot(std::move(libraryRoot))
+    : m_libraryRoot(CanonicalizeLibraryRoot(libraryRoot))
     , m_moveOperation(moveOperation ? std::move(moveOperation) : &DefaultMoveOperation)
 {
 }

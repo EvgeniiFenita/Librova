@@ -1515,3 +1515,13 @@ tasks:
   note: Fixed review findings around active import lifecycle, source-validation disposal, export/recycle
     partial failures, WAL-backed statistics caching, retained log append, and Unicode-safe export logging;
     added regression coverage and ran full test suite.
+- id: 188
+  summary: fix review-found reliability gaps in ZIP import, trash, rollback diagnostics, shutdown, logs,
+    and IPC drift guards
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.2'
+  note: Fixed validated review findings across ZIP Cyrillic entry decoding, managed trash root canonicalization,
+    rollback/runtime diagnostics, IPC drift guard, shutdown cancellation, process-handle race handling,
+    rollback/ZIP tests, and SQLite PRAGMA cleanup.

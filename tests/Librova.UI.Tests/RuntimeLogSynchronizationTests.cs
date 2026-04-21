@@ -1,8 +1,10 @@
 using Librova.UI.Runtime;
+using Librova.UI.Logging;
 using Xunit;
 
 namespace Librova.UI.Tests;
 
+[Collection(UiLoggingCollection.Name)]
 public sealed class RuntimeLogSynchronizationTests
 {
     [Fact]
@@ -74,6 +76,45 @@ public sealed class RuntimeLogSynchronizationTests
         }
         finally
         {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
+    [Fact]
+    public async Task SyncPendingRuntimeLogs_LogsWarningWhenRuntimeLogDeleteFails()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-tests",
+            $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Logs"));
+        var testLogPath = Path.Combine(sandboxRoot, "test-ui.log");
+
+        try
+        {
+            UiLogging.ReinitializeForTests(testLogPath);
+            var uiRuntimeLogPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(uiRuntimeLogPath)!);
+            await File.WriteAllTextAsync(uiRuntimeLogPath, "ui runtime log");
+
+            using (new FileStream(uiRuntimeLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                RuntimeLogSynchronization.SyncPendingRuntimeLogs(libraryRoot);
+            }
+
+            UiLogging.Shutdown();
+            var logText = await File.ReadAllTextAsync(testLogPath);
+            Assert.Contains("Failed to delete runtime log after sync", logText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            UiLogging.Shutdown();
             TryDeleteDirectory(sandboxRoot);
         }
     }

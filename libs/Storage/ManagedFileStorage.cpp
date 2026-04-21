@@ -345,6 +345,11 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             }
             catch (...)
             {
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "Commit rollback: unexpected non-std exception during cover restore.");
+                }
             }
         }
 
@@ -371,6 +376,11 @@ void CManagedFileStorage::CommitImport(const Librova::Domain::SPreparedStorage& 
             }
             catch (...)
             {
+                if (Librova::Logging::CLogging::IsInitialized())
+                {
+                    Librova::Logging::Warn(
+                        "Commit rollback: unexpected non-std exception during book restore.");
+                }
             }
         }
 

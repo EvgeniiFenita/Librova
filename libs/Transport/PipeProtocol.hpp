@@ -41,6 +41,8 @@ static_assert(static_cast<std::uint32_t>(EPipeMethod::WaitImportJob) == 8);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::CancelImportJob) == 9);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::RemoveImportJob) == 10);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::ValidateImportSources) == 12);
+inline constexpr std::uint32_t kNextPipeMethodId = 13;
+static_assert(kNextPipeMethodId == 13);
 
 static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::Ok) == 0);
 static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::InvalidRequest) == 1);
