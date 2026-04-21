@@ -33,6 +33,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - ZIP: parallel import of multiple files from the archive **(RG)**
 - ZIP: corrupted archive — a valid book from the same archive still imports **(RG)**
 - Progress summary in the `RUNNING` state shows total / processed / imported / failed / skipped
+- Long-running import after the UI wait ceiling keeps `Refresh` and `Cancel` available
 - Cancellation: rollback of already imported books **(RG)**
 - Cancellation: the library returns to the pre-import state **(RG)**
 - Drag-and-drop: files start import automatically **(RG)**
@@ -78,6 +79,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Export: file appears on disk at the selected path **(RG)**
 - Export: suggested filename contains no Windows-forbidden characters **(RG)**
 - Export as EPUB: button is visible only when a converter is configured
+- Export as EPUB: converter failure after a partial write does not corrupt an existing destination file
 - Compressed `.book.fb2.gz`: Export produces a readable `.fb2` **(RG)**
 - Compressed `.book.fb2.gz`: Export as EPUB works **(RG)**
 - Compressed `.book.fb2.gz`: Export as EPUB leaves no temp files in the library folder **(RG)**
@@ -88,6 +90,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 
 - Move to Recycle Bin: book disappears from the Library browser **(RG)**
 - Move to Recycle Bin: files are removed from `Objects` **(RG)**
+- Move to Recycle Bin: partial Windows handoff failure is reported as a managed-trash fallback
 - If the last book of a language is deleted, that language disappears from the language filter **(RG)**
 
 ---

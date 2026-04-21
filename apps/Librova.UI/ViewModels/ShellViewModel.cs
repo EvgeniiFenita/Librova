@@ -285,6 +285,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ImportJobs.ImportCompletedSuccessfully -= _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged -= _importWorkflowController.HandleImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged -= _importWorkflowController.HandleLibraryBrowserPropertyChanged;
+        ImportJobs.Dispose();
         LibraryBrowser.Dispose();
         _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;
         _converterValidationCoordinator.Dispose();

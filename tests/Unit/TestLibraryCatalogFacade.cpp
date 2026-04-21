@@ -387,6 +387,34 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     std::filesystem::remove_all(libraryRoot);
 }
 
+TEST_CASE("Sqlite query repository statistics update after WAL-backed write", "[book-database][catalog]")
+{
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-statistics-wal.db");
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    REQUIRE(queryRepository.GetLibraryStatistics().BookCount == 0);
+
+    Librova::Domain::SBook book = MakeBook(
+        "WAL Statistics",
+        {"Author"},
+        "en",
+        Librova::Domain::EBookFormat::Epub,
+        "Objects/11/22/0000002026.book.epub",
+        "statistics-wal-hash",
+        std::chrono::system_clock::now());
+    static_cast<void>(writeRepository.Add(book));
+
+    REQUIRE(queryRepository.GetLibraryStatistics().BookCount == 1);
+
+    queryRepository.CloseSession();
+    writeRepository.CloseSession();
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Library catalog facade filters books by multiple languages", "[application][catalog]")
 {
     const auto databasePath = MakeUniqueTestPath(L"librova-catalog-multi-language.db");
@@ -516,4 +544,3 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
     std::filesystem::remove(databasePath);
 }
-

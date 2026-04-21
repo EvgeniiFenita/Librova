@@ -999,6 +999,11 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
 {
     const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
     const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
+    const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
+    std::filesystem::path walPath = m_databasePath;
+    walPath += "-wal";
+    const auto walLastWriteTime = GetLastWriteTimeOrMin(walPath);
+    const std::uint64_t walSizeBytes = GetFileSizeOrZero(walPath);
     Librova::Sqlite::CSqliteConnection connection(m_databasePath);
     const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(libraryRoot, connection);
 
@@ -1006,6 +1011,9 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
         const std::scoped_lock cacheLock(m_statisticsCacheMutex);
         if (m_statisticsCache.has_value()
             && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->DatabaseSizeBytes == databaseSizeBytes
+            && m_statisticsCache->WalLastWriteTime == walLastWriteTime
+            && m_statisticsCache->WalSizeBytes == walSizeBytes
             && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
             && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
             && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
@@ -1025,7 +1033,6 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
 
     const std::uint64_t totalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1));
     const std::uint64_t totalCoverSizeBytes = coverDirectorySnapshot.TotalSizeBytes;
-    const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
 
     const Librova::Domain::IBookQueryRepository::SLibraryStatistics statistics{
         .BookCount = static_cast<std::uint64_t>(statement.GetColumnInt64(0)),
@@ -1037,6 +1044,9 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
         const std::scoped_lock cacheLock(m_statisticsCacheMutex);
         if (m_statisticsCache.has_value()
             && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->DatabaseSizeBytes == databaseSizeBytes
+            && m_statisticsCache->WalLastWriteTime == walLastWriteTime
+            && m_statisticsCache->WalSizeBytes == walSizeBytes
             && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
             && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
             && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
@@ -1046,6 +1056,9 @@ Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryReposi
 
         m_statisticsCache = SStatisticsCache{
             .DatabaseLastWriteTime = databaseLastWriteTime,
+            .DatabaseSizeBytes = databaseSizeBytes,
+            .WalLastWriteTime = walLastWriteTime,
+            .WalSizeBytes = walSizeBytes,
             .CoverDirectorySnapshot = {
                 .FileCount = coverDirectorySnapshot.FileCount,
                 .TotalSizeBytes = coverDirectorySnapshot.TotalSizeBytes,

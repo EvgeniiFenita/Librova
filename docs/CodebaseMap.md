@@ -444,6 +444,8 @@ Violating any of these causes data corruption, crashes, or silent test failures.
 
 12. **Rollback is explicit, not silent.** When import is cancelled after workers have committed books, `CLibraryImportFacade` collects all imported IDs and invokes `CImportRollbackService::RollbackImportedBooks()`. Partial success is always visible to the caller; it is never hidden.
 
+13. **Export destination replacement is staged.** `CLibraryExportFacade` writes direct exports and converted exports to a temporary sibling path first. It must not write converter or decompression output directly over the requested destination, because partial failures must preserve any existing user file.
+
 ---
 
 ## 9. Task Navigation
@@ -756,7 +758,7 @@ The transport is **Protobuf contracts over Windows named pipes**. This is the ca
 **Managed library invariants:**
 - Hot runtime workspace (import workspaces, converter working dirs, staging) is intentionally separate from the managed library root. These are synchronized back only where needed.
 - Managed FB2 files are stored compressed as `.book.fb2.gz` under `Objects/` as an internal storage detail; browse, export, delete, and duplicate behavior treat them as ordinary FB2 books.
-- `Trash/` provides rollback-safe staging for delete operations before Recycle Bin handoff. If the Windows handoff fails, the delete remains committed in the catalog and staged files stay in `Trash/` as an explicit managed fallback.
+- `Trash/` provides rollback-safe staging for delete operations before Recycle Bin handoff. If the Windows handoff fails or partially succeeds, the delete remains committed in the catalog and any files not accepted by Windows stay in `Trash/` as an explicit managed fallback.
 
 **Library-root bootstrap modes:**
 - `Create Library` — may initialize only a new or empty target directory.

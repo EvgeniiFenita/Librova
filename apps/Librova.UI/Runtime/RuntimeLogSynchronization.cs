@@ -30,7 +30,23 @@ internal static class RuntimeLogSynchronization
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(retainedLogPath)!);
-        File.Copy(runtimeLogPath, retainedLogPath, overwrite: true);
+        if (File.Exists(retainedLogPath))
+        {
+            using var source = new FileStream(runtimeLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var destination = new FileStream(retainedLogPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            if (destination.Length > 0)
+            {
+                using var separator = new StreamWriter(destination, leaveOpen: true);
+                separator.WriteLine();
+                separator.Flush();
+            }
+
+            source.CopyTo(destination);
+        }
+        else
+        {
+            File.Copy(runtimeLogPath, retainedLogPath, overwrite: false);
+        }
 
         try
         {

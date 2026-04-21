@@ -147,7 +147,7 @@ librova::v1::ExportBookResponse CLibraryJobServiceAdapter::ExportBook(
             Librova::Logging::InfoIfInitialized(
                 "ExportBook completed for book {} to '{}'.",
                 exportRequest.BookId.Value,
-                exportedPath->string());
+                Librova::Unicode::PathToUtf8(*exportedPath));
         }
         else
         {

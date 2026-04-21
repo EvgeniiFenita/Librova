@@ -1506,3 +1506,12 @@ tasks:
   note: 'Added library-section keyboard shortcuts at the MainWindow key handler: Esc closes the selected-book
     details panel, Delete moves the selected book to Recycle Bin, and Delete is ignored from text inputs.
     Markup and ViewModel tests added.'
+- id: 187
+  summary: harden release-candidate failure paths found in review
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.3'
+  note: Fixed review findings around active import lifecycle, source-validation disposal, export/recycle
+    partial failures, WAL-backed statistics caching, retained log append, and Unicode-safe export logging;
+    added regression coverage and ran full test suite.

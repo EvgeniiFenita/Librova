@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -38,6 +39,9 @@ private:
     struct SStatisticsCache
     {
         std::filesystem::file_time_type DatabaseLastWriteTime;
+        std::uint64_t DatabaseSizeBytes = 0;
+        std::filesystem::file_time_type WalLastWriteTime;
+        std::uint64_t WalSizeBytes = 0;
         SCoverDirectorySnapshot CoverDirectorySnapshot;
         Librova::Domain::IBookQueryRepository::SLibraryStatistics Statistics;
     };

@@ -60,6 +60,15 @@ public:
             std::filesystem::create_directories(request.DestinationPath.parent_path());
         }
 
+        if (WritePartialAndFail)
+        {
+            std::ofstream(request.DestinationPath, std::ios::binary) << "partial-converted-epub";
+            return {
+                .Status = Librova::Domain::EConversionStatus::Failed,
+                .Warnings = {"converter failed after partial write"}
+            };
+        }
+
         std::ofstream(request.DestinationPath, std::ios::binary) << "converted-epub";
         return {
             .Status = Librova::Domain::EConversionStatus::Succeeded,
@@ -70,6 +79,7 @@ public:
     mutable std::optional<Librova::Domain::SConversionRequest> LastRequest;
     mutable std::string LastSourceText;
     bool Enabled = true;
+    bool WritePartialAndFail = false;
 };
 
 Librova::Domain::SBook CreateBook(
@@ -290,7 +300,9 @@ TEST_CASE("LibraryExportFacade converts FB2 export to EPUB when converter is con
     REQUIRE(ReadAllText(destinationPath) == "converted-epub");
     REQUIRE(converter.LastRequest.has_value());
     REQUIRE(converter.LastRequest->SourcePath == sourcePath);
-    REQUIRE(converter.LastRequest->DestinationPath == destinationPath);
+    REQUIRE(converter.LastRequest->DestinationPath.parent_path() == destinationPath.parent_path());
+    REQUIRE(converter.LastRequest->DestinationPath != destinationPath);
+    REQUIRE(converter.LastRequest->DestinationPath.extension() == destinationPath.extension());
 }
 
 TEST_CASE("LibraryExportFacade transparently decompresses managed FB2 on direct export", "[application][export]")
@@ -395,6 +407,53 @@ TEST_CASE("LibraryExportFacade rejects converted FB2 export when converter is no
         Catch::Matchers::ContainsSubstring("converter is unavailable"));
 }
 
+TEST_CASE("LibraryExportFacade preserves existing destination when converted export fails after partial write", "[application][export]")
+{
+    CTestWorkspace sandbox(L"librova-library-export-partial-convert-failure");
+    const auto libraryRoot = sandbox.GetPath() / "Library";
+    const auto managedPath = libraryRoot / "Objects/24/68/0000000024.book.fb2.gz";
+    const auto destinationPath = sandbox.GetPath() / "Exports" / "book.epub";
+    const auto sourcePath = sandbox.GetPath() / "source.fb2";
+
+    std::filesystem::create_directories(managedPath.parent_path());
+    std::filesystem::create_directories(destinationPath.parent_path());
+    std::ofstream(sourcePath, std::ios::binary) << "fb2-contents";
+    Librova::ManagedFileEncoding::EncodeFileToPath(
+        sourcePath,
+        Librova::Domain::EStorageEncoding::Compressed,
+        managedPath);
+    std::ofstream(destinationPath, std::ios::binary) << "existing-export";
+
+    const auto databasePath = sandbox.GetPath() / "librova-library-export-partial-convert-failure.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    auto book = CreateBook({24}, "Objects/24/68/0000000024.book.fb2.gz");
+    book.File.Format = Librova::Domain::EBookFormat::Fb2;
+    book.File.StorageEncoding = Librova::Domain::EStorageEncoding::Compressed;
+    book.File.Sha256Hex = "partial-convert-failure-hash";
+    const auto bookId = writeRepository.Add(book);
+
+    CStubBookConverter converter;
+    converter.WritePartialAndFail = true;
+    const Librova::Application::CLibraryExportFacade facade(
+        writeRepository,
+        libraryRoot,
+        &converter,
+        sandbox.GetPath() / "Runtime");
+
+    REQUIRE_THROWS_WITH(
+        facade.ExportBook({
+            .BookId = bookId,
+            .DestinationPath = destinationPath,
+            .ExportFormat = Librova::Domain::EBookFormat::Epub
+        }),
+        Catch::Matchers::ContainsSubstring("converter failed after partial write"));
+
+    REQUIRE(ReadAllText(destinationPath) == "existing-export");
+
+    writeRepository.CloseSession();
+}
+
 TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression fails", "[application][export]")
 {
     CTestWorkspace sandbox(L"librova-library-export-broken-compressed-fb2");
@@ -432,4 +491,3 @@ TEST_CASE("LibraryExportFacade cleans temporary decoded FB2 when decompression f
         REQUIRE(std::filesystem::is_empty(legacyTempExportDirectory));
     }
 }
-

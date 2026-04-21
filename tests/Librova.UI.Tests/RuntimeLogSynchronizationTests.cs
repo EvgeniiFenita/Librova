@@ -38,6 +38,46 @@ public sealed class RuntimeLogSynchronizationTests
         }
     }
 
+    [Fact]
+    public async Task SyncPendingRuntimeLogs_AppendsRuntimeLogsToExistingRetainedLogs()
+    {
+        var sandboxRoot = Path.Combine(
+            Path.GetTempPath(),
+            "librova-ui-tests",
+            $"{Guid.NewGuid():N}");
+        var libraryRoot = Path.Combine(sandboxRoot, "Library");
+        Directory.CreateDirectory(Path.Combine(libraryRoot, "Logs"));
+
+        try
+        {
+            var uiRetainedLogPath = RuntimeEnvironment.GetUiLogFilePathForLibrary(libraryRoot);
+            var hostRetainedLogPath = RuntimeEnvironment.GetHostLogFilePathForLibrary(libraryRoot);
+            await File.WriteAllTextAsync(uiRetainedLogPath, "old ui log" + Environment.NewLine);
+            await File.WriteAllTextAsync(hostRetainedLogPath, "old host log" + Environment.NewLine);
+
+            var uiRuntimeLogPath = RuntimeEnvironment.GetUiRuntimeLogFilePathForLibrary(libraryRoot);
+            var hostRuntimeLogPath = RuntimeEnvironment.GetHostRuntimeLogFilePathForLibrary(libraryRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(uiRuntimeLogPath)!);
+            await File.WriteAllTextAsync(uiRuntimeLogPath, "new ui log");
+            await File.WriteAllTextAsync(hostRuntimeLogPath, "new host log");
+
+            RuntimeLogSynchronization.SyncPendingRuntimeLogs(libraryRoot);
+
+            var uiText = await File.ReadAllTextAsync(uiRetainedLogPath);
+            var hostText = await File.ReadAllTextAsync(hostRetainedLogPath);
+            Assert.Contains("old ui log", uiText, StringComparison.Ordinal);
+            Assert.Contains("new ui log", uiText, StringComparison.Ordinal);
+            Assert.Contains("old host log", hostText, StringComparison.Ordinal);
+            Assert.Contains("new host log", hostText, StringComparison.Ordinal);
+            Assert.False(File.Exists(uiRuntimeLogPath));
+            Assert.False(File.Exists(hostRuntimeLogPath));
+        }
+        finally
+        {
+            TryDeleteDirectory(sandboxRoot);
+        }
+    }
+
     private static void TryDeleteDirectory(string path)
     {
         try
@@ -52,4 +92,3 @@ public sealed class RuntimeLogSynchronizationTests
         }
     }
 }
-

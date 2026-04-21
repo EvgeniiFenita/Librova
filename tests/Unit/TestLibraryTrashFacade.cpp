@@ -156,10 +156,15 @@ public:
             const auto destination = m_recycleBinRoot / path.filename();
             std::filesystem::create_directories(destination.parent_path());
             std::filesystem::rename(path, destination);
+            if (ThrowAfterFirstMove)
+            {
+                throw std::runtime_error("recycle bin move failed after partial move");
+            }
         }
     }
 
     bool ThrowOnMove = false;
+    bool ThrowAfterFirstMove = false;
     int MoveCalls = 0;
     std::vector<std::filesystem::path> LastMovedPaths;
 
@@ -296,6 +301,50 @@ TEST_CASE("Library trash facade falls back to managed trash when recycle-bin han
     REQUIRE(recycleBinService.MoveCalls == 1);
     REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Objects/e8/5e/0000000007.book.epub"));
     REQUIRE_FALSE(repository.GetById(bookId).has_value());
+
+    CloseRepositoryAndRemoveAll(sandbox, repository);
+}
+
+TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff partially moves staged files", "[application][trash]")
+{
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-recycle-partial-handoff");
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Objects/aa/bb");
+
+    const auto databasePath = sandbox / "library-recycle-partial-handoff.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
+    CFakeRecycleBinService recycleBinService(sandbox / "RecycleBin");
+    recycleBinService.ThrowAfterFirstMove = true;
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Partial Handoff";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Objects/aa/bb/0000000011.book.epub";
+    book.CoverPath = std::filesystem::path{"Objects/aa/bb/0000000011.cover.jpg"};
+    book.File.SizeBytes = 12;
+    book.File.Sha256Hex = "partial-handoff-hash";
+    book.AddedAtUtc = std::chrono::system_clock::now();
+    const auto bookId = repository.Add(book);
+
+    std::ofstream(sandbox / "Library/Objects/aa/bb/0000000011.book.epub", std::ios::binary) << "epub";
+    std::ofstream(sandbox / "Library/Objects/aa/bb/0000000011.cover.jpg", std::ios::binary) << "cover";
+
+    const Librova::Application::CLibraryTrashFacade facade(
+        repository,
+        trashService,
+        sandbox / "Library",
+        &recycleBinService);
+    const auto result = facade.MoveBookToTrash(bookId);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE(result->HasOrphanedFiles);
+    REQUIRE_FALSE(repository.GetById(bookId).has_value());
+    REQUIRE(std::filesystem::exists(sandbox / "RecycleBin/0000000011.book.epub"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Objects/aa/bb/0000000011.book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Objects/aa/bb/0000000011.cover.jpg"));
 
     CloseRepositoryAndRemoveAll(sandbox, repository);
 }

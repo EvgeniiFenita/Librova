@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Librova.UI.ViewModels;
 
-internal sealed class ImportJobsViewModel : ObservableObject
+internal sealed class ImportJobsViewModel : ObservableObject, IDisposable
 {
     internal delegate Task ImportCompletedSuccessfullyHandler(ImportJobResultModel result);
 
@@ -348,6 +348,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         LastResult = null;
         _activeImportCancellation?.Dispose();
         _activeImportCancellation = new CancellationTokenSource();
+        var keepActiveImport = false;
 
         try
         {
@@ -398,6 +399,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     error,
                     "Import job {JobId} exceeded the UI wait ceiling and is still running in the background.",
                     jobId);
+                keepActiveImport = true;
                 return;
             }
 
@@ -407,10 +409,10 @@ internal sealed class ImportJobsViewModel : ObservableObject
         }
         finally
         {
-            _activeImportCancellation?.Dispose();
-            _activeImportCancellation = null;
-            IsCancellationRequested = false;
-            IsBusy = false;
+            if (!keepActiveImport)
+            {
+                ClearActiveImportState();
+            }
         }
     }
 
@@ -644,6 +646,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             : result.Snapshot.Message;
         ProgressSummaryText = FormatProgressSummary(result.Snapshot);
         ProgressValue = result.Snapshot.Status == ImportJobStatusModel.Completed ? 100 : Math.Clamp(result.Snapshot.Percent, 0, 100);
+        ClearActiveImportState();
     }
 
     private static string FormatProgressSummary(ImportJobSnapshotModel snapshot)
@@ -746,7 +749,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             WorkingDirectoryValidationMessage.Length == 0 ? "<ok>" : WorkingDirectoryValidationMessage);
     }
 
-    private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
+    private bool CanRefresh() => LastJobId.HasValue;
 
     private bool CanCancel() => LastJobId.HasValue && IsBusy && !IsCancellationRequested;
 
@@ -932,5 +935,21 @@ internal sealed class ImportJobsViewModel : ObservableObject
         _sourceValidationCancellation.Cancel();
         _sourceValidationCancellation.Dispose();
         _sourceValidationCancellation = null;
+    }
+
+    private void ClearActiveImportState()
+    {
+        _activeImportCancellation?.Dispose();
+        _activeImportCancellation = null;
+        IsCancellationRequested = false;
+        IsBusy = false;
+    }
+
+    public void Dispose()
+    {
+        PropertyChanged -= OnPropertyChanged;
+        CancelAndDisposeSourceValidation();
+        _activeImportCancellation?.Cancel();
+        ClearActiveImportState();
     }
 }

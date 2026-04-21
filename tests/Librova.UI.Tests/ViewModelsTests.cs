@@ -228,10 +228,47 @@ public sealed class ViewModelsTests
 
             Assert.Equal(42UL, viewModel.LastJobId);
             Assert.Null(viewModel.LastResult);
-            Assert.False(viewModel.IsBusy);
+            Assert.True(viewModel.IsBusy);
+            Assert.False(viewModel.StartImportCommand.CanExecute(null));
+            Assert.True(viewModel.RefreshCommand.CanExecute(null));
+            Assert.True(viewModel.CancelImportCommand.CanExecute(null));
             Assert.Contains("still running", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Processed 2 of 5 files", viewModel.ProgressSummaryText, StringComparison.Ordinal);
             Assert.Equal(1, service.TryGetSnapshotCalls);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_DisposeCancelsPendingSourceValidation()
+    {
+        var service = new BlockingValidationImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2")
+            };
+
+            await service.WaitForValidationStartAsync();
+            viewModel.Dispose();
+
+            await WaitForConditionAsync(() => service.CancellationObserved);
         }
         finally
         {
@@ -2783,6 +2820,57 @@ public sealed class ViewModelsTests
             Action<ImportJobSnapshotModel>? onProgress,
             CancellationToken cancellationToken) =>
             throw new TimeoutException("Timed out waiting for import job to reach a terminal state.");
+    }
+
+    private sealed class BlockingValidationImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _validationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool CancellationObserved { get; private set; }
+
+        public Task WaitForValidationStartAsync() => _validationStarted.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(null);
+
+        public async Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _validationStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+
+            return string.Empty;
+        }
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(null);
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(1UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("This service is only used for source validation.");
     }
 
     private sealed class FakePathSelectionService : IPathSelectionService

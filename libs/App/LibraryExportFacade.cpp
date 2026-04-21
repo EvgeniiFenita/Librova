@@ -50,6 +50,11 @@ public:
         return m_path;
     }
 
+    void Dismiss() noexcept
+    {
+        m_path.clear();
+    }
+
 private:
     std::filesystem::path m_path;
 };
@@ -91,6 +96,67 @@ std::filesystem::path CanonicalizeForComparison(const std::filesystem::path& pat
     }
 
     return canonicalBase.lexically_normal();
+}
+
+std::filesystem::path BuildSiblingTemporaryPath(const std::filesystem::path& destinationPath)
+{
+    const auto uniqueSuffix = std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+    auto temporaryFileName = destinationPath.filename();
+    const auto extension = temporaryFileName.extension();
+    if (!extension.empty())
+    {
+        temporaryFileName.replace_extension();
+    }
+
+    temporaryFileName += ".librova-tmp-";
+    temporaryFileName += uniqueSuffix;
+    temporaryFileName += extension;
+    return destinationPath.parent_path() / temporaryFileName;
+}
+
+void ReplaceDestinationWithPreparedFile(
+    const std::filesystem::path& preparedPath,
+    const std::filesystem::path& destinationPath)
+{
+    if (preparedPath == destinationPath)
+    {
+        return;
+    }
+
+    const bool destinationExists = std::filesystem::exists(destinationPath);
+    auto backupPath = std::filesystem::path{};
+    if (destinationExists)
+    {
+        backupPath = BuildSiblingTemporaryPath(destinationPath);
+        backupPath += ".librova-backup";
+    }
+
+    try
+    {
+        if (destinationExists)
+        {
+            std::filesystem::rename(destinationPath, backupPath);
+        }
+
+        std::filesystem::rename(preparedPath, destinationPath);
+
+        if (destinationExists)
+        {
+            std::error_code removeError;
+            std::filesystem::remove(backupPath, removeError);
+        }
+    }
+    catch (...)
+    {
+        if (destinationExists && std::filesystem::exists(backupPath) && !std::filesystem::exists(destinationPath))
+        {
+            std::error_code restoreError;
+            std::filesystem::rename(backupPath, destinationPath, restoreError);
+        }
+
+        throw;
+    }
 }
 
 } // namespace
@@ -183,7 +249,12 @@ std::filesystem::path CLibraryExportFacade::ExportManagedFile(
             Librova::Unicode::PathToUtf8(destinationPath));
     }
 
-    Librova::ManagedFileEncoding::DecodeFileToPath(sourcePath, storageEncoding, destinationPath);
+    const auto temporaryDestinationPath = BuildSiblingTemporaryPath(destinationPath);
+    CScopedPathCleanup temporaryDestinationCleanup(temporaryDestinationPath);
+
+    Librova::ManagedFileEncoding::DecodeFileToPath(sourcePath, storageEncoding, temporaryDestinationPath);
+    ReplaceDestinationWithPreparedFile(temporaryDestinationPath, destinationPath);
+    temporaryDestinationCleanup.Dismiss();
 
     if (Librova::Logging::CLogging::IsInitialized())
     {
@@ -242,10 +313,13 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
     }
 
     CNoOpProgressSink progressSink;
+    const auto temporaryDestinationPath = BuildSiblingTemporaryPath(destinationPath);
+    CScopedPathCleanup temporaryDestinationCleanup(temporaryDestinationPath);
+
     const auto conversionResult = m_converter->Convert(
         Librova::Domain::SConversionRequest{
             .SourcePath = conversionSourcePath,
-            .DestinationPath = destinationPath,
+            .DestinationPath = temporaryDestinationPath,
             .SourceFormat = book.File.Format,
             .DestinationFormat = exportFormat
         },
@@ -273,15 +347,21 @@ std::filesystem::path CLibraryExportFacade::ExportConvertedFile(
             "Export conversion failed.");
     }
 
-    const auto exportedPath = conversionResult.HasOutput() ? conversionResult.OutputPath : destinationPath;
+    const auto preparedExportPath = conversionResult.HasOutput() ? conversionResult.OutputPath : temporaryDestinationPath;
+    ReplaceDestinationWithPreparedFile(preparedExportPath, destinationPath);
+    if (preparedExportPath == temporaryDestinationPath)
+    {
+        temporaryDestinationCleanup.Dismiss();
+    }
+
     if (Librova::Logging::CLogging::IsInitialized())
     {
         Librova::Logging::Info(
             "Exported converted book to '{}'.",
-            Librova::Unicode::PathToUtf8(exportedPath));
+            Librova::Unicode::PathToUtf8(destinationPath));
     }
 
-    return exportedPath;
+    return destinationPath;
 }
 
 std::filesystem::path CLibraryExportFacade::ResolveManagedSourcePath(const std::filesystem::path& managedPath) const
