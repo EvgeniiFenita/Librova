@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
 #include <filesystem>
@@ -7,37 +7,13 @@
 #include <thread>
 #include <stdexcept>
 
-#include "ConverterCommand/ConverterCommandBuilder.hpp"
-#include "ConverterRuntime/ExternalBookConverter.hpp"
+#include "Converter/ConverterCommandBuilder.hpp"
+#include "Converter/ExternalBookConverter.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
 constexpr auto GPwshPath = "C:/Program Files/PowerShell/7/pwsh.exe";
-
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
@@ -110,7 +86,7 @@ Librova::ConverterCommand::SConverterCommandProfile CreatePwshProfile(
 
 TEST_CASE("External book converter supports exact destination path converters", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-exact");
+    CTestWorkspace sandbox(L"librova-external-converter-exact");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "copy-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -148,7 +124,7 @@ TEST_CASE("External book converter supports exact destination path converters", 
 
 TEST_CASE("External book converter relocates single-file output directory results", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-directory");
+    CTestWorkspace sandbox(L"librova-external-converter-directory");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "dir-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "managed.epub";
@@ -187,7 +163,7 @@ TEST_CASE("External book converter relocates single-file output directory result
 
 TEST_CASE("External book converter reports cancellation and stops the process", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-cancel");
+    CTestWorkspace sandbox(L"librova-external-converter-cancel");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "slow-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -244,7 +220,7 @@ TEST_CASE("External book converter reports cancellation and stops the process", 
 
 TEST_CASE("External book converter removes partial output files after cancellation", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-cancel-cleanup");
+    CTestWorkspace sandbox(L"librova-external-converter-cancel-cleanup");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "partial-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -292,7 +268,7 @@ TEST_CASE("External book converter removes partial output files after cancellati
 
 TEST_CASE("External book converter can run with an explicit working directory", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-working-directory");
+    CTestWorkspace sandbox(L"librova-external-converter-working-directory");
     const std::filesystem::path scriptPath = sandbox.GetPath() / "cwd-converter.ps1";
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
@@ -334,7 +310,7 @@ TEST_CASE("External book converter can run with an explicit working directory", 
 
 TEST_CASE("External book converter launch failures include executable and working-directory diagnostics", "[converter-runtime]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-external-converter-launch-failure");
+    CTestWorkspace sandbox(L"librova-external-converter-launch-failure");
     const std::filesystem::path sourcePath = sandbox.GetPath() / "source.fb2";
     const std::filesystem::path destinationPath = sandbox.GetPath() / "output" / "book.epub";
     const std::filesystem::path missingExecutable = sandbox.GetPath() / "missing-converter.exe";

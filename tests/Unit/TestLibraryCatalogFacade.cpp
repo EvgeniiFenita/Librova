@@ -1,13 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 
 namespace {
 
@@ -64,7 +65,7 @@ Librova::Domain::SBook MakeBook(
 
 TEST_CASE("Library catalog facade returns mapped list items from sqlite read side", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -109,8 +110,8 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
         REQUIRE_FALSE(result.IsEmpty());
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 1);
-        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en"}));
-        REQUIRE(result.AvailableGenres == std::vector<std::string>({"translated", "zone"}));
+        REQUIRE(result.AvailableLanguages == std::vector<Librova::Domain::SFacetItem>({{"en", 1}}));
+        REQUIRE(result.AvailableGenres == std::vector<Librova::Domain::SFacetItem>({{"translated", 1}, {"zone", 1}}));
         REQUIRE(result.Statistics.BookCount == 2);
         REQUIRE(result.Statistics.TotalManagedBookSizeBytes == 8192);
         REQUIRE(result.Statistics.TotalLibrarySizeBytes > 8192);
@@ -127,7 +128,7 @@ TEST_CASE("Library catalog facade returns mapped list items from sqlite read sid
 
 TEST_CASE("Library catalog facade respects pagination and structured filters", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-pagination.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog-pagination.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -180,8 +181,8 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
 
         REQUIRE(result.Items.size() == 1);
         REQUIRE(result.TotalCount == 2);
-        REQUIRE(result.AvailableLanguages == std::vector<std::string>({"en", "ru"}));
-        REQUIRE(result.AvailableGenres == std::vector<std::string>({"selected"}));
+        REQUIRE(result.AvailableLanguages == std::vector<Librova::Domain::SFacetItem>({{"en", 2}, {"ru", 1}}));
+        REQUIRE(result.AvailableGenres == std::vector<Librova::Domain::SFacetItem>({{"selected", 2}}));
         REQUIRE(result.Statistics.BookCount == 3);
         REQUIRE(result.Items.front().TitleUtf8 == "Beta");
     }
@@ -191,7 +192,7 @@ TEST_CASE("Library catalog facade respects pagination and structured filters", "
 
 TEST_CASE("Library catalog facade sorts by title descending when direction is Descending", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-sort-direction.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-sort-direction.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -253,7 +254,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
             return 0;
         }
 
-        [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+        [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }
@@ -263,7 +264,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
             return {};
         }
 
-        [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+        [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
         {
             return {};
         }
@@ -293,7 +294,7 @@ TEST_CASE("Library catalog facade rejects zero page size", "[application][catalo
 
 TEST_CASE("Library catalog facade returns full book details by id", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-library-catalog-details.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-catalog-details.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -337,7 +338,7 @@ TEST_CASE("Library catalog facade returns full book details by id", "[applicatio
 
 TEST_CASE("Library catalog facade returns aggregate library statistics", "[application][catalog]")
 {
-    const std::filesystem::path libraryRoot = std::filesystem::temp_directory_path() / "librova-library-catalog-statistics";
+    const auto libraryRoot = MakeUniqueTestPath(L"librova-library-catalog-statistics");
     const std::filesystem::path databasePath = libraryRoot / "Database" / "librova.db";
     std::filesystem::remove_all(libraryRoot);
     std::filesystem::create_directories(databasePath.parent_path());
@@ -386,9 +387,37 @@ TEST_CASE("Library catalog facade returns aggregate library statistics", "[appli
     std::filesystem::remove_all(libraryRoot);
 }
 
+TEST_CASE("Sqlite query repository statistics update after WAL-backed write", "[book-database][catalog]")
+{
+    const auto databasePath = MakeUniqueTestPath(L"librova-library-statistics-wal.db");
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+
+    REQUIRE(queryRepository.GetLibraryStatistics().BookCount == 0);
+
+    Librova::Domain::SBook book = MakeBook(
+        "WAL Statistics",
+        {"Author"},
+        "en",
+        Librova::Domain::EBookFormat::Epub,
+        "Objects/11/22/0000002026.book.epub",
+        "statistics-wal-hash",
+        std::chrono::system_clock::now());
+    static_cast<void>(writeRepository.Add(book));
+
+    REQUIRE(queryRepository.GetLibraryStatistics().BookCount == 1);
+
+    queryRepository.CloseSession();
+    writeRepository.CloseSession();
+    std::filesystem::remove(databasePath);
+}
+
 TEST_CASE("Library catalog facade filters books by multiple languages", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-language.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-multi-language.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -424,7 +453,7 @@ TEST_CASE("Library catalog facade filters books by multiple languages", "[applic
 
 TEST_CASE("Library catalog facade filters books by multiple genres with OR semantics", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-multi-genre.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-multi-genre.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -468,7 +497,7 @@ TEST_CASE("Library catalog facade filters books by multiple genres with OR seman
 
 TEST_CASE("Library catalog facade applies independent genre and tag filters", "[application][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-catalog-genre-tag-combined.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-catalog-genre-tag-combined.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -515,5 +544,3 @@ TEST_CASE("Library catalog facade applies independent genre and tag filters", "[
 
     std::filesystem::remove(databasePath);
 }
-
-

@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -7,18 +8,18 @@
 #include <stop_token>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
-#include "PipeTransport/PipeRequestDispatcher.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
+#include "Storage/ManagedTrashService.hpp"
+#include "Transport/PipeRequestDispatcher.hpp"
 
 namespace {
 
@@ -83,7 +84,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -93,7 +94,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -152,7 +153,7 @@ namespace {
 
 std::filesystem::path CreateImportSourcePath(const std::string_view scenario)
 {
-    const auto root = std::filesystem::temp_directory_path() / ("librova-pipe-dispatch-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-pipe-dispatch-");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -210,7 +211,7 @@ TEST_CASE("Pipe dispatcher rejects invalid protobuf payloads", "[pipe]")
 TEST_CASE("Pipe dispatcher executes ValidateImportSources through protobuf adapter", "[pipe]")
 {
     SDispatcherHarness harness;
-    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-validate";
+    const auto root = MakeUniqueTestPath(L"librova-pipe-dispatch-validate");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto unsupportedPath = root / "notes.txt";
@@ -258,7 +259,7 @@ TEST_CASE("Pipe dispatcher returns UnknownMethod for out-of-range method id", "[
 
 TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-catalog.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-pipe-dispatch-catalog.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -319,7 +320,7 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
 
 TEST_CASE("Pipe dispatcher executes GetBookDetails through protobuf adapter", "[pipe][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-details.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-pipe-dispatch-details.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -386,7 +387,7 @@ TEST_CASE("Pipe dispatcher executes GetBookDetails through protobuf adapter", "[
 
 TEST_CASE("Pipe dispatcher executes ExportBook through protobuf adapter", "[pipe][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-export";
+    const auto sandbox = MakeUniqueTestPath(L"librova-pipe-dispatch-export");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/e1/0f");
 
@@ -452,7 +453,7 @@ TEST_CASE("Pipe dispatcher executes ExportBook through protobuf adapter", "[pipe
 
 TEST_CASE("Pipe dispatcher executes MoveBookToTrash through protobuf adapter", "[pipe][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-trash";
+    const auto sandbox = MakeUniqueTestPath(L"librova-pipe-dispatch-trash");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/d2/20");
 
@@ -716,7 +717,7 @@ TEST_CASE("Pipe dispatcher executes cancel import and zero-timeout wait through 
 
 TEST_CASE("Pipe dispatcher returns catalog statistics inside ListBooks response", "[pipe][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-pipe-dispatch-statistics.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-pipe-dispatch-statistics.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 

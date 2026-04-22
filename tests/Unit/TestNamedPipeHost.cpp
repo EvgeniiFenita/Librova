@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -11,24 +12,22 @@
 #include <string>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
-#include "PipeHost/NamedPipeHost.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
+#include "Storage/ManagedTrashService.hpp"
+#include "Transport/NamedPipeHost.hpp"
 #include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
 std::filesystem::path BuildTestPipePath()
 {
-    const auto uniqueId = std::to_wstring(
-        static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.Host.Test.)"} + uniqueId};
+    return MakeUniquePipePath(LR"(\\.\pipe\Librova.Host.Test)");
 }
 
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -60,7 +59,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -70,7 +69,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -99,7 +98,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -109,7 +108,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -165,7 +164,7 @@ Librova::Domain::IBookRepository& GetEmptyBookRepository()
 
 std::filesystem::path CreateImportSourcePath()
 {
-    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-host-import";
+    const auto root = MakeUniqueTestPath(L"librova-pipe-host-import");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -371,7 +370,7 @@ TEST_CASE("Named pipe host serves a protobuf ValidateImportSources request end-t
     readySignal.Wait();
 
     auto client = Librova::PipeTransport::ConnectToNamedPipe(pipePath, std::chrono::seconds(2));
-    const auto root = std::filesystem::temp_directory_path() / "librova-pipe-host-validate";
+    const auto root = MakeUniqueTestPath(L"librova-pipe-host-validate");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto unsupportedPath = root / "notes.txt";
@@ -406,4 +405,3 @@ TEST_CASE("Named pipe host serves a protobuf ValidateImportSources request end-t
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(root);
 }
-

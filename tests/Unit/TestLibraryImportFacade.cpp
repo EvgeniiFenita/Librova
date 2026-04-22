@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -17,11 +18,11 @@
 
 #include <zip.h>
 
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/StructuredProgressMapper.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/StructuredProgressMapper.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
-#include "Logging/Logging.hpp"
+#include "Foundation/Logging.hpp"
 #include "TestStructuredProgressSink.hpp"
 
 namespace {
@@ -132,7 +133,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox(const std::string_view scenario, const std::string_view fileName = "book.fb2")
 {
-    const auto root = std::filesystem::temp_directory_path() / ("librova-import-facade-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-import-facade-");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / fileName;
@@ -653,7 +654,7 @@ TEST_CASE("Library import facade batches multiple supported files", "[applicatio
     };
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-batch";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-batch");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -681,7 +682,7 @@ TEST_CASE("Library import facade cleans per-source working directories after bat
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-batch-workspace-cleanup";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-batch-workspace-cleanup");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -721,7 +722,7 @@ TEST_CASE("Library import facade removes empty generated runtime working directo
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-generated-runtime-cleanup";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-generated-runtime-cleanup");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library");
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -750,7 +751,7 @@ TEST_CASE("Library import facade preserves custom working directory outside libr
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-custom-work-preserved";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-custom-work-preserved");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library");
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -779,7 +780,7 @@ TEST_CASE("Library import facade preserves custom working directory that only re
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-generated-leaf-preserved";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-generated-leaf-preserved");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library");
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -808,7 +809,7 @@ TEST_CASE("Library import facade preserves custom working directory inside libra
     CWorkspaceWritingSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-custom-temp-work-preserved";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-custom-temp-work-preserved");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library" / "Temp");
     std::ofstream(sandbox / "one.fb2").put('a');
@@ -860,6 +861,34 @@ TEST_CASE("Library import facade forwards forced EPUB conversion to single-file 
     std::filesystem::remove_all(sandbox.Root);
 }
 
+TEST_CASE("Library import facade forwards disabled cover import to single-file imports", "[application][import]")
+{
+    CStubSingleFileImporter importer;
+    importer.Result = {
+        .Status = Librova::Importing::ESingleFileImportStatus::Imported,
+        .ImportedBookId = Librova::Domain::SBookId{7}
+    };
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    CTestProgressSink progressSink;
+    const auto sandbox = CreateImportSandbox("single-file-no-covers");
+
+    const Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        GetEmptyBookRepository(),
+        {.LibraryRoot = sandbox.Root});
+    const auto result = facade.Run({
+        .SourcePaths = {sandbox.SourcePath},
+        .WorkingDirectory = sandbox.WorkingDirectory,
+        .ImportCovers = false
+    }, progressSink, {});
+
+    REQUIRE(result.IsSuccess());
+    REQUIRE(importer.LastRequest.has_value());
+    REQUIRE_FALSE(importer.LastRequest->ImportCovers);
+    std::filesystem::remove_all(sandbox.Root);
+}
+
 TEST_CASE("Library import facade expands directories recursively", "[application][import]")
 {
     CStubSingleFileImporter importer;
@@ -870,7 +899,7 @@ TEST_CASE("Library import facade expands directories recursively", "[application
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-directory";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-directory");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "nested");
     std::ofstream(sandbox / "nested" / "book.fb2").put('a');
@@ -905,7 +934,7 @@ TEST_CASE("Library import facade keeps batch mode for empty selected directory",
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-empty-directory";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-empty-directory");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "nested");
     std::ofstream(sandbox / "nested" / "note.txt").put('x');
@@ -939,7 +968,7 @@ TEST_CASE("Library import facade keeps outer batch totals while ZIP entries are 
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CStructuredProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-batch-zip-progress";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-batch-zip-progress");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "standalone.fb2").put('a');
@@ -986,7 +1015,7 @@ TEST_CASE("Library import facade accumulates imported counter across sources wit
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CStructuredProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-accumulated-progress";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-accumulated-progress");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     // zip1 with 2 entries, then zip2 with 2 entries — 4 entries total, all Imported.
@@ -1028,7 +1057,7 @@ TEST_CASE("Library import facade accepts existing directories during source vali
     CStubSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-validation-directory";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-validation-directory");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "nested");
     std::ofstream(sandbox / "nested" / "note.txt").put('x');
@@ -1055,7 +1084,7 @@ TEST_CASE("Library import facade continues batch import after unreadable ZIP sou
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-bad-zip";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-bad-zip");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "broken.zip") << "not a zip";
@@ -1085,7 +1114,7 @@ TEST_CASE("Library import facade continues batch import after unreadable ZIP sou
 
 TEST_CASE("Library import facade logs skipped and failed batch sources into host log", "[application][import][logging]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-logging";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-logging");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     const auto logPath = sandbox / "Logs" / "host.log";
@@ -1133,7 +1162,7 @@ TEST_CASE("Library import facade preserves duplicate-only batch semantics when e
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-duplicate-only-batch";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-duplicate-only-batch");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "strict.fb2").put('a');
@@ -1160,7 +1189,7 @@ TEST_CASE("Library import facade preserves duplicate-only batch semantics when e
 
 TEST_CASE("Library import facade keeps a cancelled import book intact when rollback repository removal fails", "[application][import][rollback]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-failure";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-rollback-failure");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Objects" / "00" / "00");
     std::ofstream(sandbox / "first.fb2").put('a');
@@ -1205,7 +1234,7 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
 
 TEST_CASE("Library import facade keeps a cancelled import book intact when rollback repository lookup fails", "[application][import][rollback]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-lookup-failure";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-rollback-lookup-failure");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Objects" / "00" / "00");
     std::ofstream(sandbox / "first.fb2").put('a');
@@ -1251,7 +1280,7 @@ TEST_CASE("Library import facade keeps a cancelled import book intact when rollb
 
 TEST_CASE("Library import facade logs rollback cleanup issues for unsafe managed paths", "[application][import][logging]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-rollback-cleanup-log";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-rollback-cleanup-log");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Logs");
     std::ofstream(sandbox / "first.fb2").put('a');
@@ -1407,7 +1436,7 @@ TEST_CASE("Library import facade parallel batch reports correct counts on partia
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-partial";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-parallel-partial");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "good1.fb2").put('a');
@@ -1439,7 +1468,7 @@ TEST_CASE("Library import facade parallel batch reports all skipped when every f
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-alldup";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-parallel-alldup");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "dup1.fb2").put('a');
@@ -1470,7 +1499,7 @@ TEST_CASE("Library import facade parallel batch marks result as cancelled when i
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-parallel-cancel";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-parallel-cancel");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "a.fb2").put('1');
@@ -1507,7 +1536,7 @@ TEST_CASE("Library import facade parallel batch rolls back imported book on canc
     auto rollbackRepo = std::make_unique<CRollbackAwareBookRepository>();
     auto& rollbackRepoRef = *rollbackRepo;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-rollback-test";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-rollback-test");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "book1.fb2").put('a');
@@ -1542,7 +1571,7 @@ TEST_CASE("Library import facade does not forward Sha256Hex to individual import
     CTestProgressSink progressSink;
     CRollbackAwareBookRepository repo;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-sha256-batch-test";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-sha256-batch-test");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "a.fb2").put('a');
@@ -1579,7 +1608,7 @@ TEST_CASE("Library import facade preserves original source order when a standalo
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-mixed-order";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-mixed-order");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "standalone.fb2").put('a');
@@ -1614,7 +1643,7 @@ TEST_CASE("Library import facade reports progress for completed files before the
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CThreadSafeStructuredProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-slow-first-progress";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-slow-first-progress");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "slow.fb2").put('s');
@@ -1661,7 +1690,7 @@ TEST_CASE("Library import facade logs one run-level import perf summary that inc
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
     CTestProgressSink progressSink;
 
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-facade-import-perf";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-facade-import-perf");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     std::ofstream(sandbox / "standalone.fb2").put('a');
@@ -1693,4 +1722,3 @@ TEST_CASE("Library import facade logs one run-level import perf summary that inc
 
     std::filesystem::remove_all(sandbox);
 }
-

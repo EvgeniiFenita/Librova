@@ -70,43 +70,13 @@ if(BUILD_TESTING)
     target_link_libraries(LibrovaCoreTests
         PRIVATE
             Catch2::Catch2WithMain
-            LibrovaApplication
+            LibrovaApp
             LibrovaApplicationClient
-            LibrovaApplicationJobs
-            LibrovaBookDatabase
-            LibrovaConverterCommand
-            LibrovaConverterConfiguration
-            LibrovaConverterRuntime
-            LibrovaCoverProcessingStb
+            LibrovaDatabase
             LibrovaDomain
-            LibrovaCore
-            LibrovaCoreHost
-            LibrovaDatabaseRuntime
-            LibrovaDatabaseSchema
-            LibrovaEpubParsing
-            LibrovaFb2Parsing
-            LibrovaHashing
-            LibrovaImportConversion
-            LibrovaImporting
-            LibrovaJobs
-            LibrovaLogging
-            LibrovaManagedStorage
-            LibrovaManagedFileEncoding
-            LibrovaManagedPaths
-            LibrovaManagedTrash
-            LibrovaParserRegistry
-            LibrovaPipeClient
-            LibrovaPipeHost
-            LibrovaPipeTransport
-            LibrovaProtoContracts
-            LibrovaProtoMapping
-            LibrovaProtoServices
-            LibrovaRecycleBin
-        LibrovaSearchIndex
-        LibrovaSqlite
-        LibrovaStoragePlanning
-        LibrovaUnicode
-        LibrovaZipImporting
+            LibrovaParsing
+            LibrovaTransport
+            LibrovaRpc
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)

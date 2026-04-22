@@ -1,4 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -7,8 +8,8 @@
 #include <string>
 #include <thread>
 
-#include "Importing/ImportPerfTracker.hpp"
-#include "Logging/Logging.hpp"
+#include "Import/ImportPerfTracker.hpp"
+#include "Foundation/Logging.hpp"
 
 namespace {
 
@@ -22,7 +23,7 @@ std::string ReadTextFile(const std::filesystem::path& path)
 
 TEST_CASE("Import perf tracker periodic log sorts bottlenecks and includes writer queue depth", "[importing][perf]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-perf-tracker";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-perf-tracker");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Logs");
     const auto logPath = sandbox / "Logs" / "host.log";
@@ -79,7 +80,7 @@ TEST_CASE("Import perf tracker periodic log sorts bottlenecks and includes write
 
 TEST_CASE("Import perf tracker does not emit periodic log before thresholds are reached", "[importing][perf]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-perf-tracker-threshold";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-perf-tracker-threshold");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Logs");
     const auto logPath = sandbox / "Logs" / "host.log";

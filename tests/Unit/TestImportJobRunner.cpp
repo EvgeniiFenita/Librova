@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -14,10 +14,11 @@
 
 #include <zip.h>
 
-#include "Application/LibraryImportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
 #include "Domain/Book.hpp"
 #include "Domain/BookRepository.hpp"
-#include "Jobs/ImportJobRunner.hpp"
+#include "App/ImportJobRunner.hpp"
+#include "TestWorkspace.hpp"
 
 namespace {
 
@@ -34,31 +35,6 @@ public:
     }
 
     Librova::Importing::SSingleFileImportResult Result;
-};
-
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
 };
 
 class CZipAwareStubSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -276,7 +252,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox(const std::string_view scenario, const std::string_view fileName = "book.fb2")
 {
-    const auto root = std::filesystem::temp_directory_path() / ("librova-job-runner-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-job-runner");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / fileName;
@@ -466,7 +442,7 @@ TEST_CASE("Import job runner maps cancellation into cancelled job state", "[jobs
 
 TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled terminal message", "[jobs][import][rollback]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-cancelled-residue");
+    CTestWorkspace sandbox(L"librova-job-runner-cancelled-residue");
     std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
     std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
     const auto outsidePath = sandbox.GetPath().parent_path() / "librova-job-runner-cancelled-residue.epub";
@@ -506,7 +482,7 @@ TEST_CASE("Import job runner surfaces rollback cleanup residue in the cancelled 
 
 TEST_CASE("Import job runner calls Compact on repository after a clean full rollback", "[jobs][import][rollback]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-compact-after-rollback");
+    CTestWorkspace sandbox(L"librova-job-runner-compact-after-rollback");
     std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
     std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
 
@@ -530,7 +506,7 @@ TEST_CASE("Import job runner calls Compact on repository after a clean full roll
 
 TEST_CASE("Import job runner reports partial success for ZIP import with failures", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-zip");
+    CTestWorkspace sandbox(L"librova-job-runner-zip");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -562,7 +538,7 @@ TEST_CASE("Import job runner reports partial success for ZIP import with failure
 
 TEST_CASE("Import job runner fails when ZIP import produces no imported books", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-skipped");
+    CTestWorkspace sandbox(L"librova-job-runner-skipped");
     const std::filesystem::path zipPath = CreateSkippedOnlyZipFixture(sandbox.GetPath() / "archive.zip");
     CZipAwareStubSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -590,7 +566,7 @@ TEST_CASE("Import job runner fails when ZIP import produces no imported books", 
 
 TEST_CASE("Import job runner keeps duplicate semantics when ZIP import skips every supported entry as a duplicate", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-duplicate-only-zip");
+    CTestWorkspace sandbox(L"librova-job-runner-duplicate-only-zip");
     const std::filesystem::path zipPath = CreateDuplicateOnlyZipFixture(sandbox.GetPath() / "archive.zip");
     CDuplicateOnlyZipSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -642,7 +618,7 @@ TEST_CASE("Import job runner ignores throwing progress callbacks", "[jobs][impor
 
 TEST_CASE("Import job runner publishes structured batch progress snapshots", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-structured-progress");
+    CTestWorkspace sandbox(L"librova-job-runner-structured-progress");
     const auto firstSourcePath = sandbox.GetPath() / "first.fb2";
     const auto secondSourcePath = sandbox.GetPath() / "second.fb2";
     std::ofstream(firstSourcePath).put('a');
@@ -705,7 +681,7 @@ TEST_CASE("Import job runner publishes structured batch progress snapshots", "[j
 
 TEST_CASE("Import job runner keeps running imported counters monotonic during parallel batch progress", "[jobs][import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-monotonic-progress");
+    CTestWorkspace sandbox(L"librova-job-runner-monotonic-progress");
     std::vector<std::filesystem::path> sourcePaths;
     for (int i = 0; i < 8; ++i)
     {
@@ -758,7 +734,7 @@ TEST_CASE("Import job runner keeps running imported counters monotonic during pa
 TEST_CASE("Import job runner publishes Cancelling and RollingBack status transitions during rollback",
     "[jobs][import][rollback]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-job-runner-status-transitions");
+    CTestWorkspace sandbox(L"librova-job-runner-status-transitions");
     std::ofstream(sandbox.GetPath() / "first.fb2").put('a');
     std::ofstream(sandbox.GetPath() / "second.fb2").put('b');
 

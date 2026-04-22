@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <exception>
@@ -8,25 +9,23 @@
 #include <string>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
 #include "ApplicationClient/ImportJobClient.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
-#include "PipeHost/NamedPipeHost.hpp"
+#include "App/ImportJobService.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
+#include "Storage/ManagedTrashService.hpp"
+#include "Transport/NamedPipeHost.hpp"
 #include "TestNamedPipeReadySignal.hpp"
 
 namespace {
 
 std::filesystem::path BuildTestPipePath()
 {
-    const auto uniqueId = std::to_wstring(
-        static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-    return std::filesystem::path{std::wstring{LR"(\\.\pipe\Librova.AppClient.Test.)"} + uniqueId};
+    return MakeUniquePipePath(LR"(\\.\pipe\Librova.AppClient.Test)");
 }
 
 class CImmediateSingleFileImporter final : public Librova::Importing::ISingleFileImporter
@@ -58,7 +57,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -68,7 +67,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -121,7 +120,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox()
 {
-    const auto root = std::filesystem::temp_directory_path() / "librova-app-client-import";
+    const auto root = MakeUniqueTestPath(L"librova-app-client-import");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -205,4 +204,3 @@ TEST_CASE("Application import job client performs end-to-end start wait and resu
     REQUIRE(serverFailure == nullptr);
     std::filesystem::remove_all(sandbox.Root);
 }
-

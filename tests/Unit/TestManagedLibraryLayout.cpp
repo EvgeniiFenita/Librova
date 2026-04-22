@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Domain/StorageEncoding.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
 
 TEST_CASE("Managed library layout builds stable root directories", "[storage-planning]")
 {

@@ -24,6 +24,7 @@ public sealed class ImportJobMapperTests
         Assert.Equal("abc123", proto.Sha256Hex);
         Assert.True(proto.AllowProbableDuplicates);
         Assert.True(proto.ForceEpubConversion);
+        Assert.True(proto.ImportCovers);
     }
 
     [Fact]
@@ -194,6 +195,32 @@ public sealed class ImportJobMapperTests
 
         Assert.Contains("ErrorCode", error.Message, StringComparison.Ordinal);
         Assert.Contains("domain error code", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mapper_ConvertsStartRequestWithImportCoversEnabled()
+    {
+        var proto = ImportJobMapper.ToProto(new StartImportRequestModel
+        {
+            SourcePaths = [@"C:\Books\book.fb2"],
+            WorkingDirectory = @"C:\Work",
+            ImportCovers = true
+        });
+
+        Assert.True(proto.ImportCovers);
+    }
+
+    [Fact]
+    public void Mapper_ConvertsStartRequestWithImportCoversDisabled()
+    {
+        var proto = ImportJobMapper.ToProto(new StartImportRequestModel
+        {
+            SourcePaths = [@"C:\Books\book.fb2"],
+            WorkingDirectory = @"C:\Work",
+            ImportCovers = false
+        });
+
+        Assert.False(proto.ImportCovers);
     }
 }
 

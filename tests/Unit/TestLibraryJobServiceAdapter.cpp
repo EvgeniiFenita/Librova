@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -8,20 +9,20 @@
 #include <stop_token>
 #include <thread>
 
-#include "Application/LibraryCatalogFacade.hpp"
-#include "Application/LibraryExportFacade.hpp"
-#include "Application/LibraryImportFacade.hpp"
-#include "Application/LibraryTrashFacade.hpp"
-#include "ApplicationJobs/ImportJobService.hpp"
-#include "BookDatabase/SqliteBookQueryRepository.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Jobs/ImportJobManager.hpp"
-#include "Jobs/ImportJobRunner.hpp"
-#include "Logging/Logging.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
-#include "ProtoServices/LibraryJobServiceAdapter.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "App/LibraryCatalogFacade.hpp"
+#include "App/LibraryExportFacade.hpp"
+#include "App/LibraryImportFacade.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "App/ImportJobService.hpp"
+#include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "App/ImportJobManager.hpp"
+#include "App/ImportJobRunner.hpp"
+#include "Foundation/Logging.hpp"
+#include "Storage/ManagedTrashService.hpp"
+#include "Rpc/LibraryJobServiceAdapter.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 
@@ -118,7 +119,7 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableLanguages(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -128,7 +129,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::vector<std::string> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
+    [[nodiscard]] std::vector<Librova::Domain::SFacetItem> ListAvailableGenres(const Librova::Domain::SSearchQuery&) const override
     {
         return {};
     }
@@ -187,7 +188,7 @@ struct SImportSandbox
 
 SImportSandbox CreateImportSandbox(const std::string_view scenario)
 {
-    const auto root = std::filesystem::temp_directory_path() / ("librova-proto-service-import-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-proto-service-import-");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
     const auto sourcePath = root / "book.fb2";
@@ -396,7 +397,7 @@ TEST_CASE("Library job service adapter rejects missing path in ValidateImportSou
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
 
-    const auto missingPath = std::filesystem::temp_directory_path() / "librova-validate-nonexistent-path" / "no-such-file.fb2";
+    const auto missingPath = MakeUniqueTestPath(L"librova-validate-nonexistent-path") / "no-such-file.fb2";
     std::filesystem::remove_all(missingPath.parent_path());
 
     librova::v1::ValidateImportSourcesRequest request;
@@ -427,7 +428,7 @@ TEST_CASE("Library job service adapter passes empty directory in ValidateImportS
     Librova::ApplicationJobs::CImportJobService service(manager);
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
 
-    const auto emptyDir = std::filesystem::temp_directory_path() / "librova-validate-empty-dir";
+    const auto emptyDir = MakeUniqueTestPath(L"librova-validate-empty-dir");
     std::filesystem::remove_all(emptyDir);
     std::filesystem::create_directories(emptyDir);
 
@@ -461,7 +462,7 @@ TEST_CASE("Library job service adapter passes Cyrillic directory name in Validat
     Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
 
     // Regression: path must be decoded as UTF-8, not ANSI (fixes Cyrillic directory names)
-    const auto cyrillicDir = std::filesystem::temp_directory_path() / u8"librova-validate-\u041a\u043d\u0438\u0433\u0438";
+    const auto cyrillicDir = MakeUniqueTestPath(L"librova-validate-\u041a\u043d\u0438\u0433\u0438");
     std::filesystem::remove_all(cyrillicDir);
     std::filesystem::create_directories(cyrillicDir);
 
@@ -476,7 +477,7 @@ TEST_CASE("Library job service adapter passes Cyrillic directory name in Validat
 
 TEST_CASE("Library job service adapter exposes book list query over protobuf", "[proto-service][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-proto-service-catalog.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-proto-service-catalog.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -530,7 +531,7 @@ TEST_CASE("Library job service adapter exposes book list query over protobuf", "
 
 TEST_CASE("Library job service adapter returns book details over protobuf", "[proto-service][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-proto-service-details.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-proto-service-details.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -613,7 +614,7 @@ TEST_CASE("Library job service adapter returns structured not-found for missing 
 
 TEST_CASE("Library job service adapter exports managed book file over protobuf", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-export");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/fd/86");
 
@@ -664,7 +665,7 @@ TEST_CASE("Library job service adapter exports managed book file over protobuf",
 
 TEST_CASE("Library job service adapter returns aggregate statistics inside ListBooks response", "[proto-service][catalog]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-proto-service-statistics.db";
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-proto-service-statistics.db");
     std::filesystem::remove(databasePath);
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
 
@@ -720,7 +721,7 @@ TEST_CASE("Library job service adapter returns aggregate statistics inside ListB
 
 TEST_CASE("Library job service adapter logs import snapshot wait and missing result outcomes", "[proto-service][logging]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-logging";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-logging");
     std::filesystem::remove_all(sandbox);
     const auto logPath = sandbox / "Logs" / "host.log";
 
@@ -778,7 +779,7 @@ TEST_CASE("Library job service adapter logs import snapshot wait and missing res
 
 TEST_CASE("Library job service adapter logs genre alongside language for ListBooks", "[proto-service][logging][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-list-books-logging";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-list-books-logging");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
 
@@ -849,7 +850,7 @@ TEST_CASE("Library job service adapter logs genre alongside language for ListBoo
 
 TEST_CASE("Library job service adapter exports FB2 as EPUB over protobuf when converter is configured", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converted";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-export-converted");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/8b/7d");
 
@@ -966,7 +967,7 @@ TEST_CASE("Library job service adapter exposes structured validation error for i
 
 TEST_CASE("Library job service adapter exposes structured converter unavailable error for export conversion", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-unavailable";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-export-converter-unavailable");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/1e/7f");
 
@@ -1019,7 +1020,7 @@ TEST_CASE("Library job service adapter exposes structured converter unavailable 
 
 TEST_CASE("Library job service adapter exposes structured converter failed error for export conversion", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-failed";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-export-converter-failed");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/3f/77");
 
@@ -1095,7 +1096,7 @@ TEST_CASE("Library job service adapter exposes structured converter failed error
 
 TEST_CASE("Library job service adapter exposes structured cancellation error for export conversion", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-export-converter-cancelled";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-export-converter-cancelled");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/ac/75");
 
@@ -1170,7 +1171,7 @@ TEST_CASE("Library job service adapter exposes structured cancellation error for
 
 TEST_CASE("Library job service adapter moves managed book to trash over protobuf", "[proto-service][catalog]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-proto-service-trash";
+    const auto sandbox = MakeUniqueTestPath(L"librova-proto-service-trash");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/6a/85");
 

@@ -9,29 +9,11 @@ target_include_directories(LibrovaCoreHostApp
 
 target_link_libraries(LibrovaCoreHostApp
     PRIVATE
-        LibrovaApplication
-        LibrovaApplicationJobs
-        LibrovaBookDatabase
-        LibrovaConverterConfiguration
-        LibrovaConverterRuntime
-        LibrovaCoverProcessingStb
-        LibrovaCore
-        LibrovaCoreHost
-        LibrovaDatabaseRuntime
-        LibrovaImporting
-        LibrovaJobs
-        LibrovaLogging
-        LibrovaManagedPaths
-        LibrovaManagedStorage
-        LibrovaManagedTrash
-        LibrovaParserRegistry
-        LibrovaPipeHost
-        LibrovaProtoServices
-        LibrovaProtoMapping
-        LibrovaStoragePlanning
-        LibrovaUnicode
-        LibrovaZipImporting
-        LibrovaRecycleBin
+        LibrovaApp
+        LibrovaDatabase
+        LibrovaParsing
+        LibrovaTransport
+        LibrovaRpc
 )
 
 target_compile_features(LibrovaCoreHostApp PRIVATE cxx_std_20)

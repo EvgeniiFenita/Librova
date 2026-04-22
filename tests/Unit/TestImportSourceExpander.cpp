@@ -1,13 +1,14 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
 #include <filesystem>
 #include <fstream>
 
-#include "ImportSourceExpander/ImportSourceExpander.hpp"
+#include "Import/ImportSourceExpander.hpp"
 
 TEST_CASE("Import source expander expands directories recursively and ignores unsupported files", "[import-source-expander]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-source-expander-directory";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-source-expander-directory");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "nested");
     std::ofstream(sandbox / "nested" / "book.fb2").put('a');
@@ -24,7 +25,7 @@ TEST_CASE("Import source expander expands directories recursively and ignores un
 
 TEST_CASE("Import source expander reports unsupported standalone files as warnings", "[import-source-expander]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-import-source-expander-unsupported";
+    const auto sandbox = MakeUniqueTestPath(L"librova-import-source-expander-unsupported");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox);
     const auto unsupportedPath = sandbox / "notes.txt";
@@ -41,7 +42,7 @@ TEST_CASE("Import source expander reports unsupported standalone files as warnin
 
 TEST_CASE("Import source expander reports missing sources as warnings", "[import-source-expander]")
 {
-    const auto missingPath = std::filesystem::temp_directory_path() / "librova-import-source-expander-missing.fb2";
+    const auto missingPath = MakeUniqueTestPath(L"librova-import-source-expander-missing.fb2");
     std::filesystem::remove(missingPath);
 
     const auto expanded = Librova::ImportSourceExpander::CImportSourceExpander::Expand({missingPath});

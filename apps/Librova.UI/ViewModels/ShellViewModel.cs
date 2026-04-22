@@ -74,7 +74,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             session.HostOptions.LibraryRoot,
             hasConfiguredConverter: hasConfiguredConverter,
             initialSortKey: savedPreferences?.PreferredSortKey,
-            initialSortDescending: savedPreferences?.PreferredSortDescending ?? false);
+            initialSortDescending: savedPreferences?.PreferredSortDescending ?? false,
+            navigateToImport: () => CurrentSection = ShellSection.Import);
         _importWorkflowController = new ShellImportWorkflowController(
             ImportJobs,
             LibraryBrowser,
@@ -284,6 +285,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ImportJobs.ImportCompletedSuccessfully -= _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged -= _importWorkflowController.HandleImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged -= _importWorkflowController.HandleLibraryBrowserPropertyChanged;
+        ImportJobs.Dispose();
         LibraryBrowser.Dispose();
         _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;
         _converterValidationCoordinator.Dispose();

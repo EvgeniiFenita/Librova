@@ -11,6 +11,7 @@
         Icon="/Assets/librova.ico"
         Background="{DynamicResource AppBackgroundBrush}"
         DragDrop.AllowDrop="True"
+        KeyDown="OnWindowKeyDown"
         mc:Ignorable="d">
 
   <!-- Full-bleed root — no outer margin so the app surface fills the whole window -->

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Librova.UI.ViewModels;
 
-internal sealed class ImportJobsViewModel : ObservableObject
+internal sealed class ImportJobsViewModel : ObservableObject, IDisposable
 {
     internal delegate Task ImportCompletedSuccessfullyHandler(ImportJobResultModel result);
 
@@ -23,6 +23,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private bool _allowProbableDuplicates;
     private bool _forceEpubConversionOnImport;
     private bool _hasConfiguredConverter;
+    private bool _importCovers = true;
     private string _statusText = "Idle";
     private string _sourceValidationMessage = string.Empty;
     private string _workingDirectoryValidationMessage = string.Empty;
@@ -35,10 +36,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     private string _warningsText = "No warnings.";
     private string _errorText = "No error.";
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _activeImportCancellation;
     private CancellationTokenSource? _sourceValidationCancellation;
     private bool _isValidatingSources;
     private bool _isCancellationRequested;
+    private bool _isDisposed;
 
     public event ImportCompletedSuccessfullyHandler? ImportCompletedSuccessfully;
     public event Action<bool>? ImportActivityChanged;
@@ -196,6 +199,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public bool ShowForceEpubConversionOption => HasConfiguredConverter;
 
+    public bool ImportCovers
+    {
+        get => _importCovers;
+        set => SetProperty(ref _importCovers, value);
+    }
+
     public ulong? LastJobId
     {
         get => _lastJobId;
@@ -299,6 +308,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task ApplyDroppedSourcePathsAndStartAsync(IReadOnlyList<string> sourcePaths)
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (!ApplyDroppedSourcePathsCore(sourcePaths))
         {
             return;
@@ -323,7 +337,17 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task StartImportAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         await WaitForSourceValidationAsync();
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (!CanStartImport())
         {
             throw new InvalidOperationException(
@@ -340,7 +364,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
         ProgressValue = 0;
         LastResult = null;
         _activeImportCancellation?.Dispose();
-        _activeImportCancellation = new CancellationTokenSource();
+        _activeImportCancellation = CreateLifetimeCancellationSource();
+        var keepActiveImport = false;
 
         try
         {
@@ -350,7 +375,8 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     SourcePaths = SourcePaths.ToArray(),
                     WorkingDirectory = WorkingDirectory,
                     AllowProbableDuplicates = AllowProbableDuplicates,
-                    ForceEpubConversionOnImport = ForceEpubConversionOnImport
+                    ForceEpubConversionOnImport = ForceEpubConversionOnImport,
+                    ImportCovers = ImportCovers
                 },
                 TimeSpan.FromSeconds(5),
                 _activeImportCancellation.Token);
@@ -370,7 +396,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             }
             catch (TimeoutException error)
             {
-                using var refreshCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var refreshCancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
                 var snapshot = await _importJobsService.TryGetSnapshotAsync(
                     jobId,
                     TimeSpan.FromSeconds(5),
@@ -390,6 +416,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
                     error,
                     "Import job {JobId} exceeded the UI wait ceiling and is still running in the background.",
                     jobId);
+                keepActiveImport = true;
                 return;
             }
 
@@ -397,24 +424,33 @@ internal sealed class ImportJobsViewModel : ObservableObject
             LogTerminalResult(jobId, result);
             await RaiseImportCompletedSuccessfullyAsync(result);
         }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            UiLogging.Information("Import wait was cancelled because the UI shell is shutting down.");
+        }
         finally
         {
-            _activeImportCancellation?.Dispose();
-            _activeImportCancellation = null;
-            IsCancellationRequested = false;
-            IsBusy = false;
+            if (!keepActiveImport)
+            {
+                ClearActiveImportState();
+            }
         }
     }
 
     public async Task RefreshAsync(ulong? jobId = null)
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         var effectiveJobId = jobId ?? LastJobId;
         if (effectiveJobId is null)
         {
             return;
         }
 
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
         var result = await _importJobsService.TryGetResultAsync(
             effectiveJobId.Value,
             TimeSpan.FromSeconds(5),
@@ -441,6 +477,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task CancelCurrentAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (LastJobId is null)
         {
             return;
@@ -449,7 +490,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
         IsCancellationRequested = true;
 
         var jobId = LastJobId.Value;
-        var cancellation = _activeImportCancellation ?? new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var cancellation = _activeImportCancellation ?? CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
         try
         {
             var accepted = await _importJobsService.CancelAsync(
@@ -476,13 +517,18 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task RemoveCurrentAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (LastJobId is null)
         {
             return;
         }
 
         var jobId = LastJobId.Value;
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
         try
         {
             var removed = await _importJobsService.RemoveAsync(
@@ -508,7 +554,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task BrowseSourceAsync()
     {
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(30));
         var selectedPaths = await _pathSelectionService.PickSourceFilesAsync(cancellation.Token);
         if (selectedPaths.Count > 0)
         {
@@ -518,7 +569,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task SelectSourceAndImportAsync()
     {
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(30));
         var selectedPaths = await _pathSelectionService.PickSourceFilesAsync(cancellation.Token);
         if (selectedPaths.Count == 0)
         {
@@ -527,6 +583,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         SetSourcePaths(selectedPaths);
         await WaitForSourceValidationAsync(cancellation.Token);
+        if (_isDisposed)
+        {
+            return;
+        }
+
         LogCanStartImportState("SelectSourceAndImportAsync");
         if (CanStartImport())
         {
@@ -536,7 +597,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task SelectDirectoryAndImportAsync()
     {
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(30));
         var selectedPath = await _pathSelectionService.PickSourceDirectoryAsync(cancellation.Token);
         if (string.IsNullOrWhiteSpace(selectedPath))
         {
@@ -545,6 +611,11 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
         SetSourcePaths([selectedPath]);
         await WaitForSourceValidationAsync(cancellation.Token);
+        if (_isDisposed)
+        {
+            return;
+        }
+
         LogCanStartImportState("SelectDirectoryAndImportAsync");
         if (CanStartImport())
         {
@@ -554,7 +625,12 @@ internal sealed class ImportJobsViewModel : ObservableObject
 
     public async Task BrowseWorkingDirectoryAsync()
     {
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(30));
         var selectedPath = await _pathSelectionService.PickWorkingDirectoryAsync(cancellation.Token);
         if (!string.IsNullOrWhiteSpace(selectedPath))
         {
@@ -636,6 +712,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             : result.Snapshot.Message;
         ProgressSummaryText = FormatProgressSummary(result.Snapshot);
         ProgressValue = result.Snapshot.Status == ImportJobStatusModel.Completed ? 100 : Math.Clamp(result.Snapshot.Percent, 0, 100);
+        ClearActiveImportState();
     }
 
     private static string FormatProgressSummary(ImportJobSnapshotModel snapshot)
@@ -738,7 +815,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
             WorkingDirectoryValidationMessage.Length == 0 ? "<ok>" : WorkingDirectoryValidationMessage);
     }
 
-    private bool CanRefresh() => LastJobId.HasValue && !IsBusy;
+    private bool CanRefresh() => LastJobId.HasValue;
 
     private bool CanCancel() => LastJobId.HasValue && IsBusy && !IsCancellationRequested;
 
@@ -840,7 +917,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     private async Task RefreshSourceValidationAsync(IReadOnlyList<string> sourcePaths)
     {
         CancelAndDisposeSourceValidation();
-        _sourceValidationCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        _sourceValidationCancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(5));
         var validationCancellation = _sourceValidationCancellation;
         _isValidatingSources = true;
         StartImportCommand.RaiseCanExecuteChanged();
@@ -891,7 +968,7 @@ internal sealed class ImportJobsViewModel : ObservableObject
     {
         while (_isValidatingSources)
         {
-            await Task.Delay(10, ct);
+            await Task.Delay(50, ct);
         }
     }
 
@@ -925,4 +1002,38 @@ internal sealed class ImportJobsViewModel : ObservableObject
         _sourceValidationCancellation.Dispose();
         _sourceValidationCancellation = null;
     }
+
+    private void ClearActiveImportState()
+    {
+        _activeImportCancellation?.Dispose();
+        _activeImportCancellation = null;
+        IsCancellationRequested = false;
+        IsBusy = false;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        PropertyChanged -= OnPropertyChanged;
+        _lifetimeCancellation.Cancel();
+        CancelAndDisposeSourceValidation();
+        _activeImportCancellation?.Cancel();
+        ClearActiveImportState();
+        _lifetimeCancellation.Dispose();
+    }
+
+    private CancellationTokenSource CreateOperationCancellationSource(TimeSpan timeout)
+    {
+        var cancellation = CreateLifetimeCancellationSource();
+        cancellation.CancelAfter(timeout);
+        return cancellation;
+    }
+
+    private CancellationTokenSource CreateLifetimeCancellationSource()
+        => CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
 }

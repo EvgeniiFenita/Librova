@@ -4,13 +4,14 @@
 #include <cstdint>
 #include <filesystem>
 
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
+#include "TestWorkspace.hpp"
 
 TEST_CASE("Schema migrator applies schema and sets user version", "[database-runtime]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-schema-migrator.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-schema-migrator.db");
     std::filesystem::remove(databasePath);
 
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -32,7 +33,7 @@ TEST_CASE("Schema migrator applies schema and sets user version", "[database-run
 
 TEST_CASE("Schema migrator is idempotent for existing database", "[database-runtime]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-schema-migrator-idempotent.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-schema-migrator-idempotent.db");
     std::filesystem::remove(databasePath);
 
     Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
@@ -45,7 +46,7 @@ TEST_CASE("Schema migrator is idempotent for existing database", "[database-runt
 
 TEST_CASE("Schema migrator rejects database with a schema version newer than the current binary supports", "[database-runtime]")
 {
-    const auto databasePath = std::filesystem::temp_directory_path() / "librova-schema-migrator-future.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-schema-migrator-future.db");
     std::filesystem::remove(databasePath);
 
     {
@@ -67,7 +68,7 @@ TEST_CASE("Schema migrator rejects database with incompatible older schema versi
 {
     // Databases created by earlier Librova versions have schema versions 2–5.
     // Librova no longer provides upgrade paths for them and requires recreation.
-    const auto databasePath = std::filesystem::temp_directory_path() / "librova-schema-migrator-old.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-schema-migrator-old.db");
     std::filesystem::remove(databasePath);
 
     {

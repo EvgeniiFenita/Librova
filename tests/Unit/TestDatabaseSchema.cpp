@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "DatabaseSchema/DatabaseSchema.hpp"
+#include "Database/DatabaseSchema.hpp"
 
 TEST_CASE("Database schema exposes current version and migration steps", "[database-schema]")
 {

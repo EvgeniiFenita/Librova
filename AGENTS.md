@@ -78,7 +78,7 @@ scripts\Run-Librova.ps1
 scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 ```
 
-> `build → test` must always be **sequential** — never run tests against a stale build.
+> `build → test` must always stay ordered: finish the required build first, then start tests against that fresh build. Independent test suites may run in parallel only after the build step completes.
 
 ---
 
@@ -93,7 +93,7 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - CMake is the **canonical native build system**. Visual Studio solutions are for developer convenience only.
 - Do not introduce gRPC runtime dependencies without an explicit architecture decision.
 - Conversion cancellation is **not** ordinary converter failure; never silently fall back to storing the original FB2.
-- `build → test` must be **sequential**, never parallel when tests depend on freshly built binaries.
+- `build → test` must stay **ordered**: never run tests against stale binaries. Parallel test execution is allowed only after the required build step completes.
 - After any change under `proto/`, run `scripts/ValidateProto.ps1` before marking the checkpoint done.
 - Never open `docs/backlog.yaml` or `docs/backlog-archive.yaml` directly.
   Use `python scripts/backlog.py list` and `python scripts/backlog.py show <id>` instead.
@@ -115,6 +115,15 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - Do not start convenience or side-feature work unless it directly closes an active backlog item.
 - Finish one end-to-end vertical slice before branching into adjacent polish.
 - Disposable runtime files, logs, and transient state go under `out/` rather than scattered across source.
+
+### Reuse before adding helpers
+
+- Before adding any new helper, utility function, local lambda, or small abstraction, search the repository for an existing implementation with the same responsibility.
+- Prefer reusing or extending the existing helper when the behavior already matches or can be generalized without weakening ownership boundaries.
+- If duplicate infrastructure helpers are discovered while working, consolidate them in the same task instead of adding another copy or leaving parallel implementations behind.
+- Only add a new helper when no suitable implementation exists, or when reuse would create the wrong abstraction or boundary; in that case, make the difference explicit in naming and final rationale.
+- Apply this rule especially to string utilities, filesystem and path helpers, Unicode conversion, SQLite helpers and transactions, logging wrappers, mapping code, and diagnostic formatting helpers.
+- Do not introduce file-local "just for this file" duplicates of existing helpers unless the behavior is intentionally different and that difference is obvious from the name and call site.
 
 ### Comments and documentation in code
 
@@ -192,7 +201,7 @@ For a meaningful vertical slice, prefer: unit tests for local logic → integrat
 ### Unicode and storage safety
 
 - If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
-- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Unicode/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
+- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Foundation/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
 
 ### Review and UI-specific policy
 

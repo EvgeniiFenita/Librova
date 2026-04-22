@@ -62,7 +62,7 @@ if (isDuplicate) {
 
 ### Unicode and path handling
 
-- route UTF-8 / wide / path conversions through `libs/Unicode/UnicodeConversion.*`
+- route UTF-8 / wide / path conversions through `libs/Foundation/UnicodeConversion.*`
 - never add local `WideCharToMultiByte`, `MultiByteToWideChar`, or `generic_u8string` helpers
 
 ### Proto naming

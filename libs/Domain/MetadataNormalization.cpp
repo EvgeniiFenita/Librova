@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <ranges>
 #include <vector>
 
 namespace Librova::Domain {
@@ -299,7 +300,7 @@ std::optional<std::string> NormalizeIsbn(const std::optional<std::string>& value
 
     if (normalized.size() == 13)
     {
-        if (std::all_of(normalized.begin(), normalized.end(), [](const char valueToCheck) {
+        if (std::ranges::all_of(normalized, [](const char valueToCheck) {
                 return std::isdigit(static_cast<unsigned char>(valueToCheck)) != 0;
             }))
         {

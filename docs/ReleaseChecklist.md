@@ -33,6 +33,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - ZIP: parallel import of multiple files from the archive **(RG)**
 - ZIP: corrupted archive — a valid book from the same archive still imports **(RG)**
 - Progress summary in the `RUNNING` state shows total / processed / imported / failed / skipped
+- Long-running import after the UI wait ceiling keeps `Refresh` and `Cancel` available
 - Cancellation: rollback of already imported books **(RG)**
 - Cancellation: the library returns to the pre-import state **(RG)**
 - Drag-and-drop: files start import automatically **(RG)**
@@ -41,13 +42,16 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - After import completes, the Library browser refreshes automatically **(RG)**
 - Duplicate override: `Allow probable duplicates` creates a separate record only for probable duplicates; strict duplicates stay rejected **(RG)**
 - `Force conversion to EPUB during import` is visible only when a converter is configured
+- `Import covers` checkbox is checked by default; when unchecked, imported books have no cover thumbnail and no cover file is stored
 
 ---
 
 ## Library Browser
 
 - Book grid is visible and infinite scroll works **(RG)**
-- Empty state is shown for an empty library
+- Empty library: book illustration + "Go to Import" button are shown **(RG)**
+- No-results state: search or filter returns 0 books — magnifier illustration + "Nothing found" shown, no button **(RG)**
+- No flicker when clearing the search field: empty state does not flash between states
 - Book details: metadata, annotation, and size in MB are visible **(RG)**
 - Details panel does not overlap the grid
 - With the details panel open: at least 2 card columns and at least 2 visible rows
@@ -64,6 +68,9 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Covers: real cover keeps its aspect ratio
 - Covers: placeholder letter is not clipped, including Cyrillic letters
 - FB2 with `windows-1251` shows title/author without corruption **(RG)**
+- `Esc` with a selected book closes the details panel (clears selection); does nothing when no book is selected
+- `Delete` with a selected book moves the book to the Recycle Bin; does nothing when no book is selected
+- `Delete` in the search field deletes text and does not trigger the trash command
 
 ---
 
@@ -72,6 +79,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Export: file appears on disk at the selected path **(RG)**
 - Export: suggested filename contains no Windows-forbidden characters **(RG)**
 - Export as EPUB: button is visible only when a converter is configured
+- Export as EPUB: converter failure after a partial write does not corrupt an existing destination file
 - Compressed `.book.fb2.gz`: Export produces a readable `.fb2` **(RG)**
 - Compressed `.book.fb2.gz`: Export as EPUB works **(RG)**
 - Compressed `.book.fb2.gz`: Export as EPUB leaves no temp files in the library folder **(RG)**
@@ -82,6 +90,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 
 - Move to Recycle Bin: book disappears from the Library browser **(RG)**
 - Move to Recycle Bin: files are removed from `Objects` **(RG)**
+- Move to Recycle Bin: partial Windows handoff failure is reported as a managed-trash fallback
 - If the last book of a language is deleted, that language disappears from the language filter **(RG)**
 
 ---

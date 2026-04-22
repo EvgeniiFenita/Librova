@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Librova.UI.Logging;
 
 namespace Librova.UI.Runtime;
 
@@ -30,17 +31,50 @@ internal static class RuntimeLogSynchronization
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(retainedLogPath)!);
-        File.Copy(runtimeLogPath, retainedLogPath, overwrite: true);
+        if (File.Exists(retainedLogPath))
+        {
+            using var source = new FileStream(runtimeLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var destination = new FileStream(retainedLogPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            if (destination.Length > 0)
+            {
+                using var separator = new StreamWriter(destination, leaveOpen: true);
+                separator.WriteLine();
+                separator.Flush();
+            }
+
+            source.CopyTo(destination);
+        }
+        else
+        {
+            File.Copy(runtimeLogPath, retainedLogPath, overwrite: false);
+        }
 
         try
         {
             File.Delete(runtimeLogPath);
         }
-        catch (IOException)
+        catch (IOException error)
         {
+            LogRuntimeDeleteFailure(error, runtimeLogPath);
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException error)
         {
+            LogRuntimeDeleteFailure(error, runtimeLogPath);
         }
+    }
+
+    private static void LogRuntimeDeleteFailure(Exception error, string runtimeLogPath)
+    {
+        if (UiLogging.CurrentLogFilePath is not null)
+        {
+            UiLogging.Warning(
+                error,
+                "Failed to delete runtime log after sync; old entries may persist. Path={Path}",
+                runtimeLogPath);
+            return;
+        }
+
+        Console.Error.WriteLine(
+            $"Failed to delete runtime log after sync; old entries may persist. Path={runtimeLogPath}. {error.Message}");
     }
 }

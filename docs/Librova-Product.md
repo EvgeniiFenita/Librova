@@ -35,7 +35,7 @@ On first launch, the user chooses whether to create a new managed library or ope
 - logs;
 - trash.
 
-Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and sync the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup.
+Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and append the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup without discarding already retained log history.
 
 During an active session, temporary import workspaces, managed-storage staging, and built-in converter process working directories are also kept in a local portable-aware runtime workspace rather than under the managed library root. The library root acts as durable storage for committed managed objects, logs retained after sync, the database, and trash; it is not treated as the hot runtime temp area.
 
@@ -75,6 +75,7 @@ The import flow includes:
 - duplicate detection;
 - explicit user opt-in when Librova allows a duplicate to be imported as a separate managed record;
 - optional conversion `FB2 -> EPUB`, exposed as a checkbox in `Import` only when the current session has a configured converter;
+- optional cover import, exposed as an `Import covers` checkbox in `Import`, checked by default; when unchecked, the pipeline skips cover extraction and storage for the entire batch and imported books have no cover thumbnail;
 - staging before commit;
 - database write;
 - managed storage placement.
@@ -115,6 +116,8 @@ The user can export a selected managed book to any destination path outside the 
 
 The export dialog should suggest a meaningful default filename derived from the book title and author, sanitized for Windows file-name rules.
 
+If export overwrites an existing destination file, Librova prepares the exported bytes in a temporary sibling file first and replaces the destination only after the copy, decompression, or conversion succeeds.
+
 If the active session has a configured converter, managed `FB2` books can also be exported as `EPUB` through a dedicated `Export As EPUB` action.
 
 If a selected managed book is `FB2` but the current session has no configured converter, the details panel does not show the `Export As EPUB` action and instead points the user to `Settings` to configure a converter.
@@ -127,7 +130,7 @@ The primary user-facing delete action now sends managed books to the Windows `Re
 
 Delete still stages files through the managed-library `Trash` area first so rollback remains explicit until the database row is removed.
 
-If the final handoff into the Windows `Recycle Bin` fails, Librova keeps the deleted files in the managed-library `Trash` area and reports that fallback explicitly in the UI status text.
+If the final handoff into the Windows `Recycle Bin` fails, Librova keeps any files that were not already accepted by Windows in the managed-library `Trash` area and reports that fallback explicitly in the UI status text.
 
 ### 3.6 Settings
 

@@ -5,8 +5,21 @@ namespace Librova.UI.ViewModels;
 internal sealed class FilterFacetItem : INotifyPropertyChanged
 {
     private bool _isSelected;
+    private uint _bookCount;
 
     public string Value { get; }
+
+    public uint BookCount
+    {
+        get => _bookCount;
+        set
+        {
+            if (_bookCount == value)
+                return;
+            _bookCount = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BookCount)));
+        }
+    }
 
     public bool IsSelected
     {
@@ -25,8 +38,9 @@ internal sealed class FilterFacetItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public FilterFacetItem(string value)
+    public FilterFacetItem(string value, uint bookCount = 0)
     {
         Value = value;
+        _bookCount = bookCount;
     }
 }

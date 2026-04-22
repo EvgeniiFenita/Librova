@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "ConverterConfiguration/ConverterConfiguration.hpp"
-#include "CoreHost/HostOptions.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Converter/ConverterConfiguration.hpp"
+#include "App/HostOptions.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 TEST_CASE("Host options parse required pipe and library root", "[core-host]")
 {

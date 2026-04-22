@@ -47,7 +47,8 @@ public:
 
     Librova::Domain::SParsedBook Parse(
         const std::filesystem::path& filePath,
-        std::string_view) const override
+        std::string_view = {},
+        const Librova::Domain::SBookParseOptions& = {}) const override
     {
         return {
             .Metadata = {.TitleUtf8 = filePath.filename().string(), .AuthorsUtf8 = {"Parser Author"}},

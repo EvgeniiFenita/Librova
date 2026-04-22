@@ -6,13 +6,14 @@
 #include <system_error>
 #include <thread>
 
-#include "DatabaseSchema/DatabaseSchema.hpp"
-#include "Sqlite/SqliteConnection.hpp"
-#include "Sqlite/SqliteStatement.hpp"
+#include "Database/DatabaseSchema.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
+#include "TestWorkspace.hpp"
 
 TEST_CASE("Sqlite connection can apply schema migrations to a temporary database", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-smoke.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-sqlite-smoke.db");
     std::filesystem::remove(databasePath);
 
     {
@@ -38,7 +39,7 @@ TEST_CASE("Sqlite connection can apply schema migrations to a temporary database
 
 TEST_CASE("Sqlite connection enables foreign key enforcement for each new connection", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-foreign-keys.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-sqlite-foreign-keys.db");
     std::filesystem::remove(databasePath);
 
     {
@@ -55,7 +56,7 @@ TEST_CASE("Sqlite connection enables foreign key enforcement for each new connec
 
 TEST_CASE("Sqlite connection configures busy timeout for each new connection", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-busy-timeout.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-sqlite-busy-timeout.db");
     std::filesystem::remove(databasePath);
 
     {
@@ -72,8 +73,7 @@ TEST_CASE("Sqlite connection configures busy timeout for each new connection", "
 
 TEST_CASE("Sqlite connection opens a database under a Unicode path", "[sqlite]")
 {
-    const std::filesystem::path sandboxPath =
-        std::filesystem::temp_directory_path() / std::filesystem::path{u8"librova-тест-sqlite"};
+    const auto sandboxPath = MakeUniqueTestPath(L"librova-тест-sqlite");
     const std::filesystem::path databasePath = sandboxPath / std::filesystem::path{u8"данные.db"};
 
     std::filesystem::remove_all(sandboxPath);
@@ -103,7 +103,7 @@ TEST_CASE("Sqlite connection opens a database under a Unicode path", "[sqlite]")
 
 TEST_CASE("Sqlite connection waits for an overlapping write transaction instead of failing immediately", "[sqlite]")
 {
-    const std::filesystem::path databasePath = std::filesystem::temp_directory_path() / "librova-sqlite-write-contention.db";
+    const auto databasePath = MakeUniqueTestPath(L"librova-sqlite-write-contention.db");
     std::filesystem::remove(databasePath);
 
     {

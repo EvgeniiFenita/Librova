@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "ConverterConfiguration/ConverterConfiguration.hpp"
+#include "Converter/ConverterConfiguration.hpp"
 
 TEST_CASE("Disabled converter configuration builds no command profile", "[converter-config]")
 {

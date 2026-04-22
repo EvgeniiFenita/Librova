@@ -10,9 +10,9 @@ target_include_directories(LibrovaApplicationClient
 
 target_link_libraries(LibrovaApplicationClient
     PUBLIC
-        LibrovaApplicationJobs
-        LibrovaPipeClient
-        LibrovaProtoMapping
+        LibrovaApp
+        LibrovaTransport
+        LibrovaRpc
 )
 
 target_compile_features(LibrovaApplicationClient PUBLIC cxx_std_20)

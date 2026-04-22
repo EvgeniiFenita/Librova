@@ -165,12 +165,16 @@ public sealed class LibraryCatalogMapperTests
         var page = LibraryCatalogMapper.FromProto(new ListBooksResponse
         {
             TotalCount = 2,
-            AvailableLanguages = { "en" },
-            AvailableGenres = { "adventure", "sci-fi" }
+            AvailableLanguages = { new FacetItem { Value = "en", Count = 3 } },
+            AvailableGenres =
+            {
+                new FacetItem { Value = "adventure", Count = 1 },
+                new FacetItem { Value = "sci-fi", Count = 2 }
+            }
         });
 
-        Assert.Equal(["adventure", "sci-fi"], page.AvailableGenres);
-        Assert.Equal(["en"], page.AvailableLanguages);
+        Assert.Equal([new FacetItemModel("adventure", 1), new FacetItemModel("sci-fi", 2)], page.AvailableGenres);
+        Assert.Equal([new FacetItemModel("en", 3)], page.AvailableLanguages);
     }
 
     [Fact]

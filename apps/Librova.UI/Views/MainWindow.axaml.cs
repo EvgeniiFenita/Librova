@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Librova.UI.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -88,6 +89,37 @@ internal sealed partial class MainWindow : Window
         eventArgs.Handled = true;
     }
 
+    private void OnWindowKeyDown(object? sender, KeyEventArgs eventArgs)
+    {
+        if (eventArgs.Handled
+            || DataContext is not ShellWindowViewModel { HasShell: true, Shell.IsLibrarySectionActive: true, Shell.LibraryBrowser: var libraryBrowser })
+        {
+            return;
+        }
+
+        if (eventArgs.Key is Key.Escape)
+        {
+            ExecuteShortcut(eventArgs, libraryBrowser.CloseSelectionCommand);
+            return;
+        }
+
+        if (eventArgs.Key is Key.Delete && !IsTextInputShortcutSource(eventArgs.Source))
+        {
+            ExecuteShortcut(eventArgs, libraryBrowser.MoveSelectedBookToTrashCommand);
+        }
+    }
+
+    private static void ExecuteShortcut(KeyEventArgs eventArgs, System.Windows.Input.ICommand command)
+    {
+        if (!command.CanExecute(null))
+        {
+            return;
+        }
+
+        eventArgs.Handled = true;
+        command.Execute(null);
+    }
+
     internal static DragDropEffects GetDropEffect(IDataTransfer? dataTransfer) =>
         GetDropEffect(GetDroppedSourcePaths(dataTransfer));
 
@@ -95,6 +127,19 @@ internal sealed partial class MainWindow : Window
         sourcePaths.Count > 0
             ? DragDropEffects.Copy
             : DragDropEffects.None;
+
+    internal static bool IsTextInputShortcutSource(object? source)
+    {
+        for (var visual = source as Avalonia.Visual; visual is not null; visual = visual.GetVisualParent())
+        {
+            if (visual is TextBox)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static IReadOnlyList<string> TryGetDroppedSourcePaths(DragEventArgs eventArgs)
         => GetDroppedSourcePaths(eventArgs.DataTransfer);

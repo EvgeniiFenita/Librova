@@ -1395,3 +1395,141 @@ tasks:
   note: 'Fixed in ExternalBookConverter::Convert: per-invocation subdirectory created under shared ConverterWorkspace
     so concurrent fbc.exe processes each write to their own fb2cng.log. RAII cleanup removes the subdir
     after each conversion. Build OK, 459/459 tests passed.'
+- id: 172
+  summary: centralize all filesystem I/O behind a dedicated libs/FileSystem/ facade and enforce the constraint
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.2'
+  note: 'Decided not to implement: centralising std::filesystem calls behind a facade was deemed unnecessary
+    overhead. Closed without implementation.'
+- id: 173
+  summary: audit entire C++ codebase for underused C++20 features and eliminate pre-standard workarounds
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'Audited all C++ sources; applied 11 improvements: string_view params (5 functions), std::format
+    in HostOptions, std::ranges::transform/all_of/views::values, string_view concatenation removing redundant
+    copies, [[nodiscard]] on HasTable. Build clean, 459/459 native tests pass.'
+- id: 182
+  summary: 'C++ deduplication: consolidate Foundation and Database shared utilities'
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: unscheduled
+  note: Created Foundation::ToLower (StringUtils), Foundation::EnsureDirectory/RemovePathNoThrow (FileSystemUtils),
+    Logging::*IfInitialized templates. Created Database::SqliteEntityHelpers (BuildIdInClause, ResolveEntityId,
+    ReadRelatedEntityNames/Batch), SqliteTimePoint, SqliteTransaction. Unified SQL filter builder/binder
+    helpers (AppendFilterJoins, AppendFilterAndConditions, BindFilterWhereParams) in SqliteBookQueryRepository.
+    Removed remaining duplicate job/no-job log branches in SingleFileImportCoordinator, kept ImportDiagnosticText
+    decoupled from coordinator types, and finished storage-side cleanup by replacing leftover generic
+    directory helpers in ManagedFileStorage with Foundation utilities while preserving warning-level cleanup
+    logging. All 459 native + 301 managed tests pass.
+- id: 175
+  summary: add drag-over visual highlight to Import DropZone border
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Added DragOver CSS class toggling in ImportView.axaml.cs via DragEnter/DragLeave/Drop handlers;
+    added Border.DropZone.DragOver style (AppAccentBrush border + AppAccentMutedBrush background) with
+    150ms brush transitions in Components.axaml
+- id: 160
+  summary: audit test isolation and enable safe parallel execution across native and managed suites
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.3'
+  note: Added TestWorkspace.hpp with MakeUniqueTestPath()/CTestWorkspace RAII helper; replaced all hardcoded
+    temp_directory_path paths and CScopedDirectory class definitions across 30+ test files; enabled ctest
+    -j N parallelism; native and managed test suites now run concurrently in Run-Tests.ps1. All 459 native
+    and 301 managed tests pass with -j 4.
+- id: 184
+  summary: show book count next to each language and genre option in the filter dropdowns
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'Implemented full vertical slice: SQL GROUP BY COUNT for languages and genres, SFacetItem domain
+    struct, FacetItem proto message, C++ and C# mappers, FilterFacetItem.BookCount ViewModel property,
+    LibraryBrowseRefreshResult updated, UI chip templates with count badge. All 759 tests pass.'
+- id: 185
+  summary: Improve GenreChip selected state contrast
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'Implemented: selected bg AppAccentBorderBrush (#3D2C0A), border AppAccentBrush (#F5A623) explicitly
+    on /template/ ContentPresenter (Fluent theme override), text AppAccentBrightBrush (#FFD07A), FontWeight
+    SemiBold. Unselected border bumped to AppBorderStrongBrush (#3A2E18).'
+- id: 186
+  summary: fix facet count review regressions in catalog filters
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.3'
+  note: 'Fixed catalog filter facet regressions: LibraryBrowserViewModel now aggregates case-insensitive
+    duplicate facet values without crashing and ViewModel test doubles now use real Genres data plus regression
+    coverage for mixed-case facet counts.'
+- id: 171
+  summary: auto-navigate to Library tab after a successful import completes
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: ShellImportWorkflowController.HandleImportCompletedSuccessfullyAsync now calls _setCurrentSection(Library)
+    after browser refresh; covered by two unit tests.
+- id: 179
+  summary: add Go to Import CTA button to empty library state
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.2'
+  note: Added a book-stack empty-library illustration and a Go to Import CTA; introduced ShowGoToImportButton
+    plus a navigateToImport callback wired from ShellViewModel; no CTA is shown in the no-results state.
+- id: 127
+  summary: add an Import covers checkbox to the import dialog, checked by default
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: Added import_covers optional bool to proto, threaded ImportCovers through C++ domain/facade and
+    C# model/mapper/ViewModel, added the Import covers checkbox, and enforced disabled cover import by
+    parsing without cover extraction before storage.
+- id: 176
+  summary: add keyboard shortcuts for core library actions
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.2'
+  note: 'Added library-section keyboard shortcuts at the MainWindow key handler: Esc closes the selected-book
+    details panel, Delete moves the selected book to Recycle Bin, and Delete is ignored from text inputs.
+    Markup and ViewModel tests added.'
+- id: 187
+  summary: harden release-candidate failure paths found in review
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.3'
+  note: Fixed review findings around active import lifecycle, source-validation disposal, export/recycle
+    partial failures, WAL-backed statistics caching, retained log append, and Unicode-safe export logging;
+    added regression coverage and ran full test suite.
+- id: 188
+  summary: fix review-found reliability gaps in ZIP import, trash, rollback diagnostics, shutdown, logs,
+    and IPC drift guards
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.2'
+  note: Fixed validated review findings across ZIP Cyrillic entry decoding, managed trash root canonicalization,
+    rollback/runtime diagnostics, IPC drift guard, shutdown cancellation, process-handle race handling,
+    rollback/ZIP tests, and SQLite PRAGMA cleanup.
+- id: 189
+  summary: bump application version to 1.2.0
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: '1.2'
+  note: Shared VERSION.txt now sets the application version to 1.2.0; native host and managed assembly
+    version propagation were verified.

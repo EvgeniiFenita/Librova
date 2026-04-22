@@ -1,0 +1,133 @@
+#include "App/LibraryCatalogFacade.hpp"
+
+#include <stdexcept>
+
+namespace Librova::Application {
+
+CLibraryCatalogFacade::CLibraryCatalogFacade(
+    const Librova::Domain::IBookQueryRepository& bookQueryRepository,
+    const Librova::Domain::IBookRepository& bookRepository)
+    : m_bookQueryRepository(bookQueryRepository)
+    , m_bookRepository(bookRepository)
+{
+}
+
+SBookListResult CLibraryCatalogFacade::ListBooks(const SBookListRequest& request) const
+{
+    if (!request.IsValid())
+    {
+        throw std::invalid_argument("Book list request must use a positive limit.");
+    }
+
+    const auto domainQuery = ToDomainQuery(request);
+    auto languageRequest = request;
+    languageRequest.Languages.clear();
+    auto genreRequest = request;
+    genreRequest.GenresUtf8.clear();
+
+    const std::vector<Librova::Domain::SBook> books = m_bookQueryRepository.Search(domainQuery);
+
+    SBookListResult result;
+    result.TotalCount = m_bookQueryRepository.CountSearchResults(domainQuery);
+    result.AvailableLanguages = m_bookQueryRepository.ListAvailableLanguages(ToDomainQuery(languageRequest));
+    result.AvailableGenres = m_bookQueryRepository.ListAvailableGenres(ToDomainQuery(genreRequest));
+    result.Statistics = GetLibraryStatistics();
+    result.Items.reserve(books.size());
+
+    for (const Librova::Domain::SBook& book : books)
+    {
+        result.Items.push_back(ToListItem(book));
+    }
+
+    return result;
+}
+
+std::optional<SBookDetails> CLibraryCatalogFacade::GetBookDetails(const Librova::Domain::SBookId id) const
+{
+    if (!id.IsValid())
+    {
+        throw std::invalid_argument("Book details request must use a valid book id.");
+    }
+
+    const auto book = m_bookRepository.GetById(id);
+    if (!book.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return ToDetails(*book);
+}
+
+SLibraryStatistics CLibraryCatalogFacade::GetLibraryStatistics() const
+{
+    const auto statistics = m_bookQueryRepository.GetLibraryStatistics();
+    return {
+        .BookCount = statistics.BookCount,
+        .TotalManagedBookSizeBytes = statistics.TotalManagedBookSizeBytes,
+        .TotalLibrarySizeBytes = statistics.TotalLibrarySizeBytes
+    };
+}
+
+Librova::Domain::SSearchQuery CLibraryCatalogFacade::ToDomainQuery(const SBookListRequest& request)
+{
+    return {
+        .TextUtf8 = request.TextUtf8,
+        .AuthorUtf8 = request.AuthorUtf8,
+        .Languages = request.Languages,
+        .SeriesUtf8 = request.SeriesUtf8,
+        .TagsUtf8 = request.TagsUtf8,
+        .GenresUtf8 = request.GenresUtf8,
+        .Format = request.Format,
+        .SortBy = request.SortBy,
+        .SortDirection = request.SortDirection,
+        .Offset = request.Offset,
+        .Limit = request.Limit
+    };
+}
+
+SBookListItem CLibraryCatalogFacade::ToListItem(const Librova::Domain::SBook& book)
+{
+    return {
+        .Id = book.Id,
+        .TitleUtf8 = book.Metadata.TitleUtf8,
+        .AuthorsUtf8 = book.Metadata.AuthorsUtf8,
+        .Language = book.Metadata.Language,
+        .SeriesUtf8 = book.Metadata.SeriesUtf8,
+        .SeriesIndex = book.Metadata.SeriesIndex,
+        .Year = book.Metadata.Year,
+        .TagsUtf8 = book.Metadata.TagsUtf8,
+        .GenresUtf8 = book.Metadata.GenresUtf8,
+        .Format = book.File.Format,
+        .ManagedPath = book.File.ManagedPath,
+        .CoverPath = book.CoverPath,
+        .SizeBytes = book.File.SizeBytes,
+        .AddedAtUtc = book.AddedAtUtc
+    };
+}
+
+SBookDetails CLibraryCatalogFacade::ToDetails(const Librova::Domain::SBook& book)
+{
+    return {
+        .Id = book.Id,
+        .TitleUtf8 = book.Metadata.TitleUtf8,
+        .AuthorsUtf8 = book.Metadata.AuthorsUtf8,
+        .Language = book.Metadata.Language,
+        .SeriesUtf8 = book.Metadata.SeriesUtf8,
+        .SeriesIndex = book.Metadata.SeriesIndex,
+        .PublisherUtf8 = book.Metadata.PublisherUtf8,
+        .Year = book.Metadata.Year,
+        .Isbn = book.Metadata.Isbn,
+        .TagsUtf8 = book.Metadata.TagsUtf8,
+        .GenresUtf8 = book.Metadata.GenresUtf8,
+        .DescriptionUtf8 = book.Metadata.DescriptionUtf8,
+        .Identifier = book.Metadata.Identifier,
+        .Format = book.File.Format,
+        .ManagedPath = book.File.ManagedPath,
+        .CoverPath = book.CoverPath,
+        .SizeBytes = book.File.SizeBytes,
+        .Sha256Hex = book.File.Sha256Hex,
+        .AddedAtUtc = book.AddedAtUtc
+    };
+}
+
+} // namespace Librova::Application

@@ -13,7 +13,7 @@ This skill is intentionally narrow. It covers the native C++ persistence layer t
 
 ## When To Use
 
-- use this skill when editing SQL under `libs/BookDatabase/`, `libs/DatabaseSchema/`, `libs/DatabaseRuntime/`, `libs/SearchIndex/`, or `libs/Sqlite/`
+- use this skill when editing SQL under `libs/Database/`
 - use this skill when reviewing schema changes, FTS5 changes, duplicate-detection queries, or query-shape changes
 - use this skill when debugging search quality, SQLite locking, or rollback behavior
 - use this skill together with `$code-style` for C++ naming and structure rules
@@ -29,11 +29,11 @@ Read only the files relevant to the change:
   - §8 Critical Invariants
   - §12 `IBookRepository` / `IBookQueryRepository`
   - §14.3 Storage Design
-- `libs/DatabaseSchema/DatabaseSchema.cpp` for the current schema
-- `libs/DatabaseRuntime/SchemaMigrator.cpp` for version policy
-- `libs/BookDatabase/SqliteBookRepository.cpp` for write-side patterns
-- `libs/BookDatabase/SqliteBookQueryRepository.cpp` for read-side query patterns
-- `libs/SearchIndex/SearchIndexMaintenance.cpp` for FTS maintenance
+- `libs/Database/DatabaseSchema.cpp` for the current schema
+- `libs/Database/SchemaMigrator.cpp` for version policy
+- `libs/Database/SqliteBookRepository.cpp` for write-side patterns
+- `libs/Database/SqliteBookQueryRepository.cpp` for read-side query patterns
+- `libs/Database/SearchIndexMaintenance.cpp` for FTS maintenance
 - `tests/Unit/TestDatabaseSchema.cpp`, `tests/Unit/TestSchemaMigrator.cpp`, and the relevant `TestSqlite*.cpp` coverage
 
 ## Non-Negotiable Librova Rules
@@ -83,7 +83,7 @@ The write repository additionally sets:
 
 ### Current schema shape
 
-The schema is defined in `libs/DatabaseSchema/DatabaseSchema.cpp`.
+The schema is defined in `libs/Database/DatabaseSchema.cpp`.
 
 Important tables:
 
@@ -250,8 +250,8 @@ Do not add SQLite triggers for FTS maintenance on top of the current explicit ca
 
 When the schema changes, update all of these together:
 
-1. `libs/DatabaseSchema/DatabaseSchema.cpp`
-2. `libs/DatabaseRuntime/SchemaMigrator.cpp` if version policy changes
+1. `libs/Database/DatabaseSchema.cpp`
+2. `libs/Database/SchemaMigrator.cpp` if version policy changes
 3. repository/query code that reads or writes the changed columns
 4. `tests/Unit/TestDatabaseSchema.cpp`
 5. `tests/Unit/TestSchemaMigrator.cpp`

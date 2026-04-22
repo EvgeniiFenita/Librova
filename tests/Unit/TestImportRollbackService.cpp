@@ -1,20 +1,24 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
-#include "Application/ImportRollbackService.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
+#include "App/ImportRollbackService.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
 #include "Domain/Book.hpp"
-#include "Logging/Logging.hpp"
-#include "StoragePlanning/ManagedLibraryLayout.hpp"
-#include "Unicode/UnicodeConversion.hpp"
+#include "Foundation/Logging.hpp"
+#include "Storage/ManagedLibraryLayout.hpp"
+#include "Foundation/UnicodeConversion.hpp"
 
 namespace {
 
@@ -32,8 +36,7 @@ struct SRollbackSandbox
 
 SRollbackSandbox CreateRollbackSandbox(std::string_view scenario)
 {
-    const auto root = std::filesystem::temp_directory_path()
-        / ("librova-rollback-" + std::string{scenario});
+    const auto root = MakeUniqueTestPath(L"librova-rollback");
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root / "Objects");
     std::filesystem::create_directories(root / "Logs");
@@ -99,6 +102,64 @@ Librova::Domain::SBook BuildBook(
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::January / 1 / 2026};
     return book;
 }
+
+class CPartialFailureRollbackRepository final : public Librova::Domain::IBookRepository
+{
+public:
+    explicit CPartialFailureRollbackRepository(std::unordered_set<std::int64_t> failingRemoveIds)
+        : m_failingRemoveIds(std::move(failingRemoveIds))
+    {
+    }
+
+    Librova::Domain::SBookId ReserveId() override
+    {
+        return Librova::Domain::SBookId{0};
+    }
+
+    Librova::Domain::SBookId Add(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    Librova::Domain::SBookId ForceAdd(const Librova::Domain::SBook& book) override
+    {
+        return book.Id;
+    }
+
+    std::optional<Librova::Domain::SBook> GetById(const Librova::Domain::SBookId id) const override
+    {
+        if (const auto iterator = m_books.find(id.Value); iterator != m_books.end())
+        {
+            return iterator->second;
+        }
+
+        return std::nullopt;
+    }
+
+    void Remove(const Librova::Domain::SBookId id) override
+    {
+        if (m_failingRemoveIds.contains(id.Value))
+        {
+            throw std::runtime_error("forced remove failure");
+        }
+
+        m_books.erase(id.Value);
+    }
+
+    void RemoveBatch(std::span<const Librova::Domain::SBookId>) override
+    {
+        throw std::runtime_error("forced batch failure");
+    }
+
+    void AddExisting(Librova::Domain::SBook book)
+    {
+        m_books.emplace(book.Id.Value, std::move(book));
+    }
+
+private:
+    std::unordered_map<std::int64_t, Librova::Domain::SBook> m_books;
+    std::unordered_set<std::int64_t> m_failingRemoveIds;
+};
 
 } // namespace
 
@@ -266,6 +327,36 @@ TEST_CASE("Rollback service invokes progress callback at rollback start and on c
     repository.CloseSession();
 }
 
+TEST_CASE("Rollback reports remaining ids when per-book catalog removal fails", "[rollback]")
+{
+    auto sandbox = CreateRollbackSandbox("partial-remove-failure");
+    CPartialFailureRollbackRepository repository({2});
+
+    const auto firstPath = BuildRelativeManagedBookPath({1});
+    const auto secondPath = BuildRelativeManagedBookPath({2});
+    WriteFile(sandbox.Root / firstPath);
+    WriteFile(sandbox.Root / secondPath);
+
+    auto firstBook = BuildBook(firstPath);
+    firstBook.Id = {1};
+    auto secondBook = BuildBook(secondPath);
+    secondBook.Id = {2};
+    secondBook.File.Sha256Hex = "bb";
+    repository.AddExisting(firstBook);
+    repository.AddExisting(secondBook);
+
+    Librova::Application::CImportRollbackService rollback(repository, sandbox.Root);
+    const auto result = rollback.RollbackImportedBooks({{1}, {2}});
+
+    REQUIRE(result.RemainingBookIds.size() == 1);
+    REQUIRE(result.RemainingBookIds[0].Value == 2);
+    REQUIRE_FALSE(std::filesystem::exists(sandbox.Root / firstPath));
+    REQUIRE(std::filesystem::exists(sandbox.Root / secondPath));
+    REQUIRE(std::ranges::any_of(result.Warnings, [](const auto& warning) {
+        return warning.find("catalog removal failed") != std::string::npos;
+    }));
+}
+
 TEST_CASE("Rollback service writes phase timing summary into host log", "[rollback][logging]")
 {
     auto sandbox = CreateRollbackSandbox("perf-summary");
@@ -307,4 +398,3 @@ TEST_CASE("Rollback service writes phase timing summary into host log", "[rollba
     REQUIRE(logText.find("directory_cleanup=") != std::string::npos);
     REQUIRE(logText.find("bottleneck:") != std::string::npos);
 }
-

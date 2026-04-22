@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "PipeTransport/PipeProtocol.hpp"
+#include "Transport/PipeProtocol.hpp"
 
 TEST_CASE("Pipe method ids stay synchronized for the current checkpoint", "[pipe]")
 {

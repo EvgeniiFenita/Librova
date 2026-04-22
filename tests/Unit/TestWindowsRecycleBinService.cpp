@@ -1,11 +1,12 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <filesystem>
 #include <stdexcept>
 #include <vector>
 
-#include "RecycleBin/WindowsRecycleBinService.hpp"
+#include "Storage/WindowsRecycleBinService.hpp"
 
 TEST_CASE("Windows recycle bin service rejects empty path list", "[recycle-bin]")
 {
@@ -17,7 +18,7 @@ TEST_CASE("Windows recycle bin service rejects empty path list", "[recycle-bin]"
 TEST_CASE("Windows recycle bin service reports failure for a missing path", "[recycle-bin]")
 {
     Librova::RecycleBin::CWindowsRecycleBinService service;
-    const auto missingPath = std::filesystem::temp_directory_path() / "librova-recycle-bin-missing" / "missing.fb2";
+    const auto missingPath = MakeUniqueTestPath(L"librova-recycle-bin-missing") / "missing.fb2";
     std::filesystem::remove_all(missingPath.parent_path());
 
     try
@@ -36,7 +37,7 @@ TEST_CASE("Windows recycle bin service reports failure for a missing path", "[re
 TEST_CASE("Windows recycle bin service preserves Cyrillic paths when surfacing missing-file errors", "[recycle-bin]")
 {
     Librova::RecycleBin::CWindowsRecycleBinService service;
-    const auto missingPath = std::filesystem::temp_directory_path() / u8"librova-корзина" / u8"тест.fb2";
+    const auto missingPath = MakeUniqueTestPath(L"librova-\u043a\u043e\u0440\u0437\u0438\u043d\u0430") / u8"\u0442\u0435\u0441\u0442.fb2";
     std::filesystem::remove_all(missingPath.parent_path());
 
     try

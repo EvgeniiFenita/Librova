@@ -1,15 +1,16 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
+#include "TestWorkspace.hpp"
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 
-#include "Application/LibraryTrashFacade.hpp"
-#include "BookDatabase/SqliteBookRepository.hpp"
-#include "DatabaseRuntime/SchemaMigrator.hpp"
-#include "Logging/Logging.hpp"
-#include "ManagedTrash/ManagedTrashService.hpp"
+#include "App/LibraryTrashFacade.hpp"
+#include "Database/SqliteBookRepository.hpp"
+#include "Database/SchemaMigrator.hpp"
+#include "Foundation/Logging.hpp"
+#include "Storage/ManagedTrashService.hpp"
 
 namespace {
 
@@ -155,10 +156,15 @@ public:
             const auto destination = m_recycleBinRoot / path.filename();
             std::filesystem::create_directories(destination.parent_path());
             std::filesystem::rename(path, destination);
+            if (ThrowAfterFirstMove)
+            {
+                throw std::runtime_error("recycle bin move failed after partial move");
+            }
         }
     }
 
     bool ThrowOnMove = false;
+    bool ThrowAfterFirstMove = false;
     int MoveCalls = 0;
     std::vector<std::filesystem::path> LastMovedPaths;
 
@@ -170,7 +176,7 @@ private:
 
 TEST_CASE("Library trash facade keeps deleted files in managed trash when no recycle-bin service is configured", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/5a/68");
 
@@ -214,7 +220,7 @@ TEST_CASE("Library trash facade keeps deleted files in managed trash when no rec
 
 TEST_CASE("Library trash facade finalizes staged delete into recycle bin when Windows handoff succeeds", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-recycle-bin";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-recycle-bin");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/7b/60");
 
@@ -260,7 +266,7 @@ TEST_CASE("Library trash facade finalizes staged delete into recycle bin when Wi
 
 TEST_CASE("Library trash facade falls back to managed trash when recycle-bin handoff fails", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-recycle-fallback";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-recycle-fallback");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/e8/5e");
 
@@ -299,9 +305,53 @@ TEST_CASE("Library trash facade falls back to managed trash when recycle-bin han
     CloseRepositoryAndRemoveAll(sandbox, repository);
 }
 
+TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff partially moves staged files", "[application][trash]")
+{
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-recycle-partial-handoff");
+    std::filesystem::remove_all(sandbox);
+    std::filesystem::create_directories(sandbox / "Library/Objects/aa/bb");
+
+    const auto databasePath = sandbox / "library-recycle-partial-handoff.db";
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+    Librova::BookDatabase::CSqliteBookRepository repository(databasePath);
+    Librova::ManagedTrash::CManagedTrashService trashService(sandbox / "Library");
+    CFakeRecycleBinService recycleBinService(sandbox / "RecycleBin");
+    recycleBinService.ThrowAfterFirstMove = true;
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Partial Handoff";
+    book.File.Format = Librova::Domain::EBookFormat::Epub;
+    book.File.ManagedPath = "Objects/aa/bb/0000000011.book.epub";
+    book.CoverPath = std::filesystem::path{"Objects/aa/bb/0000000011.cover.jpg"};
+    book.File.SizeBytes = 12;
+    book.File.Sha256Hex = "partial-handoff-hash";
+    book.AddedAtUtc = std::chrono::system_clock::now();
+    const auto bookId = repository.Add(book);
+
+    std::ofstream(sandbox / "Library/Objects/aa/bb/0000000011.book.epub", std::ios::binary) << "epub";
+    std::ofstream(sandbox / "Library/Objects/aa/bb/0000000011.cover.jpg", std::ios::binary) << "cover";
+
+    const Librova::Application::CLibraryTrashFacade facade(
+        repository,
+        trashService,
+        sandbox / "Library",
+        &recycleBinService);
+    const auto result = facade.MoveBookToTrash(bookId);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->Destination == Librova::Application::ETrashDestination::ManagedTrash);
+    REQUIRE(result->HasOrphanedFiles);
+    REQUIRE_FALSE(repository.GetById(bookId).has_value());
+    REQUIRE(std::filesystem::exists(sandbox / "RecycleBin/0000000011.book.epub"));
+    REQUIRE_FALSE(std::filesystem::exists(sandbox / "Library/Trash/Objects/aa/bb/0000000011.book.epub"));
+    REQUIRE(std::filesystem::exists(sandbox / "Library/Trash/Objects/aa/bb/0000000011.cover.jpg"));
+
+    CloseRepositoryAndRemoveAll(sandbox, repository);
+}
+
 TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff succeeds after partial staging", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-recycle-partial";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-recycle-partial");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/64/58");
 
@@ -343,7 +393,7 @@ TEST_CASE("Library trash facade reports orphaned files when recycle-bin handoff 
 
 TEST_CASE("Library trash facade rejects symlinked managed book path escaping library root", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-symlink";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-symlink");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/c7");
     std::filesystem::create_directories(sandbox / "Outside");
@@ -384,7 +434,7 @@ TEST_CASE("Library trash facade rejects symlinked managed book path escaping lib
 
 TEST_CASE("Library trash facade restores staged book when cover trash staging fails", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-cover";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-rollback-cover");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/34/65");
 
@@ -420,7 +470,7 @@ TEST_CASE("Library trash facade restores staged book when cover trash staging fa
 
 TEST_CASE("Library trash facade restores staged files when DB remove fails", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-rollback-remove";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-rollback-remove");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/a1/63");
 
@@ -468,7 +518,7 @@ TEST_CASE("Library trash facade restores staged files when DB remove fails", "[a
 
 TEST_CASE("Library trash facade logs staging failure when book move fails before catalog removal", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-orphan-log";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-orphan-log");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/0e/62");
 
@@ -515,7 +565,7 @@ TEST_CASE("Library trash facade logs staging failure when book move fails before
 
 TEST_CASE("Library trash facade removes a damaged catalog entry when the managed book file is already missing", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-missing-book";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-missing-book");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/f7/59");
 
@@ -548,7 +598,7 @@ TEST_CASE("Library trash facade removes a damaged catalog entry when the managed
 
 TEST_CASE("Library trash facade removes a damaged catalog entry when the managed cover file is already missing", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-missing-cover";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-missing-cover");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/8a/5b");
 
@@ -581,7 +631,7 @@ TEST_CASE("Library trash facade removes a damaged catalog entry when the managed
 
 TEST_CASE("Library trash facade keeps catalog entry when the first trash staging move fails", "[application][trash]")
 {
-    const auto sandbox = std::filesystem::temp_directory_path() / "librova-trash-facade-stage-first";
+    const auto sandbox = MakeUniqueTestPath(L"librova-trash-facade-stage-first");
     std::filesystem::remove_all(sandbox);
     std::filesystem::create_directories(sandbox / "Library/Objects/c2/5b");
 

@@ -1,0 +1,1074 @@
+#include "Database/SqliteBookQueryRepository.hpp"
+
+#include <algorithm>
+#include <format>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "Database/SqliteEntityHelpers.hpp"
+#include "Database/SqliteTimePoint.hpp"
+#include "Domain/BookFormat.hpp"
+#include "Domain/MetadataNormalization.hpp"
+#include "Domain/StorageEncoding.hpp"
+#include "Database/SqliteConnection.hpp"
+#include "Database/SqliteStatement.hpp"
+#include "Foundation/UnicodeConversion.hpp"
+
+namespace Librova::BookDatabase {
+namespace {
+
+std::string BuildFtsQuery(const std::string_view text)
+{
+    const std::string normalizedText = Librova::Domain::NormalizeText(text);
+    std::string sanitizedText;
+    sanitizedText.reserve(normalizedText.size());
+
+    for (const unsigned char currentCharacter : normalizedText)
+    {
+        if (currentCharacter == ' ')
+        {
+            sanitizedText.push_back(' ');
+            continue;
+        }
+
+        if (currentCharacter >= 0x80 || std::isalnum(currentCharacter))
+        {
+            sanitizedText.push_back(static_cast<char>(currentCharacter));
+            continue;
+        }
+
+        sanitizedText.push_back(' ');
+    }
+
+    const std::string tokenizedText = Librova::Domain::NormalizeText(sanitizedText);
+    std::string query;
+    std::string token;
+
+    for (const char currentCharacter : tokenizedText)
+    {
+        if (currentCharacter == ' ')
+        {
+            if (!token.empty())
+            {
+                if (!query.empty())
+                {
+                    query.push_back(' ');
+                }
+
+                query.push_back('"');
+                query.append(token);
+                query.append("\"*");
+                token.clear();
+            }
+
+            continue;
+        }
+
+        token.push_back(currentCharacter);
+    }
+
+    if (!token.empty())
+    {
+        if (!query.empty())
+        {
+            query.push_back(' ');
+        }
+
+        query.push_back('"');
+        query.append(token);
+        query.append("\"*");
+    }
+
+    return query;
+}
+
+std::unordered_map<std::int64_t, std::vector<std::string>> ReadAuthorsByBookId(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT ba.book_id, a.display_name "
+        "FROM book_authors ba "
+        "INNER JOIN authors a ON a.id = ba.author_id "
+        "WHERE ba.book_id IN {} "
+        "ORDER BY ba.book_id ASC, ba.author_order ASC;",
+        bookIds);
+}
+
+std::unordered_map<std::int64_t, std::vector<std::string>> ReadTagsByBookId(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT bt.book_id, t.display_name "
+        "FROM book_tags bt "
+        "INNER JOIN tags t ON t.id = bt.tag_id "
+        "WHERE bt.book_id IN {} "
+        "ORDER BY bt.book_id ASC, t.display_name ASC;",
+        bookIds);
+}
+
+std::unordered_map<std::int64_t, std::vector<std::string>> ReadGenresByBookId(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    return Librova::Sqlite::ReadRelatedEntityNamesBatch(
+        connection,
+        "SELECT bg.book_id, g.display_name "
+        "FROM book_genres bg "
+        "INNER JOIN genres g ON g.id = bg.genre_id "
+        "WHERE bg.book_id IN {} "
+        "ORDER BY bg.book_id ASC, g.display_name ASC;",
+        bookIds);
+}
+
+std::unordered_map<std::int64_t, Librova::Domain::SBook> ReadBooksById(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::vector<std::int64_t>& bookIds)
+{
+    if (bookIds.empty())
+    {
+        return {};
+    }
+
+    const auto authorsByBookId = ReadAuthorsByBookId(connection, bookIds);
+    const auto tagsByBookId = ReadTagsByBookId(connection, bookIds);
+    const auto genresByBookId = ReadGenresByBookId(connection, bookIds);
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        std::format(
+            "SELECT id, title, language, series, series_index, publisher, year, isbn, description, identifier, preferred_format, storage_encoding, managed_path, cover_path, file_size_bytes, sha256_hex, added_at_utc "
+            "FROM books WHERE id IN {};",
+            Librova::Sqlite::BuildIdInClause(bookIds.size())));
+
+    for (int i = 0; i < static_cast<int>(bookIds.size()); ++i)
+    {
+        statement.BindInt64(i + 1, bookIds[static_cast<std::size_t>(i)]);
+    }
+
+    std::unordered_map<std::int64_t, Librova::Domain::SBook> booksById;
+    booksById.reserve(bookIds.size());
+
+    while (statement.Step())
+    {
+        const std::optional<Librova::Domain::EBookFormat> format = Librova::Domain::TryParseBookFormat(statement.GetColumnText(10));
+        const std::optional<Librova::Domain::EStorageEncoding> storageEncoding = Librova::Domain::TryParseStorageEncoding(statement.GetColumnText(11));
+
+        if (!format.has_value() || !storageEncoding.has_value())
+        {
+            throw std::runtime_error("Failed to parse stored book file metadata.");
+        }
+
+        Librova::Domain::SBook book;
+        book.Id = Librova::Domain::SBookId{statement.GetColumnInt64(0)};
+        book.Metadata.TitleUtf8 = statement.GetColumnText(1);
+        book.Metadata.Language = statement.GetColumnText(2);
+        book.Metadata.SeriesUtf8 = statement.IsColumnNull(3) ? std::nullopt : std::make_optional(statement.GetColumnText(3));
+        book.Metadata.SeriesIndex = statement.IsColumnNull(4) ? std::nullopt : std::make_optional(statement.GetColumnDouble(4));
+        book.Metadata.PublisherUtf8 = statement.IsColumnNull(5) ? std::nullopt : std::make_optional(statement.GetColumnText(5));
+        book.Metadata.Year = statement.IsColumnNull(6) ? std::nullopt : std::make_optional(statement.GetColumnInt(6));
+        book.Metadata.Isbn = statement.IsColumnNull(7) ? std::nullopt : std::make_optional(statement.GetColumnText(7));
+        book.Metadata.DescriptionUtf8 = statement.IsColumnNull(8) ? std::nullopt : std::make_optional(statement.GetColumnText(8));
+        book.Metadata.Identifier = statement.IsColumnNull(9) ? std::nullopt : std::make_optional(statement.GetColumnText(9));
+        if (const auto authorIterator = authorsByBookId.find(book.Id.Value); authorIterator != authorsByBookId.end())
+        {
+            book.Metadata.AuthorsUtf8 = authorIterator->second;
+        }
+
+        if (const auto tagIterator = tagsByBookId.find(book.Id.Value); tagIterator != tagsByBookId.end())
+        {
+            book.Metadata.TagsUtf8 = tagIterator->second;
+        }
+
+        if (const auto genreIterator = genresByBookId.find(book.Id.Value); genreIterator != genresByBookId.end())
+        {
+            book.Metadata.GenresUtf8 = genreIterator->second;
+        }
+
+        book.File.Format = *format;
+        book.File.StorageEncoding = *storageEncoding;
+        book.File.ManagedPath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(12));
+        book.CoverPath = statement.IsColumnNull(13)
+            ? std::nullopt
+            : std::make_optional(Librova::Unicode::PathFromUtf8(statement.GetColumnText(13)));
+        book.File.SizeBytes = static_cast<std::uintmax_t>(statement.GetColumnInt64(14));
+        book.File.Sha256Hex = statement.GetColumnText(15);
+        book.AddedAtUtc = Librova::Sqlite::ParseTimePoint(statement.GetColumnText(16));
+
+        booksById.emplace(book.Id.Value, std::move(book));
+    }
+
+    return booksById;
+}
+
+void AppendFilterJoins(std::string& sql, const Librova::Domain::SSearchQuery& query)
+{
+    if (query.HasText())
+    {
+        sql += "INNER JOIN search_index ON search_index.rowid = b.id ";
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        sql +=
+            "INNER JOIN book_authors ba_filter ON ba_filter.book_id = b.id "
+            "INNER JOIN authors a_filter ON a_filter.id = ba_filter.author_id ";
+    }
+}
+
+void AppendFilterAndConditions(
+    std::string& sql,
+    const Librova::Domain::SSearchQuery& query,
+    const bool includeLanguages,
+    const bool includeGenres)
+{
+    if (query.HasText())
+    {
+        sql += "AND search_index MATCH ? ";
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        sql += "AND a_filter.normalized_name = ? ";
+    }
+
+    if (includeLanguages && !query.Languages.empty())
+    {
+        sql += "AND b.language IN ";
+        sql += Librova::Sqlite::BuildIdInClause(query.Languages.size());
+        sql += " ";
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        sql += "AND b.series = ? ";
+    }
+
+    for ([[maybe_unused]] const std::string& tag : query.TagsUtf8)
+    {
+        sql +=
+            "AND EXISTS ("
+            "SELECT 1 FROM book_tags bt_filter "
+            "INNER JOIN tags t_filter ON t_filter.id = bt_filter.tag_id "
+            "WHERE bt_filter.book_id = b.id AND t_filter.normalized_name = ?"
+            ") ";
+    }
+
+    if (includeGenres && !query.GenresUtf8.empty())
+    {
+        sql += "AND EXISTS ("
+               "SELECT 1 FROM book_genres bg_genre "
+               "INNER JOIN genres g_genre ON g_genre.id = bg_genre.genre_id "
+               "WHERE bg_genre.book_id = b.id AND g_genre.normalized_name IN ";
+        sql += Librova::Sqlite::BuildIdInClause(query.GenresUtf8.size());
+        sql += ") ";
+    }
+
+    if (query.Format.has_value())
+    {
+        sql += "AND b.preferred_format = ? ";
+    }
+}
+
+void BindFilterWhereParams(
+    Librova::Sqlite::CSqliteStatement& statement,
+    int& parameterIndex,
+    const Librova::Domain::SSearchQuery& query,
+    const bool includeLanguages,
+    const bool includeGenres)
+{
+    if (query.HasText())
+    {
+        statement.BindText(parameterIndex++, BuildFtsQuery(query.TextUtf8));
+    }
+
+    if (query.AuthorUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(*query.AuthorUtf8));
+    }
+
+    if (includeLanguages)
+    {
+        for (const std::string& language : query.Languages)
+        {
+            statement.BindText(parameterIndex++, language);
+        }
+    }
+
+    if (query.SeriesUtf8.has_value())
+    {
+        statement.BindText(parameterIndex++, *query.SeriesUtf8);
+    }
+
+    for (const std::string& tag : query.TagsUtf8)
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(tag));
+    }
+
+    if (includeGenres)
+    {
+        for (const std::string& genre : query.GenresUtf8)
+        {
+            statement.BindText(parameterIndex++, Librova::Domain::NormalizeText(genre));
+        }
+    }
+
+    if (query.Format.has_value())
+    {
+        statement.BindText(parameterIndex++, Librova::Domain::ToString(*query.Format));
+    }
+}
+
+void BindTextFilters(Librova::Sqlite::CSqliteStatement& statement, int& parameterIndex, const Librova::Domain::SSearchQuery& query)
+{
+    BindFilterWhereParams(statement, parameterIndex, query, true, true);
+    statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Limit));
+    statement.BindInt64(parameterIndex++, static_cast<std::int64_t>(query.Offset));
+}
+
+std::string BuildSearchSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT DISTINCT b.id "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+
+    if (query.SortBy.value_or(Librova::Domain::EBookSort::Title) == Librova::Domain::EBookSort::Author)
+    {
+        sql +=
+            "LEFT JOIN ("
+            "SELECT ba_sort.book_id, MIN(a_sort.normalized_name) AS first_author_normalized "
+            "FROM book_authors ba_sort "
+            "INNER JOIN authors a_sort ON a_sort.id = ba_sort.author_id "
+            "GROUP BY ba_sort.book_id"
+            ") author_sort ON author_sort.book_id = b.id ";
+    }
+
+    sql += "WHERE 1 = 1 ";
+    AppendFilterAndConditions(sql, query, true, true);
+
+    const std::string_view dir =
+        query.SortDirection == Librova::Domain::ESortDirection::Descending ? "DESC" : "ASC";
+
+    switch (query.SortBy.value_or(Librova::Domain::EBookSort::Title))
+    {
+    case Librova::Domain::EBookSort::Title:
+        sql += "ORDER BY b.normalized_title ";
+        sql += dir;
+        sql += ", b.title ASC, b.id ASC ";
+        break;
+    case Librova::Domain::EBookSort::Author:
+        sql += "ORDER BY author_sort.first_author_normalized ";
+        sql += dir;
+        sql += ", b.normalized_title ASC, b.title ASC, b.id ASC ";
+        break;
+    case Librova::Domain::EBookSort::DateAdded:
+        sql += "ORDER BY b.added_at_utc ";
+        sql += dir;
+        sql += ", b.normalized_title ASC, b.title ASC, b.id ASC ";
+        break;
+    }
+
+    sql += "LIMIT ? OFFSET ?;";
+    return sql;
+}
+
+std::string BuildSearchCountSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT COUNT(DISTINCT b.id) "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+    sql += "WHERE 1 = 1 ";
+    AppendFilterAndConditions(sql, query, true, true);
+    sql += ";";
+    return sql;
+}
+
+std::string BuildAvailableLanguagesSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT b.language, COUNT(*) "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+    sql += "WHERE b.language <> '' ";
+    AppendFilterAndConditions(sql, query, false, true);
+    sql += "GROUP BY b.language ORDER BY b.language COLLATE NOCASE ASC;";
+    return sql;
+}
+
+std::string BuildAvailableTagsSql(const Librova::Domain::SSearchQuery& query)
+{
+    std::string sql =
+        "SELECT DISTINCT t.display_name "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+    sql +=
+        "INNER JOIN book_tags bt_list ON bt_list.book_id = b.id "
+        "INNER JOIN tags t ON t.id = bt_list.tag_id "
+        "WHERE t.display_name <> '' ";
+    AppendFilterAndConditions(sql, query, true, false);
+    sql += "ORDER BY t.display_name COLLATE NOCASE ASC;";
+    return sql;
+}
+
+void BindSearchCountFilters(
+    Librova::Sqlite::CSqliteStatement& statement,
+    const Librova::Domain::SSearchQuery& query)
+{
+    int parameterIndex = 1;
+    BindFilterWhereParams(statement, parameterIndex, query, true, true);
+}
+
+void BindAvailableLanguageFilters(
+    Librova::Sqlite::CSqliteStatement& statement,
+    const Librova::Domain::SSearchQuery& query)
+{
+    int parameterIndex = 1;
+    BindFilterWhereParams(statement, parameterIndex, query, false, true);
+}
+
+void BindAvailableTagFilters(
+    Librova::Sqlite::CSqliteStatement& statement,
+    const Librova::Domain::SSearchQuery& query)
+{
+    int parameterIndex = 1;
+    BindFilterWhereParams(statement, parameterIndex, query, true, false);
+}
+
+void AppendDuplicateMatches(
+    std::vector<Librova::Domain::SDuplicateMatch>& matches,
+    std::unordered_set<std::int64_t>& seenIds,
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const std::string_view sql,
+    const std::string_view value,
+    const Librova::Domain::EDuplicateSeverity severity,
+    const Librova::Domain::EDuplicateReason reason)
+{
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
+    statement.BindText(1, value);
+
+    while (statement.Step())
+    {
+        const std::int64_t existingId = statement.GetColumnInt64(0);
+
+        if (!seenIds.insert(existingId).second)
+        {
+            continue;
+        }
+
+        matches.push_back({
+            .Severity = severity,
+            .Reason = reason,
+            .ExistingBookId = Librova::Domain::SBookId{existingId},
+            .ExistingTitle = statement.GetColumnText(1),
+            .ExistingAuthors = statement.GetColumnText(2)
+        });
+    }
+}
+
+std::vector<std::string> BuildNormalizedAuthors(const std::vector<std::string>& authors)
+{
+    std::vector<std::string> normalizedAuthors;
+    normalizedAuthors.reserve(authors.size());
+
+    for (const std::string& author : authors)
+    {
+        const std::string normalizedAuthor = Librova::Domain::NormalizeText(author);
+
+        if (!normalizedAuthor.empty())
+        {
+            normalizedAuthors.push_back(normalizedAuthor);
+        }
+    }
+
+    std::sort(normalizedAuthors.begin(), normalizedAuthors.end());
+    return normalizedAuthors;
+}
+
+// Splits the authors string produced by GROUP_CONCAT(display_name, '; ')
+// into individual normalized names for exact per-author comparison.
+std::vector<std::string> SplitAndNormalizeAuthors(const std::string& authorsStr)
+{
+    std::vector<std::string> result;
+    constexpr std::string_view kSeparator = "; ";
+    std::size_t start = 0;
+    while (true)
+    {
+        const std::size_t pos = authorsStr.find(kSeparator, start);
+        const std::string token = authorsStr.substr(start, pos == std::string::npos ? std::string::npos : pos - start);
+        const std::string normalized = Librova::Domain::NormalizeText(token);
+        if (!normalized.empty())
+            result.push_back(normalized);
+        if (pos == std::string::npos)
+            break;
+        start = pos + kSeparator.size();
+    }
+    return result;
+}
+
+// Strips bracket annotations such as "[litres]", "[с иллюстрациями]", "[сборник]" from
+// an already-normalized (lowercase, whitespace-collapsed) title, then trims trailing
+// punctuation.  Used to compare the "core" of titles that differ only in source annotations.
+[[nodiscard]] std::string StripTitleAnnotations(const std::string& normalizedTitle)
+{
+    std::string result;
+    result.reserve(normalizedTitle.size());
+    int depth = 0;
+    for (const char ch : normalizedTitle)
+    {
+        if (ch == '[') { ++depth; continue; }
+        if (ch == ']') { if (depth > 0) --depth; continue; }
+        if (depth == 0) result.push_back(ch);
+    }
+    // Trim trailing punctuation and spaces that may have been left adjacent to a bracket.
+    while (!result.empty() && (result.back() == ' ' || result.back() == '.'
+            || result.back() == ',' || result.back() == '!' || result.back() == '?'
+            || result.back() == ':' || result.back() == ';'))
+    {
+        result.pop_back();
+    }
+    // Trim leading spaces.
+    const std::size_t first = result.find_first_not_of(' ');
+    if (first == std::string::npos)
+        return {};
+    if (first > 0)
+        result.erase(0, first);
+    return result;
+}
+
+// Returns true when an ISBN match is credible — i.e. the candidate is the same
+// book or a closely related edition of the existing book.
+//
+// Two-tier check:
+//   1. Exact normalized title match — strong evidence of the same work.
+//   2. Stripped title match (bracket annotations removed) + shared author —
+//      catches edition variants like "[litres]", "[с иллюстрациями]" and minor
+//      trailing punctuation differences while still requiring the same author.
+//
+// Author-only match (no title overlap) is intentionally NOT credible: anthology ISBNs
+// on lib.rus.ec are shared across every story in the collection, so same-author alone
+// would block all 40+ individual Bunin stories when only one is already in the library.
+[[nodiscard]] bool IsIsbnMatchCredible(
+    const Librova::Domain::SCandidateBook& candidate,
+    const Librova::Domain::SDuplicateMatch& match)
+{
+    const std::string candidateNormalized = Librova::Domain::NormalizeText(candidate.Metadata.TitleUtf8);
+    const std::string existingNormalized  = Librova::Domain::NormalizeText(match.ExistingTitle);
+
+    // Tier 1: exact normalized title.
+    if (candidateNormalized == existingNormalized)
+        return true;
+
+    // Tier 2: same core title (annotations stripped) + shared author.
+    const std::string candidateStripped = StripTitleAnnotations(candidateNormalized);
+    const std::string existingStripped  = StripTitleAnnotations(existingNormalized);
+
+    if (!candidateStripped.empty() && candidateStripped == existingStripped)
+    {
+        const std::vector<std::string> existingAuthors = SplitAndNormalizeAuthors(match.ExistingAuthors);
+        for (const std::string& author : candidate.Metadata.AuthorsUtf8)
+        {
+            if (author.empty())
+                continue;
+            const std::string normalizedAuthor = Librova::Domain::NormalizeText(author);
+            if (normalizedAuthor.empty())
+                continue;
+            for (const std::string& existingAuthor : existingAuthors)
+            {
+                if (normalizedAuthor == existingAuthor)
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+std::string BuildNormalizedTitle(const std::string& title)
+{
+    return Librova::Domain::NormalizeText(title);
+}
+
+std::filesystem::path ResolveLibraryRoot(const std::filesystem::path& databasePath)
+{
+    const std::filesystem::path databaseDirectory = databasePath.parent_path();
+
+    if (databaseDirectory.filename() == std::filesystem::path("Database"))
+    {
+        return databaseDirectory.parent_path();
+    }
+
+    return databaseDirectory;
+}
+
+std::uint64_t GetFileSizeOrZero(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const std::uintmax_t size = std::filesystem::file_size(path, errorCode);
+
+    if (errorCode)
+    {
+        return 0;
+    }
+
+    return static_cast<std::uint64_t>(size);
+}
+
+struct SCoverDirectorySnapshot
+{
+    std::uint64_t FileCount = 0;
+    std::uint64_t TotalSizeBytes = 0;
+    std::filesystem::file_time_type LatestWriteTime = std::filesystem::file_time_type::min();
+};
+
+std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path);
+
+[[nodiscard]] SCoverDirectorySnapshot GetCoverDirectorySnapshotOrEmpty(
+    const std::filesystem::path& libraryRoot,
+    const Librova::Sqlite::CSqliteConnection& connection)
+{
+    SCoverDirectorySnapshot snapshot{};
+    const std::filesystem::path objectsRoot = libraryRoot / "Objects";
+    snapshot.LatestWriteTime = GetLastWriteTimeOrMin(objectsRoot);
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT cover_path "
+        "FROM books "
+        "WHERE cover_path IS NOT NULL AND cover_path <> '';");
+
+    while (statement.Step())
+    {
+        const std::filesystem::path coverRelativePath = Librova::Unicode::PathFromUtf8(statement.GetColumnText(0));
+        const std::filesystem::path coverPath = libraryRoot / coverRelativePath;
+
+        std::error_code errorCode;
+        if (!std::filesystem::is_regular_file(coverPath, errorCode))
+        {
+            continue;
+        }
+
+        ++snapshot.FileCount;
+        snapshot.TotalSizeBytes += GetFileSizeOrZero(coverPath);
+        snapshot.LatestWriteTime = std::max(snapshot.LatestWriteTime, GetLastWriteTimeOrMin(coverPath));
+    }
+
+    return snapshot;
+}
+
+std::filesystem::file_time_type GetLastWriteTimeOrMin(const std::filesystem::path& path)
+{
+    std::error_code errorCode;
+    const auto lastWriteTime = std::filesystem::last_write_time(path, errorCode);
+
+    if (errorCode)
+    {
+        return std::filesystem::file_time_type::min();
+    }
+
+    return lastWriteTime;
+}
+
+struct SProbableCandidateRow
+{
+    std::int64_t BookId = 0;
+    std::string Isbn;
+    std::string Series;
+    std::string Publisher;
+    std::string Title;
+    std::string AuthorsCache;
+};
+
+[[nodiscard]] bool IsEditionConflict(
+    const SProbableCandidateRow& existing,
+    const Librova::Domain::SCandidateBook& candidate)
+{
+    const std::optional<std::string> normalizedCandidateIsbn = Librova::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
+
+    // When both sides have ISBN, it is the authoritative edition identifier.
+    // Matching ISBNs → same edition regardless of publisher/series differences from different sources.
+    // Different ISBNs → different print edition.
+    if (normalizedCandidateIsbn.has_value() && !existing.Isbn.empty())
+    {
+        return *normalizedCandidateIsbn != existing.Isbn;
+    }
+
+    // ISBN missing on at least one side: fall back to series/publisher as edition heuristics.
+
+    // Both sides have a series name and normalized names differ → different series/translation
+    if (candidate.Metadata.SeriesUtf8.has_value() && !candidate.Metadata.SeriesUtf8->empty() && !existing.Series.empty())
+    {
+        if (Librova::Domain::NormalizeText(*candidate.Metadata.SeriesUtf8) != Librova::Domain::NormalizeText(existing.Series))
+        {
+            return true;
+        }
+    }
+
+    // Both sides have a publisher and normalized names differ → different publisher edition
+    if (candidate.Metadata.PublisherUtf8.has_value() && !candidate.Metadata.PublisherUtf8->empty() && !existing.Publisher.empty())
+    {
+        if (Librova::Domain::NormalizeText(*candidate.Metadata.PublisherUtf8) != Librova::Domain::NormalizeText(existing.Publisher))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+std::vector<SProbableCandidateRow> FindProbableDuplicateCandidates(
+    const Librova::Sqlite::CSqliteConnection& connection,
+    const Librova::Domain::SCandidateBook& candidate)
+{
+    const std::string normalizedTitle = BuildNormalizedTitle(candidate.Metadata.TitleUtf8);
+    const std::vector<std::string> normalizedAuthors = BuildNormalizedAuthors(candidate.Metadata.AuthorsUtf8);
+
+    if (normalizedTitle.empty() || normalizedAuthors.empty())
+    {
+        return {};
+    }
+
+    if (std::adjacent_find(normalizedAuthors.begin(), normalizedAuthors.end()) != normalizedAuthors.end())
+    {
+        return {};
+    }
+
+    std::string sql =
+        "SELECT ba.book_id, COALESCE(b.isbn, '') AS isbn, COALESCE(b.series, '') AS series, COALESCE(b.publisher, '') AS publisher, b.title, "
+        "COALESCE((SELECT GROUP_CONCAT(a2.display_name, '; ') FROM book_authors ba2 JOIN authors a2 ON a2.id = ba2.author_id WHERE ba2.book_id = ba.book_id), '') AS authors_str "
+        "FROM book_authors ba "
+        "INNER JOIN authors a ON a.id = ba.author_id "
+        "INNER JOIN books b ON b.id = ba.book_id "
+        "WHERE a.normalized_name IN ";
+    sql += Librova::Sqlite::BuildIdInClause(normalizedAuthors.size());
+    sql +=
+        " AND b.normalized_title = ? "
+        " GROUP BY ba.book_id "
+        "HAVING COUNT(*) = ? "
+        "AND COUNT(*) = ("
+        "SELECT COUNT(*) FROM book_authors ba_total WHERE ba_total.book_id = ba.book_id"
+        ");";
+
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
+
+    int parameterIndex = 1;
+    for (const std::string& normalizedAuthor : normalizedAuthors)
+    {
+        statement.BindText(parameterIndex++, normalizedAuthor);
+    }
+
+    statement.BindText(parameterIndex++, normalizedTitle);
+    statement.BindInt64(parameterIndex, static_cast<std::int64_t>(normalizedAuthors.size()));
+
+    std::vector<SProbableCandidateRow> rows;
+    while (statement.Step())
+    {
+        rows.push_back({
+            .BookId       = statement.GetColumnInt64(0),
+            .Isbn         = statement.GetColumnText(1),
+            .Series       = statement.GetColumnText(2),
+            .Publisher    = statement.GetColumnText(3),
+            .Title        = statement.GetColumnText(4),
+            .AuthorsCache = statement.GetColumnText(5)
+        });
+    }
+
+    return rows;
+}
+
+} // namespace
+
+CSqliteBookQueryRepository::CSqliteBookQueryRepository(std::filesystem::path databasePath)
+    : m_databasePath(std::move(databasePath))
+{
+}
+
+void CSqliteBookQueryRepository::CloseSession()
+{
+    const std::scoped_lock lock(m_findDupConnectionMutex);
+    m_findDupConnection.reset();
+}
+
+std::vector<Librova::Domain::SBook> CSqliteBookQueryRepository::Search(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildSearchSql(query));
+
+    int parameterIndex = 1;
+    BindTextFilters(statement, parameterIndex, query);
+
+    std::vector<std::int64_t> bookIds;
+
+    while (statement.Step())
+    {
+        bookIds.push_back(statement.GetColumnInt64(0));
+    }
+
+    const auto booksById = ReadBooksById(connection, bookIds);
+    std::vector<Librova::Domain::SBook> books;
+    books.reserve(bookIds.size());
+
+    for (const std::int64_t bookId : bookIds)
+    {
+        if (const auto bookIterator = booksById.find(bookId); bookIterator != booksById.end())
+        {
+            books.push_back(bookIterator->second);
+        }
+    }
+
+    return books;
+}
+
+std::uint64_t CSqliteBookQueryRepository::CountSearchResults(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildSearchCountSql(query));
+    BindSearchCountFilters(statement, query);
+
+    if (!statement.Step())
+    {
+        return 0;
+    }
+
+    return static_cast<std::uint64_t>(statement.GetColumnInt64(0));
+}
+
+std::vector<Librova::Domain::SFacetItem> CSqliteBookQueryRepository::ListAvailableLanguages(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildAvailableLanguagesSql(query));
+    BindAvailableLanguageFilters(statement, query);
+
+    std::vector<Librova::Domain::SFacetItem> languages;
+    while (statement.Step())
+    {
+        languages.push_back({
+            .Value = statement.GetColumnText(0),
+            .Count = static_cast<std::uint32_t>(statement.GetColumnInt64(1))
+        });
+    }
+
+    return languages;
+}
+
+std::vector<std::string> CSqliteBookQueryRepository::ListAvailableTags(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), BuildAvailableTagsSql(query));
+    BindAvailableTagFilters(statement, query);
+
+    std::vector<std::string> tags;
+    while (statement.Step())
+    {
+        tags.push_back(statement.GetColumnText(0));
+    }
+
+    return tags;
+}
+
+std::vector<Librova::Domain::SFacetItem> CSqliteBookQueryRepository::ListAvailableGenres(const Librova::Domain::SSearchQuery& query) const
+{
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+
+    std::string sql =
+        "SELECT g.display_name, COUNT(*) "
+        "FROM books b ";
+
+    AppendFilterJoins(sql, query);
+    sql +=
+        "INNER JOIN book_genres bg_list ON bg_list.book_id = b.id "
+        "INNER JOIN genres g ON g.id = bg_list.genre_id "
+        "WHERE g.display_name <> '' ";
+    AppendFilterAndConditions(sql, query, true, false);
+    sql += "GROUP BY g.display_name ORDER BY g.display_name COLLATE NOCASE ASC;";
+
+    Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), sql);
+
+    int parameterIndex = 1;
+    BindFilterWhereParams(statement, parameterIndex, query, true, false);
+
+    std::vector<Librova::Domain::SFacetItem> genres;
+    while (statement.Step())
+    {
+        genres.push_back({
+            .Value = statement.GetColumnText(0),
+            .Count = static_cast<std::uint32_t>(statement.GetColumnInt64(1))
+        });
+    }
+
+    return genres;
+}
+
+std::vector<Librova::Domain::SDuplicateMatch> CSqliteBookQueryRepository::FindDuplicates(const Librova::Domain::SCandidateBook& candidate) const
+{
+    std::vector<Librova::Domain::SDuplicateMatch> matches;
+    std::unordered_set<std::int64_t> seenIds;
+    const std::scoped_lock lock(m_findDupConnectionMutex);
+    if (!m_findDupConnection)
+    {
+        m_findDupConnection = std::make_unique<Librova::Sqlite::CSqliteConnection>(m_databasePath);
+    }
+    auto& connection = *m_findDupConnection;
+
+    if (candidate.HasHash())
+    {
+        AppendDuplicateMatches(
+            matches,
+            seenIds,
+            connection,
+            "SELECT b.id, b.title, COALESCE((SELECT GROUP_CONCAT(a.display_name, '; ') FROM book_authors ba JOIN authors a ON a.id = ba.author_id WHERE ba.book_id = b.id), '') FROM books b WHERE b.sha256_hex = ?;",
+            *candidate.Sha256Hex,
+            Librova::Domain::EDuplicateSeverity::Strict,
+            Librova::Domain::EDuplicateReason::SameHash);
+    }
+
+    if (candidate.HasIsbn())
+    {
+        const std::optional<std::string> normalizedIsbn = Librova::Domain::NormalizeIsbn(candidate.Metadata.Isbn);
+
+        if (normalizedIsbn.has_value())
+        {
+            // Collect ISBN matches into a temporary set so we can filter before
+            // committing to seenIds. ISBN alone is not sufficient — lib.rus.ec
+            // assigns anthology ISBNs to every individual story. We only accept
+            // the match when title or at least one author also overlaps.
+            std::vector<Librova::Domain::SDuplicateMatch> isbnMatches;
+            std::unordered_set<std::int64_t> isbnSeenIds;
+            AppendDuplicateMatches(
+                isbnMatches,
+                isbnSeenIds,
+                connection,
+                "SELECT b.id, b.title, COALESCE((SELECT GROUP_CONCAT(a.display_name, '; ') FROM book_authors ba JOIN authors a ON a.id = ba.author_id WHERE ba.book_id = b.id), '') FROM books b WHERE b.isbn = ?;",
+                *normalizedIsbn,
+                Librova::Domain::EDuplicateSeverity::Probable,
+                Librova::Domain::EDuplicateReason::SameIsbn);
+
+            for (auto& m : isbnMatches)
+            {
+                if (IsIsbnMatchCredible(candidate, m) && seenIds.insert(m.ExistingBookId.Value).second)
+                    matches.push_back(std::move(m));
+            }
+        }
+    }
+
+    if (candidate.Metadata.HasTitle() && candidate.Metadata.HasAuthors())
+    {
+        const std::vector<SProbableCandidateRow> probableCandidates = FindProbableDuplicateCandidates(connection, candidate);
+
+        for (const SProbableCandidateRow& probableCandidate : probableCandidates)
+        {
+            if (seenIds.contains(probableCandidate.BookId))
+            {
+                continue;
+            }
+
+            if (IsEditionConflict(probableCandidate, candidate))
+            {
+                continue;
+            }
+
+            matches.push_back({
+                .Severity = Librova::Domain::EDuplicateSeverity::Probable,
+                .Reason = Librova::Domain::EDuplicateReason::SameNormalizedTitleAndAuthors,
+                .ExistingBookId = Librova::Domain::SBookId{probableCandidate.BookId},
+                .ExistingTitle = probableCandidate.Title,
+                .ExistingAuthors = probableCandidate.AuthorsCache
+            });
+            seenIds.insert(probableCandidate.BookId);
+        }
+    }
+
+    return matches;
+}
+
+Librova::Domain::IBookQueryRepository::SLibraryStatistics CSqliteBookQueryRepository::GetLibraryStatistics() const
+{
+    const std::filesystem::path libraryRoot = ResolveLibraryRoot(m_databasePath);
+    const auto databaseLastWriteTime = GetLastWriteTimeOrMin(m_databasePath);
+    const std::uint64_t databaseSizeBytes = GetFileSizeOrZero(m_databasePath);
+    std::filesystem::path walPath = m_databasePath;
+    walPath += "-wal";
+    const auto walLastWriteTime = GetLastWriteTimeOrMin(walPath);
+    const std::uint64_t walSizeBytes = GetFileSizeOrZero(walPath);
+    Librova::Sqlite::CSqliteConnection connection(m_databasePath);
+    const auto coverDirectorySnapshot = GetCoverDirectorySnapshotOrEmpty(libraryRoot, connection);
+
+    {
+        const std::scoped_lock cacheLock(m_statisticsCacheMutex);
+        if (m_statisticsCache.has_value()
+            && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->DatabaseSizeBytes == databaseSizeBytes
+            && m_statisticsCache->WalLastWriteTime == walLastWriteTime
+            && m_statisticsCache->WalSizeBytes == walSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
+            && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
+        {
+            return m_statisticsCache->Statistics;
+        }
+    }
+
+    Librova::Sqlite::CSqliteStatement statement(
+        connection.GetNativeHandle(),
+        "SELECT COUNT(*), COALESCE(SUM(file_size_bytes), 0) FROM books;");
+
+    if (!statement.Step())
+    {
+        return {};
+    }
+
+    const std::uint64_t totalManagedBookSizeBytes = static_cast<std::uint64_t>(statement.GetColumnInt64(1));
+    const std::uint64_t totalCoverSizeBytes = coverDirectorySnapshot.TotalSizeBytes;
+
+    const Librova::Domain::IBookQueryRepository::SLibraryStatistics statistics{
+        .BookCount = static_cast<std::uint64_t>(statement.GetColumnInt64(0)),
+        .TotalManagedBookSizeBytes = totalManagedBookSizeBytes,
+        .TotalLibrarySizeBytes = totalManagedBookSizeBytes + totalCoverSizeBytes + databaseSizeBytes
+    };
+
+    {
+        const std::scoped_lock cacheLock(m_statisticsCacheMutex);
+        if (m_statisticsCache.has_value()
+            && m_statisticsCache->DatabaseLastWriteTime == databaseLastWriteTime
+            && m_statisticsCache->DatabaseSizeBytes == databaseSizeBytes
+            && m_statisticsCache->WalLastWriteTime == walLastWriteTime
+            && m_statisticsCache->WalSizeBytes == walSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.FileCount == coverDirectorySnapshot.FileCount
+            && m_statisticsCache->CoverDirectorySnapshot.TotalSizeBytes == coverDirectorySnapshot.TotalSizeBytes
+            && m_statisticsCache->CoverDirectorySnapshot.LatestWriteTime == coverDirectorySnapshot.LatestWriteTime)
+        {
+            return m_statisticsCache->Statistics;
+        }
+
+        m_statisticsCache = SStatisticsCache{
+            .DatabaseLastWriteTime = databaseLastWriteTime,
+            .DatabaseSizeBytes = databaseSizeBytes,
+            .WalLastWriteTime = walLastWriteTime,
+            .WalSizeBytes = walSizeBytes,
+            .CoverDirectorySnapshot = {
+                .FileCount = coverDirectorySnapshot.FileCount,
+                .TotalSizeBytes = coverDirectorySnapshot.TotalSizeBytes,
+                .LatestWriteTime = coverDirectorySnapshot.LatestWriteTime
+            },
+            .Statistics = statistics
+        };
+    }
+
+    return statistics;
+}
+
+} // namespace Librova::BookDatabase

@@ -228,10 +228,84 @@ public sealed class ViewModelsTests
 
             Assert.Equal(42UL, viewModel.LastJobId);
             Assert.Null(viewModel.LastResult);
-            Assert.False(viewModel.IsBusy);
+            Assert.True(viewModel.IsBusy);
+            Assert.False(viewModel.StartImportCommand.CanExecute(null));
+            Assert.True(viewModel.RefreshCommand.CanExecute(null));
+            Assert.True(viewModel.CancelImportCommand.CanExecute(null));
             Assert.Contains("still running", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Processed 2 of 5 files", viewModel.ProgressSummaryText, StringComparison.Ordinal);
             Assert.Equal(1, service.TryGetSnapshotCalls);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_DisposeCancelsPendingSourceValidation()
+    {
+        var service = new BlockingValidationImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2")
+            };
+
+            await service.WaitForValidationStartAsync();
+            viewModel.Dispose();
+
+            await WaitForConditionAsync(() => service.CancellationObserved);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_DisposeCancelsActiveImportWait()
+    {
+        var service = new BlockingCompletionImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var runTask = viewModel.StartImportAsync();
+            await service.WaitForCompletionWaitStartAsync();
+            viewModel.Dispose();
+
+            await WaitForConditionAsync(() => service.CancellationObserved);
+            await runTask;
         }
         finally
         {
@@ -745,6 +819,42 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_StartImportPassesImportCoversFlag()
+    {
+        var service = new FakeImportJobsService();
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(service)
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work"),
+                ImportCovers = false
+            };
+
+            await viewModel.StartImportCommand.ExecuteAsyncForTests();
+
+            Assert.NotNull(service.LastStartRequest);
+            Assert.False(service.LastStartRequest!.ImportCovers);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(sandboxRoot, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void ImportJobsViewModel_HidesForcedEpubConversionOptionWithoutConfiguredConverter()
     {
         var viewModel = new ImportJobsViewModel(new FakeImportJobsService());
@@ -1071,6 +1181,64 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_ShowGoToImportButton_TrueWhenLibraryEmptyAndNoFilters()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.True(viewModel.ShowGoToImportButton);
+        Assert.False(viewModel.ShowClearFiltersButton);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowClearFiltersButton_TrueWhenFiltersActiveAndEmpty()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService())
+        {
+            SearchText = "some query"
+        };
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+
+        Assert.False(viewModel.ShowGoToImportButton);
+        Assert.True(viewModel.ShowClearFiltersButton);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_GoToImportCommand_InvokesNavigateCallback()
+    {
+        var navigated = false;
+        var viewModel = new LibraryBrowserViewModel(
+            new EmptyLibraryCatalogService(),
+            navigateToImport: () => navigated = true);
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        await viewModel.GoToImportCommand.ExecuteAsyncForTests();
+
+        Assert.True(navigated);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ShowGoToImportButton_FalseWhileScheduledRefreshPending()
+    {
+        var viewModel = new LibraryBrowserViewModel(new EmptyLibraryCatalogService());
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        Assert.True(viewModel.ShowGoToImportButton);
+
+        // ScheduleRefresh() transitions to None immediately — GoToImport button hides.
+        viewModel.SearchText = "tolkien";
+        Assert.False(viewModel.ShowGoToImportButton);
+
+        // Clearing search re-schedules; button stays hidden until refresh completes.
+        viewModel.SearchText = string.Empty;
+        Assert.False(viewModel.ShowGoToImportButton);
+
+        await viewModel.RefreshCommand.ExecuteAsyncForTests();
+        Assert.True(viewModel.ShowGoToImportButton);
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_UsesGradientPlaceholderBackgroundWhenCoverIsMissing()
     {
         var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
@@ -1268,8 +1436,8 @@ public sealed class ViewModelsTests
     {
         var service = new RecordingLibraryCatalogService
         {
-            AvailableLanguages = ["en", "ru"],
-            AvailableGenres = ["sci-fi", "adventure"]
+            AvailableLanguages = [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)],
+            AvailableGenres = [new FacetItemModel("sci-fi", 0), new FacetItemModel("adventure", 0)]
         };
         var viewModel = new LibraryBrowserViewModel(service)
         {
@@ -1370,10 +1538,39 @@ public sealed class ViewModelsTests
         Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
 
         viewModel.GenreFacets.Single(f => f.Value == "sci-fi").IsSelected = true;
-        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Tags.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
+        await WaitForConditionAsync(() => service.ListCalls >= 2 && viewModel.Books.All(book => book.Genres.Contains("sci-fi", StringComparer.OrdinalIgnoreCase)));
 
         Assert.Contains("adventure", viewModel.GenreFacets.Select(f => f.Value));
         Assert.Contains("sci-fi", viewModel.GenreFacets.Select(f => f.Value));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_AggregatesFacetCountsForCaseInsensitiveDuplicates()
+    {
+        var service = new RecordingLibraryCatalogService
+        {
+            AvailableLanguages =
+            [
+                new FacetItemModel("en", 2),
+                new FacetItemModel("EN", 3)
+            ],
+            AvailableGenres =
+            [
+                new FacetItemModel("Sci-Fi", 4),
+                new FacetItemModel("sci-fi", 1)
+            ]
+        };
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+
+        var languageFacet = Assert.Single(viewModel.LanguageFacets);
+        Assert.Equal("en", languageFacet.Value, ignoreCase: true);
+        Assert.Equal(5u, languageFacet.BookCount);
+
+        var genreFacet = Assert.Single(viewModel.GenreFacets);
+        Assert.Equal("Sci-Fi", genreFacet.Value, ignoreCase: true);
+        Assert.Equal(5u, genreFacet.BookCount);
     }
 
     [Fact]
@@ -2145,6 +2342,74 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task ImportJobsViewModel_DoesNotEmitSuccessEventForCancelledImport()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new CancellationResidueImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "book.fb2"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var invoked = 0;
+            viewModel.ImportCompletedSuccessfully += _ =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(ImportJobStatusModel.Cancelled, viewModel.LastResult?.Snapshot.Status);
+            Assert.Equal(0, invoked);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
+    public async Task ImportJobsViewModel_DoesNotEmitSuccessEventWhenZeroEntriesImported()
+    {
+        var sandboxRoot = Path.Combine(Path.GetTempPath(), "librova-ui-viewmodels", $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sandboxRoot);
+
+        try
+        {
+            var viewModel = new ImportJobsViewModel(new EmptyImportJobsService())
+            {
+                SourcePath = CreateSupportedSourceFile(sandboxRoot, "empty.zip"),
+                WorkingDirectory = Path.Combine(sandboxRoot, "work")
+            };
+
+            var invoked = 0;
+            viewModel.ImportCompletedSuccessfully += _ =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            };
+
+            await viewModel.StartImportAsync();
+
+            Assert.Equal(0UL, viewModel.LastResult?.Summary?.ImportedEntries ?? 0UL);
+            Assert.Equal(0, invoked);
+        }
+        finally
+        {
+            try { Directory.Delete(sandboxRoot, true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public void LibraryBrowserViewModel_DefaultSortKeyIsTitle()
     {
         var viewModel = new LibraryBrowserViewModel();
@@ -2594,6 +2859,108 @@ public sealed class ViewModelsTests
             throw new TimeoutException("Timed out waiting for import job to reach a terminal state.");
     }
 
+    private sealed class BlockingValidationImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _validationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool CancellationObserved { get; private set; }
+
+        public Task WaitForValidationStartAsync() => _validationStarted.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(null);
+
+        public async Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            _validationStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+
+            return string.Empty;
+        }
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(null);
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(1UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("This service is only used for source validation.");
+    }
+
+    private sealed class BlockingCompletionImportJobsService : IImportJobsService
+    {
+        private readonly TaskCompletionSource _completionWaitStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool CancellationObserved { get; private set; }
+
+        public Task WaitForCompletionWaitStartAsync() => _completionWaitStarted.Task;
+
+        public Task<bool> CancelAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ImportJobResultModel?> TryGetResultAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobResultModel?>(null);
+
+        public Task<string> ValidateSourcesAsync(IReadOnlyList<string> sourcePaths, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(string.Empty);
+
+        public Task<ImportJobSnapshotModel?> TryGetSnapshotAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<ImportJobSnapshotModel?>(null);
+
+        public Task<bool> RemoveAsync(ulong jobId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(true);
+
+        public Task<ulong> StartAsync(StartImportRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(1UL);
+
+        public Task<bool> WaitAsync(ulong jobId, TimeSpan timeout, TimeSpan waitTimeout, CancellationToken cancellationToken)
+            => Task.FromResult(false);
+
+        public async Task<ImportJobResultModel> WaitForCompletionAsync(
+            ulong jobId,
+            TimeSpan timeout,
+            TimeSpan waitTimeout,
+            Action<ImportJobSnapshotModel>? onProgress,
+            CancellationToken cancellationToken)
+        {
+            _completionWaitStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+
+            throw new InvalidOperationException("This service never reaches a terminal result.");
+        }
+    }
+
     private sealed class FakePathSelectionService : IPathSelectionService
     {
         public IReadOnlyList<string> SelectedSourcePaths { get; init; } = [];
@@ -2632,7 +2999,7 @@ public sealed class ViewModelsTests
                 Snapshot = new ImportJobSnapshotModel
                 {
                     JobId = jobId,
-                    Status = ImportJobStatusModel.Failed,
+                    Status = ImportJobStatusModel.Completed,
                     Message = "Import completed without importing any supported books.",
                     Percent = 0,
                     TotalEntries = 0,
@@ -2855,7 +3222,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = Statistics,
                 Items =
                 [
@@ -2944,6 +3311,26 @@ public sealed class ViewModelsTests
             => Task.FromResult<DeleteBookResultModel?>(null);
     }
 
+    private sealed class FailingRefreshLibraryCatalogService : ILibraryCatalogService
+    {
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromException<BookListPageModel>(new InvalidOperationException("refresh failed"));
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
     private sealed class RefreshPreservingLibraryCatalogService : ILibraryCatalogService
     {
         public int GetBookDetailsCalls { get; private set; }
@@ -2952,7 +3339,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = new LibraryStatisticsModel
                 {
                     BookCount = 1
@@ -3019,7 +3406,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 2,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = new LibraryStatisticsModel
                 {
                     BookCount = 2
@@ -3234,8 +3621,8 @@ public sealed class ViewModelsTests
 
         public BookListRequestModel? LastRequest { get; private set; }
         public (long BookId, string DestinationPath)? LastExportRequest { get; private set; }
-        public IReadOnlyList<string> AvailableLanguages { get; init; } = [];
-        public IReadOnlyList<string> AvailableGenres { get; init; } = [];
+        public IReadOnlyList<FacetItemModel> AvailableLanguages { get; init; } = [];
+        public IReadOnlyList<FacetItemModel> AvailableGenres { get; init; } = [];
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -3283,6 +3670,7 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky"],
                 Language = "en",
                 Tags = ["sci-fi"],
+                Genres = ["sci-fi"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Objects/5a/68/0000000001.book.roadside.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3294,6 +3682,7 @@ public sealed class ViewModelsTests
                 Authors = ["Arkady Strugatsky", "Boris Strugatsky"],
                 Language = "ru",
                 Tags = ["adventure"],
+                Genres = ["adventure"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Objects/c7/66/0000000002.book.monday.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3323,7 +3712,7 @@ public sealed class ViewModelsTests
 
             if (request.Genres.Count > 0)
             {
-                filtered = filtered.Where(book => book.Tags.Any(tag => request.Genres.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+                filtered = filtered.Where(book => book.Genres.Any(genre => request.Genres.Contains(genre, StringComparer.OrdinalIgnoreCase)));
             }
 
             var filteredItems = filtered.ToArray();
@@ -3334,11 +3723,13 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .Select(lang => new FacetItemModel(lang, 0))
                     .ToArray(),
                 AvailableGenres = AllBooks
-                    .SelectMany(book => book.Tags)
+                    .SelectMany(book => book.Genres)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(genre => genre, StringComparer.OrdinalIgnoreCase)
+                    .Select(genre => new FacetItemModel(genre, 0))
                     .ToArray(),
                 Items = filteredItems,
                 Statistics = Statistics
@@ -3405,15 +3796,15 @@ public sealed class ViewModelsTests
                     || request.Languages.Contains(book.Language, StringComparer.OrdinalIgnoreCase))
                 .ToArray();
 
-            IReadOnlyList<string> availableLanguages = request.Languages.Count == 0
-                ? ["en", "ru"]
-                : ["en"];
+            IReadOnlyList<FacetItemModel> availableLanguages = request.Languages.Count == 0
+                ? [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)]
+                : [new FacetItemModel("en", 0)];
 
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)filteredItems.Length,
                 AvailableLanguages = availableLanguages,
-                AvailableGenres = ["adventure", "classic"],
+                AvailableGenres = [new FacetItemModel("adventure", 0), new FacetItemModel("classic", 0)],
                 Items = filteredItems
             });
         }
@@ -3443,7 +3834,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3503,7 +3894,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3549,7 +3940,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3611,7 +4002,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3674,7 +4065,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Statistics = null,
                 Items =
                 [
@@ -3719,7 +4110,7 @@ public sealed class ViewModelsTests
                 return Task.FromResult(new BookListPageModel
                 {
                     TotalCount = 3,
-                    AvailableLanguages = ["en"],
+                    AvailableLanguages = [new FacetItemModel("en", 0)],
                     Items =
                     [
                         new BookListItemModel
@@ -3749,7 +4140,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = 3,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3795,7 +4186,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = 2,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -3850,7 +4241,7 @@ public sealed class ViewModelsTests
                 return Task.FromResult(new BookListPageModel
                 {
                     TotalCount = 3,
-                    AvailableLanguages = ["en"],
+                    AvailableLanguages = [new FacetItemModel("en", 0)],
                     Items =
                     [
                         new BookListItemModel
@@ -3905,6 +4296,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author One"],
                 Language = "en",
                 Tags = ["adventure"],
+                Genres = ["adventure"],
                 Format = BookFormatModel.Epub,
                 ManagedPath = "Objects/5a/68/0000000001.book.alpha.epub",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -3943,8 +4335,8 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en", "ru"],
-                AvailableGenres = ["adventure", "sci-fi"],
+                AvailableLanguages = [new FacetItemModel("en", 0), new FacetItemModel("ru", 0)],
+                AvailableGenres = [new FacetItemModel("adventure", 0), new FacetItemModel("sci-fi", 0)],
                 Items = items
             });
         }
@@ -3985,6 +4377,7 @@ public sealed class ViewModelsTests
                 Authors = ["Author Three"],
                 Language = "ru",
                 Tags = ["sci-fi"],
+                Genres = ["sci-fi"],
                 Format = BookFormatModel.Fb2,
                 ManagedPath = "Objects/c7/66/0000000002.book.gamma.fb2",
                 AddedAtUtc = DateTimeOffset.UtcNow
@@ -4004,11 +4397,13 @@ public sealed class ViewModelsTests
                     .Select(book => book.Language)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(language => language, StringComparer.OrdinalIgnoreCase)
+                    .Select(lang => new FacetItemModel(lang, 0))
                     .ToArray(),
                 AvailableGenres = _books
-                    .SelectMany(book => book.Tags)
+                    .SelectMany(book => book.Genres)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(genre => genre, StringComparer.OrdinalIgnoreCase)
+                    .Select(genre => new FacetItemModel(genre, 0))
                     .ToArray(),
                 Items = items
             });
@@ -4092,7 +4487,7 @@ public sealed class ViewModelsTests
             return Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = items,
                 Statistics = new LibraryStatisticsModel
                 {
@@ -4138,7 +4533,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = _books.ToArray()
             });
 
@@ -4180,7 +4575,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = (ulong)_books.Count,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items = _books.ToArray()
             });
 
@@ -4215,7 +4610,7 @@ public sealed class ViewModelsTests
             => Task.FromResult(new BookListPageModel
             {
                 TotalCount = 1,
-                AvailableLanguages = ["en"],
+                AvailableLanguages = [new FacetItemModel("en", 0)],
                 Items =
                 [
                     new BookListItemModel
@@ -4242,6 +4637,128 @@ public sealed class ViewModelsTests
 
         public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<DeleteBookResultModel?>(null);
+    }
+
+    // ── ShellImportWorkflowController tests ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ShellImportWorkflowController_SwitchesToLibrarySectionAfterSuccessfulImport()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 1,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 1, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Library, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_SwitchesToLibrarySectionEvenWhenUserNavigatedAway()
+    {
+        var currentSection = ShellSection.Settings;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 3,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 3, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Library, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_DoesNotSwitchSectionWhenImportHasErrors()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new EmptyLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 3,
+                FailedEntries = 2
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 3, FailedEntries = 2 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Import, currentSection);
+    }
+
+    [Fact]
+    public async Task ShellImportWorkflowController_DoesNotSwitchSectionWhenLibraryRefreshFails()
+    {
+        var currentSection = ShellSection.Import;
+        var controller = new ShellImportWorkflowController(
+            importJobs: new ImportJobsViewModel(new FakeImportJobsService()),
+            libraryBrowser: new LibraryBrowserViewModel(new FailingRefreshLibraryCatalogService()),
+            getCurrentSection: () => currentSection,
+            setCurrentSection: s => currentSection = s,
+            raiseImportStateProperties: () => { },
+            raiseNavigationCanExecuteChanged: () => { },
+            raiseLibraryStatisticsChanged: () => { },
+            saveSortPreference: (_, _) => { });
+
+        var result = new ImportJobResultModel
+        {
+            Snapshot = new ImportJobSnapshotModel
+            {
+                Status = ImportJobStatusModel.Completed,
+                ImportedEntries = 1,
+                FailedEntries = 0
+            },
+            Summary = new ImportSummaryModel { ImportedEntries = 1, FailedEntries = 0 }
+        };
+
+        await controller.HandleImportCompletedSuccessfullyAsync(result);
+
+        Assert.Equal(ShellSection.Import, currentSection);
     }
 
     // ── ShellViewModel / converter probe tests ──────────────────────────────────────────────
@@ -4537,5 +5054,31 @@ public sealed class ViewModelsTests
     {
         var result = new Fb2ProbeResult { Outcome = Fb2ProbeOutcome.ProbeError };
         Assert.False(string.IsNullOrWhiteSpace(result.BuildValidationMessage()));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_CloseSelectionCommand_IsDisabled_WhenNoBookIsSelected()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+
+        Assert.False(viewModel.CloseSelectionCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_CloseSelectionCommand_ClearsSelection_WhenBookIsSelected()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.True(viewModel.CloseSelectionCommand.CanExecute(null));
+
+        await viewModel.CloseSelectionCommand.ExecuteAsyncForTests();
+
+        Assert.Null(viewModel.SelectedBook);
+        Assert.False(viewModel.CloseSelectionCommand.CanExecute(null));
     }
 }

@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+﻿#include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <atomic>
@@ -17,38 +17,16 @@
 
 #include <zip.h>
 
-#include "Importing/SingleFileImportCoordinator.hpp"
-#include "Logging/Logging.hpp"
+#include "Import/SingleFileImportCoordinator.hpp"
+#include "Foundation/Logging.hpp"
 #include "TestStructuredProgressSink.hpp"
-#include "Unicode/UnicodeConversion.hpp"
-#include "ZipImporting/ZipImportCoordinator.hpp"
+#include "Foundation/UnicodeConversion.hpp"
+#include "Import/ZipImportCoordinator.hpp"
+
+#include "TestWorkspace.hpp"
 
 namespace {
 
-class CScopedDirectory final
-{
-public:
-    explicit CScopedDirectory(std::filesystem::path path)
-        : m_path(std::move(path))
-    {
-        std::filesystem::remove_all(m_path);
-        std::filesystem::create_directories(m_path);
-    }
-
-    ~CScopedDirectory()
-    {
-        std::error_code errorCode;
-        std::filesystem::remove_all(m_path, errorCode);
-    }
-
-    [[nodiscard]] const std::filesystem::path& GetPath() const noexcept
-    {
-        return m_path;
-    }
-
-private:
-    std::filesystem::path m_path;
-};
 
 class CTestProgressSink final : public Librova::Domain::IProgressSink
 {
@@ -260,6 +238,35 @@ void AddZipEntry(zip_t* archive, const std::string& entryPath, const std::string
     }
 }
 
+void AddZipEntryWithFlags(
+    zip_t* archive,
+    const std::string& entryPath,
+    const std::string& text,
+    const zip_flags_t flags)
+{
+    void* buffer = std::malloc(text.size());
+
+    if (buffer == nullptr)
+    {
+        throw std::runtime_error("Failed to allocate zip buffer.");
+    }
+
+    std::memcpy(buffer, text.data(), text.size());
+    zip_source_t* source = zip_source_buffer(archive, buffer, text.size(), 1);
+
+    if (source == nullptr)
+    {
+        std::free(buffer);
+        throw std::runtime_error("Failed to allocate zip source.");
+    }
+
+    if (zip_file_add(archive, entryPath.c_str(), source, ZIP_FL_OVERWRITE | flags) < 0)
+    {
+        zip_source_free(source);
+        throw std::runtime_error("Failed to add zip entry.");
+    }
+}
+
 std::filesystem::path CreateZipFixture(const std::filesystem::path& outputPath)
 {
     int errorCode = ZIP_ER_OK;
@@ -349,6 +356,53 @@ std::filesystem::path CreateCyrillicZipFixture(const std::filesystem::path& outp
     return outputPath;
 }
 
+std::filesystem::path CreateCp866CyrillicZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    const std::string cp866EntryName{
+        "\xAF\xA0\xAF\xAA\xA0/\xAA\xAD\xA8\xA3\xA0.fb2",
+        15};
+    AddZipEntryWithFlags(archive, cp866EntryName, "<fb2/>", ZIP_FL_ENC_RAW);
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
+std::filesystem::path CreateUnsupportedOnlyZipFixture(const std::filesystem::path& outputPath)
+{
+    int errorCode = ZIP_ER_OK;
+    const auto utf8Path = Librova::Unicode::PathToUtf8(outputPath);
+    zip_t* archive = zip_open(utf8Path.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+
+    if (archive == nullptr)
+    {
+        throw std::runtime_error("Failed to create zip fixture.");
+    }
+
+    AddZipEntry(archive, "notes.txt", "ignore-me");
+    AddZipEntry(archive, "document.pdf", "%PDF");
+    AddZipEntry(archive, "folder/", "");
+
+    if (zip_close(archive) != 0)
+    {
+        throw std::runtime_error("Failed to finalize zip fixture.");
+    }
+
+    return outputPath;
+}
+
 std::string ReadTextFile(const std::filesystem::path& path)
 {
     std::ifstream input(path, std::ios::binary);
@@ -359,7 +413,7 @@ std::string ReadTextFile(const std::filesystem::path& path)
 
 TEST_CASE("ZIP import coordinator imports supported entries and keeps partial success", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import");
+    CTestWorkspace sandbox(L"librova-zip-import");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -405,7 +459,7 @@ TEST_CASE("ZIP import coordinator imports supported entries and keeps partial su
 
 TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted entries", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-force-convert");
+    CTestWorkspace sandbox(L"librova-zip-import-force-convert");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -423,9 +477,29 @@ TEST_CASE("ZIP import coordinator forwards forced EPUB conversion to extracted e
     REQUIRE(importer.Calls[1].ForceEpubConversion);
 }
 
+TEST_CASE("ZIP import coordinator forwards disabled cover import to extracted entries", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-no-covers");
+    const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work",
+        .ImportCovers = false
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 4);
+    REQUIRE(importer.Calls.size() == 2);
+    REQUIRE_FALSE(importer.Calls[0].ImportCovers);
+    REQUIRE_FALSE(importer.Calls[1].ImportCovers);
+}
+
 TEST_CASE("ZIP import coordinator forwards writer repository override to extracted entries", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-writer-repository");
+    CTestWorkspace sandbox(L"librova-zip-import-writer-repository");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CStubBookRepository writerRepository;
@@ -448,7 +522,7 @@ TEST_CASE("ZIP import coordinator forwards writer repository override to extract
 
 TEST_CASE("ZIP import coordinator cleans per-entry working directories after import", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-entry-cleanup");
+    CTestWorkspace sandbox(L"librova-zip-import-entry-cleanup");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -470,7 +544,7 @@ TEST_CASE("ZIP import coordinator cleans per-entry working directories after imp
 
 TEST_CASE("ZIP import coordinator removes non-empty per-entry working directories after import", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-non-empty-entry-cleanup");
+    CTestWorkspace sandbox(L"librova-zip-import-non-empty-entry-cleanup");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CWorkspaceWritingSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -495,7 +569,7 @@ TEST_CASE("ZIP import coordinator removes non-empty per-entry working directorie
 
 TEST_CASE("ZIP import coordinator removes empty cover workspaces for numeric entry names", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-empty-numeric-entry-cleanup");
+    CTestWorkspace sandbox(L"librova-zip-import-empty-numeric-entry-cleanup");
     const std::filesystem::path zipPath = CreateNumericZipFixture(sandbox.GetPath() / "books.zip");
     CEmptyWorkspaceSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -520,7 +594,7 @@ TEST_CASE("ZIP import coordinator removes empty cover workspaces for numeric ent
 
 TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-unsafe");
+    CTestWorkspace sandbox(L"librova-zip-import-unsafe");
     const std::filesystem::path zipPath = CreateUnsafeZipFixture(sandbox.GetPath() / "unsafe.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -545,7 +619,7 @@ TEST_CASE("ZIP import coordinator rejects unsafe archive entry paths", "[zip-imp
 
 TEST_CASE("ZIP import coordinator opens Unicode archive paths on Windows", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-unicode");
+    CTestWorkspace sandbox(L"librova-zip-import-unicode");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / std::filesystem::path{u8"книги.zip"});
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -562,7 +636,7 @@ TEST_CASE("ZIP import coordinator opens Unicode archive paths on Windows", "[zip
 
 TEST_CASE("ZIP import coordinator logs skipped and failed entries into host log", "[zip-import][logging]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-logging");
+    CTestWorkspace sandbox(L"librova-zip-import-logging");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     const auto logPath = sandbox.GetPath() / "Logs" / "host.log";
     CStubSingleFileImporter importer;
@@ -610,7 +684,7 @@ public:
 
 TEST_CASE("ZIP import coordinator stops processing entries when IsCancellationRequested returns true", "[zip-import]")
 {
-    CScopedDirectory sandbox("librova-zip-cancel-sink");
+    CTestWorkspace sandbox(L"librova-zip-cancel-sink");
     const auto zipPath = sandbox.GetPath() / "books.zip";
 
     {
@@ -642,7 +716,7 @@ TEST_CASE("ZIP import coordinator stops processing entries when IsCancellationRe
 
 TEST_CASE("ZIP import coordinator stops processing entries when stop_token is pre-requested", "[zip-import]")
 {
-    CScopedDirectory sandbox("librova-zip-cancel-token");
+    CTestWorkspace sandbox(L"librova-zip-cancel-token");
     const auto zipPath = sandbox.GetPath() / "books.zip";
 
     {
@@ -675,7 +749,7 @@ TEST_CASE("ZIP import coordinator stops processing entries when stop_token is pr
 
 TEST_CASE("ZIP import coordinator preserves UTF-8 entry names when building filesystem paths", "[zip-import]")
 {
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-cyrillic-entry");
+    CTestWorkspace sandbox(L"librova-zip-import-cyrillic-entry");
     const std::filesystem::path zipPath = CreateCyrillicZipFixture(sandbox.GetPath() / "books.zip");
     CStubSingleFileImporter importer;
     CTestProgressSink progressSink;
@@ -692,6 +766,46 @@ TEST_CASE("ZIP import coordinator preserves UTF-8 entry names when building file
     REQUIRE(result.Entries[0].ArchivePath == Librova::Unicode::PathFromUtf8("папка\\книга.fb2"));
 }
 
+TEST_CASE("ZIP import coordinator decodes CP866 Cyrillic entry names", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-cp866-entry");
+    const std::filesystem::path zipPath = CreateCp866CyrillicZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(result.Entries.size() == 1);
+    REQUIRE(importer.Calls.size() == 1);
+    REQUIRE(importer.Calls[0].SourcePath.filename() == Librova::Unicode::PathFromUtf8("книга.fb2"));
+    REQUIRE(result.Entries[0].ArchivePath == Librova::Unicode::PathFromUtf8("папка\\книга.fb2"));
+}
+
+TEST_CASE("ZIP import coordinator skips archives with no supported book entries", "[zip-import]")
+{
+    CTestWorkspace sandbox(L"librova-zip-import-unsupported-only");
+    const std::filesystem::path zipPath = CreateUnsupportedOnlyZipFixture(sandbox.GetPath() / "books.zip");
+    CStubSingleFileImporter importer;
+    CTestProgressSink progressSink;
+
+    const Librova::ZipImporting::CZipImportCoordinator coordinator(importer);
+    const auto result = coordinator.Run({
+        .ZipPath = zipPath,
+        .WorkingDirectory = sandbox.GetPath() / "work"
+    }, progressSink, {});
+
+    REQUIRE(importer.Calls.empty());
+    REQUIRE(result.ImportedCount() == 0);
+    REQUIRE(result.Entries.size() == 2);
+    REQUIRE(std::ranges::all_of(result.Entries, [](const auto& entry) {
+        return entry.Status == Librova::ZipImporting::EZipEntryImportStatus::UnsupportedEntry;
+    }));
+}
+
 TEST_CASE("ZIP import coordinator reports progress for completed entries before the first slot finishes", "[zip-import][progress]")
 {
     if (std::thread::hardware_concurrency() < 2U)
@@ -700,7 +814,7 @@ TEST_CASE("ZIP import coordinator reports progress for completed entries before 
         return;
     }
 
-    CScopedDirectory sandbox(std::filesystem::temp_directory_path() / "librova-zip-import-slow-first-progress");
+    CTestWorkspace sandbox(L"librova-zip-import-slow-first-progress");
     const std::filesystem::path zipPath = CreateZipFixture(sandbox.GetPath() / "books.zip");
     CSlowFirstZipSingleFileImporter importer;
     CThreadSafeStructuredProgressSink progressSink;
@@ -727,4 +841,3 @@ TEST_CASE("ZIP import coordinator reports progress for completed entries before 
 
     REQUIRE(result.ImportedCount() == 2);
 }
-

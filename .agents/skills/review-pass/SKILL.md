@@ -52,7 +52,7 @@ Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff
 - [ ] strong integration tests are few but protect critical cross-layer paths
 - [ ] fake services model realistic failure outcomes
 - [ ] no decorative tests that only restate implementation details
-- [ ] build -> test execution stayed sequential
+- [ ] build finished before any dependent test suite started; any parallel test execution happened only after the required build completed
 
 ## 6. Logging
 
