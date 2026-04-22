@@ -1525,3 +1525,11 @@ tasks:
   note: Fixed validated review findings across ZIP Cyrillic entry decoding, managed trash root canonicalization,
     rollback/runtime diagnostics, IPC drift guard, shutdown cancellation, process-handle race handling,
     rollback/ZIP tests, and SQLite PRAGMA cleanup.
+- id: 189
+  summary: bump application version to 1.2.0
+  status: Closed
+  type: Feature
+  priority: Low
+  milestone: '1.2'
+  note: Shared VERSION.txt now sets the application version to 1.2.0; native host and managed assembly
+    version propagation were verified.
