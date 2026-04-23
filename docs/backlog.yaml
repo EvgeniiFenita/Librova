@@ -42,21 +42,23 @@ tasks:
 
     '
 - id: 59
-  summary: add Favorites and Read as built-in user collections with per-book membership, sidebar navigation,
-    filtered browse, card-level toggle controls, and details-panel membership display
+  summary: add user-defined collections with sidebar navigation, create/delete, context-menu book membership,
+    and details-panel membership display
   status: Open
   type: Feature
   priority: Major
   milestone: '1.3'
-  note: 'each collection is a named list stored in the database; a book can independently belong to zero
-    or more collections; the sidebar must surface Favorites and Read as first-class navigation destinations
-    alongside Library; when a collection is selected the main grid shows only its books and all existing
-    search, sort, and filter controls operate within that scope; book cards must carry icon toggles (star
-    for Favorites, checkmark for Read) with tooltips and distinct visual states for added and not-added
-    books; the details panel must list which collections the selected book belongs to; the change spans
-    database schema, domain model, proto contracts, browse-request plumbing, and UI shell.
-
-    '
+  note: 'Left panel: shows a collections card with title and scrollable list; only one collection can
+    be selected at a time; Create Collection button present. Create dialog: input field for name plus
+    icon picker (20 themed book-collection icons). Delete: each collection has a delete button; confirmation
+    warning shown; on confirm all books are removed from collection then collection is deleted. View collection:
+    clicking a collection opens its books in the main grid; drag-and-drop is disabled in collection view
+    mode. Add book to collection: via book title context menu Add to → submenu listing all collections
+    (already-joined collections visually marked) plus Create new. Remove book from collection: in collection
+    view mode context menu gains Remove from collection item. Details panel: lists all collections the
+    selected book belongs to. Preset collections (deferred): architect the schema and domain model to
+    support non-deletable preset collections created on first run (e.g. Favorites); do not implement the
+    preset instances themselves in this slice.'
 - id: 61
   summary: audit and harden browse, search, and filter query performance at library scales of hundreds
     of thousands of books
