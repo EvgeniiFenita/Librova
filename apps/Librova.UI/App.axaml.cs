@@ -34,6 +34,7 @@ internal sealed partial class App : Application
             desktop.ShutdownRequested += OnShutdownRequested;
             var mainWindow = new MainWindow();
             var pathSelectionService = new AvaloniaPathSelectionService(mainWindow);
+            var clipboardService = new AvaloniaClipboardService(mainWindow);
             var preferencesStore = UiPreferencesStore.CreateDefault();
             ShellWindowConfigurator.ConfigureStartingUp(mainWindow);
             desktop.MainWindow = mainWindow;
@@ -43,6 +44,7 @@ internal sealed partial class App : Application
                 desktop,
                 mainWindow,
                 pathSelectionService,
+                clipboardService,
                 preferencesStore,
                 _startupCancellation.Token);
         }
@@ -54,6 +56,7 @@ internal sealed partial class App : Application
         IClassicDesktopStyleApplicationLifetime desktop,
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         CancellationToken cancellationToken)
     {
@@ -68,6 +71,7 @@ internal sealed partial class App : Application
             var recoverySetup = CreateRecoverySetupViewModel(
                 mainWindow,
                 pathSelectionService,
+                clipboardService,
                 preferencesStore,
                 launchOptions,
                 recoveryLibraryRoot,
@@ -86,6 +90,7 @@ internal sealed partial class App : Application
             var setup = CreateRecoverySetupViewModel(
                 mainWindow,
                 pathSelectionService,
+                clipboardService,
                 preferencesStore,
                 launchOptions,
                 CoreHostDevelopmentDefaults.GetFallbackLibraryRoot(),
@@ -98,6 +103,7 @@ internal sealed partial class App : Application
         await StartShellWithLaunchOptionsAsync(
             mainWindow,
             pathSelectionService,
+            clipboardService,
             preferencesStore,
             launchOptions,
             CoreHostDevelopmentDefaults.Create(preferencesStore: preferencesStore),
@@ -107,6 +113,7 @@ internal sealed partial class App : Application
     private Task StartShellWithLibraryRootAsync(
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string libraryRoot,
@@ -120,6 +127,7 @@ internal sealed partial class App : Application
         return StartShellWithLaunchOptionsAsync(
             mainWindow,
             pathSelectionService,
+            clipboardService,
             preferencesStore,
             launchOptions,
             CoreHostDevelopmentDefaults.CreateForLibraryRoot(
@@ -133,6 +141,7 @@ internal sealed partial class App : Application
     private async Task StartShellWithLaunchOptionsAsync(
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         CoreHostLaunchOptions hostOptions,
@@ -149,6 +158,7 @@ internal sealed partial class App : Application
             var recoverySetup = CreateRecoverySetupViewModel(
                 mainWindow,
                 pathSelectionService,
+                clipboardService,
                 preferencesStore,
                 launchOptions,
                 hostOptions.LibraryRoot,
@@ -171,12 +181,14 @@ internal sealed partial class App : Application
             _shellApplication = ShellApplication.Create(
                 session,
                 pathSelectionService,
+                clipboardService,
                 launchOptions,
                 preferencesStore: preferencesStore,
                 savedPreferencesOverride: savedPreferencesOverride,
                 switchLibraryAsync: (libraryRoot, libraryOpenMode) => SwitchLibraryRootAsync(
                     mainWindow,
                     pathSelectionService,
+                    clipboardService,
                     preferencesStore,
                     launchOptions,
                     libraryRoot,
@@ -185,6 +197,7 @@ internal sealed partial class App : Application
                 reloadShellAsync: () => ReloadCurrentShellSessionAsync(
                     mainWindow,
                     pathSelectionService,
+                    clipboardService,
                     preferencesStore,
                     launchOptions,
                     cancellationToken));
@@ -202,6 +215,7 @@ internal sealed partial class App : Application
             var recoverySetup = CreateRecoverySetupViewModel(
                 mainWindow,
                 pathSelectionService,
+                clipboardService,
                 preferencesStore,
                 launchOptions,
                 hostOptions.LibraryRoot,
@@ -214,6 +228,7 @@ internal sealed partial class App : Application
     private FirstRunSetupViewModel CreateRecoverySetupViewModel(
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string suggestedLibraryRoot,
@@ -233,6 +248,7 @@ internal sealed partial class App : Application
                 return StartShellWithLibraryRootAsync(
                     mainWindow,
                     pathSelectionService,
+                    clipboardService,
                     preferencesStore,
                     launchOptions,
                     libraryRoot,
@@ -246,6 +262,7 @@ internal sealed partial class App : Application
     private async Task SwitchLibraryRootAsync(
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         string libraryRoot,
@@ -267,6 +284,7 @@ internal sealed partial class App : Application
         await StartShellWithLibraryRootAsync(
             mainWindow,
             pathSelectionService,
+            clipboardService,
             preferencesStore,
             launchOptions,
             libraryRoot,
@@ -284,6 +302,7 @@ internal sealed partial class App : Application
     private async Task ReloadCurrentShellSessionAsync(
         MainWindow mainWindow,
         IPathSelectionService pathSelectionService,
+        IClipboardService clipboardService,
         IUiPreferencesStore preferencesStore,
         ShellLaunchOptions launchOptions,
         CancellationToken cancellationToken)
@@ -319,6 +338,7 @@ internal sealed partial class App : Application
         await StartShellWithLaunchOptionsAsync(
             mainWindow,
             pathSelectionService,
+            clipboardService,
             preferencesStore,
             launchOptions,
             CoreHostDevelopmentDefaults.CreateForLibraryRoot(

@@ -33,6 +33,7 @@ internal sealed class ShellApplication : IAsyncDisposable
     public static ShellApplication Create(
         ShellSession session,
         IPathSelectionService? pathSelectionService = null,
+        IClipboardService? clipboardService = null,
         ShellLaunchOptions? launchOptions = null,
         IShellStateStore? stateStore = null,
         IUiPreferencesStore? preferencesStore = null,
@@ -50,6 +51,7 @@ internal sealed class ShellApplication : IAsyncDisposable
             new ShellViewModel(
                 session,
                 pathSelectionService,
+                clipboardService,
                 launchOptions,
                 savedState,
                 effectivePreferencesStore,

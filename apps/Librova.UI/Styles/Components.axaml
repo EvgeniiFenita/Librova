@@ -747,6 +747,45 @@
     <Setter Property="Padding" Value="16,14" />
   </Style>
 
+  <Style Selector="ContextMenu.BookCardContextMenu">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="MinWidth" Value="220" />
+  </Style>
+
+  <Style Selector="MenuItem.BookCardContextItem">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="MinHeight" Value="40" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem:pointerover PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem.Destructive">
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem.Destructive PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
+  <Style Selector="MenuItem.BookCardContextItem.Destructive:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AppDangerSurfaceBrush}" />
+  </Style>
+  <Style Selector="Separator.BookCardContextSeparator">
+    <Setter Property="Margin" Value="6,4" />
+    <Setter Property="Background" Value="{DynamicResource AppBorderStrongBrush}" />
+  </Style>
+
   <!-- ── Filter section header ────────────────────────────────────────── -->
   <Style Selector="TextBlock.FilterSectionHeader">
     <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />

@@ -190,6 +190,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `IconLibrary` | Books on shelf | Library nav |
 | `IconImport` | Arrow DOWN into tray | Import nav / action |
 | `IconExport` | Arrow UP from tray | Export action |
+| `IconCopy` | Two overlapping sheets | Copy title / secondary clipboard actions |
 | `IconSettings` | Gear | Settings nav |
 | `IconSearch` | Magnifier | Search bar |
 | `IconClose` | × cross | Close/dismiss |
@@ -275,7 +276,7 @@ Window (Background = AppBackgroundBrush)
 
 | View | DataContext | Key layout |
 |---|---|---|
-| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right) |
+| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right). Each book card also exposes a right-click context menu with `Export`, `Copy Title`, and `Move to Trash`; when a converter is configured, the same menu also shows `Export as EPUB` and enables it for `FB2` books. |
 | `ImportView` | `ShellViewModel` | ScrollViewer → StackPanel. Drop zone → options → running state → result |
 | `SettingsView` | `ShellViewModel` | ScrollViewer → StackPanel. Converter → About → Diagnostics panels |
 
@@ -357,7 +358,7 @@ To swap the entire colour palette, update exactly these four locations:
 | Background | `AppSurfaceElevatedBrush` (`Color.SurfaceElevated` = `#2E2414`) | Тёплый amber, заметно светлее основного окна |
 | Border | `AppAccentBorderBrush` (`Color.AccentBorder` = `#3D2C0A`) | Amber-рамка, выделяет контейнер без BoxShadow |
 
-Это правило применено к `Border.FilterPopup` (filter facet flyout) и `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown). Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
+Это правило применено к `Border.FilterPopup` (filter facet flyout), `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown) и `ContextMenu.BookCardContextMenu` (меню карточки книги). Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
 
 ---
 

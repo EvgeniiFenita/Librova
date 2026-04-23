@@ -105,20 +105,21 @@ The user can:
 - keep the selected card visible by re-centering it in the scroll viewport when the details panel opens or closes and the grid reflows;
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;
 - inspect richer metadata for the selected book, including series and genres when the source file provides them;
-- export the selected book;
-- move the selected book to the Windows `Recycle Bin`.
+- open a right-click context menu on any book card with `Export`, `Copy Title`, and `Move to Trash`;
+- export either the selected book or the specific book card that opened the context menu;
+- move either the selected book or the specific book card that opened the context menu to the Windows `Recycle Bin`.
 
 Series and genres are already surfaced in the details panel when available; first-class browser filtering for genres is available in the `Library` toolbar, while dedicated series browsing remains future work.
 
 ### 3.4 Export
 
-The user can export a selected managed book to any destination path outside the managed library.
+The user can export a selected managed book, or the specific book card targeted from the library browser context menu, to any destination path outside the managed library.
 
 The export dialog should suggest a meaningful default filename derived from the book title and author, sanitized for Windows file-name rules.
 
 If export overwrites an existing destination file, Librova prepares the exported bytes in a temporary sibling file first and replaces the destination only after the copy, decompression, or conversion succeeds.
 
-If the active session has a configured converter, managed `FB2` books can also be exported as `EPUB` through a dedicated `Export As EPUB` action.
+If the active session has a configured converter, managed `FB2` books can also be exported as `EPUB` through a dedicated `Export As EPUB` action in the details panel and in the book-card context menu.
 
 If a selected managed book is `FB2` but the current session has no configured converter, the details panel does not show the `Export As EPUB` action and instead points the user to `Settings` to configure a converter.
 
@@ -126,7 +127,7 @@ The `Settings` section also shows the current application version.
 
 ### 3.5 Delete / Recycle
 
-The primary user-facing delete action now sends managed books to the Windows `Recycle Bin`.
+The primary user-facing delete action now sends managed books to the Windows `Recycle Bin`, whether triggered from the details panel, the `Delete` shortcut on the selected book, or the book-card context menu.
 
 Delete still stages files through the managed-library `Trash` area first so rollback remains explicit until the database row is removed.
 

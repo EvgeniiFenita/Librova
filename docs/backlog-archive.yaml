@@ -1533,3 +1533,15 @@ tasks:
   milestone: '1.2'
   note: Shared VERSION.txt now sets the application version to 1.2.0; native host and managed assembly
     version propagation were verified.
+- id: 178
+  summary: add right-click context menu to book card with export, copy title, and delete actions
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Added right-click ContextMenu to book card Button with Export, Export as EPUB (converter-gated,
+    FB2 only), Copy Title, and Move to Trash items; each item uses a dedicated card-scoped command that
+    accepts the target book as a parameter; OnBookCardContextRequested auto-selects the card if not already
+    selected; IClipboardService injected end-to-end; BookCardContextMenu styles follow AppSurfaceElevatedBrush/AppAccentBorderBrush
+    popup rule; 5 VM tests and 1 markup test added; Product.md, ReleaseChecklist, UiDesignSystem, and
+    README updated.

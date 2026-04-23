@@ -38,6 +38,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public ShellViewModel(
         ShellSession session,
         IPathSelectionService? pathSelectionService = null,
+        IClipboardService? clipboardService = null,
         ShellLaunchOptions? launchOptions = null,
         ShellStateSnapshot? savedState = null,
         IUiPreferencesStore? preferencesStore = null,
@@ -75,7 +76,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             hasConfiguredConverter: hasConfiguredConverter,
             initialSortKey: savedPreferences?.PreferredSortKey,
             initialSortDescending: savedPreferences?.PreferredSortDescending ?? false,
-            navigateToImport: () => CurrentSection = ShellSection.Import);
+            navigateToImport: () => CurrentSection = ShellSection.Import,
+            clipboardService: clipboardService);
         _importWorkflowController = new ShellImportWorkflowController(
             ImportJobs,
             LibraryBrowser,

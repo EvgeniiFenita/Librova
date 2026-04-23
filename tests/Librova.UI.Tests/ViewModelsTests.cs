@@ -1875,6 +1875,97 @@ public sealed class ViewModelsTests
     }
 
     [Fact]
+    public async Task LibraryBrowserViewModel_CopiesBookTitleThroughClipboardService()
+    {
+        var clipboardService = new FakeClipboardService();
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService(), clipboardService: clipboardService);
+
+        await viewModel.RefreshAsync();
+        await viewModel.CopyBookTitleAsync(viewModel.Books[0]);
+
+        Assert.Equal("Roadside Picnic", clipboardService.LastText);
+        Assert.Contains("Copied title", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ReportsClipboardFailureWhenCopyIsUnavailable()
+    {
+        var viewModel = new LibraryBrowserViewModel(new FakeLibraryCatalogService(), clipboardService: new NullClipboardService());
+
+        await viewModel.RefreshAsync();
+        await viewModel.CopyBookTitleAsync(viewModel.Books[0]);
+
+        Assert.Equal("Book title could not be copied.", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ExportBookFromCardCommand_UsesPassedBookInsteadOfSelectedBook()
+    {
+        var service = new MultiBookRecordingLibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\second.fb2"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        await viewModel.ExportBookFromCardAsync(viewModel.Books[1]);
+
+        Assert.Equal(2, service.LastExportBookId);
+        Assert.Equal(@"C:\Exports\second.fb2", service.LastExportPath);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ExportBookAsEpubFromCardCommand_UsesPassedBookInsteadOfSelectedBook()
+    {
+        var service = new MultiBookRecordingLibraryCatalogService();
+        var selectionService = new FakePathSelectionService
+        {
+            SelectedExportPath = @"C:\Exports\second.epub"
+        };
+        var viewModel = new LibraryBrowserViewModel(service, selectionService, hasConfiguredConverter: true);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        Assert.True(viewModel.ExportBookAsEpubFromCardCommand.CanExecute(viewModel.Books[1]));
+        await viewModel.ExportBookAsEpubFromCardAsync(viewModel.Books[1]);
+
+        Assert.Equal(2, service.LastExportBookId);
+        Assert.Equal(BookFormatModel.Epub, service.LastExportFormat);
+        Assert.Equal(@"C:\Exports\second.epub", service.LastExportPath);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_MoveBookToTrashFromCardCommand_UsesPassedBookInsteadOfSelectedBook()
+    {
+        var service = new MultiBookRecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service);
+
+        await viewModel.RefreshAsync();
+        await viewModel.ToggleSelectedBookAsync(viewModel.Books[0]);
+
+        await viewModel.MoveBookToTrashFromCardAsync(viewModel.Books[1]);
+
+        Assert.Equal(2, service.LastTrashedBookId);
+        Assert.Contains("Second Book", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LibraryBrowserViewModel_ExportBookAsEpubFromCardCommand_IsDisabledForNonFb2Book()
+    {
+        var service = new MultiBookRecordingLibraryCatalogService();
+        var viewModel = new LibraryBrowserViewModel(service, hasConfiguredConverter: true);
+
+        await viewModel.RefreshAsync();
+
+        Assert.False(viewModel.ExportBookAsEpubFromCardCommand.CanExecute(viewModel.Books[0]));
+        Assert.True(viewModel.ExportBookAsEpubFromCardCommand.CanExecute(viewModel.Books[1]));
+    }
+
+    [Fact]
     public async Task LibraryBrowserViewModel_SuggestedExportFileNameUsesFormatNotManagedPathExtension()
     {
         // Regression: managed FB2 files are stored as .fb2.gz on disk; the suggested export
@@ -3277,6 +3368,84 @@ public sealed class ViewModelsTests
             LastExportPath = destinationPath;
             LastExportFormat = exportFormat;
             LastExportTimeout = timeout;
+            return Task.FromResult<string?>(destinationPath);
+        }
+
+        public Task<DeleteBookResultModel?> MoveBookToTrashAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            LastTrashedBookId = bookId;
+            return Task.FromResult<DeleteBookResultModel?>(new DeleteBookResultModel
+            {
+                BookId = bookId,
+                Destination = DeleteDestinationModel.RecycleBin
+            });
+        }
+    }
+
+    private sealed class FakeClipboardService : IClipboardService
+    {
+        public string? LastText { get; private set; }
+
+        public Task<bool> SetTextAsync(string text, CancellationToken cancellationToken)
+        {
+            LastText = text;
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class MultiBookRecordingLibraryCatalogService : ILibraryCatalogService
+    {
+        public long? LastExportBookId { get; private set; }
+        public string? LastExportPath { get; private set; }
+        public BookFormatModel? LastExportFormat { get; private set; }
+        public long? LastTrashedBookId { get; private set; }
+
+        public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult(new BookListPageModel
+            {
+                TotalCount = 2,
+                Statistics = new LibraryStatisticsModel
+                {
+                    BookCount = 2
+                },
+                Items =
+                [
+                    new BookListItemModel
+                    {
+                        BookId = 1,
+                        Title = "First Book",
+                        Authors = ["Arkady Strugatsky"],
+                        Language = "en",
+                        Format = BookFormatModel.Epub,
+                        ManagedPath = "Objects/00/00/0000000001.book.epub",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    },
+                    new BookListItemModel
+                    {
+                        BookId = 2,
+                        Title = "Second Book",
+                        Authors = ["Boris Strugatsky"],
+                        Language = "ru",
+                        Format = BookFormatModel.Fb2,
+                        ManagedPath = "Objects/00/00/0000000002.book.fb2",
+                        AddedAtUtc = DateTimeOffset.UtcNow
+                    }
+                ]
+            });
+
+        public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
+            => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<string?> ExportBookAsync(
+            long bookId,
+            string destinationPath,
+            BookFormatModel? exportFormat,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            LastExportBookId = bookId;
+            LastExportPath = destinationPath;
+            LastExportFormat = exportFormat;
             return Task.FromResult<string?>(destinationPath);
         }
 

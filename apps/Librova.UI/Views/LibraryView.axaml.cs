@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -143,6 +144,24 @@ internal sealed partial class LibraryView : UserControl
         if (_wasDetailsPanelVisible)
         {
             InvalidateOpenPanelSnapshot();
+        }
+    }
+
+    private void OnBookCardContextRequested(object? sender, ContextRequestedEventArgs eventArgs)
+    {
+        if (sender is not Button { DataContext: BookListItemModel requestedBook } || _libraryBrowser is null)
+        {
+            return;
+        }
+
+        if (_libraryBrowser.SelectedBook?.BookId == requestedBook.BookId)
+        {
+            return;
+        }
+
+        if (_libraryBrowser.SelectBookCommand.CanExecute(requestedBook))
+        {
+            _libraryBrowser.SelectBookCommand.Execute(requestedBook);
         }
     }
 

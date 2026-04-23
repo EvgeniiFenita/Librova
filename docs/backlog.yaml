@@ -162,17 +162,6 @@ tasks:
     the book card DataTemplate with TextTrimming=CharacterEllipsis; the card geometry must be updated:
     increase BookCardButton Height and remove MaxHeight constraint on the title TextBlock to accommodate
     the second line without deforming the WrapPanel grid'
-- id: 178
-  summary: add right-click context menu to book card with export, copy title, and delete actions
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.3'
-  note: 'add ContextMenu on Button.BookCardButton with three items: Export (ExportSelectedBookCommand),
-    Copy Title (Clipboard via TopLevel.GetTopLevel), separator, Move to Trash (MoveSelectedBookToTrashCommand,
-    AppDangerBrush foreground, IconTrash); on ContextRequested call SelectBookCommand first if the book
-    is not yet selected; ContextMenu must follow the popup visual rule: AppSurfaceElevatedBrush background
-    and AppAccentBorderBrush border'
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open

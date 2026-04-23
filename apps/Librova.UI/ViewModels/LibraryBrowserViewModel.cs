@@ -24,6 +24,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private static readonly IBrush SelectedCardBorder = UiThemeResources.AppAccentBrush;
     private readonly ILibraryCatalogService _libraryCatalogService;
     private readonly IPathSelectionService _pathSelectionService;
+    private readonly IClipboardService _clipboardService;
     private readonly LibraryCoverPresentationService _coverPresentationService;
     private readonly bool _hasConfiguredConverter;
     private readonly LibraryBrowseQueryState _browseState;
@@ -55,10 +56,12 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         bool hasConfiguredConverter = false,
         BookSortModel? initialSortKey = null,
         bool initialSortDescending = false,
-        Action? navigateToImport = null)
+        Action? navigateToImport = null,
+        IClipboardService? clipboardService = null)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
         _pathSelectionService = pathSelectionService ?? new NullPathSelectionService();
+        _clipboardService = clipboardService ?? new NullClipboardService();
         _coverPresentationService = new LibraryCoverPresentationService(libraryRoot, coverImageLoader);
         _hasConfiguredConverter = hasConfiguredConverter;
         _navigateToImport = navigateToImport;
@@ -72,6 +75,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         ExportSelectedBookCommand = new AsyncCommand(ExportSelectedBookAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
         ExportSelectedBookAsEpubCommand = new AsyncCommand(ExportSelectedBookAsEpubAsync, () => CanExportSelectedBookAsEpub, HandleCommandErrorAsync);
         MoveSelectedBookToTrashCommand = new AsyncCommand(MoveSelectedBookToTrashAsync, () => !IsBusy && HasSelectedBook, HandleCommandErrorAsync);
+        ExportBookFromCardCommand = new AsyncCommand<BookListItemModel?>(ExportBookFromCardAsync, book => !IsBusy && book is not null, HandleCommandErrorAsync);
+        ExportBookAsEpubFromCardCommand = new AsyncCommand<BookListItemModel?>(ExportBookAsEpubFromCardAsync, CanExportBookAsEpubFromCard, HandleCommandErrorAsync);
+        MoveBookToTrashFromCardCommand = new AsyncCommand<BookListItemModel?>(MoveBookToTrashFromCardAsync, book => !IsBusy && book is not null, HandleCommandErrorAsync);
+        CopyBookTitleCommand = new AsyncCommand<BookListItemModel?>(CopyBookTitleAsync, book => book is not null, HandleCommandErrorAsync);
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
@@ -102,6 +109,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public AsyncCommand ExportSelectedBookCommand { get; }
     public AsyncCommand ExportSelectedBookAsEpubCommand { get; }
     public AsyncCommand MoveSelectedBookToTrashCommand { get; }
+    public AsyncCommand<BookListItemModel?> ExportBookFromCardCommand { get; }
+    public AsyncCommand<BookListItemModel?> ExportBookAsEpubFromCardCommand { get; }
+    public AsyncCommand<BookListItemModel?> MoveBookToTrashFromCardCommand { get; }
+    public AsyncCommand<BookListItemModel?> CopyBookTitleCommand { get; }
     public AsyncCommand<BookListItemModel?> SelectBookCommand { get; }
     public AsyncCommand CloseSelectionCommand { get; }
     public AsyncCommand ToggleSortDirectionCommand { get; }
@@ -271,6 +282,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
                 MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
+                ExportBookFromCardCommand.RaiseCanExecuteChanged();
+                ExportBookAsEpubFromCardCommand.RaiseCanExecuteChanged();
+                MoveBookToTrashFromCardCommand.RaiseCanExecuteChanged();
+                CopyBookTitleCommand.RaiseCanExecuteChanged();
                 CloseSelectionCommand.RaiseCanExecuteChanged();
             }
         }
@@ -309,6 +324,10 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
                 ExportSelectedBookCommand.RaiseCanExecuteChanged();
                 ExportSelectedBookAsEpubCommand.RaiseCanExecuteChanged();
                 MoveSelectedBookToTrashCommand.RaiseCanExecuteChanged();
+                ExportBookFromCardCommand.RaiseCanExecuteChanged();
+                ExportBookAsEpubFromCardCommand.RaiseCanExecuteChanged();
+                MoveBookToTrashFromCardCommand.RaiseCanExecuteChanged();
+                CopyBookTitleCommand.RaiseCanExecuteChanged();
                 SelectBookCommand.RaiseCanExecuteChanged();
                 CloseSelectionCommand.RaiseCanExecuteChanged();
             }
@@ -488,25 +507,39 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     public async Task ExportSelectedBookAsync()
     {
-        await ExportSelectedBookCoreAsync(null);
+        await ExportBookCoreAsync(SelectedBook, null);
     }
 
     public async Task ExportSelectedBookAsEpubAsync()
     {
-        await ExportSelectedBookCoreAsync(BookFormatModel.Epub);
+        await ExportBookCoreAsync(SelectedBook, BookFormatModel.Epub);
     }
 
-    private async Task ExportSelectedBookCoreAsync(BookFormatModel? exportFormat)
+    public async Task ExportBookFromCardAsync(BookListItemModel? book)
     {
-        if (_isDisposed || SelectedBook is null)
+        await ExportBookCoreAsync(book, null);
+    }
+
+    public async Task ExportBookAsEpubFromCardAsync(BookListItemModel? book)
+    {
+        await ExportBookCoreAsync(book, BookFormatModel.Epub);
+    }
+
+    private async Task ExportBookCoreAsync(BookListItemModel? book, BookFormatModel? exportFormat)
+    {
+        if (_isDisposed || book is null)
         {
             return;
         }
 
+        var actionBookDetails = SelectedBook?.BookId == book.BookId ? SelectedBookDetails : null;
+        var actionBookFormat = SelectedBook?.BookId == book.BookId
+            ? _selectionState.SelectedBookFormat
+            : book.Format;
         var exportPlan = await _selectionWorkflowController.PrepareExportAsync(
-            SelectedBook,
-            SelectedBookDetails,
-            _selectionState.SelectedBookFormat,
+            book,
+            actionBookDetails,
+            actionBookFormat,
             exportFormat,
             default);
         if (!exportPlan.ShouldExport)
@@ -523,7 +556,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         {
             using var cancellation = CreateOperationCancellationSource(exportPlan.OperationTimeout);
             var statusText = await _selectionWorkflowController.ExportAsync(
-                SelectedBook,
+                book,
                 exportPlan.DestinationPath!,
                 exportFormat,
                 exportPlan.TransportTimeout,
@@ -551,20 +584,30 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
 
     public async Task MoveSelectedBookToTrashAsync()
     {
-        if (_isDisposed || SelectedBook is null)
+        await MoveBookToTrashCoreAsync(SelectedBook);
+    }
+
+    public async Task MoveBookToTrashFromCardAsync(BookListItemModel? book)
+    {
+        await MoveBookToTrashCoreAsync(book);
+    }
+
+    private async Task MoveBookToTrashCoreAsync(BookListItemModel? book)
+    {
+        if (_isDisposed || book is null)
         {
             return;
         }
 
         IsBusy = true;
-        StatusText = $"Moving '{SelectedBook.Title}' to Recycle Bin...";
+        StatusText = $"Moving '{book.Title}' to Recycle Bin...";
 
         try
         {
             var loadedPageCount = Math.Max(_browseState.LoadedPageCount, 1);
             using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
             var statusText = await _selectionWorkflowController.MoveSelectedBookToTrashAsync(
-                SelectedBook,
+                book,
                 () => RefreshLoadedRangeAsync(loadedPageCount),
                 cancellation.Token);
 
@@ -586,6 +629,30 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             }
         }
     }
+
+    public async Task CopyBookTitleAsync(BookListItemModel? book)
+    {
+        if (_isDisposed || book is null || string.IsNullOrWhiteSpace(book.Title))
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(5));
+        var copied = await _clipboardService.SetTextAsync(book.Title, cancellation.Token);
+        if (IsLifetimeCancellationRequested(cancellation.Token))
+        {
+            return;
+        }
+
+        StatusText = copied
+            ? $"Copied title '{book.Title}' to the clipboard."
+            : "Book title could not be copied.";
+    }
+
+    private bool CanExportBookAsEpubFromCard(BookListItemModel? book) =>
+        !IsBusy
+        && _hasConfiguredConverter
+        && book?.Format is BookFormatModel.Fb2;
 
     private EmptyStateKind ComputeEmptyStateKind() =>
         HasBooks ? EmptyStateKind.None :

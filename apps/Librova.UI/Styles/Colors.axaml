@@ -344,6 +344,9 @@
   <!-- Arrow-up from tray (Export) -->
   <StreamGeometry x:Key="IconExport">M12,4 L16,8 L13,8 L13,14 L11,14 L11,8 L8,8 Z M5,16 L19,16 L19,19 L5,19 Z</StreamGeometry>
 
+  <!-- Two overlapping sheets (Copy) -->
+  <StreamGeometry x:Key="IconCopy">M9,5 C9,3.895 9.895,3 11,3 L18,3 C19.105,3 20,3.895 20,5 L20,14 C20,15.105 19.105,16 18,16 L11,16 C9.895,16 9,15.105 9,14 Z M6,8 C4.895,8 4,8.895 4,10 L4,19 C4,20.105 4.895,21 6,21 L13,21 C14.105,21 15,20.105 15,19 L15,18 L13,18 L13,19 L6,19 L6,10 L7,10 L7,8 Z</StreamGeometry>
+
   <!-- Trash can -->
   <StreamGeometry x:Key="IconTrash">M9,4 L15,4 L16,6 L20,6 L20,8 L4,8 L4,6 L8,6 Z M6,9 L18,9 L17,20 L7,20 Z M9,11 L9,18 L11,18 L11,11 Z M13,11 L13,18 L15,18 L15,11 Z</StreamGeometry>
 

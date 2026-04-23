@@ -71,6 +71,9 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - `Esc` with a selected book closes the details panel (clears selection); does nothing when no book is selected
 - `Delete` with a selected book moves the book to the Recycle Bin; does nothing when no book is selected
 - `Delete` in the search field deletes text and does not trigger the trash command
+- Right-click on a non-selected book card selects that card before opening the context menu
+- Book-card context menu exposes `Export`, `Copy Title`, and `Move to Trash`
+- With a configured converter, book-card context menu also exposes `Export as EPUB`; it is enabled only for `FB2` books
 
 ---
 
