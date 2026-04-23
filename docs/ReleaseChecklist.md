@@ -82,6 +82,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Export: file appears on disk at the selected path **(RG)**
 - Export: suggested filename contains no Windows-forbidden characters **(RG)**
 - Export as EPUB: button is visible only when a converter is configured
+- Export as EPUB: without a configured converter, an `FB2` details panel hides the action and shows the `Settings` guidance instead
 - Export as EPUB: converter failure after a partial write does not corrupt an existing destination file
 - Compressed `.book.fb2.gz`: Export produces a readable `.fb2` **(RG)**
 - Compressed `.book.fb2.gz`: Export as EPUB works **(RG)**

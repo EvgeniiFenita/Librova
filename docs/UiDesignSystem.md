@@ -224,6 +224,17 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup. Popup открывается с `VerticalOffset=6` (зазор под кнопкой). При `:dropdownopen` иконка `DropDownGlyph` становится `AppAccentBrush` (янтарная) |
 | `CheckBox` | *(none)* | Foreground override to Primary |
 
+### Toolbar control parity
+
+Controls that serve the same role in the `Library` toolbar must keep the same baseline chrome:
+
+| Control | Default rule |
+|---|---|
+| `ComboBox.AppComboBox` | `MinHeight="42"`, `AppSurfaceAltBrush` surface, `AppBorderBrush` border |
+| `ToggleButton.FilterButton` | `MinHeight="42"`, `AppSurfaceAltBrush` surface via `/template/ ContentPresenter`, `AppBorderBrush` border |
+
+Do not force a fixed `Height` on toolbar controls. Use `MinHeight` so text, DPI scaling, and localized content can expand without clipping.
+
 ### ToolTip
 
 Global style applied in `Components.axaml`. No custom class needed — all `ToolTip.Tip` attributes pick it up automatically.

@@ -159,15 +159,7 @@ The following are outside the product scope by design:
 
 ## 5. High-Level Technical Picture
 
-Librova consists of two processes:
-
-- `Librova.UI` in `C# / .NET / Avalonia`
-- `Librova.Core` in `C++20`
-
-They communicate through:
-
-- `Protobuf`
-- Windows named pipes
+Implementation details such as the two-process split, named-pipe transport, and module ownership are documented in `docs/CodebaseMap.md`.
 
 ## 6. Related Documents
 

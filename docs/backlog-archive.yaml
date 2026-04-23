@@ -1545,3 +1545,20 @@ tasks:
     selected; IClipboardService injected end-to-end; BookCardContextMenu styles follow AppSurfaceElevatedBrush/AppAccentBorderBrush
     popup rule; 5 VM tests and 1 markup test added; Product.md, ReleaseChecklist, UiDesignSystem, and
     README updated.
+- id: 190
+  summary: synchronize stale documentation references and script docs across repository
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: unscheduled
+  note: Synchronized proto and product docs with the current module map, added a scripts reference to
+    README, documented the missing Export as EPUB no-converter release check, clarified toolbar control
+    parity in the UI design system, and removed the unused root plan template.
+- id: 191
+  summary: fix PublishPortable script output path in README scripts reference
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: unscheduled
+  note: Corrected the README scripts reference so PublishPortable now points to the final out\package\<PackageName>
+    portable output and explicitly distinguishes the intermediate out\publish directory.

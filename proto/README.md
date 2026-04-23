@@ -22,9 +22,9 @@ This file is intentionally **proto-local**. Use it for naming and toolchain remi
 ## Local Notes
 
 - contracts are transport-oriented and intentionally do not expose internal repository or managed-storage layout details
-- protobuf C++ code generation is wired into the native build through `libs/ProtoContracts`
-- application-to-transport mapping lives in `libs/ProtoMapping`
-- service-shaped protobuf request/response handling lives in `libs/ProtoServices`
+- generated protobuf C++ code and proto-to-domain mapping live under `libs/Rpc`
+- named-pipe transport hosting and request dispatch live under `libs/Transport`
+- C++ namespaces such as `Librova::ProtoMapping` and `Librova::ProtoServices` are implementation detail names inside `libs/Rpc`; they are not separate top-level modules
 - the MVP path intentionally uses named-pipe transport and does not require a gRPC runtime
 - managed protobuf class generation is wired through `Grpc.Tools` with `GrpcServices="None"`; this is code generation tooling, not a gRPC transport runtime
 - `protoc` is expected to come from the repository `vcpkg` toolchain via the `protobuf` package

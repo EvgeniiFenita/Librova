@@ -47,6 +47,19 @@ scripts\Run-Librova.ps1
 
 For agent-oriented task procedures, see the skills listed in `AGENTS.md`.
 
+## Scripts Reference
+
+| Script | Purpose | Common flags |
+|---|---|---|
+| `scripts\Run-Tests.ps1` | Configure, build, and run the native and managed test suites in the required build -> test order | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-SkipConfigure`, `-SkipNative`, `-SkipManaged` |
+| `scripts\Run-Librova.ps1` | Build and launch the native host and UI for manual verification | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-NoLaunch`, `-FirstRun`, `-SecondRun`, `-StartupErrorRecovery` |
+| `scripts\ValidateProto.ps1` | Validate `.proto` changes by compiling the descriptor set with the preset's `protoc` | `-BuildPreset <cmake-preset>`, `-ProtoFile <relative-proto-path>` |
+| `python scripts\backlog.py ...` | Inspect and maintain the backlog via the supported CLI instead of editing YAML directly | `list`, `show <id>`, `add`, `edit <id>`, `close <id>`, `validate` |
+| `scripts\PublishPortable.ps1` | Build the portable packaged distribution under `out\package\<PackageName>`; uses `out\publish\...` as an intermediate publish directory | `-NativePreset <cmake-preset>`, `-Configuration Release`, runtime/publish options defined in the script |
+| `scripts\GenerateLibrovaIcon.ps1` | Regenerate the application icon assets from the scripted source | no routine flags; run after editing the icon generator inputs |
+
+Use `Get-Content scripts\<name>.ps1 -TotalCount 40` or `Get-Help` for the full parameter list when a script changes.
+
 ## Branch Structure
 
 | Branch | Purpose |
