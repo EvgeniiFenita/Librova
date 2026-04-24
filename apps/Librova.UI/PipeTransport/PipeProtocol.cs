@@ -17,7 +17,12 @@ internal enum PipeMethod : uint
     WaitImportJob = 8,
     CancelImportJob = 9,
     RemoveImportJob = 10,
-    ValidateImportSources = 12
+    ValidateImportSources = 12,
+    ListCollections = 13,
+    CreateCollection = 14,
+    DeleteCollection = 15,
+    AddBookToCollection = 16,
+    RemoveBookFromCollection = 17
 }
 
 internal enum PipeResponseStatus : uint

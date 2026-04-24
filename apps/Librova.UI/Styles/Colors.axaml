@@ -143,6 +143,25 @@
   <SolidColorBrush x:Key="AppDangerHoverBgBrush"    Color="{StaticResource Color.DangerHoverBg}" />
   <SolidColorBrush x:Key="AppNavActiveBrush"        Color="{StaticResource Color.NavActive}" />
   <SolidColorBrush x:Key="AppNavActiveHoverBrush"   Color="{StaticResource Color.NavActiveHover}" />
+  <SolidColorBrush x:Key="AppDialogOverlayBrush"    Color="#80000000" />
+
+  <!-- Avalonia Fluent menu templates use MenuFlyout* resources inside nested submenu popups. -->
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource Color.SurfaceElevated}" />
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource Color.AccentBorder}" />
+  <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">1</Thickness>
+  <Thickness x:Key="MenuFlyoutPresenterThemePadding">6</Thickness>
+  <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
+  <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{StaticResource Color.AccentSurface}" />
+  <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{StaticResource Color.AccentSurfaceHover}" />
+  <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="Transparent" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="{StaticResource Color.TextMuted}" />
+  <SolidColorBrush x:Key="MenuFlyoutSubItemChevron" Color="{StaticResource Color.TextSecondary}" />
+  <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPointerOver" Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPressed" Color="{StaticResource Color.AccentBright}" />
+
   <SolidColorBrush x:Key="EmptyStateGlowBrush" Color="{StaticResource Color.EmptyStateGlow}" />
   <SolidColorBrush x:Key="EmptyStateGlowSoftBrush" Color="{StaticResource Color.EmptyStateGlowSoft}" />
   <SolidColorBrush x:Key="EmptyStateLeatherBrush" Color="{StaticResource Color.EmptyStateLeather}" />

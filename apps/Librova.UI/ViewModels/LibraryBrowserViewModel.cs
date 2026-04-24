@@ -31,6 +31,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private readonly LibraryBrowseRefreshController _refreshController;
     private readonly LibrarySelectionWorkflowController _selectionWorkflowController;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly Action<long>? _activateCollectionNavigation;
     private CancellationTokenSource? _refreshDebounce;
     private CancellationTokenSource? _loadMoreCancellation;
     private bool _isDisposed;
@@ -42,11 +43,18 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     private bool _isLoadingSelectionDetails;
     private bool _isFilterPanelOpen;
     private string _genreSearchText = string.Empty;
+    private string _newCollectionName = string.Empty;
+    private string _selectedCreateCollectionIconKey = BookCollectionIcons.All[0].Key;
+    private bool _isCreateCollectionDialogOpen;
+    private bool _isDeleteCollectionDialogOpen;
+    private BookCollectionListItemViewModel? _selectedCollection;
+    private BookCollectionListItemViewModel? _pendingDeleteCollection;
+    private BookListItemModel? _pendingCollectionMembershipBook;
     private EmptyStateKind _emptyStateKind;
     private int _detailsLoadVersion;
     private readonly LibrarySelectionState _selectionState = new(FormatSizeInMegabytes);
     private LibraryStatisticsModel _libraryStatistics = new();
-    private readonly Action? _navigateToImport;
+    private readonly Func<Task>? _navigateToImport;
 
     public LibraryBrowserViewModel(
         ILibraryCatalogService? libraryCatalogService = null,
@@ -56,7 +64,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         bool hasConfiguredConverter = false,
         BookSortModel? initialSortKey = null,
         bool initialSortDescending = false,
-        Action? navigateToImport = null,
+        Action<long>? activateCollectionNavigation = null,
+        Func<Task>? navigateToImport = null,
         IClipboardService? clipboardService = null)
     {
         _libraryCatalogService = libraryCatalogService ?? new NullLibraryCatalogService();
@@ -64,6 +73,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         _clipboardService = clipboardService ?? new NullClipboardService();
         _coverPresentationService = new LibraryCoverPresentationService(libraryRoot, coverImageLoader);
         _hasConfiguredConverter = hasConfiguredConverter;
+        _activateCollectionNavigation = activateCollectionNavigation;
         _navigateToImport = navigateToImport;
         _browseState = new LibraryBrowseQueryState(
             SortKeyOption.For(initialSortKey ?? BookSortModel.Title),
@@ -79,6 +89,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         ExportBookAsEpubFromCardCommand = new AsyncCommand<BookListItemModel?>(ExportBookAsEpubFromCardAsync, CanExportBookAsEpubFromCard, HandleCommandErrorAsync);
         MoveBookToTrashFromCardCommand = new AsyncCommand<BookListItemModel?>(MoveBookToTrashFromCardAsync, book => !IsBusy && book is not null, HandleCommandErrorAsync);
         CopyBookTitleCommand = new AsyncCommand<BookListItemModel?>(CopyBookTitleAsync, book => book is not null, HandleCommandErrorAsync);
+        SelectCollectionCommand = new AsyncCommand<BookCollectionListItemViewModel?>(SelectCollectionAsync, collection => collection is not null, HandleCommandErrorAsync);
+        ClearCollectionViewCommand = new AsyncCommand(ClearCollectionViewAsync, () => IsCollectionViewActive, HandleCommandErrorAsync);
+        OpenCreateCollectionCommand = new AsyncCommand(OpenCreateCollectionAsync, () => !IsBusy, HandleCommandErrorAsync);
+        CancelCreateCollectionCommand = new AsyncCommand(CancelCreateCollectionAsync, () => IsCreateCollectionDialogOpen, HandleCommandErrorAsync);
+        CreateCollectionCommand = new AsyncCommand(CreateCollectionAsync, CanCreateCollection, HandleCommandErrorAsync);
+        RequestDeleteCollectionCommand = new AsyncCommand<BookCollectionListItemViewModel?>(RequestDeleteCollectionAsync, collection => collection is not null, HandleCommandErrorAsync);
+        CancelDeleteCollectionCommand = new AsyncCommand(CancelDeleteCollectionAsync, () => IsDeleteCollectionDialogOpen, HandleCommandErrorAsync);
+        ConfirmDeleteCollectionCommand = new AsyncCommand(ConfirmDeleteCollectionAsync, () => IsDeleteCollectionDialogOpen && _pendingDeleteCollection is not null, HandleCommandErrorAsync);
+        ToggleBookCollectionMembershipCommand = new AsyncCommand<BookCollectionMembershipRequest?>(ToggleBookCollectionMembershipAsync, request => request is not null, HandleCommandErrorAsync);
+        RemoveBookFromSelectedCollectionCommand = new AsyncCommand<BookListItemModel?>(RemoveBookFromSelectedCollectionAsync, book => book is not null && IsCollectionViewActive, HandleCommandErrorAsync);
         SelectBookCommand = new AsyncCommand<BookListItemModel?>(ToggleSelectedBookAsync, book => book is not null);
         CloseSelectionCommand = new AsyncCommand(CloseSelectionAsync, () => HasSelectedBook, HandleCommandErrorAsync);
         ToggleSortDirectionCommand = new AsyncCommand(ToggleSortDirectionAsync, () => true, HandleCommandErrorAsync);
@@ -103,7 +123,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public ObservableCollection<BookListItemModel> Books { get; } = [];
     public ObservableCollection<FilterFacetItem> LanguageFacets { get; } = [];
     public ObservableCollection<FilterFacetItem> GenreFacets { get; } = [];
+    public ObservableCollection<BookCollectionListItemViewModel> Collections { get; } = [];
     public IReadOnlyList<SortKeyOption> AvailableSortKeys { get; } = SortKeyOption.All;
+    public IReadOnlyList<BookCollectionIconOption> AvailableCollectionIcons => BookCollectionIcons.All;
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand LoadDetailsCommand { get; }
     public AsyncCommand ExportSelectedBookCommand { get; }
@@ -113,6 +135,16 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public AsyncCommand<BookListItemModel?> ExportBookAsEpubFromCardCommand { get; }
     public AsyncCommand<BookListItemModel?> MoveBookToTrashFromCardCommand { get; }
     public AsyncCommand<BookListItemModel?> CopyBookTitleCommand { get; }
+    public AsyncCommand<BookCollectionListItemViewModel?> SelectCollectionCommand { get; }
+    public AsyncCommand ClearCollectionViewCommand { get; }
+    public AsyncCommand OpenCreateCollectionCommand { get; }
+    public AsyncCommand CancelCreateCollectionCommand { get; }
+    public AsyncCommand CreateCollectionCommand { get; }
+    public AsyncCommand<BookCollectionListItemViewModel?> RequestDeleteCollectionCommand { get; }
+    public AsyncCommand CancelDeleteCollectionCommand { get; }
+    public AsyncCommand ConfirmDeleteCollectionCommand { get; }
+    public AsyncCommand<BookCollectionMembershipRequest?> ToggleBookCollectionMembershipCommand { get; }
+    public AsyncCommand<BookListItemModel?> RemoveBookFromSelectedCollectionCommand { get; }
     public AsyncCommand<BookListItemModel?> SelectBookCommand { get; }
     public AsyncCommand CloseSelectionCommand { get; }
     public AsyncCommand ToggleSortDirectionCommand { get; }
@@ -172,7 +204,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         }
     }
 
-    public int ActiveFilterCount => _browseState.SelectedLanguages.Count + _browseState.SelectedGenres.Count;
+    public int ActiveFilterCount =>
+        _browseState.SelectedLanguages.Count
+        + _browseState.SelectedGenres.Count;
 
     public bool HasActiveFilters => _browseState.HasActiveFilters;
 
@@ -366,6 +400,8 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     }
 
     public bool HasBooks => Books.Count > 0;
+    public bool HasCollections => Collections.Count > 0;
+    public bool IsCollectionViewActive => SelectedCollection is not null;
     public bool HasSelectedBook => SelectedBook is not null;
     public bool ShowDetailsPanel => HasSelectedBook;
     public bool ShowDetailsPanelLoading => HasSelectedBook && IsLoadingSelectionDetails;
@@ -378,6 +414,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public bool ShowClearFiltersButton => _emptyStateKind == EmptyStateKind.NoResults;
     public bool ShowLoadMoreIndicator => HasBooks && IsLoadingMore;
     public string BookCountText => FormatBookCount(_browseState.TotalBookCount);
+    public string CollectionViewTitle => SelectedCollection?.Name ?? "Library";
     public string LibraryStatisticsText =>
         _isLibraryStatisticsUnavailable
             ? "Library summary unavailable."
@@ -393,6 +430,92 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
     public bool HasSelectedBookCover => _selectionState.HasSelectedBookCover;
     public bool ShowSelectedBookCoverPlaceholder => _selectionState.ShowSelectedBookCoverPlaceholder;
     public IReadOnlyList<MetadataPair> SelectedBookMetadataPairs => _selectionState.SelectedBookMetadataPairs;
+
+    public BookCollectionListItemViewModel? SelectedCollection
+    {
+        get => _selectedCollection;
+        private set
+        {
+            if (ReferenceEquals(_selectedCollection, value))
+            {
+                return;
+            }
+
+            if (_selectedCollection is not null)
+            {
+                _selectedCollection.IsSelected = false;
+            }
+
+            if (SetProperty(ref _selectedCollection, value) && _selectedCollection is not null)
+            {
+                _selectedCollection.IsSelected = true;
+            }
+
+            RaisePropertyChanged(nameof(IsCollectionViewActive));
+            RaisePropertyChanged(nameof(CollectionViewTitle));
+            ClearCollectionViewCommand.RaiseCanExecuteChanged();
+            RemoveBookFromSelectedCollectionCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string NewCollectionName
+    {
+        get => _newCollectionName;
+        set
+        {
+            if (SetProperty(ref _newCollectionName, value))
+            {
+                CreateCollectionCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string SelectedCreateCollectionIconKey
+    {
+        get => _selectedCreateCollectionIconKey;
+        set
+        {
+            if (SetProperty(ref _selectedCreateCollectionIconKey, value))
+            {
+                RaisePropertyChanged(nameof(SelectedCreateCollectionIcon));
+                CreateCollectionCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public BookCollectionIconOption? SelectedCreateCollectionIcon
+    {
+        get => AvailableCollectionIcons.FirstOrDefault(option => option.Key == SelectedCreateCollectionIconKey);
+        set => SelectedCreateCollectionIconKey = value?.Key ?? BookCollectionIcons.All[0].Key;
+    }
+
+    public bool IsCreateCollectionDialogOpen
+    {
+        get => _isCreateCollectionDialogOpen;
+        private set
+        {
+            if (SetProperty(ref _isCreateCollectionDialogOpen, value))
+            {
+                CancelCreateCollectionCommand.RaiseCanExecuteChanged();
+                CreateCollectionCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool IsDeleteCollectionDialogOpen
+    {
+        get => _isDeleteCollectionDialogOpen;
+        private set
+        {
+            if (SetProperty(ref _isDeleteCollectionDialogOpen, value))
+            {
+                CancelDeleteCollectionCommand.RaiseCanExecuteChanged();
+                ConfirmDeleteCollectionCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string PendingDeleteCollectionName => _pendingDeleteCollection?.Name ?? string.Empty;
 
     public async Task RefreshAsync()
     {
@@ -654,9 +777,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         && _hasConfiguredConverter
         && book?.Format is BookFormatModel.Fb2;
 
+    private bool HasResultRestrictions => _browseState.HasResultRestrictions;
+
     private EmptyStateKind ComputeEmptyStateKind() =>
         HasBooks ? EmptyStateKind.None :
-        HasActiveFilters ? EmptyStateKind.NoResults :
+        HasResultRestrictions ? EmptyStateKind.NoResults :
         EmptyStateKind.LibraryEmpty;
 
     private void ApplyEmptyState(EmptyStateKind kind)
@@ -682,9 +807,9 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         // - NoResults + filters still active   → keep NoResults; no flicker on each keystroke
         if (_emptyStateKind == EmptyStateKind.LibraryEmpty)
         {
-            ApplyEmptyState(HasActiveFilters ? EmptyStateKind.NoResults : EmptyStateKind.None);
+            ApplyEmptyState(HasResultRestrictions ? EmptyStateKind.NoResults : EmptyStateKind.None);
         }
-        else if (_emptyStateKind == EmptyStateKind.NoResults && !HasActiveFilters)
+        else if (_emptyStateKind == EmptyStateKind.NoResults && !HasResultRestrictions)
         {
             ApplyEmptyState(EmptyStateKind.None);
         }
@@ -802,9 +927,11 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
             _browseState.SetLoadedState(nextBatchNumber, refreshResult.TotalCount, Books.Count);
             _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
             SyncHasMoreResults(previousHasMoreResults);
+            UpdateCollections(refreshResult.Collections);
             UpdateAvailableLanguages(refreshResult.AvailableLanguages);
             UpdateAvailableGenres(refreshResult.AvailableGenres);
             RaisePropertyChanged(nameof(HasBooks));
+            RaisePropertyChanged(nameof(HasCollections));
             ApplyEmptyState(ComputeEmptyStateKind());
             RaisePropertyChanged(nameof(BookCountText));
             RaisePropertyChanged(nameof(LibraryStatisticsText));
@@ -880,6 +1007,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         bool previousHasMoreResults)
     {
         ApplyVisibleItems(refreshResult.VisibleItems);
+        UpdateCollections(refreshResult.Collections);
         UpdateAvailableLanguages(refreshResult.AvailableLanguages);
         UpdateAvailableGenres(refreshResult.AvailableGenres);
 
@@ -900,6 +1028,7 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         _isLibraryStatisticsUnavailable = ApplyLibraryStatistics(refreshResult.Statistics);
         SyncHasMoreResults(previousHasMoreResults);
         RaisePropertyChanged(nameof(HasBooks));
+        RaisePropertyChanged(nameof(HasCollections));
         ApplyEmptyState(ComputeEmptyStateKind());
         RaisePropertyChanged(nameof(BookCountText));
         RaisePropertyChanged(nameof(LibraryStatisticsText));
@@ -1140,10 +1269,279 @@ internal sealed class LibraryBrowserViewModel : ObservableObject, IDisposable
         return Task.CompletedTask;
     }
 
-    private Task GoToImportAsync()
+    private async Task SelectCollectionAsync(BookCollectionListItemViewModel? collection)
     {
-        _navigateToImport?.Invoke();
+        if (_isDisposed || collection is null)
+        {
+            return;
+        }
+
+        SelectedCollection = collection;
+        _browseState.SelectedCollectionId = collection.CollectionId;
+        _activateCollectionNavigation?.Invoke(collection.CollectionId);
+        await RefreshAsync();
+    }
+
+    public async Task ClearCollectionViewAsync()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        SelectedCollection = null;
+        _browseState.SelectedCollectionId = null;
+        await RefreshAsync();
+    }
+
+    private Task OpenCreateCollectionAsync()
+    {
+        _pendingCollectionMembershipBook = null;
+        NewCollectionName = string.Empty;
+        SelectedCreateCollectionIconKey = BookCollectionIcons.All[0].Key;
+        IsCreateCollectionDialogOpen = true;
         return Task.CompletedTask;
+    }
+
+    private Task CancelCreateCollectionAsync()
+    {
+        _pendingCollectionMembershipBook = null;
+        IsCreateCollectionDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private bool CanCreateCollection() =>
+        IsCreateCollectionDialogOpen
+        && !IsBusy
+        && !string.IsNullOrWhiteSpace(NewCollectionName)
+        && !string.IsNullOrWhiteSpace(SelectedCreateCollectionIconKey);
+
+    private async Task CreateCollectionAsync()
+    {
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
+        var createdCollection = await _libraryCatalogService.CreateCollectionAsync(
+            NewCollectionName.Trim(),
+            SelectedCreateCollectionIconKey,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+        if (IsLifetimeCancellationRequested(cancellation.Token) || createdCollection is null)
+        {
+            return;
+        }
+
+        if (_pendingCollectionMembershipBook is not null)
+        {
+            var book = _pendingCollectionMembershipBook;
+            bool added;
+            try
+            {
+                added = await _libraryCatalogService.AddBookToCollectionAsync(
+                    book.BookId,
+                    createdCollection.CollectionId,
+                    TimeSpan.FromSeconds(5),
+                    cancellation.Token);
+            }
+            catch
+            {
+                await RollBackCreatedCollectionAsync(createdCollection, cancellation.Token);
+                throw;
+            }
+
+            if (!added)
+            {
+                await RollBackCreatedCollectionAsync(createdCollection, cancellation.Token);
+                StatusText = $"Created collection '{createdCollection.Name}' but could not add '{book.Title}'.";
+                return;
+            }
+        }
+
+        IsCreateCollectionDialogOpen = false;
+        _pendingCollectionMembershipBook = null;
+        await RefreshLoadedRangeAsync(Math.Max(_browseState.LoadedPageCount, 1));
+        if (SelectedBook is not null)
+        {
+            await LoadSelectedBookDetailsAsync();
+        }
+        StatusText = $"Created collection '{createdCollection.Name}'.";
+    }
+
+    private async Task RollBackCreatedCollectionAsync(BookCollectionModel createdCollection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _libraryCatalogService.DeleteCollectionAsync(
+                createdCollection.CollectionId,
+                TimeSpan.FromSeconds(5),
+                cancellationToken);
+        }
+        catch (Exception error)
+        {
+            UiLogging.Warning(
+                error,
+                "Failed to roll back collection after membership add failure. CollectionId={CollectionId}",
+                createdCollection.CollectionId);
+        }
+    }
+
+    private Task RequestDeleteCollectionAsync(BookCollectionListItemViewModel? collection)
+    {
+        if (_isDisposed || collection is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _pendingDeleteCollection = collection;
+        RaisePropertyChanged(nameof(PendingDeleteCollectionName));
+        IsDeleteCollectionDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelDeleteCollectionAsync()
+    {
+        _pendingDeleteCollection = null;
+        RaisePropertyChanged(nameof(PendingDeleteCollectionName));
+        IsDeleteCollectionDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmDeleteCollectionAsync()
+    {
+        if (_pendingDeleteCollection is null)
+        {
+            return;
+        }
+
+        var deletingCollection = _pendingDeleteCollection;
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
+        var deleted = await _libraryCatalogService.DeleteCollectionAsync(
+            deletingCollection.CollectionId,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+        if (IsLifetimeCancellationRequested(cancellation.Token))
+        {
+            return;
+        }
+
+        IsDeleteCollectionDialogOpen = false;
+        _pendingDeleteCollection = null;
+        RaisePropertyChanged(nameof(PendingDeleteCollectionName));
+
+        if (SelectedCollection?.CollectionId == deletingCollection.CollectionId)
+        {
+            SelectedCollection = null;
+            _browseState.SelectedCollectionId = null;
+        }
+
+        await RefreshLoadedRangeAsync(Math.Max(_browseState.LoadedPageCount, 1));
+        if (SelectedBook is not null)
+        {
+            await LoadSelectedBookDetailsAsync();
+        }
+        StatusText = deleted
+            ? $"Deleted collection '{deletingCollection.Name}'."
+            : $"Collection '{deletingCollection.Name}' was not found.";
+    }
+
+    private async Task ToggleBookCollectionMembershipAsync(BookCollectionMembershipRequest? request)
+    {
+        if (_isDisposed || request is null)
+        {
+            return;
+        }
+
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
+        var changed = await _libraryCatalogService.AddBookToCollectionAsync(
+            request.Book.BookId,
+            request.Collection.CollectionId,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+        if (IsLifetimeCancellationRequested(cancellation.Token))
+        {
+            return;
+        }
+
+        var statusText = changed
+            ? $"Added '{request.Book.Title}' to '{request.Collection.Name}'."
+            : $"'{request.Book.Title}' is already in '{request.Collection.Name}'.";
+
+        await RefreshLoadedRangeAsync(Math.Max(_browseState.LoadedPageCount, 1));
+        if (SelectedBook?.BookId == request.Book.BookId)
+        {
+            await LoadSelectedBookDetailsAsync();
+        }
+
+        StatusText = statusText;
+    }
+
+    private async Task RemoveBookFromSelectedCollectionAsync(BookListItemModel? book)
+    {
+        if (_isDisposed || book is null || SelectedCollection is null)
+        {
+            return;
+        }
+
+        var targetCollection = SelectedCollection;
+        using var cancellation = CreateOperationCancellationSource(TimeSpan.FromSeconds(10));
+        await _libraryCatalogService.RemoveBookFromCollectionAsync(
+            book.BookId,
+            targetCollection.CollectionId,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+        if (IsLifetimeCancellationRequested(cancellation.Token))
+        {
+            return;
+        }
+
+        await RefreshLoadedRangeAsync(Math.Max(_browseState.LoadedPageCount, 1));
+        if (SelectedBook?.BookId == book.BookId)
+        {
+            await LoadSelectedBookDetailsAsync();
+        }
+        StatusText = $"Removed '{book.Title}' from '{targetCollection.Name}'.";
+    }
+
+    public void StartCreateCollectionForBook(BookListItemModel? book)
+    {
+        if (_isDisposed || book is null)
+        {
+            return;
+        }
+
+        _pendingCollectionMembershipBook = book;
+        NewCollectionName = string.Empty;
+        SelectedCreateCollectionIconKey = BookCollectionIcons.All[0].Key;
+        IsCreateCollectionDialogOpen = true;
+    }
+
+    private void UpdateCollections(IEnumerable<BookCollectionModel> collections)
+    {
+        var previousSelectedId = SelectedCollection?.CollectionId;
+        Collections.Clear();
+        foreach (var collection in collections)
+        {
+            Collections.Add(new BookCollectionListItemViewModel(collection));
+        }
+
+        if (previousSelectedId is null)
+        {
+            SelectedCollection = null;
+            return;
+        }
+
+        var restoredSelection = Collections.FirstOrDefault(collection => collection.CollectionId == previousSelectedId.Value);
+        SelectedCollection = restoredSelection;
+        if (restoredSelection is null && _browseState.SelectedCollectionId == previousSelectedId.Value)
+        {
+            _browseState.SelectedCollectionId = null;
+        }
+    }
+
+    private async Task GoToImportAsync()
+    {
+        if (_navigateToImport is not null)
+        {
+            await _navigateToImport();
+        }
     }
 
     private static string FormatBookCount(ulong bookCount) =>

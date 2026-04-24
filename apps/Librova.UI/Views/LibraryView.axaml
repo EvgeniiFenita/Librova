@@ -420,53 +420,6 @@
                             ContextRequested="OnBookCardContextRequested"
                             Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.SelectBookCommand}"
                             CommandParameter="{Binding .}">
-                        <Button.ContextMenu>
-                          <ContextMenu Classes="BookCardContextMenu"
-                                       DataContext="{Binding .}">
-                            <MenuItem Classes="BookCardContextItem"
-                                      Header="Export"
-                                      Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.ExportBookFromCardCommand}"
-                                      CommandParameter="{Binding .}">
-                              <MenuItem.Icon>
-                                <PathIcon Width="16"
-                                          Height="16"
-                                          Data="{StaticResource IconExport}" />
-                              </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Classes="BookCardContextItem"
-                                      Header="Export as EPUB"
-                                      IsVisible="{Binding #LibraryRootView.DataContext.HasConfiguredConverter}"
-                                      Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.ExportBookAsEpubFromCardCommand}"
-                                      CommandParameter="{Binding .}">
-                              <MenuItem.Icon>
-                                <PathIcon Width="16"
-                                          Height="16"
-                                          Data="{StaticResource IconExport}" />
-                              </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Classes="BookCardContextItem"
-                                      Header="Copy Title"
-                                      Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.CopyBookTitleCommand}"
-                                      CommandParameter="{Binding .}">
-                              <MenuItem.Icon>
-                                <PathIcon Width="16"
-                                          Height="16"
-                                          Data="{StaticResource IconCopy}" />
-                              </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator Classes="BookCardContextSeparator" />
-                            <MenuItem Classes="BookCardContextItem Destructive"
-                                      Header="Move to Trash"
-                                      Command="{Binding #LibraryRootView.DataContext.LibraryBrowser.MoveBookToTrashFromCardCommand}"
-                                      CommandParameter="{Binding .}">
-                              <MenuItem.Icon>
-                                <PathIcon Width="16"
-                                          Height="16"
-                                          Data="{StaticResource IconTrash}" />
-                              </MenuItem.Icon>
-                            </MenuItem>
-                          </ContextMenu>
-                        </Button.ContextMenu>
                         <Border Classes="BookCard"
                               Height="300">
                         <Border.BorderBrush>

@@ -30,6 +30,7 @@ internal sealed class LibraryBrowseRefreshController
             _browseState.BuildBatchRequest(batchNumber),
             timeout,
             cancellationToken);
+        var collections = await _libraryCatalogService.ListCollectionsAsync(timeout, cancellationToken);
 
         var visibleItems = page.Items.Select(prepare).ToArray();
         _browseState.SetLoadedState(batchNumber, page.TotalCount, visibleItems.Length);
@@ -38,6 +39,7 @@ internal sealed class LibraryBrowseRefreshController
             page.TotalCount,
             page.AvailableLanguages,
             page.AvailableGenres,
+            collections,
             page.Statistics);
     }
 
@@ -51,6 +53,7 @@ internal sealed class LibraryBrowseRefreshController
             _browseState.BuildBatchRequest(batchNumber),
             timeout,
             cancellationToken);
+        var collections = await _libraryCatalogService.ListCollectionsAsync(timeout, cancellationToken);
 
         var visibleItems = page.Items.Select(prepare).ToArray();
         return new LibraryBrowseRefreshResult(
@@ -58,6 +61,7 @@ internal sealed class LibraryBrowseRefreshController
             page.TotalCount,
             page.AvailableLanguages,
             page.AvailableGenres,
+            collections,
             page.Statistics);
     }
 
@@ -71,6 +75,7 @@ internal sealed class LibraryBrowseRefreshController
             _browseState.BuildInitialRangeRequest(itemLimit),
             timeout,
             cancellationToken);
+        var collections = await _libraryCatalogService.ListCollectionsAsync(timeout, cancellationToken);
 
         var visibleItems = page.Items.Select(prepare).ToArray();
         _browseState.SetLoadedRangeState(visibleItems.Length, page.TotalCount);
@@ -79,6 +84,7 @@ internal sealed class LibraryBrowseRefreshController
             page.TotalCount,
             page.AvailableLanguages,
             page.AvailableGenres,
+            collections,
             page.Statistics);
     }
 }
@@ -88,4 +94,5 @@ internal sealed record LibraryBrowseRefreshResult(
     ulong TotalCount,
     IReadOnlyList<FacetItemModel> AvailableLanguages,
     IReadOnlyList<FacetItemModel> AvailableGenres,
+    IReadOnlyList<BookCollectionModel> Collections,
     LibraryStatisticsModel? Statistics);

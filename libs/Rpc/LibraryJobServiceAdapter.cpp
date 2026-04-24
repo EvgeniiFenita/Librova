@@ -218,6 +218,122 @@ librova::v1::MoveBookToTrashResponse CLibraryJobServiceAdapter::MoveBookToTrash(
     }
 }
 
+librova::v1::ListCollectionsResponse CLibraryJobServiceAdapter::ListCollections(
+    const librova::v1::ListCollectionsRequest&) const
+{
+    try
+    {
+        const auto collections = m_libraryCatalogFacade.ListCollections();
+        Librova::Logging::InfoIfInitialized(
+            "ListCollections returned {} collection(s).",
+            collections.size());
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoCollectionsResponse(collections);
+    }
+    catch (const std::exception& error)
+    {
+        Librova::Logging::WarnIfInitialized("ListCollections failed. Error='{}'.", error.what());
+        const auto mappedError = MapCatalogExceptionToError(error);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoCollectionsResponse({}, &mappedError);
+    }
+}
+
+librova::v1::CreateCollectionResponse CLibraryJobServiceAdapter::CreateCollection(
+    const librova::v1::CreateCollectionRequest& request) const
+{
+    try
+    {
+        const auto collection = m_libraryCatalogFacade.CreateCollection(request.name(), request.icon_key());
+        Librova::Logging::InfoIfInitialized(
+            "CreateCollection created collection {} ('{}').",
+            collection.Id,
+            collection.NameUtf8);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoCreateCollectionResponse(&collection);
+    }
+    catch (const std::exception& error)
+    {
+        Librova::Logging::WarnIfInitialized("CreateCollection failed. Name='{}' Error='{}'.", request.name(), error.what());
+        const auto mappedError = MapCatalogExceptionToError(error);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoCreateCollectionResponse(
+            static_cast<const Librova::Domain::SBookCollection*>(nullptr),
+            &mappedError);
+    }
+}
+
+librova::v1::DeleteCollectionResponse CLibraryJobServiceAdapter::DeleteCollection(
+    const librova::v1::DeleteCollectionRequest& request) const
+{
+    try
+    {
+        const bool deleted = m_libraryCatalogFacade.DeleteCollection(request.collection_id());
+        Librova::Logging::InfoIfInitialized(
+            "DeleteCollection for collection {} deleted={}.",
+            request.collection_id(),
+            deleted);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoDeleteCollectionResponse(
+            deleted);
+    }
+    catch (const std::exception& error)
+    {
+        Librova::Logging::WarnIfInitialized("DeleteCollection failed for collection {}. Error='{}'.", request.collection_id(), error.what());
+        const auto mappedError = MapCatalogExceptionToError(error);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoDeleteCollectionResponse(false, &mappedError);
+    }
+}
+
+librova::v1::AddBookToCollectionResponse CLibraryJobServiceAdapter::AddBookToCollection(
+    const librova::v1::AddBookToCollectionRequest& request) const
+{
+    try
+    {
+        const bool changed = m_libraryCatalogFacade.AddBookToCollection(
+            Librova::Domain::SBookId{request.book_id()},
+            request.collection_id());
+        Librova::Logging::InfoIfInitialized(
+            "AddBookToCollection completed. BookId={} CollectionId={} Changed={}.",
+            request.book_id(),
+            request.collection_id(),
+            changed);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoAddBookToCollectionResponse(changed);
+    }
+    catch (const std::exception& error)
+    {
+        Librova::Logging::WarnIfInitialized(
+            "AddBookToCollection failed. BookId={} CollectionId={} Error='{}'.",
+            request.book_id(),
+            request.collection_id(),
+            error.what());
+        const auto mappedError = MapCatalogExceptionToError(error);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoAddBookToCollectionResponse(false, &mappedError);
+    }
+}
+
+librova::v1::RemoveBookFromCollectionResponse CLibraryJobServiceAdapter::RemoveBookFromCollection(
+    const librova::v1::RemoveBookFromCollectionRequest& request) const
+{
+    try
+    {
+        const bool changed = m_libraryCatalogFacade.RemoveBookFromCollection(
+            Librova::Domain::SBookId{request.book_id()},
+            request.collection_id());
+        Librova::Logging::InfoIfInitialized(
+            "RemoveBookFromCollection completed. BookId={} CollectionId={} Changed={}.",
+            request.book_id(),
+            request.collection_id(),
+            changed);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoRemoveBookFromCollectionResponse(changed);
+    }
+    catch (const std::exception& error)
+    {
+        Librova::Logging::WarnIfInitialized(
+            "RemoveBookFromCollection failed. BookId={} CollectionId={} Error='{}'.",
+            request.book_id(),
+            request.collection_id(),
+            error.what());
+        const auto mappedError = MapCatalogExceptionToError(error);
+        return Librova::ProtoMapping::CLibraryCatalogProtoMapper::ToProtoRemoveBookFromCollectionResponse(false, &mappedError);
+    }
+}
+
 librova::v1::GetImportJobSnapshotResponse CLibraryJobServiceAdapter::GetImportJobSnapshot(
     const librova::v1::GetImportJobSnapshotRequest& request) const
 {

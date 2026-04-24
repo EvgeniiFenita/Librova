@@ -74,6 +74,16 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Right-click on a non-selected book card selects that card before opening the context menu
 - Book-card context menu exposes `Export`, `Copy Title`, and `Move to Trash`
 - With a configured converter, book-card context menu also exposes `Export as EPUB`; it is enabled only for `FB2` books
+- Collections: sidebar shows emoji-icon collection buttons under Library/Import; empty state has 📚 glyph + "Create one" CTA; "New collection" ghost button appears below the list when collections exist; delete is via right-click context menu on a collection item
+- Collections: creating a collection adds it to the sidebar without leaving `Library` **(RG)**
+- Collections: selecting a collection filters the ordinary library grid to that collection **(RG)**
+- Collections: clicking `Library` clears the active collection view and returns to the full catalog
+- Collections: book-card context menu exposes `Add to` submenu with existing collections
+- Collections: `Create new...` from the book-card context menu creates the collection and adds that book to it **(RG)**
+- Collections: `Remove from collection` is visible in collection view and removes only membership, not the book itself **(RG)**
+- Collections: deleting a collection keeps its books in the library and removes only memberships **(RG)**
+- Book details: selected-book details panel shows collection memberships when present
+- Collection view: drag-and-drop import is disabled while a collection is active
 
 ---
 

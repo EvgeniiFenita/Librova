@@ -6,7 +6,7 @@ TEST_CASE("Database schema exposes current version and migration steps", "[datab
 {
     const auto& migrations = Librova::DatabaseSchema::CDatabaseSchema::GetMigrationStatements();
 
-    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 1);
+    REQUIRE(Librova::DatabaseSchema::CDatabaseSchema::GetCurrentVersion() == 2);
     REQUIRE(migrations.size() == 3);
     REQUIRE(migrations[0] == "PRAGMA foreign_keys = ON;");
     REQUIRE(migrations[1] == "PRAGMA journal_mode = WAL;");
@@ -33,6 +33,16 @@ TEST_CASE("Database schema script contains genre infrastructure tables", "[datab
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_genres_genre_id") != std::string_view::npos);
 }
 
+TEST_CASE("Database schema script contains collection infrastructure tables", "[database-schema]")
+{
+    const std::string_view script = Librova::DatabaseSchema::CDatabaseSchema::GetCreateSchemaScript();
+
+    REQUIRE(script.find("CREATE TABLE IF NOT EXISTS collections") != std::string_view::npos);
+    REQUIRE(script.find("CREATE TABLE IF NOT EXISTS book_collections") != std::string_view::npos);
+    REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_collections_normalized_name") != std::string_view::npos);
+    REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_collections_collection_id") != std::string_view::npos);
+}
+
 TEST_CASE("Database schema FTS search_index has genres column", "[database-schema]")
 {
     const std::string_view script = Librova::DatabaseSchema::CDatabaseSchema::GetCreateSchemaScript();
@@ -53,4 +63,3 @@ TEST_CASE("Database schema script contains required indexes", "[database-schema]
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_authors_author_id") != std::string_view::npos);
     REQUIRE(script.find("CREATE INDEX IF NOT EXISTS idx_book_tags_tag_id") != std::string_view::npos);
 }
-

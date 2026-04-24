@@ -2,11 +2,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Librova.UI.LibraryCatalog;
 using Librova.UI.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
@@ -15,6 +17,9 @@ namespace Librova.UI.Views;
 
 internal sealed partial class LibraryView : UserControl
 {
+    private const int MaxCollectionContextMenuNameLength = 36;
+    private const string CollectionContextMenuEllipsis = "...";
+
     private ScrollViewer? _booksViewport;
     private LibraryBrowserViewModel? _libraryBrowser;
     private long? _selectionAnchorBookId;
@@ -149,21 +154,162 @@ internal sealed partial class LibraryView : UserControl
 
     private void OnBookCardContextRequested(object? sender, ContextRequestedEventArgs eventArgs)
     {
-        if (sender is not Button { DataContext: BookListItemModel requestedBook } || _libraryBrowser is null)
+        if (sender is not Button { DataContext: BookListItemModel requestedBook } button || _libraryBrowser is null)
         {
             return;
         }
 
-        if (_libraryBrowser.SelectedBook?.BookId == requestedBook.BookId)
-        {
-            return;
-        }
-
-        if (_libraryBrowser.SelectBookCommand.CanExecute(requestedBook))
+        if (_libraryBrowser.SelectedBook?.BookId != requestedBook.BookId
+            && _libraryBrowser.SelectBookCommand.CanExecute(requestedBook))
         {
             _libraryBrowser.SelectBookCommand.Execute(requestedBook);
         }
+
+        var menu = BuildBookCardContextMenu(_libraryBrowser, requestedBook);
+        button.ContextMenu = menu;
+        menu.Open(button);
+        eventArgs.Handled = true;
     }
+
+    internal static ContextMenu BuildBookCardContextMenu(LibraryBrowserViewModel libraryBrowser, BookListItemModel requestedBook)
+    {
+        var menuItems = new List<object>
+        {
+            CreateCommandMenuItem("Export", libraryBrowser.ExportBookFromCardCommand, requestedBook, "IconExport")
+        };
+
+        if (libraryBrowser.ExportBookAsEpubFromCardCommand.CanExecute(requestedBook))
+        {
+            menuItems.Add(CreateCommandMenuItem("Export as EPUB", libraryBrowser.ExportBookAsEpubFromCardCommand, requestedBook, "IconExport"));
+        }
+
+        var membershipItems = new List<object>();
+        var membershipMenu = new MenuItem
+        {
+            Header = "Add to",
+            Icon = CreateMenuIcon("IconAddFolder"),
+            Classes = { "BookCardContextItem" }
+        };
+
+        foreach (var collection in libraryBrowser.Collections)
+        {
+            var isMember = requestedBook.Collections.Any(item => item.CollectionId == collection.CollectionId);
+            var membershipItem = new MenuItem
+            {
+                Header = FormatCollectionContextMenuHeader(collection.Name, isMember),
+                Command = libraryBrowser.ToggleBookCollectionMembershipCommand,
+                CommandParameter = new BookCollectionMembershipRequest(requestedBook, collection.Collection, isMember),
+                IsEnabled = !isMember,
+                Icon = CreateCollectionGlyphIcon(collection.IconGlyph),
+                Classes = { "BookCardContextItem" }
+            };
+            ToolTip.SetTip(membershipItem, collection.Name);
+            membershipItems.Add(membershipItem);
+        }
+
+        membershipItems.Add(new Separator
+        {
+            Classes = { "BookCardContextSeparator" }
+        });
+        var createNewItem = new MenuItem
+        {
+            Header = "Create new...",
+            Classes = { "BookCardContextItem" }
+        };
+        createNewItem.Click += (_, _) => libraryBrowser.StartCreateCollectionForBook(requestedBook);
+        membershipItems.Add(createNewItem);
+        foreach (var item in membershipItems)
+        {
+            membershipMenu.Items.Add(item);
+        }
+
+        menuItems.Add(membershipMenu);
+
+        if (libraryBrowser.IsCollectionViewActive)
+        {
+            menuItems.Add(CreateCommandMenuItem("Remove from collection", libraryBrowser.RemoveBookFromSelectedCollectionCommand, requestedBook, "IconClose"));
+        }
+
+        menuItems.Add(CreateCommandMenuItem("Copy Title", libraryBrowser.CopyBookTitleCommand, requestedBook, "IconCopy"));
+        menuItems.Add(new Separator
+        {
+            Classes = { "BookCardContextSeparator" }
+        });
+        menuItems.Add(CreateCommandMenuItem("Move to Trash", libraryBrowser.MoveBookToTrashFromCardCommand, requestedBook, "IconTrash", isDestructive: true));
+
+        return new ContextMenu
+        {
+            ItemsSource = menuItems,
+            Classes = { "BookCardContextMenu" }
+        };
+    }
+
+    private static MenuItem CreateCommandMenuItem(
+        string header,
+        System.Windows.Input.ICommand command,
+        object parameter,
+        string iconResourceKey,
+        bool isDestructive = false)
+    {
+        var menuItem = new MenuItem
+        {
+            Header = header,
+            Command = command,
+            CommandParameter = parameter,
+            Icon = CreateMenuIcon(iconResourceKey)
+        };
+        menuItem.Classes.Add("BookCardContextItem");
+        if (isDestructive)
+        {
+            menuItem.Classes.Add("Destructive");
+        }
+
+        return menuItem;
+    }
+
+    private static string FormatCollectionContextMenuHeader(string name, bool isMember)
+    {
+        var displayName = TruncateCollectionContextMenuName(name);
+        return isMember ? $"✓ {displayName}" : displayName;
+    }
+
+    private static string TruncateCollectionContextMenuName(string name)
+    {
+        var normalizedName = string.IsNullOrWhiteSpace(name) ? "Untitled collection" : name.Trim();
+        if (normalizedName.Length <= MaxCollectionContextMenuNameLength)
+        {
+            return normalizedName;
+        }
+
+        return normalizedName[..(MaxCollectionContextMenuNameLength - CollectionContextMenuEllipsis.Length)]
+            + CollectionContextMenuEllipsis;
+    }
+
+    private static PathIcon CreateMenuIcon(string iconResourceKey)
+    {
+        var icon = new PathIcon
+        {
+            Width = 16,
+            Height = 16
+        };
+        if (Application.Current?.FindResource(iconResourceKey) is Geometry geometry)
+        {
+            icon.Data = geometry;
+        }
+
+        return icon;
+    }
+
+    private static TextBlock CreateCollectionGlyphIcon(string glyph) =>
+        new()
+        {
+            Text = glyph,
+            FontSize = 15,
+            Width = 18,
+            Height = 18,
+            TextAlignment = TextAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
 
     private void OnViewportOffsetChanged(Vector offset)
     {

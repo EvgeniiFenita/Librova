@@ -77,6 +77,13 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     item.CoverPath = std::filesystem::path(u8"Objects/8a/5b/0000000012.cover.jpg");
     item.SizeBytes = 4096;
     item.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    item.Collections = {{
+        .Id = 3,
+        .NameUtf8 = "Favorites",
+        .IconKey = "star",
+        .Kind = Librova::Domain::EBookCollectionKind::User,
+        .IsDeletable = true
+    }};
 
     const Librova::Application::SBookListResult result{
         .Items = {item},
@@ -113,6 +120,9 @@ TEST_CASE("Library catalog proto mapper builds list response with safe storage m
     REQUIRE(response.items(0).cover_file_extension() == "jpg");
     REQUIRE(response.items(0).cover_relative_path() == "Objects/8a/5b/0000000012.cover.jpg");
     REQUIRE(response.items(0).format() == librova::v1::BOOK_FORMAT_EPUB);
+    REQUIRE(response.items(0).memberships_size() == 1);
+    REQUIRE(response.items(0).memberships(0).collection_id() == 3);
+    REQUIRE(response.items(0).memberships(0).name() == "Favorites");
 }
 
 TEST_CASE("Library catalog proto mapper builds book details response", "[proto-mapping][catalog]")

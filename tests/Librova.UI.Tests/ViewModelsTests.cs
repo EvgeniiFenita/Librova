@@ -1211,7 +1211,11 @@ public sealed class ViewModelsTests
         var navigated = false;
         var viewModel = new LibraryBrowserViewModel(
             new EmptyLibraryCatalogService(),
-            navigateToImport: () => navigated = true);
+            navigateToImport: () =>
+            {
+                navigated = true;
+                return Task.CompletedTask;
+            });
 
         await viewModel.RefreshCommand.ExecuteAsyncForTests();
         await viewModel.GoToImportCommand.ExecuteAsyncForTests();

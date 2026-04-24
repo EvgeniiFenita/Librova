@@ -624,6 +624,23 @@
     <Setter Property="CornerRadius" Value="4" />
   </Style>
 
+  <!-- Thin non-expanding overlay scrollbar used in the sidebar collection list.
+       FluentScrollBar animates Width on pointer-over; clearing Transitions + locking
+       Width in every pseudo-class state prevents the expand animation entirely. -->
+  <Style Selector="ScrollBar.OverlayBar">
+    <Setter Property="Width" Value="5" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions />
+    </Setter>
+  </Style>
+  <Style Selector="ScrollBar.OverlayBar:pointerover">
+    <Setter Property="Width" Value="5" />
+  </Style>
+  <Style Selector="ScrollBar.OverlayBar:pressed">
+    <Setter Property="Width" Value="5" />
+  </Style>
+
   <!-- ════════════════════════════════════════════
        ICONS
        ════════════════════════════════════════════ -->
@@ -632,6 +649,16 @@
     <Setter Property="Width" Value="18" />
     <Setter Property="Height" Value="18" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.NavIcon">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <Style Selector="PathIcon.AppIconAccent">
@@ -643,6 +670,27 @@
   <!-- Larger icon used inside active NavItem (inherits accent from parent) -->
   <Style Selector="Button.NavItem.Active PathIcon.AppIcon">
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.NavItem.Active TextBlock.NavIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+
+  <!-- Emoji icon badge — adds amber tint behind the icon when the nav item is active -->
+  <Style Selector="Border.NavIconBadge">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.NavItem.Active Border.NavIconBadge">
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <!-- Nav label text colours — placed last so specificity is unambiguous -->
@@ -684,6 +732,135 @@
   <Style Selector="Button.IconActionSm:disabled /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppBorderBrush}" />
+  </Style>
+
+  <!-- Amber-filled icon button for sidebar primary actions (e.g. create collection) -->
+  <Style Selector="Button.IconActionPrimary">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+  </Style>
+  <Style Selector="Button.IconActionPrimary /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.IconActionPrimary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrightBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.IconActionPrimary:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppBorderBrush}" />
+  </Style>
+
+  <!-- Amber text-link action button (inline CTAs like empty-state "create one") -->
+  <Style Selector="Button.CollectionLinkAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction:disabled PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+  </Style>
+
+  <!-- Full-width "New collection" ghost button shown at bottom of collections list -->
+  <Style Selector="Button.CollectionAddAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentMutedBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceMutedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction:pointerover PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionAddAction:disabled PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextMutedBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.CollectionLinkAction:pointerover PathIcon.AppIcon">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrightBrush}" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem">
+    <Setter Property="Width" Value="48" />
+    <Setter Property="Height" Value="54" />
+    <Setter Property="Padding" Value="0,0,0,2" />
+    <Setter Property="Margin" Value="3" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceAltBrush}" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceHoverBrush}" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem:selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceBrush}" />
+  </Style>
+  <Style Selector="ListBox.IconPickerGrid ListBoxItem:selected:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSurfaceHoverBrush}" />
   </Style>
 
 
@@ -752,6 +929,21 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="MinWidth" Value="220" />
+  </Style>
+  <Style Selector="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius.Medium}" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="MinWidth" Value="220" />
+  </Style>
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource AppSurfaceElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="6" />
     <Setter Property="MinWidth" Value="220" />
   </Style>

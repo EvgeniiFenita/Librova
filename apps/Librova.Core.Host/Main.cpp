@@ -18,6 +18,7 @@
 #include "App/ImportJobService.hpp"
 #include "Database/SqliteBookQueryRepository.hpp"
 #include "Database/SqliteBookRepository.hpp"
+#include "Database/SqliteBookCollectionRepository.hpp"
 #include "Converter/ConverterConfiguration.hpp"
 #include "Converter/ExternalBookConverter.hpp"
 #include "Storage/StbCoverImageProcessor.hpp"
@@ -354,6 +355,7 @@ int main(int argc, char** argv)
         const Librova::ParserRegistry::CBookParserRegistry parserRegistry;
         Librova::BookDatabase::CSqliteBookRepository bookRepository(databasePath);
         Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+        Librova::BookDatabase::CSqliteBookCollectionRepository collectionRepository(databasePath);
         const auto runtimeWorkspaceRoot = BuildFallbackRuntimeWorkspaceRoot(options.LibraryRoot);
         const auto converterWorkingDirectory =
             options.ConverterWorkingDirectory.value_or(runtimeWorkspaceRoot / "ConverterWorkspace");
@@ -396,7 +398,11 @@ int main(int argc, char** argv)
             zipImportCoordinator,
             bookRepository,
             {.LibraryRoot = options.LibraryRoot});
-        const Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, bookRepository);
+        const Librova::Application::CLibraryCatalogFacade catalogFacade(
+            queryRepository,
+            bookRepository,
+            collectionRepository,
+            collectionRepository);
         const Librova::Application::CLibraryExportFacade exportFacade(
             bookRepository,
             options.LibraryRoot,

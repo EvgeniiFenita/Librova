@@ -248,6 +248,15 @@ void AppendFilterAndConditions(
         sql += " ";
     }
 
+    if (query.CollectionId.has_value())
+    {
+        sql +=
+            "AND EXISTS ("
+            "SELECT 1 FROM book_collections bc_filter "
+            "WHERE bc_filter.book_id = b.id AND bc_filter.collection_id = ?"
+            ") ";
+    }
+
     if (query.SeriesUtf8.has_value())
     {
         sql += "AND b.series = ? ";
@@ -302,6 +311,11 @@ void BindFilterWhereParams(
         {
             statement.BindText(parameterIndex++, language);
         }
+    }
+
+    if (query.CollectionId.has_value())
+    {
+        statement.BindInt64(parameterIndex++, *query.CollectionId);
     }
 
     if (query.SeriesUtf8.has_value())

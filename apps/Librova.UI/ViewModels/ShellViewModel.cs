@@ -8,7 +8,6 @@ using Librova.UI.Runtime;
 using Librova.UI.CoreHost;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +32,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     private readonly ShellConverterPathController _converterPathController;
     private readonly string _uiStateFilePath;
     private readonly string _uiPreferencesFilePath;
+    private ShellNavigationSelection _navigationSelection = ShellNavigationSelection.Library;
     private Task _converterProbeTask = Task.CompletedTask;
 
     public ShellViewModel(
@@ -76,7 +76,8 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
             hasConfiguredConverter: hasConfiguredConverter,
             initialSortKey: savedPreferences?.PreferredSortKey,
             initialSortDescending: savedPreferences?.PreferredSortDescending ?? false,
-            navigateToImport: () => CurrentSection = ShellSection.Import,
+            activateCollectionNavigation: ActivateCollectionNavigation,
+            navigateToImport: ShowImportSectionAsync,
             clipboardService: clipboardService);
         _importWorkflowController = new ShellImportWorkflowController(
             ImportJobs,
@@ -98,6 +99,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ImportJobs.ImportCompletedSuccessfully += _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged += _importWorkflowController.HandleImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged += _importWorkflowController.HandleLibraryBrowserPropertyChanged;
+        LibraryBrowser.PropertyChanged += OnLibraryBrowserPropertyChanged;
 
         SavePreferencesCommand = new AsyncCommand(SavePreferencesAsync, CanSavePreferences);
         BrowseFb2CngExecutablePathCommand = new AsyncCommand(BrowseFb2CngExecutablePathAsync);
@@ -178,6 +180,23 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
     public string ConverterProbeStatusText => _converterSettings.ConverterProbeStatusText;
     public bool IsConverterConfiguredSuccessfully => _converterSettings.IsConverterConfiguredSuccessfully;
     public bool IsLibrarySectionActive => _sectionState.IsLibrarySectionActive;
+    public ShellNavigationSelection NavigationSelection
+    {
+        get => _navigationSelection;
+        private set
+        {
+            if (SetProperty(ref _navigationSelection, value))
+            {
+                RaisePropertyChanged(nameof(IsLibraryNavigationActive));
+                RaisePropertyChanged(nameof(IsImportNavigationActive));
+                RaisePropertyChanged(nameof(IsSettingsNavigationActive));
+            }
+        }
+    }
+
+    public bool IsLibraryNavigationActive => NavigationSelection.Kind is ShellNavigationKind.Library;
+    public bool IsImportNavigationActive => NavigationSelection.Kind is ShellNavigationKind.Import;
+    public bool IsSettingsNavigationActive => NavigationSelection.Kind is ShellNavigationKind.Settings;
     public bool IsImportSectionActive => _sectionState.IsImportSectionActive;
     public bool IsSettingsSectionActive => _sectionState.IsSettingsSectionActive;
     public bool IsImportInProgress => ImportJobs.IsBusy;
@@ -204,34 +223,56 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
 
     public Task WaitForConverterProbeAsync() => _converterProbeTask;
 
-    public Task ActivateImportSectionAsync()
+    public async Task ActivateImportSectionAsync()
     {
         CurrentSection = ShellSection.Import;
-        return Task.CompletedTask;
+        NavigationSelection = ShellNavigationSelection.Import;
+        await ClearCollectionViewIfActiveAsync();
     }
 
-    public Task ActivateSectionAsync(ShellSection section)
+    public async Task ActivateSectionAsync(ShellSection section)
     {
         CurrentSection = section;
-        return Task.CompletedTask;
+        NavigationSelection = section switch
+        {
+            ShellSection.Library => ShellNavigationSelection.Library,
+            ShellSection.Import => ShellNavigationSelection.Import,
+            ShellSection.Settings => ShellNavigationSelection.Settings,
+            _ => ShellNavigationSelection.Library
+        };
+
+        if (section is ShellSection.Library && LibraryBrowser.IsCollectionViewActive)
+        {
+            await LibraryBrowser.ClearCollectionViewAsync();
+        }
+        else if (section is ShellSection.Import or ShellSection.Settings)
+        {
+            await ClearCollectionViewIfActiveAsync();
+        }
     }
 
-    private Task ShowLibrarySectionAsync()
+    private async Task ShowLibrarySectionAsync()
     {
         CurrentSection = ShellSection.Library;
-        return Task.CompletedTask;
+        NavigationSelection = ShellNavigationSelection.Library;
+        if (LibraryBrowser.IsCollectionViewActive)
+        {
+            await LibraryBrowser.ClearCollectionViewAsync();
+        }
     }
 
-    private Task ShowImportSectionAsync()
+    private async Task ShowImportSectionAsync()
     {
         CurrentSection = ShellSection.Import;
-        return Task.CompletedTask;
+        NavigationSelection = ShellNavigationSelection.Import;
+        await ClearCollectionViewIfActiveAsync();
     }
 
-    private Task ShowSettingsSectionAsync()
+    private async Task ShowSettingsSectionAsync()
     {
         CurrentSection = ShellSection.Settings;
-        return Task.CompletedTask;
+        NavigationSelection = ShellNavigationSelection.Settings;
+        await ClearCollectionViewIfActiveAsync();
     }
 
     private Task ClearConverterPathAsync() => _converterPathController.ClearConverterPathAsync();
@@ -276,6 +317,30 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ShowSettingsSectionCommand.RaiseCanExecuteChanged();
     }
 
+    private void ActivateCollectionNavigation(long collectionId)
+    {
+        CurrentSection = ShellSection.Library;
+        NavigationSelection = ShellNavigationSelection.Collection(collectionId);
+    }
+
+    private void OnLibraryBrowserPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is nameof(LibraryBrowserViewModel.IsCollectionViewActive)
+            && !LibraryBrowser.IsCollectionViewActive
+            && NavigationSelection.Kind is ShellNavigationKind.Collection)
+        {
+            NavigationSelection = ShellNavigationSelection.Library;
+        }
+    }
+
+    private async Task ClearCollectionViewIfActiveAsync()
+    {
+        if (LibraryBrowser.IsCollectionViewActive)
+        {
+            await LibraryBrowser.ClearCollectionViewAsync();
+        }
+    }
+
     private void OnConverterValidationStateChanged()
         => _converterValidationWorkflow.ApplyState(allowAutoSave: true);
 
@@ -287,6 +352,7 @@ internal sealed class ShellViewModel : ObservableObject, IDisposable
         ImportJobs.ImportCompletedSuccessfully -= _importWorkflowController.HandleImportCompletedSuccessfullyAsync;
         ImportJobs.PropertyChanged -= _importWorkflowController.HandleImportJobsPropertyChanged;
         LibraryBrowser.PropertyChanged -= _importWorkflowController.HandleLibraryBrowserPropertyChanged;
+        LibraryBrowser.PropertyChanged -= OnLibraryBrowserPropertyChanged;
         ImportJobs.Dispose();
         LibraryBrowser.Dispose();
         _converterValidationCoordinator.StateChanged -= OnConverterValidationStateChanged;

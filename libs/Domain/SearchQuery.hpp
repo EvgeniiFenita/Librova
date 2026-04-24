@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,7 @@ struct SSearchQuery
     std::string TextUtf8;
     std::optional<std::string> AuthorUtf8;
     std::vector<std::string> Languages;
+    std::optional<std::int64_t> CollectionId;
     std::optional<std::string> SeriesUtf8;
     std::vector<std::string> TagsUtf8;
     std::vector<std::string> GenresUtf8;
@@ -44,6 +46,7 @@ struct SSearchQuery
     {
         return AuthorUtf8.has_value()
             || !Languages.empty()
+            || CollectionId.has_value()
             || SeriesUtf8.has_value()
             || !TagsUtf8.empty()
             || !GenresUtf8.empty()

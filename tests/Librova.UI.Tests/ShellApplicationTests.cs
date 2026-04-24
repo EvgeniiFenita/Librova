@@ -78,6 +78,83 @@ public sealed class ShellApplicationTests
     }
 
     [Fact]
+    public async Task Shell_SelectingCollectionActivatesCollectionNavigationWithoutHighlightingLibrary()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService
+            {
+                Collections =
+                [
+                    new BookCollectionModel(10, "Favorites", "star", BookCollectionKindModel.User, true)
+                ]
+            });
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+        await application.Shell.LibraryBrowser.RefreshAsync();
+
+        await application.Shell.LibraryBrowser.SelectCollectionCommand.ExecuteAsyncForTests(
+            application.Shell.LibraryBrowser.Collections[0]);
+
+        Assert.True(application.Shell.IsLibrarySectionActive);
+        Assert.True(application.Shell.LibraryBrowser.Collections[0].IsSelected);
+        Assert.Equal(ShellNavigationKind.Collection, application.Shell.NavigationSelection.Kind);
+        Assert.Equal(10, application.Shell.NavigationSelection.CollectionId);
+        Assert.False(application.Shell.IsLibraryNavigationActive);
+        Assert.False(application.Shell.IsImportNavigationActive);
+        Assert.False(application.Shell.IsSettingsNavigationActive);
+
+        await application.Shell.ShowLibrarySectionCommand.ExecuteAsyncForTests();
+
+        Assert.True(application.Shell.IsLibraryNavigationActive);
+        Assert.False(application.Shell.LibraryBrowser.IsCollectionViewActive);
+    }
+
+    [Fact]
+    public async Task Shell_ClearingFiltersInsideCollectionPreservesCollectionNavigation()
+    {
+        var session = new ShellSession(
+            new CoreHostProcess(),
+            new CoreHostLaunchOptions
+            {
+                ExecutablePath = @"C:\Tools\LibrovaCoreHostApp.exe",
+                PipePath = @"\\.\pipe\Librova.ShellApplication.Test",
+                LibraryRoot = @"C:\Libraries\Librova"
+            },
+            new FakeImportJobsService(),
+            new FakeLibraryCatalogService
+            {
+                Collections =
+                [
+                    new BookCollectionModel(10, "Favorites", "star", BookCollectionKindModel.User, true)
+                ]
+            });
+        var application = ShellApplication.Create(
+            session,
+            stateStore: CreateIsolatedStateStore(),
+            preferencesStore: new FakePreferencesStore());
+        await application.Shell.LibraryBrowser.RefreshAsync();
+        await application.Shell.LibraryBrowser.SelectCollectionCommand.ExecuteAsyncForTests(
+            application.Shell.LibraryBrowser.Collections[0]);
+
+        await application.Shell.LibraryBrowser.ClearAllFiltersCommand.ExecuteAsyncForTests();
+
+        Assert.Equal(ShellNavigationKind.Collection, application.Shell.NavigationSelection.Kind);
+        Assert.Equal(10, application.Shell.NavigationSelection.CollectionId);
+        Assert.True(application.Shell.LibraryBrowser.IsCollectionViewActive);
+        Assert.False(application.Shell.IsLibraryNavigationActive);
+    }
+
+    [Fact]
     public async Task InitializeAsync_PreloadsLibraryBrowser()
     {
         var catalogService = new FakeLibraryCatalogService
@@ -1091,6 +1168,7 @@ public sealed class ShellApplicationTests
     {
         public int ListCalls { get; private set; }
         public IReadOnlyList<BookListItemModel> Items { get; init; } = [];
+        public IReadOnlyList<BookCollectionModel> Collections { get; init; } = [];
         public LibraryStatisticsModel Statistics { get; init; } = new();
 
         public Task<BookListPageModel> ListBooksAsync(BookListRequestModel request, TimeSpan timeout, CancellationToken cancellationToken)
@@ -1105,6 +1183,11 @@ public sealed class ShellApplicationTests
 
         public Task<BookDetailsModel?> GetBookDetailsAsync(long bookId, TimeSpan timeout, CancellationToken cancellationToken)
             => Task.FromResult<BookDetailsModel?>(null);
+
+        public Task<IReadOnlyList<BookCollectionModel>> ListCollectionsAsync(
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+            => Task.FromResult(Collections);
 
         public Task<string?> ExportBookAsync(
             long bookId,
@@ -1207,4 +1290,3 @@ public sealed class ShellApplicationTests
         return path;
     }
 }
-

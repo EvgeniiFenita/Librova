@@ -26,6 +26,7 @@ if(BUILD_TESTING)
         TestLibraryImportFacade.cpp
         TestBook.cpp
         TestSqliteBookRepository.cpp
+        TestSqliteBookCollectionRepository.cpp
         TestBookRepository.cpp
         TestConverterCommandBuilder.cpp
         TestConverterConfiguration.cpp
@@ -95,4 +96,3 @@ if(BUILD_TESTING)
         DISCOVERY_TIMEOUT 60
     )
 endif()
-

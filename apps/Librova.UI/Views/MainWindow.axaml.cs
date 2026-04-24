@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Librova.UI.ViewModels;
@@ -53,7 +55,14 @@ internal sealed partial class MainWindow : Window
 
     private void OnDragOver(object? sender, DragEventArgs eventArgs)
     {
-        if (DataContext is ShellWindowViewModel { HasShell: true, Shell.IsImportInProgress: true })
+        if (DataContext is ShellWindowViewModel { HasShell: true, Shell: { IsImportInProgress: true } })
+        {
+            eventArgs.DragEffects = DragDropEffects.None;
+            eventArgs.Handled = true;
+            return;
+        }
+
+        if (DataContext is ShellWindowViewModel { HasShell: true, Shell.LibraryBrowser.IsCollectionViewActive: true })
         {
             eventArgs.DragEffects = DragDropEffects.None;
             eventArgs.Handled = true;
@@ -72,6 +81,12 @@ internal sealed partial class MainWindow : Window
         }
 
         if (viewModel.Shell.IsImportInProgress)
+        {
+            eventArgs.Handled = true;
+            return;
+        }
+
+        if (viewModel.Shell.LibraryBrowser.IsCollectionViewActive)
         {
             eventArgs.Handled = true;
             return;
@@ -183,5 +198,39 @@ internal sealed partial class MainWindow : Window
         return storageItem.Path is null
             ? null
             : Uri.UnescapeDataString(storageItem.Path.LocalPath);
+    }
+
+    private void OnCollectionItemContextRequested(object? sender, ContextRequestedEventArgs eventArgs)
+    {
+        if (sender is not Button { DataContext: BookCollectionListItemViewModel collection } button
+            || DataContext is not ShellWindowViewModel { HasShell: true, Shell.LibraryBrowser: var browser })
+            return;
+
+        if (!collection.IsDeletable)
+            return;
+
+        var deleteItem = new MenuItem
+        {
+            Header = "Delete Collection",
+            Command = browser.RequestDeleteCollectionCommand,
+            CommandParameter = collection,
+            Icon = CreateMenuIcon("IconTrash")
+        };
+        deleteItem.Classes.Add("BookCardContextItem");
+        deleteItem.Classes.Add("Destructive");
+
+        var menu = new ContextMenu { Classes = { "BookCardContextMenu" } };
+        menu.Items.Add(deleteItem);
+        button.ContextMenu = menu;
+        menu.Open(button);
+        eventArgs.Handled = true;
+    }
+
+    private static PathIcon CreateMenuIcon(string iconResourceKey)
+    {
+        var icon = new PathIcon { Width = 16, Height = 16 };
+        if (Application.Current?.FindResource(iconResourceKey) is Geometry geometry)
+            icon.Data = geometry;
+        return icon;
     }
 }

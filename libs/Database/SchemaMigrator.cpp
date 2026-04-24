@@ -10,6 +10,11 @@
 namespace Librova::DatabaseRuntime {
 namespace {
 
+void UpgradeToVersion2(const Librova::Sqlite::CSqliteConnection& connection)
+{
+    connection.Execute(Librova::DatabaseSchema::CDatabaseSchema::GetCollectionSchemaScript());
+}
+
 int ReadUserVersionValue(const Librova::Sqlite::CSqliteConnection& connection)
 {
     Librova::Sqlite::CSqliteStatement statement(connection.GetNativeHandle(), "PRAGMA user_version;");
@@ -36,12 +41,8 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
         return;
     }
 
-    if (currentVersion != 0)
+    if (currentVersion < 0 || currentVersion > expectedVersion)
     {
-        // Database schema is incompatible with this version of Librova.
-        // Forward-compatibility (newer DB, older binary) and backward-compat
-        // (older DB without migration) are both rejected.  The user must
-        // delete the library database so Librova can recreate it.
         throw std::runtime_error(
             std::format(
                 "Database schema version {} is incompatible with this version of Librova "
@@ -50,24 +51,23 @@ void CSchemaMigrator::Migrate(const std::filesystem::path& databasePath)
                 expectedVersion));
     }
 
-    // currentVersion == 0: brand-new database — apply the full schema.
-    // -----------------------------------------------------------------------
-    // Future migrations: when the schema must change and existing databases
-    // need upgrading (rather than recreation), relax the incompatibility check
-    // above and add upgrade functions here, e.g.:
-    //
-    //     if (currentVersion < 2) { UpgradeToVersion2(connection); }
-    //     if (currentVersion < 3) { UpgradeToVersion3(connection); }
-    //
-    // Each UpgradeToVersionN operates inside the transaction opened below.
-    // Remember to bump GetCurrentVersion() in DatabaseSchema.cpp accordingly.
-    // -----------------------------------------------------------------------
     connection.Execute("PRAGMA journal_mode = WAL;");
     connection.Execute("BEGIN IMMEDIATE;");
 
     try
     {
-        connection.Execute(Librova::DatabaseSchema::CDatabaseSchema::GetCreateSchemaScript());
+        if (currentVersion == 0)
+        {
+            connection.Execute(Librova::DatabaseSchema::CDatabaseSchema::GetCreateSchemaScript());
+        }
+        else
+        {
+            if (currentVersion < 2)
+            {
+                UpgradeToVersion2(connection);
+            }
+        }
+
         connection.Execute(std::format("PRAGMA user_version = {};", expectedVersion));
         connection.Execute("COMMIT;");
     }

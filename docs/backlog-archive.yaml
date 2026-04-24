@@ -1562,3 +1562,13 @@ tasks:
   milestone: unscheduled
   note: Corrected the README scripts reference so PublishPortable now points to the final out\package\<PackageName>
     portable output and explicitly distinguishes the intermediate out\publish directory.
+- id: 59
+  summary: add user-defined collections with sidebar navigation, create/delete, context-menu book membership,
+    and details-panel membership display
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.3'
+  note: 'Implemented user-defined collections end to end: schema and migration, collection repository,
+    catalog IPC, sidebar navigation, create/delete dialogs, book membership menu, details membership display,
+    docs, and regression coverage.'

@@ -5,6 +5,7 @@
         xmlns:viewModels="using:Librova.UI.ViewModels"
         xmlns:views="using:Librova.UI.Views"
         x:Class="Librova.UI.Views.MainWindow"
+        x:Name="MainWindowRoot"
         x:DataType="viewModels:ShellWindowViewModel"
         Width="1280"
         Height="840"
@@ -13,6 +14,30 @@
         DragDrop.AllowDrop="True"
         KeyDown="OnWindowKeyDown"
         mc:Ignorable="d">
+
+  <Window.Resources>
+    <!-- Thin scrollbar in its own Grid column so it never overlaps content.
+         Column is Auto → collapses to 0 when scrollbar is hidden (no overflow),
+         giving full-width buttons. When overflow: 5px column, no overlap. -->
+    <ControlTheme x:Key="OverlayScrollViewerTheme" TargetType="ScrollViewer">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ColumnDefinitions="*,Auto">
+            <ScrollContentPresenter x:Name="PART_ContentPresenter"
+                                    Padding="{TemplateBinding Padding}"
+                                    IsScrollChainingEnabled="{TemplateBinding IsScrollChainingEnabled}" />
+            <ScrollBar x:Name="PART_VerticalScrollBar"
+                       Grid.Column="1"
+                       Classes="OverlayBar"
+                       Width="5"
+                       Margin="3,0,0,0"
+                       Orientation="Vertical"
+                       AllowAutoHide="{TemplateBinding AllowAutoHide}" />
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+  </Window.Resources>
 
   <!-- Full-bleed root — no outer margin so the app surface fills the whole window -->
   <Grid>
@@ -298,15 +323,15 @@
       <Border Grid.Column="0"
               Padding="14,18">
         <!--
-             DockPanel layout:
-               · Bottom-docked section = library info card + Settings button
+         DockPanel layout:
+               · Bottom-docked section = library info card + Settings button + version
                · Fill section (top)    = branding + primary nav
              This keeps nav tightly below branding with no artificial gap,
              and anchors library/settings to the bottom of the sidebar.
         -->
         <DockPanel>
 
-          <!-- Bottom: library card + settings -->
+          <!-- Bottom: library card + settings + version -->
           <StackPanel DockPanel.Dock="Bottom"
                       Spacing="5">
             <Border Classes="AppPanelMuted"
@@ -364,7 +389,7 @@
             </Border>
 
             <Button Classes="NavItem"
-                    Classes.Active="{Binding Shell.IsSettingsSectionActive}"
+                    Classes.Active="{Binding Shell.IsSettingsNavigationActive}"
                     HorizontalAlignment="Stretch"
                     Command="{Binding Shell.ShowSettingsSectionCommand}">
               <StackPanel Orientation="Horizontal"
@@ -418,7 +443,7 @@
             <StackPanel Spacing="5"
                         Margin="0,18,0,0">
               <Button Classes="NavItem"
-                      Classes.Active="{Binding Shell.IsLibrarySectionActive}"
+                      Classes.Active="{Binding Shell.IsLibraryNavigationActive}"
                       HorizontalAlignment="Stretch"
                       Command="{Binding Shell.ShowLibrarySectionCommand}">
                 <StackPanel Orientation="Horizontal"
@@ -431,7 +456,7 @@
                 </StackPanel>
               </Button>
               <Button Classes="NavItem"
-                      Classes.Active="{Binding Shell.IsImportSectionActive}"
+                      Classes.Active="{Binding Shell.IsImportNavigationActive}"
                       HorizontalAlignment="Stretch"
                       Command="{Binding Shell.ShowImportSectionCommand}">
                 <StackPanel Orientation="Horizontal"
@@ -443,6 +468,99 @@
                              Text="Import" />
                 </StackPanel>
               </Button>
+
+              <Border Classes="AppPanelMuted"
+                      Margin="0,8,0,0"
+                      Padding="8">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="SectionEyebrow"
+                             Text="COLLECTIONS" />
+                  <StackPanel IsVisible="{Binding Shell.LibraryBrowser.HasCollections, Converter={x:Static BoolConverters.Not}}"
+                              HorizontalAlignment="Center"
+                              Margin="0,4,0,4"
+                              Spacing="4">
+                    <TextBlock FontSize="26"
+                               LineHeight="34"
+                               HorizontalAlignment="Center"
+                               Text="📚" />
+                    <TextBlock Classes="Caption"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               Text="No collections yet" />
+                    <Button Classes="CollectionLinkAction"
+                            HorizontalAlignment="Center"
+                            Command="{Binding Shell.LibraryBrowser.OpenCreateCollectionCommand}">
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="6"
+                                  VerticalAlignment="Center">
+                        <PathIcon Classes="AppIcon"
+                                  Width="13"
+                                  Height="13"
+                                  VerticalAlignment="Center"
+                                  Data="{StaticResource IconAddFolder}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Create one" />
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                  <!-- MaxHeight: ~4 items at NavItem MinHeight 42px + 6px Margin each -->
+                  <ScrollViewer Theme="{StaticResource OverlayScrollViewerTheme}"
+                                MaxHeight="210"
+                                AllowAutoHide="False"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Shell.LibraryBrowser.Collections}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="viewModels:BookCollectionListItemViewModel">
+                          <Button Classes="NavItem"
+                                  Classes.Active="{Binding IsSelected}"
+                                  HorizontalAlignment="Stretch"
+                                  Margin="0,0,0,6"
+                                  ContextRequested="OnCollectionItemContextRequested"
+                                  Command="{Binding #MainWindowRoot.DataContext.Shell.LibraryBrowser.SelectCollectionCommand}"
+                                  CommandParameter="{Binding .}"
+                                  ToolTip.Tip="{Binding Name}">
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="10">
+                              <Border Classes="NavIconBadge">
+                                <TextBlock Classes="NavIcon"
+                                           Text="{Binding IconGlyph}" />
+                              </Border>
+                              <TextBlock Grid.Column="1"
+                                         Classes="NavLabel"
+                                         MaxWidth="132"
+                                         VerticalAlignment="Center"
+                                         Text="{Binding Name}"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="NoWrap" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                  <Border IsVisible="{Binding Shell.LibraryBrowser.HasCollections}"
+                          Height="1"
+                          Margin="0,0,0,0"
+                          Background="{DynamicResource AppBorderBrush}" />
+                  <Button Classes="CollectionAddAction"
+                          IsVisible="{Binding Shell.LibraryBrowser.HasCollections}"
+                          AutomationProperties.Name="Create collection"
+                          Command="{Binding Shell.LibraryBrowser.OpenCreateCollectionCommand}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="7"
+                                VerticalAlignment="Center">
+                      <PathIcon Classes="AppIcon"
+                                Width="13"
+                                Height="13"
+                                VerticalAlignment="Center"
+                                Data="{StaticResource IconAddFolder}" />
+                      <TextBlock VerticalAlignment="Center"
+                                 Text="New collection" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </Border>
             </StackPanel>
           </StackPanel>
 
@@ -461,6 +579,97 @@
         <views:SettingsView IsVisible="{Binding IsSettingsSectionActive}" />
       </Grid>
 
+    </Grid>
+
+    <Grid IsVisible="{Binding HasShell}">
+      <Border IsVisible="{Binding Shell.LibraryBrowser.IsCreateCollectionDialogOpen}"
+              Background="{DynamicResource AppDialogOverlayBrush}">
+        <Border Classes="AppPanelCompact"
+                Width="520"
+                Padding="22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="16">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="SectionEyebrow"
+                         Text="COLLECTIONS" />
+              <TextBlock Classes="SectionTitle"
+                         Text="Create Collection" />
+              <TextBlock Classes="BodyMuted"
+                         Text="Choose a name and icon for the new collection." />
+            </StackPanel>
+
+            <TextBox Classes="AppTextInput"
+                     PlaceholderText="Collection name"
+                     Text="{Binding Shell.LibraryBrowser.NewCollectionName, Mode=TwoWay}" />
+
+            <ListBox Classes="IconPickerGrid"
+                     ItemsSource="{Binding Shell.LibraryBrowser.AvailableCollectionIcons}"
+                     SelectedItem="{Binding Shell.LibraryBrowser.SelectedCreateCollectionIcon, Mode=TwoWay}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:BookCollectionIconOption">
+                  <TextBlock FontSize="20"
+                             LineHeight="28"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Text="{Binding Glyph}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+              <Button Classes="SecondaryAction"
+                      Command="{Binding Shell.LibraryBrowser.CancelCreateCollectionCommand}"
+                      Content="Cancel" />
+              <Button Classes="PrimaryAction"
+                      Command="{Binding Shell.LibraryBrowser.CreateCollectionCommand}"
+                      Content="Create" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
+
+      <Border IsVisible="{Binding Shell.LibraryBrowser.IsDeleteCollectionDialogOpen}"
+              Background="{DynamicResource AppDialogOverlayBrush}">
+        <Border Classes="DangerPanel"
+                Width="500"
+                Padding="22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="16">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="SectionEyebrow"
+                         Text="COLLECTIONS" />
+              <TextBlock Classes="SectionTitle"
+                         Text="Delete Collection" />
+              <TextBlock Classes="BodyMuted"
+                         TextWrapping="Wrap">
+                <Run Text="Delete '" />
+                <Run Text="{Binding Shell.LibraryBrowser.PendingDeleteCollectionName}" />
+                <Run Text="'? Books stay in the library; only collection membership is removed." />
+              </TextBlock>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+              <Button Classes="SecondaryAction"
+                      Command="{Binding Shell.LibraryBrowser.CancelDeleteCollectionCommand}"
+                      Content="Cancel" />
+              <Button Classes="DestructiveAction"
+                      Command="{Binding Shell.LibraryBrowser.ConfirmDeleteCollectionCommand}"
+                      Content="Delete" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Border>
     </Grid>
 
   </Grid>

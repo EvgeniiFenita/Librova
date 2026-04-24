@@ -34,6 +34,21 @@ public:
     [[nodiscard]] librova::v1::MoveBookToTrashResponse MoveBookToTrash(
         const librova::v1::MoveBookToTrashRequest& request) const;
 
+    [[nodiscard]] librova::v1::ListCollectionsResponse ListCollections(
+        const librova::v1::ListCollectionsRequest& request) const;
+
+    [[nodiscard]] librova::v1::CreateCollectionResponse CreateCollection(
+        const librova::v1::CreateCollectionRequest& request) const;
+
+    [[nodiscard]] librova::v1::DeleteCollectionResponse DeleteCollection(
+        const librova::v1::DeleteCollectionRequest& request) const;
+
+    [[nodiscard]] librova::v1::AddBookToCollectionResponse AddBookToCollection(
+        const librova::v1::AddBookToCollectionRequest& request) const;
+
+    [[nodiscard]] librova::v1::RemoveBookFromCollectionResponse RemoveBookFromCollection(
+        const librova::v1::RemoveBookFromCollectionRequest& request) const;
+
     [[nodiscard]] librova::v1::GetImportJobSnapshotResponse GetImportJobSnapshot(
         const librova::v1::GetImportJobSnapshotRequest& request) const;
 

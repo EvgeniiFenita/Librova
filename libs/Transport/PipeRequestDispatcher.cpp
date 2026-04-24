@@ -35,6 +35,16 @@ namespace {
         return "CancelImportJob";
     case EPipeMethod::RemoveImportJob:
         return "RemoveImportJob";
+    case EPipeMethod::ListCollections:
+        return "ListCollections";
+    case EPipeMethod::CreateCollection:
+        return "CreateCollection";
+    case EPipeMethod::DeleteCollection:
+        return "DeleteCollection";
+    case EPipeMethod::AddBookToCollection:
+        return "AddBookToCollection";
+    case EPipeMethod::RemoveBookFromCollection:
+        return "RemoveBookFromCollection";
     default:
         return "Unknown";
     }
@@ -51,6 +61,11 @@ namespace {
 
     return method == EPipeMethod::StartImport
         || method == EPipeMethod::ValidateImportSources
+        || method == EPipeMethod::ListCollections
+        || method == EPipeMethod::CreateCollection
+        || method == EPipeMethod::DeleteCollection
+        || method == EPipeMethod::AddBookToCollection
+        || method == EPipeMethod::RemoveBookFromCollection
         || method == EPipeMethod::GetImportJobResult
         || method == EPipeMethod::CancelImportJob
         || method == EPipeMethod::RemoveImportJob;
@@ -132,6 +147,36 @@ SPipeResponseEnvelope CPipeRequestDispatcher::Dispatch(const SPipeRequestEnvelop
             request,
             [this](const auto& typedRequest) {
                 return m_adapter.RemoveImportJob(typedRequest);
+            });
+    case EPipeMethod::ListCollections:
+        return DispatchTyped<librova::v1::ListCollectionsRequest, librova::v1::ListCollectionsResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.ListCollections(typedRequest);
+            });
+    case EPipeMethod::CreateCollection:
+        return DispatchTyped<librova::v1::CreateCollectionRequest, librova::v1::CreateCollectionResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.CreateCollection(typedRequest);
+            });
+    case EPipeMethod::DeleteCollection:
+        return DispatchTyped<librova::v1::DeleteCollectionRequest, librova::v1::DeleteCollectionResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.DeleteCollection(typedRequest);
+            });
+    case EPipeMethod::AddBookToCollection:
+        return DispatchTyped<librova::v1::AddBookToCollectionRequest, librova::v1::AddBookToCollectionResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.AddBookToCollection(typedRequest);
+            });
+    case EPipeMethod::RemoveBookFromCollection:
+        return DispatchTyped<librova::v1::RemoveBookFromCollectionRequest, librova::v1::RemoveBookFromCollectionResponse>(
+            request,
+            [this](const auto& typedRequest) {
+                return m_adapter.RemoveBookFromCollection(typedRequest);
             });
     default:
         return {

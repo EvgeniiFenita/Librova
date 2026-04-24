@@ -14,6 +14,7 @@
 #include "App/LibraryTrashFacade.hpp"
 #include "App/ImportJobService.hpp"
 #include "Database/SqliteBookQueryRepository.hpp"
+#include "Database/SqliteBookCollectionRepository.hpp"
 #include "Database/SqliteBookRepository.hpp"
 #include "Database/SchemaMigrator.hpp"
 #include "App/ImportJobManager.hpp"
@@ -265,6 +266,7 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
 
     Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
     Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookCollectionRepository collectionRepository(databasePath);
 
     Librova::Domain::SBook book;
     book.Metadata.TitleUtf8 = "Roadside Picnic";
@@ -274,7 +276,9 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
     book.File.SizeBytes = 1024;
     book.File.Sha256Hex = "pipe-catalog-hash";
     book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
-    static_cast<void>(writeRepository.Add(book));
+    const auto bookId = writeRepository.Add(book);
+    const auto collection = collectionRepository.CreateCollection("Favorites", "star");
+    REQUIRE(collectionRepository.AddBookToCollection(bookId, collection.Id));
 
     CImmediateSingleFileImporter importer;
     Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
@@ -283,7 +287,11 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
         zipCoordinator,
         writeRepository,
         {.LibraryRoot = std::filesystem::temp_directory_path()});
-    Librova::Application::CLibraryCatalogFacade catalogFacade(queryRepository, writeRepository);
+    Librova::Application::CLibraryCatalogFacade catalogFacade(
+        queryRepository,
+        writeRepository,
+        collectionRepository,
+        collectionRepository);
     Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
     Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
     Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
@@ -314,7 +322,114 @@ TEST_CASE("Pipe dispatcher executes ListBooks through protobuf adapter", "[pipe]
     REQUIRE(typedResponse.ParseFromString(response.Payload));
     REQUIRE(typedResponse.items_size() == 1);
     REQUIRE(typedResponse.items(0).title() == "Roadside Picnic");
+    REQUIRE(typedResponse.items(0).memberships_size() == 1);
+    REQUIRE(typedResponse.items(0).memberships(0).name() == "Favorites");
 
+    collectionRepository.CloseSession();
+    queryRepository.CloseSession();
+    CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
+}
+
+TEST_CASE("Pipe dispatcher executes collection RPC methods through protobuf adapter", "[pipe][catalog][collections]")
+{
+    const std::filesystem::path databasePath = MakeUniqueTestPath(L"librova-pipe-dispatch-collections.db");
+    std::filesystem::remove(databasePath);
+    Librova::DatabaseRuntime::CSchemaMigrator::Migrate(databasePath);
+
+    Librova::BookDatabase::CSqliteBookRepository writeRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookQueryRepository queryRepository(databasePath);
+    Librova::BookDatabase::CSqliteBookCollectionRepository collectionRepository(databasePath);
+
+    Librova::Domain::SBook book;
+    book.Metadata.TitleUtf8 = "Solaris";
+    book.Metadata.AuthorsUtf8 = {"Stanislaw Lem"};
+    book.Metadata.Language = "en";
+    book.File.ManagedPath = "Objects/3f/1f/0000000302.book.epub";
+    book.File.SizeBytes = 1024;
+    book.File.Sha256Hex = "pipe-collection-hash";
+    book.AddedAtUtc = std::chrono::sys_days{std::chrono::March / 30 / 2026};
+    const auto bookId = writeRepository.Add(book);
+
+    CImmediateSingleFileImporter importer;
+    Librova::ZipImporting::CZipImportCoordinator zipCoordinator(importer);
+    Librova::Application::CLibraryImportFacade facade(
+        importer,
+        zipCoordinator,
+        writeRepository,
+        {.LibraryRoot = std::filesystem::temp_directory_path()});
+    Librova::Application::CLibraryCatalogFacade catalogFacade(
+        queryRepository,
+        writeRepository,
+        collectionRepository,
+        collectionRepository);
+    Librova::Application::CLibraryExportFacade exportFacade(writeRepository, std::filesystem::temp_directory_path());
+    Librova::ManagedTrash::CManagedTrashService trashService(std::filesystem::temp_directory_path());
+    Librova::Application::CLibraryTrashFacade trashFacade(writeRepository, trashService, std::filesystem::temp_directory_path());
+    Librova::Jobs::CImportJobRunner runner(facade);
+    Librova::Jobs::CImportJobManager manager(runner);
+    Librova::ApplicationJobs::CImportJobService service(manager);
+    Librova::ProtoServices::CLibraryJobServiceAdapter adapter(service, facade, catalogFacade, exportFacade, trashFacade);
+    Librova::PipeTransport::CPipeRequestDispatcher dispatcher(adapter);
+
+    std::uint64_t requestId = 4000;
+    auto dispatch = [&](const Librova::PipeTransport::EPipeMethod method, const google::protobuf::MessageLite& typedRequest) {
+        std::string payload;
+        REQUIRE(typedRequest.SerializeToString(&payload));
+        const Librova::PipeTransport::SPipeRequestEnvelope request{
+            .RequestId = requestId++,
+            .Method = method,
+            .Payload = payload
+        };
+        const auto response = dispatcher.Dispatch(request);
+        REQUIRE(response.RequestId == request.RequestId);
+        REQUIRE(response.Status == Librova::PipeTransport::EPipeResponseStatus::Ok);
+        return response.Payload;
+    };
+
+    librova::v1::CreateCollectionRequest createRequest;
+    createRequest.set_name("Favorites");
+    createRequest.set_icon_key("star");
+    librova::v1::CreateCollectionResponse createResponse;
+    REQUIRE(createResponse.ParseFromString(dispatch(Librova::PipeTransport::EPipeMethod::CreateCollection, createRequest)));
+    REQUIRE(createResponse.has_collection());
+    REQUIRE(createResponse.collection().name() == "Favorites");
+    const auto collectionId = createResponse.collection().collection_id();
+
+    librova::v1::ListCollectionsResponse listResponse;
+    REQUIRE(listResponse.ParseFromString(dispatch(
+        Librova::PipeTransport::EPipeMethod::ListCollections,
+        librova::v1::ListCollectionsRequest{})));
+    REQUIRE(listResponse.collections_size() == 1);
+    REQUIRE(listResponse.collections(0).collection_id() == collectionId);
+
+    librova::v1::AddBookToCollectionRequest addRequest;
+    addRequest.set_book_id(bookId.Value);
+    addRequest.set_collection_id(collectionId);
+    librova::v1::AddBookToCollectionResponse addResponse;
+    REQUIRE(addResponse.ParseFromString(dispatch(Librova::PipeTransport::EPipeMethod::AddBookToCollection, addRequest)));
+    REQUIRE(addResponse.changed());
+
+    librova::v1::RemoveBookFromCollectionRequest removeRequest;
+    removeRequest.set_book_id(bookId.Value);
+    removeRequest.set_collection_id(collectionId);
+    librova::v1::RemoveBookFromCollectionResponse removeResponse;
+    REQUIRE(removeResponse.ParseFromString(dispatch(Librova::PipeTransport::EPipeMethod::RemoveBookFromCollection, removeRequest)));
+    REQUIRE(removeResponse.changed());
+
+    librova::v1::DeleteCollectionRequest deleteRequest;
+    deleteRequest.set_collection_id(collectionId);
+    librova::v1::DeleteCollectionResponse deleteResponse;
+    REQUIRE(deleteResponse.ParseFromString(dispatch(Librova::PipeTransport::EPipeMethod::DeleteCollection, deleteRequest)));
+    REQUIRE(deleteResponse.deleted());
+    REQUIRE_FALSE(deleteResponse.has_error());
+
+    librova::v1::DeleteCollectionResponse secondDeleteResponse;
+    REQUIRE(secondDeleteResponse.ParseFromString(dispatch(Librova::PipeTransport::EPipeMethod::DeleteCollection, deleteRequest)));
+    REQUIRE_FALSE(secondDeleteResponse.deleted());
+    REQUIRE_FALSE(secondDeleteResponse.has_error());
+
+    collectionRepository.CloseSession();
+    queryRepository.CloseSession();
     CloseRepositoryAndRemoveDatabase(databasePath, writeRepository);
 }
 

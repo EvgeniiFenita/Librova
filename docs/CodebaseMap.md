@@ -58,9 +58,9 @@ Do **not** duplicate decision rationale here — that belongs in §14 Architectu
 
 ## 1. Introduction
 
-Librova is a Windows-first desktop e-book library manager. It is structured as **two cooperating processes**: `Librova.Core` (C++20 native host) handles all domain logic — import, parsing, conversion, persistence, search, export, and trash — while `Librova.UI` (C# / .NET / Avalonia) owns the UI, ViewModels, and user interactions. The processes are deployed as a matched pair; no cross-version named-pipe compatibility is guaranteed.
+Librova is a Windows-first desktop e-book library manager. It is structured as **two cooperating processes**: `Librova.Core` (C++20 native host) handles all domain logic — import, parsing, conversion, persistence, search, collections, export, and trash — while `Librova.UI` (C# / .NET / Avalonia) owns the UI, ViewModels, and user interactions. The processes are deployed as a matched pair; no cross-version named-pipe compatibility is guaranteed.
 
-The **IPC boundary** is a Windows named pipe carrying length-prefixed Protobuf 3 messages. The contract is defined in a single `.proto` file (`proto/import_jobs.proto`) and exposes 11 RPC methods via the `LibraryJobService` service. There is no gRPC runtime and no P/Invoke as the primary transport. The UI process spawns the native host on startup and controls its lifetime; the host can also self-terminate if the parent UI PID disappears.
+The **IPC boundary** is a Windows named pipe carrying length-prefixed Protobuf 3 messages. The contract is defined in a single `.proto` file (`proto/import_jobs.proto`) and exposes 16 RPC methods via the `LibraryJobService` service. There is no gRPC runtime and no P/Invoke as the primary transport. The UI process spawns the native host on startup and controls its lifetime; the host can also self-terminate if the parent UI PID disappears.
 
 Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build), SQLite + FTS5 (persistence and full-text search), spdlog (C++ logging), Serilog (C# logging), pugixml (XML / FB2 parsing), libzip (ZIP extraction), stb (cover image processing), BS::thread_pool (parallel import). All build artifacts are written to `out/`.
 
@@ -75,7 +75,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | **ViewModels** | `apps/Librova.UI/ViewModels/` | MVVM logic: browse, import job tracking, first-run wizard, settings, section state machine |
 | **Views** | `apps/Librova.UI/Views/`, `apps/Librova.UI/Styles/` | AXAML markup, code-behind event handlers, design-token styles |
 | **Transport (C#)** | `apps/Librova.UI/PipeTransport/`, `apps/Librova.UI/ImportJobs/`, `apps/Librova.UI/LibraryCatalog/` | Named-pipe client, envelope protocol, service wrappers, proto ↔ C# model mapping |
-| **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 11 RPC methods, all message types, all enums |
+| **IPC Boundary** | `proto/import_jobs.proto` | Canonical contract: 16 RPC methods, all message types, all enums |
 | **Transport (C++)** | `libs/Transport/` | Named-pipe host, envelope serialization/deserialization, request dispatcher, pipe client |
 | **Proto Adapter** | `libs/Rpc/` | Route pipe method IDs → facade calls; translate proto ↔ domain types |
 | **Application Facades** | `libs/App/` | Orchestrate use cases: import, catalog query, export, trash; async job lifecycle; host bootstrap and CLI options |
@@ -121,7 +121,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Database` | SQLite RAII wrappers; SQL DDL constants; schema migration (v0→1); FTS5 index maintenance; SQLite book repositories; genre helpers; shared SQL utilities in `Librova::Sqlite` namespace (`BuildIdInClause`, `ResolveEntityId`, `ReadRelatedEntityNames`, `ParseTimePoint`, `SerializeTimePoint`, `CSqliteTransaction`) | `CSqliteConnection`, `CSqliteStatement`, `CDatabaseSchema`, `CSchemaMigrator`, `CSearchIndexMaintenance`, `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteGenreHelpers` |
+| `Database` | SQLite RAII wrappers; SQL DDL constants; schema migration (v0→1, v1→2 for collections); FTS5 index maintenance; SQLite book and collection repositories; genre helpers; shared SQL utilities in `Librova::Sqlite` namespace (`BuildIdInClause`, `ResolveEntityId`, `ReadRelatedEntityNames`, `ReadRelatedEntityNamesBatch`, `ParseTimePoint`, `SerializeTimePoint`, `CSqliteTransaction`) | `CSqliteConnection`, `CSqliteStatement`, `CDatabaseSchema`, `CSchemaMigrator`, `CSearchIndexMaintenance`, `CSqliteBookRepository` (write, `IBookRepository`), `CSqliteBookQueryRepository` (read, `IBookQueryRepository`), `CSqliteBookCollectionRepository` (`IBookCollectionRepository`, `IBookCollectionQueryRepository`), `CSqliteGenreHelpers` |
 
 ### Managed Storage
 
@@ -139,7 +139,7 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 | Module | Role | Key types |
 |---|---|---|
-| `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `SBookParseOptions`, `IBookRepository`, `IBookQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
+| `Domain` | All pure domain types: value objects, interfaces, enums, exceptions — zero I/O dependencies | `SBook`, `SBookId`, `SBookMetadata`, `SBookFileInfo`, `SParsedBook`, `SBookParseOptions`, `SBookCollection`, `IBookRepository`, `IBookQueryRepository`, `IBookCollectionRepository`, `IBookCollectionQueryRepository`, `IBookParser`, `IBookConverter`, `IManagedStorage`, `ITrashService`, `IProgressSink`, `CDomainException`, `CDuplicateHashException`, `EBookFormat`, `EStorageEncoding`, `EDomainErrorCode` |
 | `Foundation` | UTF-8 ↔ UTF-16 conversions (`PathFromUtf8()` — the **only** approved way to create `std::filesystem::path` from UTF-8 strings); SHA-256 via Windows BCrypt API; spdlog initialization and `*IfInitialized` log helpers; compile-time version constant; `ToLower` string utility; `EnsureDirectory` / `RemovePathNoThrow` filesystem helpers | `PathFromUtf8()`, `ComputeFileSha256Hex()`, `CLogging`, `CVersion`, `ToLower`, `EnsureDirectory`, `RemovePathNoThrow` |
 | `CoreHost` | Parse CLI options; bootstrap library (schema migration, service wiring) | `CLibraryBootstrap`, `SHostOptions` |
 
@@ -152,11 +152,11 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `Program.cs` / `App.axaml.cs` | Avalonia entry point; top-level exception handler | `App` |
 | `CoreHost/` | Spawn and manage native host process; resolve executable path; host launch defaults | `CoreHostProcess`, `CoreHostPathResolver`, `CoreHostLaunchOptions`, `CoreHostDevelopmentDefaults`, `UiConverterMode` |
 | `Shell/` | Application bootstrap; session lifecycle; preferences and state persistence; library root validation | `ShellApplication`, `ShellBootstrap`, `ShellSession`, `ShellStateStore`, `UiPreferencesStore`, `LibraryRootValidation`, `FirstRunSetupPolicy`, `ConverterValidationCoordinator`, `Fb2ConverterProbe` |
-| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `FilterFacetItem`, `EmptyStateKind` |
+| `ViewModels/` | All MVVM ViewModel classes | `ShellViewModel`, `ShellWindowViewModel`, `LibraryBrowserViewModel`, `ImportJobsViewModel`, `FirstRunSetupViewModel`, `ShellConverterPathController`, `ShellImportWorkflowController`, `ShellLibrarySwitchController`, `LibraryCoverPresentationService`, `BookCollectionListItemViewModel`, `BookCollectionMembershipRequest`, `BookCollectionIcons`, `FilterFacetItem`, `EmptyStateKind` |
 | `Views/` | AXAML markup + code-behind | `MainWindow`, `LibraryView`, `ImportView`, `SettingsView` |
 | `Styles/` | Design-token resources | `Colors.axaml`, `Typography.axaml`, `Components.axaml` |
 | `ImportJobs/` | Import job IPC client + service + mapper + models | `IImportJobsService`, `ImportJobsService`, `ImportJobClient`, `ImportJobMapper`, `ImportJobModels`, `ImportJobDomainError` |
-| `LibraryCatalog/` | Catalog query IPC client + service + mapper + models | `ILibraryCatalogService`, `LibraryCatalogService`, `LibraryCatalogClient`, `LibraryCatalogMapper`, `LibraryCatalogModels`, `FacetItemModel`, `NullLibraryCatalogService` |
+| `LibraryCatalog/` | Catalog query and collection IPC client + service + mapper + models | `ILibraryCatalogService`, `LibraryCatalogService`, `LibraryCatalogClient`, `LibraryCatalogMapper`, `LibraryCatalogModels`, `BookCollectionModel`, `BookCollectionKindModel`, `FacetItemModel`, `NullLibraryCatalogService` |
 | `PipeTransport/` | Low-level named-pipe I/O and envelope protocol (mirrors C++ side) | `NamedPipeClient`, `PipeProtocol` |
 | `Runtime/` | Version, OS environment, workspace cleanup, log sync | `ApplicationVersion`, `RuntimeEnvironment`, `RuntimeWorkspaceMaintenance`, `RuntimeLogSynchronization` |
 | `Mvvm/` | Base MVVM helpers | `AsyncCommand`, `ObservableObject` |
@@ -183,11 +183,16 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 | `GetBookDetails` | `GetBookDetailsRequest → GetBookDetailsResponse` | Full metadata for a single book |
 | `ExportBook` | `ExportBookRequest → ExportBookResponse` | Copy/convert managed book to destination path |
 | `MoveBookToTrash` | `MoveBookToTrashRequest → MoveBookToTrashResponse` | Remove from catalog; route to Recycle Bin or managed trash |
+| `ListCollections` | `ListCollectionsRequest → ListCollectionsResponse` | Return user-visible collections for the sidebar and menus |
+| `CreateCollection` | `CreateCollectionRequest → CreateCollectionResponse` | Create a new collection with name + icon |
+| `DeleteCollection` | `DeleteCollectionRequest → DeleteCollectionResponse` | Delete a user-defined collection without deleting books |
+| `AddBookToCollection` | `AddBookToCollectionRequest → AddBookToCollectionResponse` | Add one book to one collection |
+| `RemoveBookFromCollection` | `RemoveBookFromCollectionRequest → RemoveBookFromCollectionResponse` | Remove one book from one collection |
 
 ### Protocol Wire Format
 
 - Every call is wrapped in `SPipeRequestEnvelope` (request_id, method `EPipeMethod`, payload bytes) / `SPipeResponseEnvelope` (request_id, status, error_message, payload bytes).
-- Method IDs in `EPipeMethod` are **append-only integers** (1–10, 12; ID 11 is reserved). Adding a method requires a new ID; IDs are never recycled.
+- Method IDs in `EPipeMethod` are **append-only integers** (1–10, 12–17; ID 11 is reserved). Adding a method requires a new ID; IDs are never recycled.
 - UI and Core are deployed in lockstep; no backward-compatibility guarantee across versions.
 
 ### Mapping Points
@@ -207,11 +212,13 @@ Key technologies: CMake + vcpkg (native build), .csproj / MSBuild (managed build
 
 **`ImportJobStatus` enum**: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `CANCELLING`, `ROLLING_BACK`, `COMPACTING` — 8 states, full lifecycle including post-cancel rollback phases.
 
-**`BookListItem`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`.
+**`BookListItem`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`, `memberships[]` (`BookCollection`).
 
-**`BookDetails`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `description`, `identifier`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `content_hash_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`.
+**`BookDetails`** fields: `id`, `title`, `authors[]`, `language`, `series`, `series_index`, `publisher`, `year`, `isbn`, `description`, `identifier`, `tags[]`, `genres[]`, `format` (`BookFormat` enum), `managed_file_name`, `cover_resource_available`, `content_hash_available`, `cover_file_extension`, `cover_relative_path`, `size_bytes`, `added_at_unix_ms`, `memberships[]` (`BookCollection`).
 
-**`BookListRequest`** fields: `text` (FTS query), `author`, `languages[]`, `genres[]`, `series`, `tags[]`, `format`, `sort_by` (`BookSort` enum), `direction` (`SortDirection`), `offset`, `limit`.
+**`BookListRequest`** fields: `text` (FTS query), `author`, `languages[]`, `genres[]`, `series`, `tags[]`, `format`, `sort_by` (`BookSort` enum), `direction` (`SortDirection`), `offset`, `limit`, optional `collection_id`.
+
+**`BookCollection`** fields: `collection_id`, `name`, `icon_key`, `kind` (`CollectionKind` enum), `is_deletable`.
 
 **`ErrorCode`** enum values: `VALIDATION`, `UNSUPPORTED_FORMAT`, `DUPLICATE_REJECTED`, `PARSER_FAILURE`, `CONVERTER_UNAVAILABLE`, `CONVERTER_FAILED`, `STORAGE_FAILURE`, `DATABASE_FAILURE`, `CANCELLATION`, `INTEGRITY_ISSUE`, `NOT_FOUND`.
 
@@ -402,7 +409,7 @@ BookId = 42  →  padded = "0000000042"  →  hash lower 2 bytes  →  "Objects/
 Empty `sha256_hex` skips the write-side check (treated as "unknown hash").  
 `IBookRepository::ForceAdd()` bypasses the hash check entirely (explicit override).
 
-### Database Schema (version 1)
+### Database Schema (version 2)
 
 | Table | Key columns | Notes |
 |---|---|---|
@@ -411,9 +418,11 @@ Empty `sha256_hex` skips the write-side check (treated as "unknown hash").
 | `book_genres` | book_id, genre_id, source_type | `source_type`: `fb2_genre` or `epub_subject` — preserves provenance |
 | `tags` | name (unique) | Freeform tag |
 | `book_tags` | book_id, tag_id | Many-to-many |
+| `collections` | id, name, normalized_name, icon_key, kind, is_deletable, created_at_utc | User-defined collections now; preset/system collections later without schema reshaping |
+| `book_collections` | book_id, collection_id | Many-to-many membership; `ON DELETE CASCADE` from `collections` |
 | `search_index` | FTS5 virtual table: title, authors, tags, description, genres | Full-text search |
 
-Schema version policy: `user_version 0` → create fresh DB + set to 1. `user_version 1` → no-op. Any other value → incompatibility error (manual deletion required).
+Schema version policy: `user_version 0` → create fresh DB + set to 2. `user_version 1` → non-destructive upgrade to 2 by adding collection tables and indexes. `user_version 2` → no-op. Any newer or unknown value → incompatibility error (manual deletion required).
 
 ---
 
@@ -437,7 +446,7 @@ Violating any of these causes data corruption, crashes, or silent test failures.
 
 8. **Per-entry working directories use ZIP index, not filename.** Subdirectories are `working_dir/entries/<zip_index>/` — never the entry's relative path. Identical filenames in different archive subdirectories would otherwise collide.
 
-9. **DB schema version policy.** `CSchemaMigrator` accepts `user_version == 0` (creates fresh DB) or `user_version == 1` (no-op). Any other version throws an incompatibility error. Do not add automatic upgrade logic unless the change is non-destructive and the decision is explicit.
+9. **DB schema version policy.** `CSchemaMigrator` accepts `user_version == 0` (creates fresh DB), `user_version == currentVersion` (no-op), and only deliberately approved non-destructive upgrades such as `1 → 2` for collection infrastructure. Any other version throws an incompatibility error. Do not add automatic upgrade logic unless the change is non-destructive and the decision is explicit.
 
 10. **Mandatory IPC boundary logging in both directions.** Every method in `CLibraryJobServiceAdapter` must log the key outcome (not only on failure). Every managed `*Service.cs` wrapping an IPC call must log the successful response. Error-only logs are a diagnostic gap.
 
@@ -635,6 +644,20 @@ std::vector<SDuplicateMatch> FindDuplicates(const SCandidateBook& candidate) con
 SLibraryStatistics       GetLibraryStatistics() const;
 ```
 
+### `IBookCollectionRepository` / `IBookCollectionQueryRepository`
+
+```cpp
+std::vector<SBookCollection> ListCollections() const;
+std::vector<SBookCollection> ListCollectionsForBook(SBookId bookId) const;
+std::unordered_map<std::int64_t, std::vector<SBookCollection>> ListCollectionsForBooks(
+    const std::vector<SBookId>& bookIds) const;
+std::optional<SBookCollection> GetCollectionById(std::int64_t collectionId) const;
+SBookCollection CreateCollection(std::string nameUtf8, std::string iconKey);
+bool DeleteCollection(std::int64_t collectionId);
+bool AddBookToCollection(SBookId bookId, std::int64_t collectionId);
+bool RemoveBookFromCollection(SBookId bookId, std::int64_t collectionId);
+```
+
 ### `IProgressSink`
 
 ```cpp
@@ -679,6 +702,7 @@ SConversionResult Convert(const SConversionRequest& request,
 | `SBook` | `Id`, `Metadata`, `File`, `CoverPath`, `AddedAtUtc` |
 | `SBookMetadata` | `TitleUtf8`, `AuthorsUtf8[]`, `Language`, `SeriesUtf8`, `SeriesIndex`, `PublisherUtf8`, `Year`, `Isbn`, `TagsUtf8[]`, `GenresUtf8[]`, `DescriptionUtf8`, `Identifier` |
 | `SBookFileInfo` | `Format` (`EBookFormat`), `StorageEncoding` (`EStorageEncoding`), `ManagedPath`, `SizeBytes`, `Sha256Hex` |
+| `SBookCollection` | `Id`, `NameUtf8`, `IconKey`, `Kind`, `IsDeletable` |
 | `SParsedBook` | `Metadata`, `SourceFormat`, `CoverExtension`, `CoverBytes`, `CoverDiagnosticMessage` |
 | `SStoragePlan` | `BookId`, `Format`, `StorageEncoding`, `SourcePath`, optional `CoverSourcePath` |
 | `SPreparedStorage` | `StagedBookPath`, `StagedCoverPath`, `FinalBookPath`, `FinalCoverPath`, `RelativeBookPath`, `RelativeCoverPath` |
@@ -691,8 +715,8 @@ SConversionResult Convert(const SConversionRequest& request,
 
 1. Parse CLI: library root, working directory, parent UI PID, pipe name.
 2. Initialize spdlog (log to `LibraryRoot/Logs/`).
-3. Run `CSchemaMigrator` — create DB (version 0 → 1) or validate (version 1 = no-op); error on any other version.
-4. Construct services: `CSqliteBookRepository`, `CSqliteBookQueryRepository`, `CManagedFileStorage`, parsers, converter, facades, job manager.
+3. Run `CSchemaMigrator` — create DB (version 0 → 2), upgrade `1 → 2` for collection infrastructure, or validate (version 2 = no-op); error on any other version.
+4. Construct services: `CSqliteBookRepository`, `CSqliteBookQueryRepository`, `CSqliteBookCollectionRepository`, `CManagedFileStorage`, parsers, converter, facades, job manager.
 5. Start `CNamedPipeHost` — begin listening for requests.
 6. Bind lifetime to parent process identity: monitor the UI process using `pid + creation time`; self-terminate if that exact process dies.
 7. Dispatch loop: `EPipeMethod` → `CLibraryJobServiceAdapter` → proto response.
@@ -768,7 +792,7 @@ The transport is **Protobuf contracts over Windows named pipes**. This is the ca
 - `Open Library` — must validate that the selected root is already a complete managed library, including `Database/librova.db`.
 - Startup recovery for a damaged library — must not silently recreate the library in place; must accept an alternative path.
 
-**Database schema version policy:** `CSchemaMigrator` accepts `user_version == 0` (fresh DB, creates schema at version 1) or `user_version == 1` (no-op). Any other version throws an incompatibility error requiring the user to delete the library database. No automatic upgrade paths are provided unless the change is non-destructive and the decision is deliberate. When upgrading is appropriate, use the dispatch pattern:
+**Database schema version policy:** `CSchemaMigrator` accepts `user_version == 0` (fresh DB, creates schema at the current version), `user_version == currentVersion` (no-op), and deliberately approved non-destructive upgrades such as `1 → 2` for collection infrastructure. Any other version throws an incompatibility error requiring the user to delete the library database. No automatic upgrade paths are provided unless the change is non-destructive and the decision is deliberate. When upgrading is appropriate, use the dispatch pattern:
 ```cpp
 if (currentVersion < 2) { UpgradeToVersion2(connection); }
 if (currentVersion < 3) { UpgradeToVersion3(connection); }

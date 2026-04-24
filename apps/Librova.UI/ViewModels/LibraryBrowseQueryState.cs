@@ -16,6 +16,7 @@ internal sealed class LibraryBrowseQueryState
     public string SearchText { get; set; } = string.Empty;
     public IReadOnlyList<string> SelectedLanguages { get; set; } = [];
     public IReadOnlyList<string> SelectedGenres { get; set; } = [];
+    public long? SelectedCollectionId { get; set; }
     public SortKeyOption SelectedSortKey { get; set; }
     public bool SortDescending { get; set; }
 
@@ -35,12 +36,17 @@ internal sealed class LibraryBrowseQueryState
         || SelectedLanguages.Count > 0
         || SelectedGenres.Count > 0;
 
+    public bool HasResultRestrictions =>
+        HasActiveFilters
+        || SelectedCollectionId is not null;
+
     public BookListRequestModel BuildBatchRequest(int batchNumber) =>
         new()
         {
             Text = SearchText,
             Languages = SelectedLanguages,
             Genres = SelectedGenres,
+            CollectionId = SelectedCollectionId,
             SortBy = SelectedSortKey.Key,
             SortDirection = SortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = checked((ulong)Math.Max(0, batchNumber - 1) * (ulong)PageSize),
@@ -53,6 +59,7 @@ internal sealed class LibraryBrowseQueryState
             Text = SearchText,
             Languages = SelectedLanguages,
             Genres = SelectedGenres,
+            CollectionId = SelectedCollectionId,
             SortBy = SelectedSortKey.Key,
             SortDirection = SortDescending ? BookSortDirectionModel.Descending : BookSortDirectionModel.Ascending,
             Offset = 0,

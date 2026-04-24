@@ -1,3 +1,9 @@
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Librova.UI.LibraryCatalog;
+using Librova.UI.ViewModels;
+using Librova.UI.Views;
+using System.Collections;
 using System.Xml.Linq;
 using Xunit;
 
@@ -49,25 +55,72 @@ public sealed class LibraryViewMarkupTests
         var bookCardButton = document
             .Descendants(AvaloniaNamespace + "Button")
             .Single(element => element.Attribute("Classes")?.Value == "BookCardButton");
-        var contextMenu = bookCardButton.Descendants(AvaloniaNamespace + "ContextMenu").Single();
-        var menuItems = contextMenu.Descendants(AvaloniaNamespace + "MenuItem").ToArray();
 
         Assert.Equal("OnBookCardContextRequested", bookCardButton.Attribute("ContextRequested")?.Value);
-        Assert.Equal("BookCardContextMenu", contextMenu.Attribute("Classes")?.Value);
-        Assert.Equal(4, menuItems.Length);
-        Assert.Equal("Export", menuItems[0].Attribute("Header")?.Value);
-        Assert.Equal("{Binding #LibraryRootView.DataContext.LibraryBrowser.ExportBookFromCardCommand}", menuItems[0].Attribute("Command")?.Value);
-        Assert.Equal("{Binding .}", menuItems[0].Attribute("CommandParameter")?.Value);
-        Assert.Equal("Export as EPUB", menuItems[1].Attribute("Header")?.Value);
-        Assert.Equal("{Binding #LibraryRootView.DataContext.HasConfiguredConverter}", menuItems[1].Attribute("IsVisible")?.Value);
-        Assert.Equal("{Binding #LibraryRootView.DataContext.LibraryBrowser.ExportBookAsEpubFromCardCommand}", menuItems[1].Attribute("Command")?.Value);
-        Assert.Equal("{Binding .}", menuItems[1].Attribute("CommandParameter")?.Value);
-        Assert.Equal("Copy Title", menuItems[2].Attribute("Header")?.Value);
-        Assert.Equal("{Binding #LibraryRootView.DataContext.LibraryBrowser.CopyBookTitleCommand}", menuItems[2].Attribute("Command")?.Value);
-        Assert.Equal("{Binding .}", menuItems[2].Attribute("CommandParameter")?.Value);
-        Assert.Equal("Move to Trash", menuItems[3].Attribute("Header")?.Value);
-        Assert.Equal("{Binding #LibraryRootView.DataContext.LibraryBrowser.MoveBookToTrashFromCardCommand}", menuItems[3].Attribute("Command")?.Value);
-        Assert.Equal("{Binding .}", menuItems[3].Attribute("CommandParameter")?.Value);
+        Assert.Empty(bookCardButton.Descendants(AvaloniaNamespace + "ContextMenu"));
+    }
+
+    [Fact]
+    public void LibraryView_BookCard_ContextMenu_BuildsProgrammaticCollectionMenu()
+    {
+        var favorites = new BookCollectionModel(10, "Favorites", "star", BookCollectionKindModel.User, true);
+        var unread = new BookCollectionModel(11, "Unread", "bookmark", BookCollectionKindModel.User, true);
+        var longNamedCollection = new BookCollectionModel(
+            12,
+            "Very Long Collection Name That Should Be Trimmed In Context Menus",
+            "folder",
+            BookCollectionKindModel.User,
+            true);
+        var browser = new LibraryBrowserViewModel();
+        browser.Collections.Add(new BookCollectionListItemViewModel(favorites));
+        browser.Collections.Add(new BookCollectionListItemViewModel(unread));
+        browser.Collections.Add(new BookCollectionListItemViewModel(longNamedCollection));
+
+        var book = new BookListItemModel
+        {
+            BookId = 7,
+            Title = "Alpha",
+            Authors = ["Author"],
+            Language = "en",
+            Format = BookFormatModel.Epub,
+            ManagedPath = "Objects/aa/aa/0000000007.book.epub",
+            SizeBytes = 1024,
+            AddedAtUtc = DateTimeOffset.UtcNow,
+            Collections = [favorites]
+        };
+
+        var menu = Dispatcher.UIThread.Invoke(() => LibraryView.BuildBookCardContextMenu(browser, book));
+        var menuItems = GetItems(menu.ItemsSource);
+        var commandItems = menuItems.OfType<MenuItem>().ToArray();
+        var addToItem = Assert.Single(commandItems, item => item.Header?.ToString() == "Add to");
+        var addToItems = addToItem.Items.Cast<object>().ToArray();
+        var collectionItems = addToItems.OfType<MenuItem>().ToArray();
+
+        Assert.Contains("BookCardContextMenu", menu.Classes);
+        Assert.Contains(commandItems, item => item.Header?.ToString() == "Export");
+        Assert.Contains(commandItems, item => item.Header?.ToString() == "Copy Title");
+        Assert.Contains(commandItems, item => item.Header?.ToString() == "Move to Trash");
+        Assert.DoesNotContain(commandItems, item => item.Header?.ToString() == "Remove from collection");
+        Assert.Contains(addToItems, item => item is Separator);
+        Assert.NotNull(addToItem.Icon);
+
+        var existingMembershipItem = Assert.Single(collectionItems, item => item.Header?.ToString() == "✓ Favorites");
+        var newMembershipItem = Assert.Single(collectionItems, item => item.Header?.ToString() == "Unread");
+        var longMembershipItem = Assert.Single(
+            collectionItems,
+            item => item.CommandParameter is BookCollectionMembershipRequest request
+                && request.Collection.CollectionId == longNamedCollection.CollectionId);
+        var createNewItem = Assert.Single(collectionItems, item => item.Header?.ToString() == "Create new...");
+
+        Assert.False(existingMembershipItem.IsEnabled);
+        Assert.True(newMembershipItem.IsEnabled);
+        Assert.EndsWith("...", longMembershipItem.Header?.ToString());
+        Assert.True(longMembershipItem.Header?.ToString()?.Length <= 36);
+        Assert.Equal(longNamedCollection.Name, ToolTip.GetTip(longMembershipItem));
+        Assert.IsType<BookCollectionMembershipRequest>(existingMembershipItem.CommandParameter);
+        Assert.IsType<BookCollectionMembershipRequest>(newMembershipItem.CommandParameter);
+        Assert.IsType<BookCollectionMembershipRequest>(longMembershipItem.CommandParameter);
+        Assert.Null(createNewItem.Command);
     }
 
     private static XElement FindElementByName(XDocument document, string name) =>
@@ -80,6 +133,12 @@ public sealed class LibraryViewMarkupTests
         var repositoryRoot = ResolveRepositoryRoot();
         var markupPath = Path.Combine(repositoryRoot.FullName, "apps", "Librova.UI", "Views", "LibraryView.axaml");
         return XDocument.Load(markupPath);
+    }
+
+    private static object[] GetItems(object? itemsSource)
+    {
+        var enumerable = Assert.IsAssignableFrom<IEnumerable>(itemsSource);
+        return enumerable.Cast<object>().ToArray();
     }
 
     private static DirectoryInfo ResolveRepositoryRoot()

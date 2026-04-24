@@ -19,7 +19,12 @@ enum class EPipeMethod : std::uint32_t
     WaitImportJob = 8,
     CancelImportJob = 9,
     RemoveImportJob = 10,
-    ValidateImportSources = 12
+    ValidateImportSources = 12,
+    ListCollections = 13,
+    CreateCollection = 14,
+    DeleteCollection = 15,
+    AddBookToCollection = 16,
+    RemoveBookFromCollection = 17
 };
 
 enum class EPipeResponseStatus : std::uint32_t
@@ -41,8 +46,13 @@ static_assert(static_cast<std::uint32_t>(EPipeMethod::WaitImportJob) == 8);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::CancelImportJob) == 9);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::RemoveImportJob) == 10);
 static_assert(static_cast<std::uint32_t>(EPipeMethod::ValidateImportSources) == 12);
-inline constexpr std::uint32_t kNextPipeMethodId = 13;
-static_assert(kNextPipeMethodId == 13);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::ListCollections) == 13);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::CreateCollection) == 14);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::DeleteCollection) == 15);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::AddBookToCollection) == 16);
+static_assert(static_cast<std::uint32_t>(EPipeMethod::RemoveBookFromCollection) == 17);
+inline constexpr std::uint32_t kNextPipeMethodId = 18;
+static_assert(kNextPipeMethodId == 18);
 
 static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::Ok) == 0);
 static_assert(static_cast<std::uint32_t>(EPipeResponseStatus::InvalidRequest) == 1);

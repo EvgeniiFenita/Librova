@@ -2,6 +2,7 @@ using Avalonia.Media;
 using Librova.UI.LibraryCatalog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Librova.UI.ViewModels;
 
@@ -110,6 +111,14 @@ internal sealed class LibrarySelectionState
         if (!string.IsNullOrWhiteSpace(tags))
         {
             pairs.Add(new("Tags", tags));
+        }
+
+        var collections = source?.Collections.Count > 0
+            ? string.Join(", ", source.Collections.Select(collection => collection.Name))
+            : null;
+        if (!string.IsNullOrWhiteSpace(collections))
+        {
+            pairs.Add(new("Collections", collections));
         }
 
         pairs.Add(new("Size", _formatSize(SelectedBook.SizeBytes)));

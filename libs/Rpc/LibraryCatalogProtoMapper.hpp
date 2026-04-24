@@ -32,6 +32,29 @@ public:
         const Librova::Application::SBookDetails* details,
         const Librova::Domain::SDomainError* error = nullptr);
 
+    [[nodiscard]] static librova::v1::BookCollection ToProto(
+        const Librova::Domain::SBookCollection& collection);
+
+    [[nodiscard]] static librova::v1::ListCollectionsResponse ToProtoCollectionsResponse(
+        const std::vector<Librova::Domain::SBookCollection>& collections,
+        const Librova::Domain::SDomainError* error = nullptr);
+
+    [[nodiscard]] static librova::v1::CreateCollectionResponse ToProtoCreateCollectionResponse(
+        const Librova::Domain::SBookCollection* collection,
+        const Librova::Domain::SDomainError* error = nullptr);
+
+    [[nodiscard]] static librova::v1::DeleteCollectionResponse ToProtoDeleteCollectionResponse(
+        bool deleted,
+        const Librova::Domain::SDomainError* error = nullptr);
+
+    [[nodiscard]] static librova::v1::AddBookToCollectionResponse ToProtoAddBookToCollectionResponse(
+        bool changed,
+        const Librova::Domain::SDomainError* error = nullptr);
+
+    [[nodiscard]] static librova::v1::RemoveBookFromCollectionResponse ToProtoRemoveBookFromCollectionResponse(
+        bool changed,
+        const Librova::Domain::SDomainError* error = nullptr);
+
     [[nodiscard]] static librova::v1::LibraryStatistics ToProto(
         const Librova::Application::SLibraryStatistics& statistics);
 
@@ -55,6 +78,7 @@ private:
     [[nodiscard]] static librova::v1::BookFormat ToProto(Librova::Domain::EBookFormat format) noexcept;
     [[nodiscard]] static librova::v1::BookSort ToProto(Librova::Domain::EBookSort sort) noexcept;
     [[nodiscard]] static librova::v1::BookSortDirection ToProto(Librova::Domain::ESortDirection dir) noexcept;
+    [[nodiscard]] static librova::v1::CollectionKind ToProto(Librova::Domain::EBookCollectionKind kind) noexcept;
 };
 
 } // namespace Librova::ProtoMapping

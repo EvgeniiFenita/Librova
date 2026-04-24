@@ -49,6 +49,7 @@ internal sealed class BookListRequestModel
     public string? Author { get; init; }
     public IReadOnlyList<string> Languages { get; init; } = [];
     public IReadOnlyList<string> Genres { get; init; } = [];
+    public long? CollectionId { get; init; }
     public string? Series { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public BookFormatModel? Format { get; init; }
@@ -59,6 +60,19 @@ internal sealed class BookListRequestModel
 }
 
 internal sealed record FacetItemModel(string Value, uint Count);
+
+internal enum BookCollectionKindModel
+{
+    User,
+    Preset
+}
+
+internal sealed record BookCollectionModel(
+    long CollectionId,
+    string Name,
+    string IconKey,
+    BookCollectionKindModel Kind,
+    bool IsDeletable);
 
 internal sealed class BookListPageModel
 {
@@ -94,6 +108,7 @@ internal sealed record BookListItemDataModel
     public int? Year { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public IReadOnlyList<string> Genres { get; init; } = [];
+    public IReadOnlyList<BookCollectionModel> Collections { get; init; } = [];
     public BookFormatModel Format { get; init; }
     public BookStorageInfoModel Storage { get; init; } = new();
     public ulong SizeBytes { get; init; }
@@ -270,6 +285,12 @@ internal sealed class BookListItemModel : INotifyPropertyChanged
         init => _data = Data with { Genres = value };
     }
 
+    public IReadOnlyList<BookCollectionModel> Collections
+    {
+        get => Data.Collections;
+        init => _data = Data with { Collections = value };
+    }
+
     public BookFormatModel Format
     {
         get => Data.Format;
@@ -444,6 +465,7 @@ internal sealed record BookDetailsDataModel
     public IReadOnlyList<string> Genres { get; init; } = [];
     public string? Description { get; init; }
     public string? Identifier { get; init; }
+    public IReadOnlyList<BookCollectionModel> Collections { get; init; } = [];
     public BookFormatModel Format { get; init; }
     public BookStorageInfoModel Storage { get; init; } = new();
     public ulong SizeBytes { get; init; }
@@ -550,6 +572,12 @@ internal sealed class BookDetailsModel : INotifyPropertyChanged
     {
         get => Data.Identifier;
         init => _data = Data with { Identifier = value };
+    }
+
+    public IReadOnlyList<BookCollectionModel> Collections
+    {
+        get => Data.Collections;
+        init => _data = Data with { Collections = value };
     }
 
     public BookFormatModel Format

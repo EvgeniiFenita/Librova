@@ -16,6 +16,7 @@ Librova is not an e-book reader. It manages the library itself: import, storage,
 - import `EPUB`, `FB2`, and `ZIP`
 - store books in a managed library
 - search and browse metadata
+- organize books into user-defined collections
 - export managed books, including `Export as EPUB` for managed `FB2` when a converter is configured
 - delete through the Windows `Recycle Bin`, with managed `Trash` fallback
 - run as an offline-first single-user desktop workflow

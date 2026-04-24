@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "Domain/BookCollection.hpp"
 #include "Domain/BookRepository.hpp"
 
 namespace Librova::Application {
@@ -17,6 +18,7 @@ struct SBookListRequest
     std::optional<std::string> AuthorUtf8;
     std::vector<std::string> Languages;
     std::vector<std::string> GenresUtf8;
+    std::optional<std::int64_t> CollectionId;
     std::optional<std::string> SeriesUtf8;
     std::vector<std::string> TagsUtf8;
     std::optional<Librova::Domain::EBookFormat> Format;
@@ -47,6 +49,7 @@ struct SBookListItem
     std::optional<std::filesystem::path> CoverPath;
     std::uintmax_t SizeBytes = 0;
     std::chrono::system_clock::time_point AddedAtUtc{};
+    std::vector<Librova::Domain::SBookCollection> Collections;
 };
 
 struct SLibraryStatistics
@@ -91,6 +94,7 @@ struct SBookDetails
     std::uintmax_t SizeBytes = 0;
     std::string Sha256Hex;
     std::chrono::system_clock::time_point AddedAtUtc{};
+    std::vector<Librova::Domain::SBookCollection> Collections;
 };
 
 class CLibraryCatalogFacade final
@@ -100,9 +104,22 @@ public:
         const Librova::Domain::IBookQueryRepository& bookQueryRepository,
         const Librova::Domain::IBookRepository& bookRepository);
 
+    CLibraryCatalogFacade(
+        const Librova::Domain::IBookQueryRepository& bookQueryRepository,
+        const Librova::Domain::IBookRepository& bookRepository,
+        const Librova::Domain::IBookCollectionQueryRepository& bookCollectionQueryRepository,
+        Librova::Domain::IBookCollectionRepository& bookCollectionRepository);
+
     [[nodiscard]] SBookListResult ListBooks(const SBookListRequest& request) const;
     [[nodiscard]] std::optional<SBookDetails> GetBookDetails(Librova::Domain::SBookId id) const;
     [[nodiscard]] SLibraryStatistics GetLibraryStatistics() const;
+    [[nodiscard]] std::vector<Librova::Domain::SBookCollection> ListCollections() const;
+    [[nodiscard]] Librova::Domain::SBookCollection CreateCollection(
+        std::string nameUtf8,
+        std::string iconKey) const;
+    [[nodiscard]] bool DeleteCollection(std::int64_t collectionId) const;
+    [[nodiscard]] bool AddBookToCollection(Librova::Domain::SBookId bookId, std::int64_t collectionId) const;
+    [[nodiscard]] bool RemoveBookFromCollection(Librova::Domain::SBookId bookId, std::int64_t collectionId) const;
 
 private:
     [[nodiscard]] static Librova::Domain::SSearchQuery ToDomainQuery(const SBookListRequest& request);
@@ -111,6 +128,8 @@ private:
 
     const Librova::Domain::IBookQueryRepository& m_bookQueryRepository;
     const Librova::Domain::IBookRepository& m_bookRepository;
+    const Librova::Domain::IBookCollectionQueryRepository* m_bookCollectionQueryRepository = nullptr;
+    Librova::Domain::IBookCollectionRepository* m_bookCollectionRepository = nullptr;
 };
 
 } // namespace Librova::Application

@@ -56,6 +56,7 @@ For C# presentation helpers that cannot bind XAML resources directly, resolve sh
 |---|---|---|
 | `AppNavActiveBrush` | `#1E1606` | Active NavItem background |
 | `AppNavActiveHoverBrush` | `#261C08` | Active NavItem hover |
+| `AppDialogOverlayBrush` | `#80000000` | Modal dialog backdrop overlay |
 
 ### Text hierarchy
 
@@ -94,7 +95,7 @@ Defined in `Colors.axaml`.
 
 | Token | Value | Usage |
 |---|---|---|
-| `Radius.Small` | 8 | NavItem buttons, IconAction |
+| `Radius.Small` | 8 | NavItem buttons, IconAction, NavIconBadge, CollectionAddAction |
 | `Radius.Medium` | 12 | Inputs, ComboBox, BookCard, secondary panels |
 | `Radius.Large` | 18 | Section panels (AccentPanel, SuccessPanel, DangerPanel) |
 | `Radius.XLarge` | 24 | Top-level panels (AppPanel, AppShell) |
@@ -162,13 +163,24 @@ All buttons inherit the global `Button` style: `Cursor=Hand`, background transit
 | `DestructiveAction` | DangerSurface bg, danger border, SemiBold | Destructive ops (Move to Recycle Bin) |
 | `IconAction` | SurfaceAlt bg, border, 40×40, square | Icon-only standard size |
 | `IconActionSm` | SurfaceAlt bg, border, 36×36, square | Icon-only compact (panel headers) |
+| `IconActionPrimary` | Accent-filled, dark icon, 34×34, square | Primary icon CTA (reserved/amber emphasis) |
 | `NavItem` | SurfaceMuted bg, border, h=42, Radius.Small | Sidebar nav (Library, Import, Settings) |
 | `NavItem` + `.Active` | NavActive bg, accent border | Currently selected nav section |
+| `CollectionAddAction` | Ghost (transparent bg, accent border, amber text+icon), full-width, Radius.Small | "New collection" button at bottom of collections list |
+| `CollectionLinkAction` | Transparent bg, amber text+icon, no border | Inline CTA link (e.g. "Create one" in empty state) |
 
 ### Nav button text behaviour
 - Inactive → `TextBlock.NavLabel` Foreground = `AppTextMutedBrush`
 - Active → `TextBlock.NavLabel` Foreground = `AppTextPrimaryBrush`  
 - Disabled (import in progress) → whole button `Opacity=0.45`
+
+### NavIconBadge
+
+Collection nav buttons wrap their emoji `TextBlock.NavIcon` in a `Border.NavIconBadge` (30×30, `Radius.Small`, transparent background). The badge provides a consistent tap/hover target and is reserved for future active-state tinting if needed. The active state is signalled by the amber left border on the parent `NavItem` button — the badge itself stays transparent.
+
+### Collection icon glyphs
+
+Collection entries use emoji glyphs (`📚 🗂 📦 📁 🔖 ⭐ ❤️ 🧭 🗺 ⏰ ✨ 🌙 ☀️ 🍃 🔥 👑 ✏️ 🎭 🏰 💍`) rendered via `TextBlock.NavIcon` (FontSize=18, 24×24). Emoji render via Segoe UI Emoji fallback on Windows — they ignore `Foreground` color. Set `LineHeight` explicitly on any standalone emoji `TextBlock` (e.g. `LineHeight="34"` for `FontSize="26"`) to prevent Avalonia clipping the glyph descenders.
 
 ### Disabled states
 Every action button class (`AccentAction`, `SecondaryAction`, `DestructiveAction`) uses two rules when disabled:
@@ -195,7 +207,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `IconSearch` | Magnifier | Search bar |
 | `IconClose` | × cross | Close/dismiss |
 | `IconFolderOpen` | Open folder | Open Library |
-| `IconAddFolder` | Folder + plus | New Library |
+| `IconAddFolder` | Folder + plus | New Library; New/Create collection buttons |
 | `IconTrash` | Trash can | Delete / move to bin |
 | `IconInfo` | Info circle | Info hint |
 | `IconUploadCloud` | Cloud with arrow | Drop zone |
@@ -222,6 +234,7 @@ Rendered via `PathIcon` — fills all sub-paths as solid colour.
 | `TextBox` | `AppTextInput` | h=42, SurfaceAlt bg, Medium radius |
 | `TextBox` | `AppTextArea` | Multi-line, TextWrapping=Wrap |
 | `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup. Popup открывается с `VerticalOffset=6` (зазор под кнопкой). При `:dropdownopen` иконка `DropDownGlyph` становится `AppAccentBrush` (янтарная) |
+| `ListBox` | `IconPickerGrid` | 48×54 emoji cells in a `WrapPanel`, SurfaceAlt bg, 1px border; selected cell gets amber border (2px) + AccentSurface bg. Used in the Create Collection dialog for icon selection. `VerticalScrollBarVisibility=Auto`. Set `ClipToBounds="False"` on `ListBoxItem` to avoid emoji descender clipping. |
 | `CheckBox` | *(none)* | Foreground override to Primary |
 
 ### Toolbar control parity
@@ -273,6 +286,7 @@ Window (Background = AppBackgroundBrush)
         │              DockPanel
         │                  Bottom: library card + Settings NavItem + version label
         │                  Fill:   branding pill + tagline + Library/Import NavItems
+        │                          collections panel
         └── Col 1: Border (AppSurfaceBrush) — content fill
                    Grid (DataContext=Shell)
                        LibraryView / ImportView / SettingsView (fade-in on :visible)
@@ -287,7 +301,7 @@ Window (Background = AppBackgroundBrush)
 
 | View | DataContext | Key layout |
 |---|---|---|
-| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right). Each book card also exposes a right-click context menu with `Export`, `Copy Title`, and `Move to Trash`; when a converter is configured, the same menu also shows `Export as EPUB` and enables it for `FB2` books. |
+| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right). Each book card also exposes a right-click context menu with `Export`, `Add to`, `Copy Title`, and `Move to Trash`; when a converter is configured, the same menu also shows `Export as EPUB` and enables it for `FB2` books. |
 | `ImportView` | `ShellViewModel` | ScrollViewer → StackPanel. Drop zone → options → running state → result |
 | `SettingsView` | `ShellViewModel` | ScrollViewer → StackPanel. Converter → About → Diagnostics panels |
 
@@ -369,7 +383,7 @@ To swap the entire colour palette, update exactly these four locations:
 | Background | `AppSurfaceElevatedBrush` (`Color.SurfaceElevated` = `#2E2414`) | Тёплый amber, заметно светлее основного окна |
 | Border | `AppAccentBorderBrush` (`Color.AccentBorder` = `#3D2C0A`) | Amber-рамка, выделяет контейнер без BoxShadow |
 
-Это правило применено к `Border.FilterPopup` (filter facet flyout), `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown) и `ContextMenu.BookCardContextMenu` (меню карточки книги). Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
+Это правило применено к `Border.FilterPopup` (filter facet flyout), `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown), `ContextMenu.BookCardContextMenu` (root menu карточки книги), `ContextMenu` и `Menu`. Вложенные submenu у `MenuItem` в Fluent-шаблоне используют ресурсы `MenuFlyoutPresenterBackground` / `MenuFlyoutPresenterBorderBrush`, поэтому эти ключи переопределены в `Colors.axaml` той же парой токенов. Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
 
 ---
 
@@ -382,6 +396,12 @@ All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150
 ## 16. Sidebar Details
 
 **Gradient** — The sidebar uses `AppSidebarGradientBrush` (a `LinearGradientBrush` from top `#0A0806` to bottom `#1A1409`) to create a subtle depth effect from recessed/shadowed top to warm amber base.
+
+**Collections block** — The collections panel lives in the top navigation stack directly under Library/Import. Collection entries use the same `Button.NavItem` chrome as primary navigation buttons. Each entry wraps its emoji glyph in a `Border.NavIconBadge` (30×30, `Radius.Small`), which provides a consistent icon area without adding visual noise. Long collection names are single-line ellipsized and exposed through a tooltip. The scrollable list (`MaxHeight="210"` ≈ 4 items) leaves right-side breathing room so the scrollbar does not overlap buttons.
+
+When no collections exist, the panel shows a 📚 emoji, a caption, and a `CollectionLinkAction` CTA ("Create one" with `IconAddFolder`). When collections exist, a `CollectionAddAction` ghost button ("New collection" with `IconAddFolder`) appears below the list. Delete is via right-click context menu on a collection item — no inline delete button in the header.
+
+Selecting a collection activates only that collection button; the Library nav button is not active while a collection filter is active.
 
 **Version badge** — A small 11 px muted `TextBlock` at the bottom of the sidebar DockPanel, bound to `Shell.ApplicationVersionText`. Only visible when `HasShell=true`.
 

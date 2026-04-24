@@ -72,6 +72,13 @@ internal static class LibraryCatalogMapper
             Message = error.Message
         };
 
+    private static BookCollectionKindModel MapCollectionKind(CollectionKind kind) =>
+        kind switch
+        {
+            CollectionKind.Preset => BookCollectionKindModel.Preset,
+            _ => BookCollectionKindModel.User
+        };
+
     public static BookListRequest ToProto(BookListRequestModel model)
     {
         var request = new BookListRequest
@@ -88,6 +95,10 @@ internal static class LibraryCatalogMapper
 
         request.Languages.AddRange(model.Languages);
         request.Genres.AddRange(model.Genres);
+        if (model.CollectionId is not null)
+        {
+            request.CollectionId = model.CollectionId.Value;
+        }
 
         if (!string.IsNullOrWhiteSpace(model.Series))
         {
@@ -137,6 +148,31 @@ internal static class LibraryCatalogMapper
             ? response.Details is null ? null : FromProto(response.Details)
             : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
 
+    public static IReadOnlyList<BookCollectionModel> FromProto(ListCollectionsResponse response) =>
+        response.Error is null
+            ? response.Collections.Select(FromProto).ToArray()
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
+
+    public static BookCollectionModel? FromProto(CreateCollectionResponse response) =>
+        response.Error is null
+            ? response.Collection is null ? null : FromProto(response.Collection)
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
+
+    public static bool FromProto(DeleteCollectionResponse response) =>
+        response.Error is null
+            ? response.Deleted
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
+
+    public static bool FromProto(AddBookToCollectionResponse response) =>
+        response.Error is null
+            ? response.Changed
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
+
+    public static bool FromProto(RemoveBookFromCollectionResponse response) =>
+        response.Error is null
+            ? response.Changed
+            : throw new LibraryCatalogDomainException(MapDomainError(response.Error));
+
     public static LibraryStatisticsModel FromProto(LibraryStatistics statistics) =>
         new()
         {
@@ -178,6 +214,7 @@ internal static class LibraryCatalogMapper
             Year = item.HasYear ? item.Year : null,
             Tags = item.Tags.ToArray(),
             Genres = item.Genres.ToArray(),
+            Collections = item.Memberships.Select(FromProto).ToArray(),
             Format = item.Format switch
             {
                 BookFormat.Epub => BookFormatModel.Epub,
@@ -196,6 +233,14 @@ internal static class LibraryCatalogMapper
             AddedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(item.AddedAtUnixMs)
         };
 
+    public static BookCollectionModel FromProto(BookCollection collection) =>
+        new(
+            collection.CollectionId,
+            collection.Name,
+            collection.IconKey,
+            MapCollectionKind(collection.Kind),
+            collection.IsDeletable);
+
     public static BookDetailsModel FromProto(BookDetails item) =>
         new()
         {
@@ -210,6 +255,7 @@ internal static class LibraryCatalogMapper
             Isbn = item.HasIsbn ? item.Isbn : null,
             Tags = item.Tags.ToArray(),
             Genres = item.Genres.ToArray(),
+            Collections = item.Memberships.Select(FromProto).ToArray(),
             Description = item.HasDescription ? item.Description : null,
             Identifier = item.HasIdentifier ? item.Identifier : null,
             Format = item.Format switch

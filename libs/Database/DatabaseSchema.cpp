@@ -1,5 +1,7 @@
 #include "Database/DatabaseSchema.hpp"
 
+#include <string>
+
 namespace Librova::DatabaseSchema {
 namespace {
 
@@ -104,17 +106,43 @@ CREATE INDEX IF NOT EXISTS idx_book_tags_tag_id ON book_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_book_genres_genre_id ON book_genres(genre_id);
 )sql";
 
+constexpr std::string_view GCreateCollectionSchemaScript = R"sql(
+CREATE TABLE IF NOT EXISTS collections (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    normalized_name TEXT NOT NULL UNIQUE,
+    icon_key TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    is_deletable INTEGER NOT NULL DEFAULT 1,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS book_collections (
+    book_id INTEGER NOT NULL,
+    collection_id INTEGER NOT NULL,
+    PRIMARY KEY (book_id, collection_id),
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_collections_normalized_name ON collections(normalized_name);
+CREATE INDEX IF NOT EXISTS idx_book_collections_collection_id ON book_collections(collection_id);
+CREATE INDEX IF NOT EXISTS idx_book_collections_book_id ON book_collections(book_id);
+)sql";
+
+const std::string GCreateFullSchemaScript = std::string{GCreateSchemaScript} + std::string{GCreateCollectionSchemaScript};
+
 const std::vector<std::string_view> GMigrationStatements{
     "PRAGMA foreign_keys = ON;",
     "PRAGMA journal_mode = WAL;",
-    GCreateSchemaScript
+    GCreateFullSchemaScript
 };
 
 } // namespace
 
 int CDatabaseSchema::GetCurrentVersion() noexcept
 {
-    return 1;
+    return 2;
 }
 
 const std::vector<std::string_view>& CDatabaseSchema::GetMigrationStatements()
@@ -124,7 +152,12 @@ const std::vector<std::string_view>& CDatabaseSchema::GetMigrationStatements()
 
 std::string_view CDatabaseSchema::GetCreateSchemaScript() noexcept
 {
-    return GCreateSchemaScript;
+    return GCreateFullSchemaScript;
+}
+
+std::string_view CDatabaseSchema::GetCollectionSchemaScript() noexcept
+{
+    return GCreateCollectionSchemaScript;
 }
 
 } // namespace Librova::DatabaseSchema

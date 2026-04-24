@@ -117,6 +117,7 @@ message BookListRequest {
   uint64 limit = 9;
   repeated string languages = 12;
   repeated string genres = 13;
+  optional int64 collection_id = 14;
 }
 
 message BookListItem {
@@ -138,6 +139,7 @@ message BookListItem {
   optional string cover_file_extension = 16;
   repeated string genres = 17;
   optional string cover_relative_path = 18;
+  repeated BookCollection memberships = 19;
 }
 
 message BookDetails {
@@ -164,6 +166,7 @@ message BookDetails {
   optional string cover_file_extension = 22;
   repeated string genres = 23;
   optional string cover_relative_path = 24;
+  repeated BookCollection memberships = 25;
 }
 
 message ListBooksRequest {
@@ -224,6 +227,67 @@ message MoveBookToTrashResponse {
   DeleteDestination destination = 2;
   bool has_orphaned_files = 3;
   optional DomainError error = 4;
+}
+
+enum CollectionKind {
+  COLLECTION_KIND_UNSPECIFIED = 0;
+  COLLECTION_KIND_USER = 1;
+  COLLECTION_KIND_PRESET = 2;
+}
+
+message BookCollection {
+  int64 collection_id = 1;
+  string name = 2;
+  string icon_key = 3;
+  CollectionKind kind = 4;
+  bool is_deletable = 5;
+}
+
+message ListCollectionsRequest {
+}
+
+message ListCollectionsResponse {
+  repeated BookCollection collections = 1;
+  optional DomainError error = 2;
+}
+
+message CreateCollectionRequest {
+  string name = 1;
+  string icon_key = 2;
+}
+
+message CreateCollectionResponse {
+  optional BookCollection collection = 1;
+  optional DomainError error = 2;
+}
+
+message DeleteCollectionRequest {
+  int64 collection_id = 1;
+}
+
+message DeleteCollectionResponse {
+  bool deleted = 1;
+  optional DomainError error = 2;
+}
+
+message AddBookToCollectionRequest {
+  int64 book_id = 1;
+  int64 collection_id = 2;
+}
+
+message AddBookToCollectionResponse {
+  bool changed = 1;
+  optional DomainError error = 2;
+}
+
+message RemoveBookFromCollectionRequest {
+  int64 book_id = 1;
+  int64 collection_id = 2;
+}
+
+message RemoveBookFromCollectionResponse {
+  bool changed = 1;
+  optional DomainError error = 2;
 }
 
 message StartImportRequest {
@@ -291,6 +355,11 @@ service LibraryJobService {
   rpc GetBookDetails(GetBookDetailsRequest) returns (GetBookDetailsResponse);
   rpc ExportBook(ExportBookRequest) returns (ExportBookResponse);
   rpc MoveBookToTrash(MoveBookToTrashRequest) returns (MoveBookToTrashResponse);
+  rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse);
+  rpc CreateCollection(CreateCollectionRequest) returns (CreateCollectionResponse);
+  rpc DeleteCollection(DeleteCollectionRequest) returns (DeleteCollectionResponse);
+  rpc AddBookToCollection(AddBookToCollectionRequest) returns (AddBookToCollectionResponse);
+  rpc RemoveBookFromCollection(RemoveBookFromCollectionRequest) returns (RemoveBookFromCollectionResponse);
   rpc GetImportJobSnapshot(GetImportJobSnapshotRequest) returns (GetImportJobSnapshotResponse);
   rpc GetImportJobResult(GetImportJobResultRequest) returns (GetImportJobResultResponse);
   rpc WaitImportJob(WaitImportJobRequest) returns (WaitImportJobResponse);

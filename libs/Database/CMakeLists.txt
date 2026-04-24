@@ -6,6 +6,8 @@ add_library(LibrovaDatabase STATIC
     DatabaseSchema.cpp
     SchemaMigrator.cpp
     SearchIndexMaintenance.cpp
+    SqliteBookCollectionRepository.cpp
+    SqliteBookCollectionRepository.hpp
     SqliteBookQueryRepository.cpp
     SqliteBookRepository.cpp
     SqliteEntityHelpers.cpp

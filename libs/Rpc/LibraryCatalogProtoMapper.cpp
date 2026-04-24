@@ -49,6 +49,10 @@ Librova::Application::SBookListRequest CLibraryCatalogProtoMapper::FromProto(
 
     result.Languages.assign(request.languages().begin(), request.languages().end());
     result.GenresUtf8.assign(request.genres().begin(), request.genres().end());
+    if (request.has_collection_id())
+    {
+        result.CollectionId = request.collection_id();
+    }
 
     if (request.has_series())
     {
@@ -96,6 +100,11 @@ librova::v1::BookListRequest CLibraryCatalogProtoMapper::ToProto(
     for (const std::string& genre : request.GenresUtf8)
     {
         proto.add_genres(genre);
+    }
+
+    if (request.CollectionId.has_value())
+    {
+        proto.set_collection_id(*request.CollectionId);
     }
 
     if (request.SeriesUtf8.has_value())
@@ -152,6 +161,11 @@ librova::v1::BookListItem CLibraryCatalogProtoMapper::ToProto(
     for (const std::string& genre : item.GenresUtf8)
     {
         proto.add_genres(genre);
+    }
+
+    for (const auto& collection : item.Collections)
+    {
+        *proto.add_memberships() = ToProto(collection);
     }
 
     if (item.SeriesUtf8.has_value())
@@ -275,6 +289,23 @@ librova::v1::BookDetails CLibraryCatalogProtoMapper::ToProto(
         proto.set_cover_relative_path(Librova::Unicode::PathToUtf8(*details.CoverPath));
     }
 
+    for (const auto& collection : details.Collections)
+    {
+        *proto.add_memberships() = ToProto(collection);
+    }
+
+    return proto;
+}
+
+librova::v1::BookCollection CLibraryCatalogProtoMapper::ToProto(
+    const Librova::Domain::SBookCollection& collection)
+{
+    librova::v1::BookCollection proto;
+    proto.set_collection_id(collection.Id);
+    proto.set_name(collection.NameUtf8);
+    proto.set_icon_key(collection.IconKey);
+    proto.set_kind(ToProto(collection.Kind));
+    proto.set_is_deletable(collection.IsDeletable);
     return proto;
 }
 
@@ -287,6 +318,82 @@ librova::v1::GetBookDetailsResponse CLibraryCatalogProtoMapper::ToProtoResponse(
     {
         *response.mutable_details() = ToProto(*details);
     }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
+
+    return response;
+}
+
+librova::v1::ListCollectionsResponse CLibraryCatalogProtoMapper::ToProtoCollectionsResponse(
+    const std::vector<Librova::Domain::SBookCollection>& collections,
+    const Librova::Domain::SDomainError* error)
+{
+    librova::v1::ListCollectionsResponse response;
+    for (const auto& collection : collections)
+    {
+        *response.add_collections() = ToProto(collection);
+    }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
+
+    return response;
+}
+
+librova::v1::CreateCollectionResponse CLibraryCatalogProtoMapper::ToProtoCreateCollectionResponse(
+    const Librova::Domain::SBookCollection* collection,
+    const Librova::Domain::SDomainError* error)
+{
+    librova::v1::CreateCollectionResponse response;
+    if (collection != nullptr)
+    {
+        *response.mutable_collection() = ToProto(*collection);
+    }
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
+
+    return response;
+}
+
+librova::v1::DeleteCollectionResponse CLibraryCatalogProtoMapper::ToProtoDeleteCollectionResponse(
+    const bool deleted,
+    const Librova::Domain::SDomainError* error)
+{
+    librova::v1::DeleteCollectionResponse response;
+    response.set_deleted(deleted);
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
+
+    return response;
+}
+
+librova::v1::AddBookToCollectionResponse CLibraryCatalogProtoMapper::ToProtoAddBookToCollectionResponse(
+    const bool changed,
+    const Librova::Domain::SDomainError* error)
+{
+    librova::v1::AddBookToCollectionResponse response;
+    response.set_changed(changed);
+    if (error != nullptr)
+    {
+        *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
+    }
+
+    return response;
+}
+
+librova::v1::RemoveBookFromCollectionResponse CLibraryCatalogProtoMapper::ToProtoRemoveBookFromCollectionResponse(
+    const bool changed,
+    const Librova::Domain::SDomainError* error)
+{
+    librova::v1::RemoveBookFromCollectionResponse response;
+    response.set_changed(changed);
     if (error != nullptr)
     {
         *response.mutable_error() = CImportJobProtoMapper::ToProto(*error);
@@ -466,6 +573,19 @@ librova::v1::BookSortDirection CLibraryCatalogProtoMapper::ToProto(
     case Librova::Domain::ESortDirection::Ascending:
     default:
         return librova::v1::BOOK_SORT_DIRECTION_ASC;
+    }
+}
+
+librova::v1::CollectionKind CLibraryCatalogProtoMapper::ToProto(
+    const Librova::Domain::EBookCollectionKind kind) noexcept
+{
+    switch (kind)
+    {
+    case Librova::Domain::EBookCollectionKind::Preset:
+        return librova::v1::COLLECTION_KIND_PRESET;
+    case Librova::Domain::EBookCollectionKind::User:
+    default:
+        return librova::v1::COLLECTION_KIND_USER;
     }
 }
 

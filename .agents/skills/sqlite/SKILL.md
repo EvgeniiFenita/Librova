@@ -59,9 +59,10 @@ Read only the files relevant to the change:
 
 ### Schema version policy
 
-- current schema version is `1`
-- `user_version == 0` means a fresh database: create schema and set version to `1`
-- `user_version == 1` is a no-op
+- current schema version is `2`
+- `user_version == 0` means a fresh database: create schema and set version to `2`
+- `user_version == 1` is deliberately upgraded to `2` by adding collection infrastructure
+- `user_version == 2` is a no-op
 - any other version is treated as incompatible and must throw
 - do not add automatic upgrade logic unless the decision is deliberate and non-destructive
 
@@ -92,6 +93,7 @@ Important tables:
 - `authors` + `book_authors`
 - `tags` + `book_tags`
 - `genres` + `book_genres`
+- `collections` + `book_collections`
 - `search_index` as an FTS5 virtual table with `content=''`
 
 Important `books` columns that frequently matter in code review:

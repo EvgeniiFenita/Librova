@@ -141,7 +141,7 @@ Redundant comments are noise — omit them.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
 - In native libraries: keep `.hpp` and `.cpp` together unless a different layout is clearly necessary.
 - If SQLite schema depends on optional modules (e.g., FTS5), declare them explicitly in `vcpkg.json`.
-- **Database schema version policy**: the current schema is version 1. `CSchemaMigrator` accepts only `user_version == 0` (creates fresh DB) or `user_version == expected` (no-op). Any other version throws an incompatibility error requiring the user to delete and recreate the database. **Do not add automatic upgrade paths** unless the schema change is non-destructive and the decision is deliberate; when upgrading is appropriate, follow the dispatch pattern documented in `docs/CodebaseMap.md §14 Architecture Decisions`.
+- **Database schema version policy**: the current schema is version 2. `CSchemaMigrator` accepts `user_version == 0` (creates fresh DB), `user_version == expected` (no-op), and only deliberately approved non-destructive upgrades such as `1 -> 2` for collection infrastructure. Any other version throws an incompatibility error requiring the user to delete and recreate the database. **Do not add automatic upgrade paths** unless the schema change is non-destructive and the decision is deliberate; when upgrading is appropriate, follow the dispatch pattern documented in `docs/CodebaseMap.md §14 Architecture Decisions`.
 - External converter integration stays user-configurable; `fb2cng` is the first built-in profile, not a hard-wired exclusive.
 
 ### Verification and test discipline

@@ -98,6 +98,10 @@ The user can:
 - use that same full-text field with ordinary punctuation without breaking the search flow through raw FTS syntax errors;
 - filter the grid by language;
 - filter the grid by genre;
+- create user-defined collections from the left sidebar;
+- delete user-defined collections without deleting the underlying books from the library;
+- open a collection from the sidebar and browse it through the ordinary `Library` grid filtered by that collection;
+- add or remove a book from collections through the book-card context menu;
 - see a library summary in the left `Current Library` panel with total managed-book count and one aggregate library-size metric in megabytes that includes managed books, stored covers, and the SQLite database;
 - browse books as cover-driven cards in a responsive grid;
 - see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
@@ -109,7 +113,7 @@ The user can:
 - export either the selected book or the specific book card that opened the context menu;
 - move either the selected book or the specific book card that opened the context menu to the Windows `Recycle Bin`.
 
-Series and genres are already surfaced in the details panel when available; first-class browser filtering for genres is available in the `Library` toolbar, while dedicated series browsing remains future work.
+Series and genres are already surfaced in the details panel when available; user-defined collection memberships are also surfaced there for the selected book. First-class browser filtering for genres is available in the `Library` toolbar, while dedicated series browsing and preset/system collections remain future work.
 
 ### 3.4 Export
 
