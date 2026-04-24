@@ -37,6 +37,7 @@ Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff
 
 - [ ] cancellation is distinct from converter failure
 - [ ] no silent fallback to storing the original FB2 on conversion failure
+- [ ] `import_covers=false` skips cover extraction throughout the entire pipeline, not only at the final storage step
 - [ ] probable duplicates require explicit user consent
 - [ ] rollback semantics are explicit and tested
 
@@ -77,7 +78,38 @@ If any of these drifted, fix them immediately using the relevant doc owner from 
 ## 8. Release Readiness
 
 - [ ] `Debug` and `Release` validation are complete when code changed
-- [ ] required manual UI scenarios were walked through
+- [ ] required manual UI scenarios in `docs/ReleaseChecklist.md` were walked through
 - [ ] no critical regressions remain in startup, import, browser, export, delete, or settings
 - [ ] logs are actionable enough to diagnose startup and runtime problems
 - [ ] remaining open backlog items are intentionally scheduled, not accidental drift
+
+## 9. Filesystem / Path Safety
+
+- [ ] all `std::filesystem::path` constructions from UTF-8 strings use `PathFromUtf8()`, never `path(std::string)` or `path(const char*)`
+- [ ] no absolute path leaks into the database, preferences, or IPC proto fields
+- [ ] library root and runtime workspace are not mixed without explicit intent
+- [ ] managed library is portable: no hard-coded drive letters or machine-specific paths stored durably
+- [ ] `ManagedPathSafety` escape checks cover archive and export destination paths
+
+## 10. SQLite / Schema Safety
+
+- [ ] schema version policy enforced: v0→2 and v1→2 are the only approved upgrade paths; any other version produces an incompatibility error, not a silent migration
+- [ ] `ON DELETE CASCADE` on `book_collections` removes only membership rows, not the books themselves
+- [ ] FTS5 queries are safe against punctuation and special-character input
+- [ ] SQLite transaction boundaries cover all multi-step writes
+
+## 11. Collections Correctness
+
+- [ ] delete collection removes only membership rows; books must survive
+- [ ] add/remove book from collection is idempotent and leaves no orphan rows
+- [ ] sidebar and browser correctly reflect membership changes without stale state
+- [ ] RPC methods covered: `ListCollections`, `CreateCollection`, `DeleteCollection`, `AddBookToCollection`, `RemoveBookFromCollection`
+
+## 12. Project-Specific Invariants
+
+- [ ] `zip_t*` ZIP access stays single-threaded; no ZIP handle shared across worker threads
+- [ ] cancellation of conversion is **not** classified as ordinary converter failure
+- [ ] `IBookRepository::ReserveIds()` called on main thread before worker dispatch; workers never open their own SQLite transactions for ID allocation
+- [ ] all `std::future` in Phase 2 of `CZipImportCoordinator` resolved via `get()` even after cancellation — abandoning futures is UB
+- [ ] `inFlight` semaphore declared before `thread_pool` in `CZipImportCoordinator`; reversed order causes dangling reference on destruction
+- [ ] export destination written via temporary sibling, not in-place
