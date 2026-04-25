@@ -14,6 +14,7 @@ Produce Windows-desktop-oriented Qt/QML guidance that stays practical, consisten
 - use this skill for layout, component, theming, navigation, typography, iconography, and motion questions in Qt/QML apps
 - in Librova itself, treat `docs/UiDesignSystem.md` as the canonical design source
 - do **not** override repository-specific tokens or component rules without updating `docs/UiDesignSystem.md`
+- when implementing design changes in QML files (editing `.qml` views or components), use `$qt-qml` together with this skill
 
 ## Librova Rules
 
