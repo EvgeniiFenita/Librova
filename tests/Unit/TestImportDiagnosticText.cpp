@@ -1,7 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <google/protobuf/descriptor.h>
-
 #include "Import/ImportDiagnosticText.hpp"
 
 TEST_CASE("Import diagnostic text joins warnings and terminal error with a stable separator", "[importing]")

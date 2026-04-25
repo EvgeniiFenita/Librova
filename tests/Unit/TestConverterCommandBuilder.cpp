@@ -19,24 +19,6 @@ TEST_CASE("Converter command builder creates default fb2cng command profile", "[
     }));
 }
 
-TEST_CASE("Converter command builder includes optional fb2cng config file when requested", "[converter-command]")
-{
-    const auto profile = Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
-        "tools/fbc.exe",
-        std::filesystem::path{"config/fb2cng.yaml"});
-
-    REQUIRE(profile.ArgumentTemplate == std::vector<std::string>({
-        "-c",
-        "config/fb2cng.yaml",
-        "convert",
-        "--to",
-        "{output_format}",
-        "--overwrite",
-        "{source}",
-        "{destination_dir}"
-    }));
-}
-
 TEST_CASE("Converter command builder resolves placeholders for generic templates", "[converter-command]")
 {
     const Librova::ConverterCommand::SConverterCommandProfile profile{
@@ -118,4 +100,3 @@ TEST_CASE("Converter command builder preserves literal placeholder text inside r
         "Temp/{output_format}"
     }));
 }
-

@@ -2,12 +2,12 @@
 
 Librova is a Windows-first desktop application for managing a personal e-book library.
 
-The project uses a two-process architecture:
+The active desktop application uses an in-process Qt/QML shell over the native C++ application facade:
 
-- `Librova.UI` in `C# / .NET / Avalonia`
-- `Librova.Core` in `C++20`
+- `LibrovaQtApp` in `Qt / QML`
+- native backend in `C++20`
 
-Processes communicate through Protobuf over Windows named pipes. Local storage is based on SQLite with `FTS5`.
+Local storage is based on SQLite with `FTS5`.
 
 Librova is not an e-book reader. It manages the library itself: import, storage, search, export, and maintenance.
 
@@ -30,7 +30,6 @@ Librova is not an e-book reader. It manages the library itself: import, storage,
 | follow repository-wide rules, workflow, and doc ownership | `AGENTS.md` |
 | inspect frozen architecture decisions | `docs/CodebaseMap.md` §14 Architecture Decisions |
 | understand test expectations | `AGENTS.md` § Verification and test discipline |
-| change IPC / Protobuf transport safely | `docs/CodebaseMap.md` §5 IPC Boundary |
 | change the SQLite schema or native SQL / FTS queries safely | `AGENTS.md` → `$sqlite` skill, then `docs/CodebaseMap.md` §7 / §12 |
 | change UI appearance or layout | `docs/UiDesignSystem.md` |
 | inspect active work | `python scripts\backlog.py list` or `python scripts\backlog.py show <id>` |
@@ -42,8 +41,7 @@ Repository helper scripts live in `scripts/` and resolve the repository root fro
 ```powershell
 scripts\Run-Tests.ps1
 python scripts\backlog.py list
-scripts\ValidateProto.ps1
-scripts\Run-Librova.ps1
+scripts\Run-LibrovaQt.ps1
 ```
 
 For agent-oriented task procedures, see the skills listed in `AGENTS.md`.
@@ -52,11 +50,10 @@ For agent-oriented task procedures, see the skills listed in `AGENTS.md`.
 
 | Script | Purpose | Common flags |
 |---|---|---|
-| `scripts\Run-Tests.ps1` | Configure, build, and run the native and managed test suites in the required build -> test order | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-SkipConfigure`, `-SkipNative`, `-SkipManaged` |
-| `scripts\Run-Librova.ps1` | Build and launch the native host and UI for manual verification | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-NoLaunch`, `-FirstRun`, `-SecondRun`, `-StartupErrorRecovery` |
-| `scripts\ValidateProto.ps1` | Validate `.proto` changes by compiling the descriptor set with the preset's `protoc` | `-BuildPreset <cmake-preset>`, `-ProtoFile <relative-proto-path>` |
+| `scripts\Run-Tests.ps1` | Configure, build, run native + Qt tests, then validate that Qt does not leak into `libs/` | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-QtRoot <path>`, `-SkipConfigure`, `-SkipNative`, `-SkipBoundaryValidation` |
+| `scripts\Run-LibrovaQt.ps1` | Build and launch the Qt/QML one-process app for manual verification | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-QtRoot <path>`, launch flags defined in the script |
 | `python scripts\backlog.py ...` | Inspect and maintain the backlog via the supported CLI instead of editing YAML directly | `list`, `show <id>`, `add`, `edit <id>`, `close <id>`, `validate` |
-| `scripts\PublishPortable.ps1` | Build the portable packaged distribution under `out\package\<PackageName>`; uses `out\publish\...` as an intermediate publish directory | `-NativePreset <cmake-preset>`, `-Configuration Release`, runtime/publish options defined in the script |
+| `scripts\PublishPortableQt.ps1` | Build the portable Qt packaged distribution under `out\package\<PackageName>` | `-Preset <cmake-preset>`, `-Configuration Release`, packaging options defined in the script |
 | `scripts\GenerateLibrovaIcon.ps1` | Regenerate the application icon assets from the scripted source | no routine flags; run after editing the icon generator inputs |
 
 Use `Get-Content scripts\<name>.ps1 -TotalCount 40` or `Get-Help` for the full parameter list when a script changes.

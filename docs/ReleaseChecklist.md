@@ -18,8 +18,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Corrupted library: the recovery screen does not try to recreate the library and accepts a different path **(RG)**
 - Shell navigation: `Library` / `Import` / `Settings` switch correctly and content does not overlap
 - Application icon is present in the window title bar
-- Host lifetime: host exits together with the UI on normal close **(RG)**
-- Host lifetime: host exits after force-killing the UI **(RG)**
+- Qt lifetime: the in-process backend closes cleanly when the UI exits **(RG)**
 
 ---
 
@@ -33,7 +32,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - ZIP: parallel import of multiple files from the archive **(RG)**
 - ZIP: corrupted archive — a valid book from the same archive still imports **(RG)**
 - Progress summary in the `RUNNING` state shows total / processed / imported / failed / skipped
-- Long-running import after the UI wait ceiling keeps `Refresh` and `Cancel` available
+- Long-running import keeps progress visible and `Cancel` available
 - Cancellation: rollback of already imported books **(RG)**
 - Cancellation: the library returns to the pre-import state **(RG)**
 - Drag-and-drop: files start import automatically **(RG)**
@@ -117,10 +116,10 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Nested subfolder of the current library is rejected as a new root **(RG)**
 - Converter configuration: relative path -> error **(RG)**
 - Converter configuration: non-existent file -> error **(RG)**
-- Converter configuration: working `fbc.exe` -> `Save` button becomes enabled **(RG)**
+- Converter configuration: working `fbc.exe` is accepted and saved automatically **(RG)**
 - Debounce ~500 ms — probe is not started on every keystroke
 - After saving the converter path, the session reloads and stays on `Settings`
-- Diagnostics: UI log, host log, and executable paths are visible
+- Diagnostics: UI log, runtime workspace, converter workspace, staging path, and executable/runtime paths are visible
 - About card: `VERSION` is not empty, `AUTHOR` and `CONTACT` are populated
 
 ---
@@ -129,4 +128,4 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 
 - Relaunch state persistence: Import preserves the last source path after restart
 - Smoke pass after release build: `scripts\Run-Tests.ps1 -Preset x64-release -Configuration Release` passes **(RG)**
-- Smoke launch release build: `scripts\Run-Librova.ps1 -Preset x64-release -Configuration Release` starts and opens the library **(RG)**
+- Smoke launch release build: `scripts\Run-LibrovaQt.ps1 -Preset x64-release -Configuration Release` starts and opens the library **(RG)**

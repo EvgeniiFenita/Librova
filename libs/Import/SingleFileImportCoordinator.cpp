@@ -315,7 +315,7 @@ bool IsCancellationRequested(
     return stopToken.stop_requested() || progressSink.IsCancellationRequested();
 }
 
-[[nodiscard]] std::string SanitizeTransportErrorMessage(const std::string_view message)
+[[nodiscard]] std::string SanitizeUserFacingErrorMessage(const std::string_view message)
 {
     constexpr std::string_view detailedAuthorMessage =
         "FB2 metadata must contain at least one non-empty title-info/author.";
@@ -860,7 +860,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
     catch (const std::exception& error)
     {
         const std::string diagnosticError = error.what();
-        const std::string transportError = SanitizeTransportErrorMessage(diagnosticError);
+        std::string userFacingError = SanitizeUserFacingErrorMessage(diagnosticError);
 
         if (Librova::Logging::CLogging::IsInitialized())
         {
@@ -897,7 +897,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
                 return {
                     .Status = ESingleFileImportStatus::Failed,
-                    .Error = SanitizeTransportErrorMessage(cleanupFailure),
+                    .Error = SanitizeUserFacingErrorMessage(cleanupFailure),
                     .DiagnosticError = diagnosticError + " [cleanup_failure: " + cleanupFailure + "]"
                 };
             }
@@ -913,7 +913,7 @@ SSingleFileImportResult CSingleFileImportCoordinator::Run(
 
         return {
             .Status = ESingleFileImportStatus::Failed,
-            .Error = std::move(transportError),
+            .Error = std::move(userFacingError),
             .DiagnosticError = std::move(diagnosticError)
         };
     }

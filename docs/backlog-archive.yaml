@@ -1572,3 +1572,13 @@ tasks:
   note: 'Implemented user-defined collections end to end: schema and migration, collection repository,
     catalog IPC, sidebar navigation, create/delete dialogs, book membership menu, details membership display,
     docs, and regression coverage.'
+- id: 192
+  summary: complete Qt-only desktop migration and remove retired desktop runtime
+  status: Closed
+  type: Feature
+  priority: Critical
+  milestone: '1.3'
+  note: 'Completed the Qt-only desktop migration hardening pass: restored collection-view drop guards,
+    restored Escape/Delete library shortcuts, recentered selected cards during layout changes, removed
+    the hidden converter config path, synchronized backlog and review-pass wording, and validated the
+    Qt-only build, tests, and boundary checks manually.'

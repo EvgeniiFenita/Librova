@@ -6,7 +6,6 @@
     "bshoshany-thread-pool",
     "catch2",
     "libzip",
-    "protobuf",
     "pugixml",
     "spdlog",
     "stb",

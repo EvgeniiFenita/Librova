@@ -35,7 +35,7 @@ On first launch, the user chooses whether to create a new managed library or ope
 - logs;
 - trash.
 
-Once a library is active, both UI and native host logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write the hot runtime log streams to a local portable-aware runtime location and append the resulting `ui.log` and `host.log` back into `LibraryRoot/Logs` on shutdown or the next successful startup without discarding already retained log history.
+Once a library is active, UI/runtime logs are retained under that same library in `Logs/`, so diagnostics stay attached to the managed library rather than splitting across unrelated folders. During the active session Librova may write hot runtime log streams to a local portable-aware runtime location and append the resulting logs back into `LibraryRoot/Logs` on shutdown or the next successful startup without discarding already retained log history.
 
 During an active session, temporary import workspaces, managed-storage staging, and built-in converter process working directories are also kept in a local portable-aware runtime workspace rather than under the managed library root. The library root acts as durable storage for committed managed objects, logs retained after sync, the database, and trash; it is not treated as the hot runtime temp area.
 
@@ -43,9 +43,9 @@ For the portable packaged distribution, bootstrap-only UI files that exist befor
 
 When that portable packaged distribution and its managed library are moved together to another machine or drive letter, Librova should still reopen the same library on the next launch by resolving the saved library location relative to the application directory rather than depending only on the previous absolute drive path.
 
-For multi-file, directory, and ZIP imports, the native host log must also record per-source and per-entry skipped/failed diagnostics with concrete file names, so large import investigations do not depend only on the UI warning summary.
+For multi-file, directory, and ZIP imports, runtime logs must also record per-source and per-entry skipped/failed diagnostics with concrete file names, so large import investigations do not depend only on the UI warning summary.
 
-The native host is treated as a child runtime of the UI session. Normal shutdown and abnormal UI termination are both expected to stop the host process instead of leaving it orphaned in the background.
+The native backend is composed in-process with the Qt UI. Normal shutdown is expected to close the backend worker cleanly before process exit.
 
 If the configured library root is invalid or unavailable on a later launch, Librova opens a startup recovery screen and lets the user choose a different library root before retrying startup.
 
@@ -163,10 +163,10 @@ The following are outside the product scope by design:
 
 ## 5. High-Level Technical Picture
 
-Implementation details such as the two-process split, named-pipe transport, and module ownership are documented in `docs/CodebaseMap.md`.
+Implementation details such as the active Qt/QML one-process shell and module ownership are documented in `docs/CodebaseMap.md`.
 
 ## 6. Related Documents
 
-- [Librova CodebaseMap](CodebaseMap.md) — module map, architecture decisions, and IPC invariants
+- [Librova CodebaseMap](CodebaseMap.md) — module map and architecture decisions
 - [Librova Backlog](backlog.yaml) — single source of truth for all open and planned work; use `python scripts/backlog.py list` to browse
 - [ReleaseChecklist](ReleaseChecklist.md)

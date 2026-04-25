@@ -29,8 +29,7 @@ std::optional<Librova::ConverterCommand::SConverterCommandProfile> TryBuildComma
         return std::nullopt;
     case EConverterConfigurationMode::BuiltInFb2Cng:
         return Librova::ConverterCommand::CConverterCommandBuilder::CreateFb2CngProfile(
-            configuration.Fb2Cng.ExecutablePath,
-            configuration.Fb2Cng.ConfigPath);
+            configuration.Fb2Cng.ExecutablePath);
     }
 
     return std::nullopt;

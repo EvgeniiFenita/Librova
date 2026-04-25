@@ -13,7 +13,7 @@ Change the import pipeline without breaking transactional safety, cancellation s
 
 - use this skill when adding a new source format
 - use this skill when changing import stages, duplicate detection, conversion handling, or archive / directory behavior
-- use `$transport-rpc` alongside this skill if the import change also requires IPC contract updates
+- update Qt adapters/controllers when the import change affects user-visible import workflow or progress state
 
 > **Architecture overview**: For stage classes, thread model, cancellation contract, and directory layout, see `docs/CodebaseMap.md` §6 Import Pipeline Architecture.
 

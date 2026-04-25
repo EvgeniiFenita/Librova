@@ -1084,7 +1084,7 @@ TEST_CASE("Single file import stores library-relative paths in book record", "[i
     REQUIRE(bookRepository.AddedBook->CoverPath == std::filesystem::path{"Objects/5a/68/0000000001.cover.jpg"});
 }
 
-TEST_CASE("Single file import keeps detailed parser diagnostics out of transport-facing error text", "[importing]")
+TEST_CASE("Single file import keeps detailed parser diagnostics out of user-facing error text", "[importing]")
 {
     CTestWorkspace sandbox(L"librova-importing-parser-diagnostics");
     const auto sourcePath = sandbox.GetPath() / "invalid.fb2";

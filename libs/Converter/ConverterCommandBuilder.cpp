@@ -65,8 +65,7 @@ std::string ExpandTemplate(
 } // namespace
 
 SConverterCommandProfile CConverterCommandBuilder::CreateFb2CngProfile(
-    const std::filesystem::path& executablePath,
-    const std::optional<std::filesystem::path>& configPath)
+    const std::filesystem::path& executablePath)
 {
     if (executablePath.empty())
     {
@@ -77,12 +76,6 @@ SConverterCommandProfile CConverterCommandBuilder::CreateFb2CngProfile(
         .ExecutablePath = executablePath,
         .OutputMode = EConverterOutputMode::SingleFileInDestinationDirectory
     };
-
-    if (configPath.has_value())
-    {
-        profile.ArgumentTemplate.push_back("-c");
-        profile.ArgumentTemplate.push_back(Librova::Unicode::PathToUtf8(*configPath));
-    }
 
     profile.ArgumentTemplate.push_back("convert");
     profile.ArgumentTemplate.push_back("--to");

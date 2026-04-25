@@ -113,7 +113,7 @@ Typical things to verify:
 - runtime behavior
 - logging expectations
 - storage layout
-- proto package / transport method inventory
+- Qt adapter/controller/model inventory
 
 Prefer direct source verification over inference.
 

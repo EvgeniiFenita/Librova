@@ -1,6 +1,6 @@
 ---
 name: vertical-slice
-description: End-to-end implementation checklist for any new Librova feature. Use when starting a read-side query, mutation, transport contract change, or UI shell workflow. Do NOT use for pure stabilization, doc-only, or build-only tasks.
+description: End-to-end implementation checklist for any new Librova feature. Use when starting a read-side query, mutation, or UI shell workflow. Do NOT use for pure stabilization, doc-only, or build-only tasks.
 ---
 
 # Vertical Slice Playbook
@@ -12,8 +12,7 @@ Deliver a feature or workflow end-to-end across every touched layer, with tests 
 ## When to Use
 
 - use this skill for user-visible features or workflow changes that cross multiple layers
-- use this skill for read-side or mutation flows that touch domain, transport, and UI together
-- use `$transport-rpc` instead when the change is IPC-only
+- use this skill for read-side or mutation flows that touch domain, Qt adapters/controllers, and UI together
 - use `$import-pipeline` as the domain-specific companion when the slice is mainly about import behavior
 - use `$review-pass` instead for stabilization or hardening passes without new feature work
 
@@ -23,7 +22,7 @@ Before writing code:
 
 1. run `python scripts/backlog.py list` and confirm the task maps to an open backlog item
 2. if no backlog item matches, stop and confirm with the user whether to proceed
-3. identify the slice category: read-side query / mutation-use-case / transport-contract / UI-shell-workflow
+3. identify the slice category: read-side query / mutation-use-case / UI-shell-workflow
 4. consult `docs/CodebaseMap.md` §9 Task Navigation for the entry-point checklist for your slice type, and §3-§4 to locate the relevant modules
 
 ## 1. Read-Side Query Slice
@@ -32,15 +31,10 @@ Use for list, details, search, filters, and similar read-only flows.
 
 - [ ] add or extend the native application facade
 - [ ] keep domain and repository boundaries clean unless a new contract is genuinely required
-- [ ] add or extend protobuf request/response messages in `proto/`
-- [ ] extend native proto mapping
-- [ ] extend the native protobuf service adapter
-- [ ] extend pipe transport method registration and request dispatch
-- [ ] run `scripts/ValidateProto.ps1` when `proto/` changes
-- [ ] add or extend the C# pipe method enum, client, service, and mapper
-- [ ] add or extend the C# ViewModel / UI binding
+- [ ] add or extend the Qt adapter/controller/model surface
+- [ ] add or extend the QML binding
 - [ ] add unit tests for local logic
-- [ ] add an integration test for the IPC boundary
+- [ ] add an integration test for the touched Qt/backend boundary
 - [ ] update docs according to `AGENTS.md` document-maintenance policy
 
 ## 2. Mutation / Use-Case Slice
@@ -57,11 +51,7 @@ Apply the read-side checklist plus:
 - [ ] `docs/Librova-Product.md` updated if user-facing behavior changed
 - [ ] `docs/ReleaseChecklist.md` updated if the UI workflow changed
 
-## 3. Transport Contract Change Slice
-
-If the slice is primarily transport work, use `$transport-rpc` for the ordered IPC checklist and come back here only for the surrounding feature wiring.
-
-## 4. UI Shell Workflow Slice
+## 3. UI Shell Workflow Slice
 
 Use for a new section, dialog, settings panel, or first-run flow.
 
@@ -71,7 +61,7 @@ Use for a new section, dialog, settings panel, or first-run flow.
 - [ ] `docs/ReleaseChecklist.md` updated if the UI workflow changed
 - [ ] UI labels in English exactly as they appear in the source
 
-## 5. Close-Out
+## 4. Close-Out
 
 Before marking the task done:
 

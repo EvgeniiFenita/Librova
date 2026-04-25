@@ -3,8 +3,8 @@
 ## Project Snapshot
 
 Librova is a Windows-first desktop e-book library manager.  
-Two-process architecture: `Librova.UI` (C# / .NET / Avalonia) ↔ `Librova.Core` (C++20).  
-IPC: Protobuf over Windows named pipes. Storage: SQLite + FTS5. Build: CMake + vcpkg (native), .csproj (managed).
+Active architecture: `LibrovaQtApp` (Qt / QML) + C++20 backend in one process.  
+Storage: SQLite + FTS5. Build: CMake + vcpkg + Qt.
 
 Full product, architecture, and backlog context lives in `docs/`. Read them before any substantive change.
 
@@ -36,20 +36,20 @@ large new features that touch multiple layers.
 Before making changes, read these documents in order:
 
 1. `docs/Librova-Product.md` — what the product is and what is in scope
-2. `docs/CodebaseMap.md` — module map, task navigation, frozen architecture decisions, and IPC invariants (fast orientation: where things live, where to go for a given change)
+2. `docs/CodebaseMap.md` — module map, task navigation, and frozen architecture decisions (fast orientation: where things live, where to go for a given change)
 3. `python scripts/backlog.py list` or `python scripts/backlog.py show <id>` — active backlog
 4. `docs/UiDesignSystem.md` — UI design system: colour tokens, typography, components, shell layout (read before any UI change)
 
 Use `$skill-name` in the CLI whenever this file says to use a skill.
 
-When writing new C++, C#, Protobuf, or script code: use the `$code-style` skill.
+When writing new C++, QML, or script code: use the `$code-style` skill.
 When changing the SQLite schema, native SQL queries, FTS behavior, or SQLite review/debugging rules: use the `$sqlite` skill.
 
 ---
 
 ## Build and Test
 
-Run the full build and test suite (native + managed, `Debug` by default):
+Run the full build and test suite (native + Qt, `Debug` by default):
 
 Repository helper scripts live under `scripts/` and resolve the repository root from the script path. The commands below assume the repository root as the current directory; from another working directory, call the same script by a path that points to the repo copy.
 
@@ -67,15 +67,8 @@ cmake --build --preset x64-debug --config Debug
 # Run native tests
 ctest --test-dir out\build\x64-debug -C Debug --output-on-failure
 
-# Build and run managed tests
-dotnet test tests\Librova.UI.Tests\Librova.UI.Tests.csproj -c Debug
-
-# Proto validation — required after any change under proto/
-scripts\ValidateProto.ps1
-
-# Build and launch the app (for manual verification)
-scripts\Run-Librova.ps1
-scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
+# Build and launch the Qt app (for manual verification)
+scripts\Run-LibrovaQt.ps1
 ```
 
 > `build → test` must always stay ordered: finish the required build first, then start tests against that fresh build. Independent test suites may run in parallel only after the build step completes.
@@ -85,8 +78,8 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 ## Hard Constraints (Never Violate)
 
 - MVP targets **Windows only**.
-- Architecture is **two-process**: UI in C# / Avalonia, core in C++20. Do not collapse into one process.
-- IPC is **Protobuf over named pipes**. Do not introduce gRPC runtime or P/Invoke as the main transport.
+- Active architecture is **one-process**: UI in Qt/QML, backend in C++20, composed through `libs/App/ILibraryApplication`.
+- Do not reintroduce the retired two-process desktop runtime or a managed desktop UI.
 - **One user, one managed library, offline-first.** No cloud, no multi-library in MVP.
 - **Unicode and Cyrillic correctness** are non-negotiable everywhere: storage, search, UI, and logs.
 - All build artifacts go under repository-root `out/`. No project-local `bin/` or `obj/` as steady state.
@@ -94,7 +87,6 @@ scripts\Run-Librova.ps1 -FirstRun    # first-run setup screen
 - Do not introduce gRPC runtime dependencies without an explicit architecture decision.
 - Conversion cancellation is **not** ordinary converter failure; never silently fall back to storing the original FB2.
 - `build → test` must stay **ordered**: never run tests against stale binaries. Parallel test execution is allowed only after the required build step completes.
-- After any change under `proto/`, run `scripts/ValidateProto.ps1` before marking the checkpoint done.
 - Never open `docs/backlog.yaml` or `docs/backlog-archive.yaml` directly.
   Use `python scripts/backlog.py list` and `python scripts/backlog.py show <id>` instead.
   The archive file must never be loaded as upfront context.
@@ -136,7 +128,7 @@ Redundant comments are noise — omit them.
 
 - Do not invent architecture that conflicts with frozen decisions in `docs/CodebaseMap.md §14 Architecture Decisions`.
 - Fix the true cause of a bug whenever it is reasonably reachable in the current task; do not stop at a local patch that only hides downstream symptoms while leaving the source inconsistency in place.
-- Keep domain logic out of Avalonia views and transport DTOs.
+- Keep domain logic out of QML views and Qt UI adapters.
 - Prefer small vertical slices that preserve clean layer boundaries.
 - For native code: one static library per logical slice under `libs/<SliceName>/` with a local `CMakeLists.txt`.
 - In native libraries: keep `.hpp` and `.cpp` together unless a different layout is clearly necessary.
@@ -146,7 +138,6 @@ Redundant comments are noise — omit them.
 
 ### Verification and test discipline
 
-- Process-level IPC tests must use explicit readiness checks and deterministic cleanup — no fixed sleeps.
 - When closing a review-pass issue, add a regression test for the exact failure mode before marking the checkpoint done.
 - Native tests that open a `CSqliteBookRepository` or `CSqliteBookQueryRepository` must call `repository.CloseSession()` before removing the database file — Windows does not allow deleting a file with an open handle. Both classes cache a persistent SQLite connection internally.
 
@@ -154,19 +145,18 @@ Redundant comments are noise — omit them.
 
 **Unit Tests** — use for: local business rules, mappers, validation logic, DTO conversion, command enablement, pagination and state transitions. Unit tests should dominate by count.
 
-**Integration Tests** — use for: real SQLite behavior, filesystem staging and rollback, native host composition, named-pipe request/response, C# to native host flows through real IPC. Integration tests should exist at critical boundaries, not everywhere.
+**Integration Tests** — use for: real SQLite behavior, filesystem staging and rollback, Qt adapter to native application facade flows, and filesystem-bound workflows. Integration tests should exist at critical boundaries, not everywhere.
 
-**Strong Host-Backed Tests** — use sparingly for the most valuable end-to-end user flows (e.g., import through the real native host followed by browser refresh; browser query against the real native host and SQLite; export through the real native host and managed library). These tests are expensive but catch cross-layer drift.
+**Strong Application Tests** — use sparingly for the most valuable end-to-end user flows (e.g., import through the real `ILibraryApplication` facade followed by browser refresh; browser query against SQLite through the Qt adapter; export through the real native application facade and managed library). These tests are expensive but catch cross-layer drift.
 
 #### When a New Test Is Required
 
 Add a new test when:
 
 - a new user-facing behavior is introduced
-- a new IPC method is introduced
 - rollback or partial-failure semantics are introduced
 - a review found a bug class not covered by current tests
-- C++ and C# contracts can drift independently
+- Qt adapters and native application contracts can drift independently
 - a fix changes Unicode, encoding, path, or filesystem-boundary behavior
 - a fix changes startup, shutdown, or command-line control flow
 
@@ -179,7 +169,7 @@ Be suspicious when:
 - a test checks that a method was called but not the user-visible outcome
 - a ViewModel test uses invalid paths or impossible state unless that is the scenario under test
 
-Specific regression classes that should remain covered once fixed: Unicode or Cyrillic filesystem paths; legacy text encodings such as `windows-1251`; rollback and cancellation cleanup; cross-language enum or transport drift; search-index and database side effects, not only returned DTOs; CLI parsing for non-runtime flags such as `--help` and `--version`.
+Specific regression classes that should remain covered once fixed: Unicode or Cyrillic filesystem paths; legacy text encodings such as `windows-1251`; rollback and cancellation cleanup; Qt/native adapter drift; search-index and database side effects, not only returned DTOs; CLI parsing for non-runtime flags such as `--help` and `--version`.
 
 #### UI Test Policy
 
@@ -189,25 +179,24 @@ Specific regression classes that should remain covered once fixed: Unicode or Cy
 
 #### Verification Order
 
-For a meaningful vertical slice, prefer: unit tests for local logic → integration tests for touched boundaries → strong host-backed test if the feature crosses `C# → pipe → C++`. Do not add a strong integration test if existing lower-level tests already fully protect the change.
+For a meaningful vertical slice, prefer: unit tests for local logic → integration tests for touched boundaries → strong Qt/application test if the feature crosses `QML/Qt adapter → C++ facade`. Do not add a strong integration test if existing lower-level tests already fully protect the change.
 
 ### Logging and diagnostics
 
-- Important execution paths in both C++ and C# must emit actionable logs through the repository logging facade. **IPC boundary logging is mandatory in both directions:**
-  - Every method in `CLibraryJobServiceAdapter` (C++) must log the key outcome after computing the response — blocking message, job ID, result flag, or count — not only on failure.
-  - Every managed `*Service.cs` class wrapping an IPC call must log the successful response outcome alongside the existing error-path log; error-only logs are a silent diagnostic gap.
+- Important execution paths in C++ and Qt code must emit actionable logs through the repository logging facade. **Boundary logging is mandatory:**
+  - Every Qt adapter wrapping an `ILibraryApplication` call must log successful response outcomes and surface backend errors through explicit error paths; success callbacks must not run after backend exceptions.
   - **Log level guide:** `Info` for expected outcomes and normal state transitions; `Warn` for unexpected-but-handled states (CanStartImport=false, empty result where non-empty was expected, degraded operation); `Error` / `Critical` for caught exceptions and failures surfaced to the user.
 
 ### Unicode and storage safety
 
 - If a bug fix reveals duplicated infrastructure helpers for Unicode, path safety, encoding conversion, or resource ownership, consolidate them in the same task instead of patching copies independently.
-- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Foundation/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion, including protobuf string fields.
+- Native UTF-8, wide-string, and `std::filesystem::path` conversions must go through `libs/Foundation/UnicodeConversion.*`; do not add ad-hoc `WideCharToMultiByte`, `MultiByteToWideChar`, `generic_u8string`, or duplicate path-conversion helpers outside that shared slice. **Never construct `std::filesystem::path` from `std::string`, `const char*`, or `std::string_view` with UTF-8 content** — `std::filesystem::path(std::string)` on Windows uses the ANSI codepage and silently corrupts non-ASCII (e.g. Cyrillic) paths. Use `PathFromUtf8()` for every UTF-8→path conversion.
 
 ### Review and UI-specific policy
 
 - When the user asks for a code review or review-pass style findings, write the review results in Russian by default.
-- All popup / dropdown / flyout surfaces must share the same visual pair: `AppSurfaceElevatedBrush` (`#2E2414`) background + `AppAccentBorderBrush` (`#3D2C0A`) amber border. Applied to `Border.FilterPopup` and `ComboBox.AppComboBox /template/ Border#PopupBorder`. Any new Popup or flyout container must follow the same pair. See `docs/UiDesignSystem.md` § 14 "Popup / Dropdown surface rule".
-- Controls that serve the same role in the toolbar (ComboBox, ToggleButton trigger) must share the same default height (`MinHeight="42"`), background token (`AppSurfaceAltBrush` via `/template/ ContentPresenter`), and border token (`AppBorderBrush`). Do not use a fixed `Height` setter on toolbar controls — use `MinHeight` so content can expand.
+- All popup / dropdown / flyout surfaces must share the same visual pair: elevated warm surface background + amber accent border. Any new Popup or flyout container must follow the same pair. See `docs/UiDesignSystem.md` § 14 "Popup / Dropdown surface rule".
+- Controls that serve the same role in the toolbar must share the same default height, background token, and border token. Do not use a fixed height when content may need to expand.
 
 ---
 
@@ -242,8 +231,7 @@ When a task completes, update docs **in the same task** if any of the following 
 | UI workflow changed (user-visible) | `docs/ReleaseChecklist.md` — update the relevant checklist item or add new one; no step-by-step scenarios needed |
 | UI styles, colours, components, or layout changed | `docs/UiDesignSystem.md` |
 | New `libs/<Module>/` added or renamed; new key class added | `docs/CodebaseMap.md` §3 C++ Modules |
-| New `apps/Librova.UI/<Folder>/` added or key C# type added | `docs/CodebaseMap.md` §4 C# Modules |
-| New RPC method added to proto | `docs/CodebaseMap.md` §5 IPC Boundary (methods table) |
+| New `apps/Librova.Qt/<Folder>/` added or key Qt/QML type added | `docs/CodebaseMap.md` §4 Qt/QML App |
 | Import pipeline stages or cancellation contract changed | `docs/CodebaseMap.md` §6 Import Pipeline Architecture |
 | Library root layout, storage encoding, or DB schema changed | `docs/CodebaseMap.md` §7 Storage & Persistence Model |
 | Domain interface added or signature changed | `docs/CodebaseMap.md` §12 Domain Interfaces Reference |
@@ -310,8 +298,7 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 | `$docs-maintenance` | updating, reviewing, de-duplicating, or verifying repository documentation against code and the documentation hierarchy |
 | `$sqlite` | changing the SQLite schema, native SQL queries, FTS/search behavior, or SQLite-specific review/debugging in the C++ persistence layer |
 | `$vertical-slice` | implementing a feature or workflow that crosses multiple layers |
-| `$transport-rpc` | adding or changing an IPC / Protobuf method |
 | `$import-pipeline` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |
-| `$analyze-logs` | analyzing `host.log` and `ui.log` after an import run |
+| `$analyze-logs` | analyzing Librova import logs after an import run |
 | `$review-pass` | doing a high-risk hardening pass before review or release-candidate stabilization |
-| `$win-desktop-design` | designing or refining Avalonia UI structure, look, and UX behavior |
+| `$win-desktop-design` | designing or refining Qt/QML Windows desktop UI structure, look, and UX behavior |

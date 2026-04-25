@@ -18,16 +18,6 @@
     return std::filesystem::temp_directory_path() / std::filesystem::path{name};
 }
 
-// Generates a unique named-pipe path: <prefix>.<pid>.<counter>
-[[nodiscard]] inline std::filesystem::path MakeUniquePipePath(const wchar_t* prefix)
-{
-    static std::atomic<unsigned long long> s_counter{0};
-    const auto pid = static_cast<unsigned long long>(GetCurrentProcessId());
-    const auto seq = s_counter.fetch_add(1, std::memory_order_relaxed);
-    const std::wstring name = std::wstring(prefix) + L"." + std::to_wstring(pid) + L"." + std::to_wstring(seq);
-    return std::filesystem::path{name};
-}
-
 // RAII unique sandbox directory.
 // Creates a fresh directory on construction, removes it (and all contents) on destruction.
 class CTestWorkspace final

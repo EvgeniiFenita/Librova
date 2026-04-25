@@ -125,7 +125,7 @@ def main() -> int:
     if len(sys.argv) > 1:
         output_path = str(ResolveOutputPath(sys.argv[1]))
     else:
-        output_path = str(REPO_ROOT / "apps/Librova.UI/Assets/librova.ico")
+        output_path = str(REPO_ROOT / "apps/Librova.Qt/assets/librova.ico")
     CIconGenerator.Generate(output_path)
     return 0
 

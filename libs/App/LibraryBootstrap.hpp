@@ -2,9 +2,9 @@
 
 #include <filesystem>
 
-#include "App/HostOptions.hpp"
+#include "App/ILibraryApplication.hpp"
 
-namespace Librova::CoreHost {
+namespace Librova::Application {
 
 class CLibraryBootstrap final
 {
@@ -14,4 +14,4 @@ public:
         ELibraryOpenMode libraryOpenMode);
 };
 
-} // namespace Librova::CoreHost
+} // namespace Librova::Application

@@ -7,19 +7,9 @@ if(BUILD_TESTING)
 
     add_executable(LibrovaCoreTests
         TestHashing.cpp
-        TestImportJobClient.cpp
         TestImportJobService.cpp
-        TestImportJobProtoMapper.cpp
         TestImportDiagnosticText.cpp
         TestImportSourceExpander.cpp
-        TestLibraryCatalogProtoMapper.cpp
-        TestLibraryJobServiceAdapter.cpp
-        TestNamedPipeClient.cpp
-        TestNamedPipeChannel.cpp
-        TestNamedPipeHost.cpp
-        TestPipeProtocol.cpp
-        TestPipeRequestDispatcher.cpp
-        TestProtoContracts.cpp
         TestLibraryCatalogFacade.cpp
         TestLibraryExportFacade.cpp
         TestLibraryTrashFacade.cpp
@@ -34,8 +24,7 @@ if(BUILD_TESTING)
         TestEpubParser.cpp
         TestFb2GenreMapper.cpp
         TestFb2Parser.cpp
-        TestCoreHostApp.cpp
-        TestHostOptions.cpp
+        TestCLibraryApplication.cpp
         TestLibraryBootstrap.cpp
         TestBookFormat.cpp
         TestBookId.cpp
@@ -72,20 +61,13 @@ if(BUILD_TESTING)
         PRIVATE
             Catch2::Catch2WithMain
             LibrovaApp
-            LibrovaApplicationClient
             LibrovaDatabase
             LibrovaDomain
             LibrovaParsing
-            LibrovaTransport
-            LibrovaRpc
     )
 
     target_compile_features(LibrovaCoreTests PRIVATE cxx_std_20)
     target_include_directories(LibrovaCoreTests PRIVATE ${Stb_INCLUDE_DIR})
-    target_compile_definitions(LibrovaCoreTests PRIVATE
-        LIBROVA_CORE_HOST_APP_NAME="LibrovaCoreHostApp.exe"
-        LIBROVA_TEST_CONFIGURATION="$<CONFIG>"
-    )
     if(MSVC)
         target_compile_options(LibrovaCoreTests PRIVATE /FS)
     endif()

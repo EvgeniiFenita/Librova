@@ -2,7 +2,7 @@
 
 #include "Domain/DomainError.hpp"
 
-TEST_CASE("Domain error codes convert to stable transport-friendly strings", "[domain][error]")
+TEST_CASE("Domain error codes convert to stable error strings", "[domain][error]")
 {
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::Validation) == "validation");
     REQUIRE(Librova::Domain::ToString(Librova::Domain::EDomainErrorCode::IntegrityIssue) == "integrity_issue");
@@ -36,4 +36,3 @@ TEST_CASE("Domain error exposes infrastructure failure categories", "[domain][er
     REQUIRE(storageError.IsInfrastructureFailure());
     REQUIRE_FALSE(storageError.IsUserResolvable());
 }
-

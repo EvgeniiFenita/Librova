@@ -8,7 +8,7 @@ This file is for `libs/`-specific context only.
 
 ## Local Scope
 
-Libraries under `libs/` contain the C++20 domain and infrastructure slices of `Librova.Core`.
+Libraries under `libs/` contain the C++20 domain, application, persistence, and infrastructure slices used by the Qt app.
 
 - each slice is a static library with its own `CMakeLists.txt`
 - keep `.hpp` and `.cpp` together unless there is a strong local reason not to
@@ -18,18 +18,18 @@ Libraries under `libs/` contain the C++20 domain and infrastructure slices of `L
 
 - Use the repository logging facade, not `std::cout` / `std::cerr`, in reusable library code.
 - Route UTF-8 / wide / path conversions through `libs/Foundation/UnicodeConversion.*`.
-- Treat transport-facing DTOs and mappers as boundary code, not domain code.
+- Treat UI-facing application DTOs and adapters as boundary code, not domain code.
 
 ## Native Quick Loop
 
 ```powershell
-# Native-only fast path
+# Native + Qt fast path
 cmake --preset x64-debug
 cmake --build --preset x64-debug --config Debug
 ctest --test-dir out\build\x64-debug -C Debug --output-on-failure
 
 # Or use the repo script
-..\scripts\Run-Tests.ps1 -SkipManaged
+..\scripts\Run-Tests.ps1
 ```
 
-For the full build -> test workflow, including sequential validation rules and proto checks, follow the root `AGENTS.md`.
+For the full build -> test workflow and sequential validation rules, follow the root `AGENTS.md`.

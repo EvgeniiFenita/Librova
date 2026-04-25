@@ -31,14 +31,14 @@ void PrepareExistingLibraryRoot(const std::filesystem::path& libraryRoot)
 
 } // namespace
 
-TEST_CASE("Library bootstrap creates library layout for a new library root", "[core-host]")
+TEST_CASE("Library bootstrap creates library layout for a new library root", "[application]")
 {
     CTestWorkspace sandbox(L"librova-library-bootstrap");
     const auto libraryRoot = sandbox.GetPath() / "Library";
 
-    Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
+    Librova::Application::CLibraryBootstrap::PrepareLibraryRoot(
         libraryRoot,
-        Librova::CoreHost::ELibraryOpenMode::CreateNew);
+        Librova::Application::ELibraryOpenMode::CreateNew);
 
     REQUIRE(std::filesystem::exists(libraryRoot / "Database"));
     REQUIRE(std::filesystem::exists(libraryRoot / "Objects"));
@@ -47,42 +47,41 @@ TEST_CASE("Library bootstrap creates library layout for a new library root", "[c
     REQUIRE_FALSE(std::filesystem::exists(libraryRoot / "Temp"));
 }
 
-TEST_CASE("Library bootstrap opens an existing managed library without requiring Temp", "[core-host]")
+TEST_CASE("Library bootstrap opens an existing managed library without requiring Temp", "[application]")
 {
     CTestWorkspace sandbox(L"librova-library-bootstrap-existing");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     PrepareExistingLibraryRoot(libraryRoot);
 
-    Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
+    Librova::Application::CLibraryBootstrap::PrepareLibraryRoot(
         libraryRoot,
-        Librova::CoreHost::ELibraryOpenMode::OpenExisting);
+        Librova::Application::ELibraryOpenMode::Open);
 
     REQUIRE(std::filesystem::exists(libraryRoot / "Database" / "librova.db"));
     REQUIRE_FALSE(std::filesystem::exists(libraryRoot / "Temp"));
 }
 
-TEST_CASE("Library bootstrap rejects opening a missing managed library", "[core-host]")
+TEST_CASE("Library bootstrap rejects opening a missing managed library", "[application]")
 {
     CTestWorkspace sandbox(L"librova-library-bootstrap-open-missing");
     const auto libraryRoot = sandbox.GetPath() / "MissingLibrary";
 
     REQUIRE_THROWS_WITH(
-        Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
+        Librova::Application::CLibraryBootstrap::PrepareLibraryRoot(
             libraryRoot,
-            Librova::CoreHost::ELibraryOpenMode::OpenExisting),
+            Librova::Application::ELibraryOpenMode::Open),
         Catch::Matchers::ContainsSubstring("does not exist"));
 }
 
-TEST_CASE("Library bootstrap rejects creating a library in a non-empty directory", "[core-host]")
+TEST_CASE("Library bootstrap rejects creating a library in a non-empty directory", "[application]")
 {
     CTestWorkspace sandbox(L"librova-library-bootstrap-create-non-empty");
     const auto libraryRoot = sandbox.GetPath() / "Library";
     WriteTextFile(libraryRoot / "existing.txt", "occupied");
 
     REQUIRE_THROWS_WITH(
-        Librova::CoreHost::CLibraryBootstrap::PrepareLibraryRoot(
+        Librova::Application::CLibraryBootstrap::PrepareLibraryRoot(
             libraryRoot,
-            Librova::CoreHost::ELibraryOpenMode::CreateNew),
+            Librova::Application::ELibraryOpenMode::CreateNew),
         Catch::Matchers::ContainsSubstring("must be empty"));
 }
-

@@ -11,7 +11,7 @@ Run a high-signal hardening pass over risky changes before review, release, or a
 
 ## When to Use
 
-- use this skill after high-risk changes touching transport, storage, cancellation, rollback, startup, shutdown, or other failure-prone boundaries
+- use this skill after high-risk changes touching Qt/backend boundaries, storage, cancellation, rollback, startup, shutdown, or other failure-prone boundaries
 - use this skill before a release-candidate pass
 - use this skill when you want to check for documentation drift before handing work off
 - do **not** use this as a replacement for the implementation checklist of a feature; use it after the implementation work exists
@@ -26,12 +26,11 @@ Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff
 - [ ] partial failures do not leave inconsistent storage or database state
 - [ ] stale temp state is cleaned on startup
 
-## 2. IPC And Contract Safety
+## 2. Qt / Backend Contract Safety
 
-- [ ] C++ and C# transport method enums are synchronized
-- [ ] request/response ids and parsing rules are covered by tests
+- [ ] Qt adapters and native application facade contracts are synchronized
+- [ ] request/response mapping rules are covered by tests
 - [ ] timeouts and cancellation semantics are explicit
-- [ ] `scripts/ValidateProto.ps1` passes when transport changed
 
 ## 3. Import And Conversion Safety
 
@@ -58,7 +57,7 @@ Use `/review` in the Codex CLI to open a dedicated reviewer for the current diff
 ## 6. Logging
 
 - [ ] startup and shutdown are logged with actionable context
-- [ ] IPC boundaries emit meaningful log entries
+- [ ] Qt/backend boundaries emit meaningful log entries
 - [ ] long-running jobs log progress
 - [ ] failure and recovery paths are diagnosable from logs alone
 - [ ] routine polling does not flood logs
@@ -86,7 +85,7 @@ If any of these drifted, fix them immediately using the relevant doc owner from 
 ## 9. Filesystem / Path Safety
 
 - [ ] all `std::filesystem::path` constructions from UTF-8 strings use `PathFromUtf8()`, never `path(std::string)` or `path(const char*)`
-- [ ] no absolute path leaks into the database, preferences, or IPC proto fields
+- [ ] no absolute path leaks into the database or preferences unless intentionally persisted
 - [ ] library root and runtime workspace are not mixed without explicit intent
 - [ ] managed library is portable: no hard-coded drive letters or machine-specific paths stored durably
 - [ ] `ManagedPathSafety` escape checks cover archive and export destination paths
@@ -103,7 +102,7 @@ If any of these drifted, fix them immediately using the relevant doc owner from 
 - [ ] delete collection removes only membership rows; books must survive
 - [ ] add/remove book from collection is idempotent and leaves no orphan rows
 - [ ] sidebar and browser correctly reflect membership changes without stale state
-- [ ] RPC methods covered: `ListCollections`, `CreateCollection`, `DeleteCollection`, `AddBookToCollection`, `RemoveBookFromCollection`
+- [ ] application facade and Qt adapter collection operations are covered: `ListCollections`, `CreateCollection`, `DeleteCollection`, `AddBookToCollection`, `RemoveBookFromCollection`
 
 ## 12. Project-Specific Invariants
 

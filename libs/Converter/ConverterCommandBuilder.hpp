@@ -45,8 +45,7 @@ class CConverterCommandBuilder final
 {
 public:
     [[nodiscard]] static SConverterCommandProfile CreateFb2CngProfile(
-        const std::filesystem::path& executablePath,
-        const std::optional<std::filesystem::path>& configPath = std::nullopt);
+        const std::filesystem::path& executablePath);
 
     [[nodiscard]] static SResolvedConverterCommand Build(
         const SConverterCommandProfile& profile,

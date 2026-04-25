@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = "apps\Librova.UI\Assets\librova.ico"
+    [string]$OutputPath = "apps\Librova.Qt\assets\librova.ico"
 )
 
 $ErrorActionPreference = "Stop"

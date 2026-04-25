@@ -17,7 +17,6 @@ enum class EConverterConfigurationMode
 struct SFb2CngConverterSettings
 {
     std::filesystem::path ExecutablePath;
-    std::optional<std::filesystem::path> ConfigPath;
 
     [[nodiscard]] bool IsValid() const noexcept
     {

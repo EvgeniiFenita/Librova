@@ -1,6 +1,7 @@
 add_library(LibrovaApp STATIC
-    HostOptions.cpp
-    HostOptions.hpp
+    CLibraryApplication.cpp
+    CLibraryApplication.hpp
+    ILibraryApplication.hpp
     ImportJobManager.cpp
     ImportJobManager.hpp
     ImportJobRunner.cpp
@@ -36,6 +37,8 @@ target_link_libraries(LibrovaApp
         LibrovaImport
         LibrovaConverter
     PRIVATE
+        LibrovaDatabase
+        LibrovaParsing
         LibrovaFoundation
         LibrovaStorage
 )

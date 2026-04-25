@@ -1,19 +1,19 @@
 ---
 name: analyze-logs
-description: "Step-by-step guide for analyzing Librova import logs (host.log + ui.log): parse errors, genre mapping gaps, log noise, encoding fallbacks, duplicate detection, and actionable fix decisions. Specific to Librova FB2 import logs only — do NOT use for general log analysis. Use whenever the user provides log files after an import run."
+description: "Step-by-step guide for analyzing Librova import logs: parse errors, genre mapping gaps, log noise, encoding fallbacks, duplicate detection, and actionable fix decisions. Specific to Librova FB2 import logs only — do NOT use for general log analysis. Use whenever the user provides log files after an import run."
 ---
 
 # Import Log Analysis Playbook
 
 ## Goal
 
-Turn `host.log` and `ui.log` into a short diagnosis: what failed, whether logging quality regressed, and which fixes should happen now versus later.
+Turn Librova import logs into a short diagnosis: what failed, whether logging quality regressed, and which fixes should happen now versus later.
 
 ## When to Use
 
 - use this skill when the user provides post-import logs
 - use this skill when you need to compare two import runs or explain a cancellation timeline
-- do **not** use this skill before you have actual `host.log` and `ui.log` data
+- do **not** use this skill before you have actual Librova log data
 
 ## Expected Deliverable
 
@@ -24,10 +24,7 @@ Your final analysis should identify:
 - whether the issue is parser / duplicate / conversion / rollback / noise / performance related
 - which fixes are immediate and which ones can be queued
 
-Log files after an import run live at `<LibraryRoot>\Logs\`:
-
-- `host.log` — C++ native process (parsing, importing, IPC service)
-- `ui.log` — C# UI process (job orchestration, IPC client calls)
+Log files after an import run live at `<LibraryRoot>\Logs\`. In the Qt-only runtime, import, UI adapter, and native backend diagnostics are written by the single desktop process.
 
 ---
 
@@ -44,15 +41,14 @@ When the logs are hundreds of thousands of lines, **do not** start with `Get-Con
 Prefer streaming APIs over loading the entire file into PowerShell objects:
 
 ```powershell
-$hostLog = "C:\...\Logs\host.log"
-$uiLog   = "C:\...\Logs\ui.log"
+$log = "C:\...\Logs\librova.log"
 
 # Cheap metadata
-Get-Item $hostLog, $uiLog | Select FullName, Length, LastWriteTime
+Get-Item $log | Select FullName, Length, LastWriteTime
 
 # Stream lines without Get-Content materializing the full file
-[System.IO.File]::ReadLines($hostLog) | Select-Object -First 5
-[System.IO.File]::ReadLines($hostLog) | Select-Object -Last 5
+[System.IO.File]::ReadLines($log) | Select-Object -First 5
+[System.IO.File]::ReadLines($log) | Select-Object -Last 5
 ```
 
 If you need grouped counts, prefer `Select-String ... | Measure-Object` or targeted regex extraction over broad full-file transforms.
@@ -64,7 +60,7 @@ If you need grouped counts, prefer `Select-String ... | Measure-Object` or targe
 Run these counts first to get a picture before reading individual lines:
 
 ```powershell
-$log = "C:\...\Logs\host.log"
+$log = "C:\...\Logs\librova.log"
 
 # Overall severity breakdown
 Select-String -Path $log -Pattern "\[error\]|\[critical\]" | Measure-Object | Select Count   # hard failures
@@ -91,13 +87,13 @@ Treat these ratios as a baseline from large real-world import runs, not as a uni
 
 ## 3. Reconstruct Import Speed / Degradation
 
-`ui.log` already contains enough progress snapshots to rebuild throughput over time.
+The import log contains enough progress snapshots to rebuild throughput over time.
 
 ```powershell
-$uiLog = "C:\...\Logs\ui.log"
+$log = "C:\...\Logs\librova.log"
 $re = '^(?<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+ [+-]\d{2}:\d{2}) \[INF\] Import job in progress\. JobId=(?<job>\d+) Status="(?<status>[^"]+)" Percent=(?<percent>\d+) Imported=(?<imported>\d+) Failed=(?<failed>\d+) Skipped=(?<skipped>\d+) Message=(?<msg>.*)$'
 
-$rows = foreach ($line in [System.IO.File]::ReadLines($uiLog)) {
+$rows = foreach ($line in [System.IO.File]::ReadLines($log)) {
     if ($line -match $re) {
         [pscustomobject]@{
             Ts       = [datetimeoffset]::Parse($matches.ts)
@@ -146,7 +142,7 @@ $buckets |
 For native per-archive confirmation, use `zip: done`:
 
 ```powershell
-Select-String -Path $hostLog -Pattern "zip: done job=" |
+Select-String -Path $log -Pattern "zip: done job=" |
     Select-Object -ExpandProperty Line
 ```
 
@@ -288,16 +284,13 @@ If the log is suspiciously large or info count seems very high:
 
 ```powershell
 # Check for polling leakage
-Select-String -Path $log -Pattern "WaitImportJob|GetImportJobSnapshot|TryGetSnapshotAsync|WaitAsync" |
+Select-String -Path $log -Pattern "GetImportJobSnapshot|WaitImportJob|poll" |
     Select-Object -First 5
 ```
 
-If these appear at `[info]` level → noise reduction regressed. Check:
-- `libs/Rpc/LibraryJobServiceAdapter.cpp` — polling calls must use `LogDebugIfInitialized`
-- `apps/Librova.UI/Logging/UiLogging.cs` — file sink must have `restrictedToMinimumLevel: LogEventLevel.Information`
-- `apps/Librova.UI/ImportJobs/ImportJobsService.cs` — `TryGetSnapshotAsync` and `WaitAsync(completed=false)` must call `UiLogging.Debug`
+If these appear at `[info]` level → noise reduction regressed. Check the Qt import adapter and native job-service polling paths for `Debug` logging.
 
-Also check for **success-path flood** in `host.log`:
+Also check for **success-path flood** in the import log:
 
 ```powershell
 $patterns = @(
@@ -310,7 +303,7 @@ $patterns = @(
 )
 
 foreach ($pattern in $patterns) {
-    "{0}`t{1}" -f (Select-String -Path $hostLog -Pattern $pattern).Count, $pattern
+    "{0}`t{1}" -f (Select-String -Path $log -Pattern $pattern).Count, $pattern
 }
 ```
 
@@ -320,19 +313,19 @@ Recent large-run evidence:
 - duplicate handling can fan out into **three warning lines per logical duplicate**
 - `Slow book` warnings are useful, but thousands of them need aggregation, not eyeballing
 
-For `ui.log`, repeated `Import job in progress` lines with **unchanged counters** are also pure noise and should be treated as polling flood, especially after cancel.
+Repeated `Import job in progress` lines with **unchanged counters** are pure noise and should be treated as polling flood, especially after cancel.
 
 ---
 
 ## 10. Cancellation Timeline
 
-Always reconstruct cancellation from **both** logs.
+Always reconstruct cancellation from import progress and backend state-transition lines.
 
 ```powershell
-Select-String -Path $uiLog -Pattern 'Cancelling import job|CancelAsync completed|TryGetResultAsync completed|finished with status "Cancelled"' |
+Select-String -Path $log -Pattern 'Cancelling import job|Cancel completed|TryGetResult completed|finished with status "Cancelled"' |
     Select-Object -ExpandProperty Line
 
-Select-String -Path $hostLog -Pattern 'CancelImportJob|\[import-perf\] SUMMARY|Rolled back .* after cancellation|Database compacted after cancellation rollback|completed with status 4' |
+Select-String -Path $log -Pattern 'CancelImportJob|\[import-perf\] SUMMARY|Rolled back .* after cancellation|Database compacted after cancellation rollback|completed with status 4' |
     Select-Object -ExpandProperty Line
 ```
 
@@ -341,7 +334,7 @@ Then answer four separate questions:
 1. **When was cancel requested?**
 2. **When did active import work actually stop?**
 3. **How long did rollback / cleanup / compaction take?**
-4. **When did UI finally observe the terminal state?**
+4. **When did the UI finally observe the terminal state?**
 
 To detect post-cancel polling flood:
 
@@ -353,26 +346,26 @@ If import counters freeze almost immediately after cancel but completion comes m
 
 ---
 
-## 11. ui.log Analysis
+## 11. UI Progress Log Analysis
 
 ```powershell
-$uilog = "C:\...\Logs\ui.log"
+$log = "C:\...\Logs\librova.log"
 
 # Error summary
-Select-String -Path $uilog -Pattern "\[ERR\]|\[FTL\]" | Select-Object -ExpandProperty Line
+Select-String -Path $log -Pattern "\[ERR\]|\[FTL\]" | Select-Object -ExpandProperty Line
 
 # Noise check
-Select-String -Path $uilog -Pattern "TryGetSnapshotAsync|WaitAsync" | Measure-Object | Select Count
+Select-String -Path $log -Pattern "TryGetSnapshot|Wait" | Measure-Object | Select Count
 # Should be 0 — these are Debug and must not reach the file sink
 ```
 
 Also inspect the progress stream itself:
 
 ```powershell
-Select-String -Path $uilog -Pattern "Import job in progress\." |
+Select-String -Path $log -Pattern "Import job in progress\." |
     Select-Object -First 3
 
-Select-String -Path $uilog -Pattern "Import job in progress\." |
+Select-String -Path $log -Pattern "Import job in progress\." |
     Select-Object -Last 3
 ```
 

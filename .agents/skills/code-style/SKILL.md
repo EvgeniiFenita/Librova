@@ -1,6 +1,6 @@
 ---
 name: code-style
-description: Code style reference for Librova. Use when writing new C++, C#, Protobuf, or Python code, or when reviewing naming, formatting, or structural conventions.
+description: Code style reference for Librova. Use when writing new C++, QML, or Python code, or when reviewing naming, formatting, or structural conventions.
 ---
 
 # Code Style Reference
@@ -55,21 +55,16 @@ if (isDuplicate) {
 }
 ```
 
-### C# private fields
+### Qt / QML boundaries
 
-- private fields use `_camelCase`
-- public types, methods, properties, and enums use `PascalCase`
+- keep QML focused on presentation and view state
+- keep business rules in native application/domain layers or QML-facing Qt adapters and controllers
+- reuse shared QML controls and theme tokens instead of hardcoded per-view styling
 
 ### Unicode and path handling
 
 - route UTF-8 / wide / path conversions through `libs/Foundation/UnicodeConversion.*`
 - never add local `WideCharToMultiByte`, `MultiByteToWideChar`, or `generic_u8string` helpers
-
-### Proto naming
-
-- message and enum names: `PascalCase`
-- field names: `snake_case`
-- helper names must reflect actual ownership and return type; do not use names like `*View` for owning UTF-8 strings
 
 ## If You Need More Than This
 

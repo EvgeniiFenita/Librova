@@ -1,492 +1,261 @@
 # Librova UI Design System
 
-> Reference for everyone working on `apps/Librova.UI`.  
-> All source of truth is in `Styles/Colors.axaml`, `Styles/Components.axaml`, `Styles/Typography.axaml`.
+Reference for everyone working on the Librova Qt/QML desktop UI.
 
 ---
 
 ## 1. Visual Language
 
-**Style:** Deep warm sepia + amber/gold accent. Dark, cosy, library-like.  
-**Framework:** Avalonia 12 + FluentTheme (dark variant).  
-**Font:** `Segoe UI Variable, Segoe UI, sans-serif` — set globally on `Window`.  
-**Target OS:** Windows 11. DWM title-bar colour is set via P/Invoke (`DWMWA_CAPTION_COLOR`).
+**Style:** deep warm sepia with amber/gold accent; dark, focused, library-like.  
+**Framework:** Qt/QML under `apps/Librova.Qt`.  
+**Font:** Segoe UI Variable, Segoe UI, sans-serif.  
+**Target OS:** Windows 11.
+
+The design is quiet and work-focused: dense enough for managing a real library, but with generous spacing around reading metadata, filters, import progress, and destructive actions.
 
 ---
 
 ## 2. Colour Palette
 
-All colours live in `Colors.axaml` as `Color` primitives + `SolidColorBrush` resources.  
-**Never hardcode hex values in views or styles — always use a `{DynamicResource}` brush.**
-For C# presentation helpers that cannot bind XAML resources directly, resolve shared brushes through `apps/Librova.UI/Styling/UiThemeResources.cs` so code stays aligned with the same named tokens and fallback values.
+Colour tokens live in `apps/Librova.Qt/qml/theme/LibrovaTheme.qml`. Do not hardcode hex values in views when a named token exists.
 
-### Background layers (darkest → lightest)
+### Background layers
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppBackgroundBrush` | `#0D0A07` | Window root, title bar |
-| `AppSidebarBrush` | `#100C08` | Left navigation panel |
-| `AppSurfaceBrush` | `#161108` | Main content area |
-| `AppSurfaceMutedBrush` | `#1C160C` | Cards, NavItem default bg |
-| `AppSurfaceAltBrush` | `#221A0E` | Inputs, pointerover surfaces |
-| `AppSurfaceHoverBrush` | `#2A2012` | Button / control hover bg |
+| `background` | `#0D0A07` | Window root and title bar |
+| `sidebar` | `#100C08` | Left navigation panel |
+| `surface` | `#161108` | Main content area |
+| `surfaceMuted` | `#1C160C` | Cards and default nav surfaces |
+| `surfaceAlt` | `#221A0E` | Inputs and pointerover surfaces |
+| `surfaceHover` | `#2A2012` | Button/control hover background |
+| `surfaceElevated` | `#2E2414` | Popups, dropdowns, menus |
 
 ### Borders
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppBorderBrush` | `#2A200E` | Default 1 px borders |
-| `AppBorderStrongBrush` | `#3A2E18` | Emphasis borders |
-| `AppSidebarBorderBrush` | `#211A0C` | Sidebar / content divider |
+| `border` | `#2A200E` | Default 1 px borders |
+| `borderStrong` | `#3A2E18` | Emphasis borders |
+| `sidebarBorder` | `#211A0C` | Sidebar/content divider |
 
-### Accent (amber / gold)
-
-| Token | Hex | Usage |
-|---|---|---|
-| `AppAccentBrush` | `#F5A623` | Primary accent, active borders |
-| `AppAccentBrightBrush` | `#FFD07A` | Hover on accent controls |
-| `AppAccentDimBrush` | `#B87A1A` | Pressed accent |
-| `AppAccentMutedBrush` | `#2A1C06` | Accent tint overlay |
-| `AppAccentSurfaceBrush` | `#1A1003` | Accent panel background |
-| `AppAccentBorderBrush` | `#3D2C0A` | Accent panel border |
-
-### Navigation active state
+### Accent
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppNavActiveBrush` | `#1E1606` | Active NavItem background |
-| `AppNavActiveHoverBrush` | `#261C08` | Active NavItem hover |
-| `AppDialogOverlayBrush` | `#80000000` | Modal dialog backdrop overlay |
+| `accent` | `#F5A623` | Primary accent and active borders |
+| `accentBright` | `#FFD07A` | Hover on accent controls |
+| `accentDim` | `#B87A1A` | Pressed accent |
+| `accentMuted` | `#2A1C06` | Accent tint overlay |
+| `accentSurface` | `#1A1003` | Accent panel background |
+| `accentBorder` | `#3D2C0A` | Accent panel and popup border |
 
-### Text hierarchy
+### Text
 
 | Token | Hex | Usage |
 |---|---|---|
-| `AppTextPrimaryBrush` | `#F5EDD8` | Default body text, active nav label |
-| `AppTextSecondaryBrush` | `#A89880` | De-emphasised text |
-| `AppTextMutedBrush` | `#967E68` | Placeholder, captions, inactive nav label |
+| `textPrimary` | `#F5EDD8` | Default body text and active labels |
+| `textSecondary` | `#A89880` | De-emphasized text |
+| `textMuted` | `#967E68` | Placeholders, captions, inactive labels |
 
 ### Semantic status
 
-| Token | Surface | Border | Foreground |
+| Token group | Surface | Border | Foreground |
 |---|---|---|---|
-| Success | `AppSuccessSurfaceBrush` `#08221A` | `AppSuccessBorderBrush` `#124E37` | `AppSuccessBrush` `#34D39A` |
-| Warning | `AppWarningSurfaceBrush` `#221806` | — | `AppWarningBrush` `#F9BF4C` |
-| Danger | `AppDangerSurfaceBrush` `#200A0C` | `AppDangerBorderBrush` `#551820` | `AppDangerBrush` `#F87171` |
-| Danger text | — | — | `AppDangerTextBrush` `#FFDDDD` / `AppDangerTextHoverBrush` `#FFE8E8` |
-| Danger hover bg | `AppDangerHoverBgBrush` `#3D0E12` | — | — |
-
-### Specialised
-
-| Token | Hex | Usage |
-|---|---|---|
-| `AppOnAccentBrush` | `#0A0700` | Text on filled accent (PrimaryAction) button |
-| `AppMatteBrush` | `#0A0700` | Book cover placeholder background |
-| `AppCoverPlaceholderBrush` | `#F5EDD8` | Initial letter on cover placeholder |
-| `AppSidebarGradientBrush` | `#0A0806` → `#1A1409` | Sidebar vertical gradient (see §16) |
+| Success | `#08221A` | `#124E37` | `#34D39A` |
+| Warning | `#221806` | `#4A3510` | `#F9BF4C` |
+| Danger | `#200A0C` | `#551820` | `#F87171` |
 
 ---
 
-## 3. Spacing & Shape Tokens
+## 3. Typography
 
-Defined in `Colors.axaml`.
+Typography tokens live in `apps/Librova.Qt/qml/theme/LibrovaTypography.qml`.
 
-### Corner radius
-
-| Token | Value | Usage |
+| Role | Size | Weight | Usage |
 |---|---|---|
-| `Radius.Small` | 8 | NavItem buttons, IconAction, NavIconBadge, CollectionAddAction |
-| `Radius.Medium` | 12 | Inputs, ComboBox, BookCard, secondary panels |
-| `Radius.Large` | 18 | Section panels (AccentPanel, SuccessPanel, DangerPanel) |
-| `Radius.XLarge` | 24 | Top-level panels (AppPanel, AppShell) |
+| Display | 28 | Semibold | First-run title, major empty states |
+| Section title | 22 | Semibold | Library, Import, Settings section headers |
+| Card title | 16 | Semibold | Book cards and panel headings |
+| Body | 14 | Regular | Main UI text |
+| Caption | 12 | Regular | Supporting labels and diagnostics |
+| Overline | 11 | Semibold | Uppercase group labels |
 
-### Padding
-
-| Token | Value | Usage |
-|---|---|---|
-| `Padding.Card` | 22 | Full panels (AppPanel, DangerPanel) |
-| `Padding.CardCompact` | 16 | Compact panels, AppPanelFlat |
-| `Padding.Sidebar` | 16,20 | Sidebar outer padding |
-
-**Base grid unit = 4 px.** All spacing and margin values should be multiples of 4.
+Do not scale font size with viewport width. Keep letter spacing at zero unless a specific token defines otherwise.
 
 ---
 
-## 4. Typography
+## 4. Shell Layout
 
-Defined in `Typography.axaml`. Base size 14 px, line-height 22 px, `AppTextPrimaryBrush`.
+The ready shell has:
 
-| Class | Size | Weight | Colour | Usage |
-|---|---|---|---|---|
-| *(none)* | 14 | Regular | Primary | Default body |
-| `DisplayTitle` | 32 | Bold | Primary | Startup / error hero headings |
-| `ViewTitle` | 22 | SemiBold | Primary | Page title (Library, Import, Settings) |
-| `SectionTitle` | 16 | SemiBold | Primary | Card / panel heading |
-| `SectionEyebrow` | 11 | Bold, +1.4 spacing | Accent | Category overline (LIBRARY, RUNNING …) |
-| `BodyMuted` | 14 | Regular | Secondary | Supporting descriptions |
-| `Caption` | 12 | Regular | Muted | Paths, hints, small labels |
-| `MetaLabel` | 11 | Bold, +0.6 spacing | Muted | Metadata key labels (AUTHOR, YEAR …) |
+- fixed left sidebar with brand, primary navigation, collections, current-library panel, and version label
+- main content area with persistent `Library`, `Import`, and `Settings` sections
+- section state preserved across navigation through `SectionLoader.qml`
+- global file/folder drop handling that switches to `Import` and starts import immediately
+
+Minimum desktop dimensions must preserve useful library browsing: at least two visible book-card columns and two visible rows when the details panel is open.
 
 ---
 
-## 5. Panel / Surface Components
+## 5. Navigation
 
-Defined in `Components.axaml`.
+Navigation controls use `LNavItem` and the sidebar collection item pattern.
 
-| Class | Radius | Padding | Background | Use case |
-|---|---|---|---|---|
-| `AppPanel` | XLarge | Card | Surface | Top-level content cards |
-| `AppPanelCompact` | Large | CardCompact | Surface | Mid-level cards |
-| `AppPanelMuted` | Medium | CardCompact | SurfaceMuted | Inset info blocks |
-| `AppPanelFlat` | 0 | CardCompact | Surface | Full-bleed content areas (book grid) |
-| `AccentPanel` | Large | CardCompact | AccentSurface | Highlighted action sections |
-| `SuccessPanel` | Large | CardCompact | SuccessSurface | Completed operation results |
-| `DangerPanel` | Large | Card | DangerSurface | Error / startup failure screens |
-| `DropZone` | Large | 32,40 | AccentSurface | Drag-and-drop target |
-| `MetricPill` | Medium | 14,8 | SurfaceAlt | Book count badge |
-| `MetricPillAccent` | Medium | 14,8 | AccentSurface + AccentBorder | Accent-tinted stat pill (book count in toolbar) |
-| `SortGroup` | Medium | — | SurfaceAlt + Border, `ClipToBounds=True` | Unified capsule wrapping sort key ComboBox + direction button; child `ComboBox.AppComboBox` and `Button.IconAction` lose their own borders inside this container |
-| `CoverMatte` | 12 (hard) | — | Matte | Book cover rounded frame |
-| `ToggleButton.GenreChip` | Large (18, pill) | 8,4 | SurfaceAlt + Border | Genre filter pill; checked → AccentBorder bg + Accent border + AccentBright text, `SemiBold` |
+- inactive nav label: `textMuted`
+- active nav label: `textPrimary`
+- active state: amber left border and warm active background
+- disabled during active import where switching would break workflow state
+
+Collections live under primary navigation. Collection entries use emoji glyphs from the approved set rendered with Segoe UI Emoji and a stable 30 x 30 icon area.
 
 ---
 
-## 6. Button Classes
+## 6. Controls
 
-All buttons inherit the global `Button` style: `Cursor=Hand`, background transition 120 ms.
+Shared controls live in `apps/Librova.Qt/qml/components/`.
 
-| Class | Appearance | Use case |
-|---|---|---|
-| `PrimaryAction` | Filled accent, dark text, SemiBold, h=42 | Main CTA (Continue, Save, Select Files) |
-| `SecondaryAction` | SurfaceAlt bg, border, h=42 | Secondary actions (Browse, Cancel, Open) |
-| `AccentAction` | AccentSurface bg, accent border, h=42 | Accent-tinted actions (Export as EPUB) |
-| `DestructiveAction` | DangerSurface bg, danger border, SemiBold | Destructive ops (Move to Recycle Bin) |
-| `IconAction` | SurfaceAlt bg, border, 40×40, square | Icon-only standard size |
-| `IconActionSm` | SurfaceAlt bg, border, 36×36, square | Icon-only compact (panel headers) |
-| `IconActionPrimary` | Accent-filled, dark icon, 34×34, square | Primary icon CTA (reserved/amber emphasis) |
-| `NavItem` | SurfaceMuted bg, border, h=42, Radius.Small | Sidebar nav (Library, Import, Settings) |
-| `NavItem` + `.Active` | NavActive bg, accent border | Currently selected nav section |
-| `CollectionAddAction` | Ghost (transparent bg, accent border, amber text+icon), full-width, Radius.Small | "New collection" button at bottom of collections list |
-| `CollectionLinkAction` | Transparent bg, amber text+icon, no border | Inline CTA link (e.g. "Create one" in empty state) |
+| Component | Usage |
+|---|---|
+| `LButton` | Primary, secondary, destructive, and ghost actions |
+| `LTextInput` | Search, path entry, and form fields |
+| `LCheckBox` | Import covers, duplicate override, conversion options |
+| `LNavItem` | Sidebar navigation and collection entries |
+| `LToast` | Non-blocking status/error messages |
 
-### Nav button text behaviour
-- Inactive → `TextBlock.NavLabel` Foreground = `AppTextMutedBrush`
-- Active → `TextBlock.NavLabel` Foreground = `AppTextPrimaryBrush`  
-- Disabled (import in progress) → whole button `Opacity=0.45`
+Toolbar controls with the same role must share height, background, border, and typography. Prefer minimum dimensions over fixed dimensions when localized or dynamic content may expand.
 
-### NavIconBadge
-
-Collection nav buttons wrap their emoji `TextBlock.NavIcon` in a `Border.NavIconBadge` (30×30, `Radius.Small`, transparent background). The badge provides a consistent tap/hover target and is reserved for future active-state tinting if needed. The active state is signalled by the amber left border on the parent `NavItem` button — the badge itself stays transparent.
-
-### Collection icon glyphs
-
-Collection entries use emoji glyphs (`📚 🗂 📦 📁 🔖 ⭐ ❤️ 🧭 🗺 ⏰ ✨ 🌙 ☀️ 🍃 🔥 👑 ✏️ 🎭 🏰 💍`) rendered via `TextBlock.NavIcon` (FontSize=18, 24×24). Emoji render via Segoe UI Emoji fallback on Windows — they ignore `Foreground` color. Set `LineHeight` explicitly on any standalone emoji `TextBlock` (e.g. `LineHeight="34"` for `FontSize="26"`) to prevent Avalonia clipping the glyph descenders.
-
-### Disabled states
-Every action button class (`AccentAction`, `SecondaryAction`, `DestructiveAction`) uses two rules when disabled:
-- `Button.*:disabled { Opacity = 0.4 }` — dims the entire button uniformly, including icons with explicit `Foreground` bindings.
-- `Button.*:disabled /template/ ContentPresenter { Background = <original-enabled-bg>, Foreground = TextMuted }` — keeps the button shape visible and mutes inherited text colour.
-
-The `Background` in the ContentPresenter rule is set to the button's own enabled surface (not `SurfaceMuted`) so the button chrome does not blend into the panel background.
+Disabled controls use uniform opacity reduction and retain their original chrome so the layout remains stable.
 
 ---
 
 ## 7. Icon System
 
-Icons are `StreamGeometry` resources defined in `Colors.axaml`.  
-Rendered via `PathIcon` — fills all sub-paths as solid colour.
+Icons live in `apps/Librova.Qt/qml/theme/LibrovaIcons.qml` and are authored on a 24 x 24 grid. Use shared icon names instead of local path copies.
 
 | Key | Shape | Usage |
 |---|---|---|
-| `IconBook` | Bookmark silhouette | Sidebar brand |
-| `IconLibrary` | Books on shelf | Library nav |
-| `IconImport` | Arrow DOWN into tray | Import nav / action |
-| `IconExport` | Arrow UP from tray | Export action |
-| `IconCopy` | Two overlapping sheets | Copy title / secondary clipboard actions |
-| `IconSettings` | Gear | Settings nav |
-| `IconSearch` | Magnifier | Search bar |
-| `IconClose` | × cross | Close/dismiss |
-| `IconFolderOpen` | Open folder | Open Library |
-| `IconAddFolder` | Folder + plus | New Library; New/Create collection buttons |
-| `IconTrash` | Trash can | Delete / move to bin |
-| `IconInfo` | Info circle | Info hint |
-| `IconUploadCloud` | Cloud with arrow | Drop zone |
-| `IconChevronRight` | › chevron | Navigation hint |
-| `IconChevronDown` | ∨ chevron (Fluent outline path) | FilterButton dropdown arrow; matches the Avalonia Fluent ComboBox `DropDownGlyph` shape |
-| `IconWarning` | Triangle with ! | Validation errors, warnings |
-| `IconCheck` | Checkmark in circle | Import success, operation complete |
-| `IconRefresh` | Circular arrow | Retry on startup error |
-
-### PathIcon classes
-
-| Class | Size | Colour | Usage |
-|---|---|---|---|
-| `AppIcon` | 18×18 | TextSecondary | Default icon in controls |
-| `AppIconAccent` | 18×18 | Accent | Highlighted / action icons |
-| `Button.NavItem.Active PathIcon.AppIcon` | — | Accent | Active nav icon override |
+| `book` | Bookmark silhouette | Sidebar brand |
+| `library` | Books on shelf | Library nav |
+| `import` | Arrow down into tray | Import nav/action |
+| `exportIcon` | Arrow up from tray | Export action |
+| `copy` | Two overlapping sheets | Copy title |
+| `settings` | Gear | Settings nav |
+| `search` | Magnifier | Search bar |
+| `close` | Cross | Close/dismiss |
+| `folderOpen` | Open folder | Open Library |
+| `addFolder` | Folder plus | New Library / new collection |
+| `trash` | Trash can | Delete/move to bin |
+| `warning` | Triangle with exclamation | Validation errors |
+| `check` | Checkmark | Success/complete |
+| `refresh` | Circular arrow | Retry/reload |
 
 ---
 
-## 8. Form Controls
+## 8. Library Section
 
-| Control | Class | Notes |
-|---|---|---|
-| `TextBox` | `AppTextInput` | h=42, SurfaceAlt bg, Medium radius |
-| `TextBox` | `AppTextArea` | Multi-line, TextWrapping=Wrap |
-| `ComboBox` | `AppComboBox` | Popup (`Border#PopupBorder`): `AppSurfaceElevatedBrush` bg + `AppAccentBorderBrush` amber border — унифицирован с FilterPopup. Popup открывается с `VerticalOffset=6` (зазор под кнопкой). При `:dropdownopen` иконка `DropDownGlyph` становится `AppAccentBrush` (янтарная) |
-| `ListBox` | `IconPickerGrid` | 48×54 emoji cells in a `WrapPanel`, SurfaceAlt bg, 1px border; selected cell gets amber border (2px) + AccentSurface bg. Used in the Create Collection dialog for icon selection. `VerticalScrollBarVisibility=Auto`. Set `ClipToBounds="False"` on `ListBoxItem` to avoid emoji descender clipping. |
-| `CheckBox` | *(none)* | Foreground override to Primary |
+The Library section contains:
 
-### Toolbar control parity
+- toolbar with search, filters, sort, and direction controls
+- responsive cover-card grid
+- centered empty/no-results states with generated illustrations
+- right details panel that opens without leaving the section
+- book-card context menu for export, copy title, collection membership, and trash actions
 
-Controls that serve the same role in the `Library` toolbar must keep the same baseline chrome:
+Book cards keep stable dimensions. Real covers preserve aspect ratio on a neutral matte background. Missing covers use generated placeholders with readable initials, including Cyrillic letters.
 
-| Control | Default rule |
-|---|---|
-| `ComboBox.AppComboBox` | `MinHeight="42"`, `AppSurfaceAltBrush` surface, `AppBorderBrush` border |
-| `ToggleButton.FilterButton` | `MinHeight="42"`, `AppSurfaceAltBrush` surface via `/template/ ContentPresenter`, `AppBorderBrush` border |
-
-Do not force a fixed `Height` on toolbar controls. Use `MinHeight` so text, DPI scaling, and localized content can expand without clipping.
-
-### ToolTip
-
-Global style applied in `Components.axaml`. No custom class needed — all `ToolTip.Tip` attributes pick it up automatically.
-
-| Token | Value |
-|---|---|
-| Background | `AppSurfaceAltBrush` |
-| Foreground | `AppTextPrimaryBrush` (cream) |
-| BorderBrush | `AppBorderStrongBrush` |
-| BorderThickness | 1 |
-| CornerRadius | `Radius.Small` |
-| Padding | `8,5` |
-| FontSize | 12 |
-
-### ScrollBar
-Styled entirely via FluentTheme resource key overrides in `Colors.axaml` (no `/template/` selectors except CornerRadius=4 on Thumb). Key states:
-- Collapsed: `ScrollBarPanningThumbBackground` = `BorderStrong`  
-- Expanded: `ScrollBarThumbBackgroundColor` = `BorderStrong`  
-- Hover: `ScrollBarThumbFillPointerOver` = Accent  
-- Pressed: `ScrollBarThumbFillPressed` = AccentDim
+The details panel must not overlap the grid. Opening or closing the panel recenters the selected card so selection remains visible after reflow.
 
 ---
 
-## 9. Shell Layout
+## 9. Import Section
 
-```
-Window (Background = AppBackgroundBrush)
-└── Grid
-    ├── [IsStartingUp]    Border — full-bleed startup screen
-    ├── [IsFirstRun]      Border — two-column setup wizard (hero + form)
-    ├── [HasStartupError] Border — recovery screen
-    └── [HasShell]        Grid  ColumnDefinitions="244,*"
-        ├── Col 0: Border (AppSidebarGradientBrush) — sidebar fill (gradient)
-        │          Rectangle 1px — divider
-        │          Border Padding="14,18" — sidebar content
-        │              DockPanel
-        │                  Bottom: library card + Settings NavItem + version label
-        │                  Fill:   branding pill + tagline + Library/Import NavItems
-        │                          collections panel
-        └── Col 1: Border (AppSurfaceBrush) — content fill
-                   Grid (DataContext=Shell)
-                       LibraryView / ImportView / SettingsView (fade-in on :visible)
-```
+Import is immediate-start:
 
-**Sidebar width:** 244 px (fixed).  
-**Content column:** fills remaining space (`*`).
+- dropping files/folders or selecting files/folders starts import without a separate Start button
+- active import locks navigation/actions that would break job state
+- progress shows total, processed, imported, failed, skipped, and current message
+- cancellation exposes rolling back/compacting states instead of hiding them
+- terminal result keeps aggregate summary and per-source warnings visible
+
+`Import covers` is checked by default. `Force conversion to EPUB during import` is visible only when a converter is configured.
 
 ---
 
-## 10. View Structure
+## 10. Settings Section
 
-| View | DataContext | Key layout |
-|---|---|---|
-| `LibraryView` | `ShellViewModel` | Grid: toolbar (Auto) + content row (*). Toolbar keeps the full-text search field, language filter, genre filter, sort group, and book-count pill. Content = book grid (AppPanelFlat) + details panel (360 px fixed, right). Each book card also exposes a right-click context menu with `Export`, `Add to`, `Copy Title`, and `Move to Trash`; when a converter is configured, the same menu also shows `Export as EPUB` and enables it for `FB2` books. |
-| `ImportView` | `ShellViewModel` | ScrollViewer → StackPanel. Drop zone → options → running state → result |
-| `SettingsView` | `ShellViewModel` | ScrollViewer → StackPanel. Converter → About → Diagnostics panels |
+Settings is a single scrollable page with:
+
+- converter executable path entry and browse action
+- validation status and automatic preference save
+- diagnostics paths for logs/runtime/converter/staging
+- about/version information
+
+Converter path validation runs after user edits, not as an eager probe on every startup.
 
 ---
 
-## 11. Disabled / Lock-out State
+## 11. First-Run And Recovery
 
-During import (`IsImportInProgress = true`) the UI is locked:
+First-run provides two explicit modes:
 
-- `ShowLibrarySectionCommand`, `ShowImportSectionCommand`, `ShowSettingsSectionCommand` → `CanExecute = false` → `NavItem:disabled` → `Opacity=0.45`
-- `TextBox:disabled`, `ComboBox:disabled`, `CheckBox:disabled` → `Opacity=0.38`
-- `Border.AppPanelMuted:disabled` → `Opacity=0.45`
-- Buttons (`AccentAction`, `SecondaryAction`, `DestructiveAction`): `Opacity=0.4` on button + ContentPresenter keeps original bg, text muted to `TextMuted`
-- Library card in sidebar (`Border.AppPanelMuted`) — `IsEnabled` bound to `!Shell.IsImportInProgress`; dims to 0.45 opacity and prevents Open/New button interaction
-- Drop zone in `ImportView` (`Border.DropZone`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims to 0.45 opacity, disables the picker buttons, and must not accept drag-over/drop while an import is already running
-- OPTIONS panel in `ImportView` (`Border.AppPanelMuted`) — `IsEnabled` bound to `!ImportJobs.IsBusy`; dims all import option checkboxes (Allow probable duplicates, Force conversion to EPUB, Import covers) via parent propagation
-- Only the "Cancel" button remains active
+- create a new managed library in a new or empty folder
+- open an existing complete managed library root
 
-### Lockout class — generic region lock-out
+The left hero panel keeps the `Librova` wordmark prominent. The right panel owns mode selection, path input, validation, and continue action.
 
-For entire shell regions (not single controls), use the `Lockout` CSS class. It sets `IsEnabled=False` and `Opacity=0.4` on the container and all children in one step — no per-widget wiring needed.
-
-```xml
-<StackPanel Classes.Lockout="{Binding Shell.IsImportInProgress}">
-    <!-- entire region dims and disables as a unit -->
-</StackPanel>
-```
-
-**Currently applied to:**
-- Sidebar top section (branding + nav) — `MainWindow.axaml`, bound to `Shell.IsImportInProgress`
-- ImportView page header ("INGEST / Import Books") — `ImportView.axaml`, bound to `ImportJobs.IsBusy`
-
-**Anti-double-dim rule:** `NavItem:disabled` buttons inside a Lockout container have `Opacity=1` overridden in `Components.axaml` so the parent's 0.4 is the only dim applied (instead of multiplicative `0.4 × 0.45 = 0.18`).
-
-**Adding a new long-running job type:** bind the container's `Classes.Lockout` to the relevant `IsBusy` property — no new style rules needed.
-
-> **Important:** Nav commands must NOT use `CurrentSection is not ShellSection.X` in CanExecute — that would disable the active button and break active-state styling.
+Startup recovery appears when the saved library root is invalid or damaged and lets the user choose a different library without silently recreating the broken one.
 
 ---
 
 ## 12. Title Bar
 
-Controlled via DWM P/Invoke (`DWMWA_CAPTION_COLOR = 35`, Windows 11 only).  
-Colour: `#0D0A07` as COLORREF `0x00070A0D`.  
-Set in `MainWindow.axaml.cs → OnOpened`. Catches both `DllNotFoundException` and `EntryPointNotFoundException` for cross-version safety.
+The title bar uses the same `background` colour as the window root. Windows-specific title-bar integration belongs in `QtWindowsPlatform`, not in QML views.
 
 ---
 
 ## 13. App Icon
 
-Generated by `scripts/GenerateLibrovaIcon.py` → `apps/Librova.UI/Assets/librova.ico`.  
-Design: warm sepia rounded rectangle background + amber/gold bookmark silhouette with soft glow, highlight strip, spine strip.  
-From the repo root, regenerate with: `python scripts\GenerateLibrovaIcon.py apps\Librova.UI\Assets\librova.ico`
+Generated by `scripts/GenerateLibrovaIcon.py` into `apps/Librova.Qt/assets/librova.ico`.
+
+Design: warm sepia rounded rectangle background with an amber/gold bookmark silhouette, soft glow, highlight strip, and spine strip.
+
+Regenerate from the repo root:
+
+```powershell
+python scripts\GenerateLibrovaIcon.py apps\Librova.Qt\assets\librova.ico
+```
 
 ---
 
-## 14. Palette Change Checklist
+## 14. Popup / Dropdown Surface Rule
 
-To swap the entire colour palette, update exactly these four locations:
+All popup, dropdown, flyout, and context-menu surfaces use the same visual pair:
 
-| File | What to change |
-|---|---|
-| `apps/Librova.UI/Styles/Colors.axaml` | `Color.*` primitive tokens at the top (lines 10–80). All brushes and FluentTheme overrides propagate automatically via `{StaticResource}`. |
-| `apps/Librova.UI/Views/MainWindow.axaml.cs` | `TitleBarColor` constant — must match `Color.Background` as COLORREF `0x00BBGGRR`. |
-| `apps/Librova.UI/ViewModels/LibraryBrowserViewModel.cs` | 5 `static readonly IBrush` fields (lines ~30–34). Each has a comment naming the token it mirrors. |
-| `scripts/GenerateLibrovaIcon.py` | `ACCENT`, `BG`, glow colour constants, then re-run the script to regenerate `librova.ico`. |
-
-**Known Avalonia limitations affecting palette tokens:**
-
-- `BoxShadow` values (e.g., BookCard hover glow `#38F5A623`) and `TextControlSelectionHighlightColor` (`#40F5A623`) cannot reference `StaticResource` because `BoxShadow` is a parsed struct string and `<Color>` text content cannot be a markup extension. Both values are declared as named tokens (`Color.AccentGlow`, `Color.AccentSelection`) in `Colors.axaml` for documentation, but the consuming sites hardcode the literal hex with a comment referencing the token name. Update all four together when changing the palette.
-- `AppSidebarGradientBrush` gradient stops also use hardcoded hex values for the same reason — update alongside `Color.Sidebar` / `Color.Background`.
-
-### Popup / Dropdown surface rule
-
-**Все всплывающие поверхности (Popup, dropdown, flyout) должны использовать одинаковую визуальную пару:**
-
-| Token | Value | Назначение |
+| Token | Value | Purpose |
 |---|---|---|
-| Background | `AppSurfaceElevatedBrush` (`Color.SurfaceElevated` = `#2E2414`) | Тёплый amber, заметно светлее основного окна |
-| Border | `AppAccentBorderBrush` (`Color.AccentBorder` = `#3D2C0A`) | Amber-рамка, выделяет контейнер без BoxShadow |
+| Background | `surfaceElevated` / `#2E2414` | Warm elevated surface, lighter than the main window |
+| Border | `accentBorder` / `#3D2C0A` | Amber border that separates the container without relying on shadow |
 
-Это правило применено к `Border.FilterPopup` (filter facet flyout), `ComboBox.AppComboBox /template/ Border#PopupBorder` (sort/language dropdown), `ContextMenu.BookCardContextMenu` (root menu карточки книги), `ContextMenu` и `Menu`. Вложенные submenu у `MenuItem` в Fluent-шаблоне используют ресурсы `MenuFlyoutPresenterBackground` / `MenuFlyoutPresenterBorderBrush`, поэтому эти ключи переопределены в `Colors.axaml` той же парой токенов. Любой новый Popup или выпадающий контейнер должен следовать этой же паре.
+Applied surfaces include filter popup, sort dropdown, book-card context menu, collection menu, and any submenu container. Any new popup or dropdown must follow this pair.
 
 ---
 
 ## 15. Section Transitions
 
-All three content views (`LibraryView`, `ImportView`, `SettingsView`) have a 150 ms opacity fade-in animation triggered by the `UserControl:visible` pseudo-class. The animation plays each time the section becomes active. No ViewModel changes required — it is self-contained XAML in each view's `UserControl.Styles`.
+Section transitions use short opacity fades around 150 ms. Transitions must not destroy section state; `Library`, `Import`, and `Settings` stay instantiated and toggle visibility.
 
 ---
 
-## 16. Sidebar Details
+## 16. Palette Change Checklist
 
-**Gradient** — The sidebar uses `AppSidebarGradientBrush` (a `LinearGradientBrush` from top `#0A0806` to bottom `#1A1409`) to create a subtle depth effect from recessed/shadowed top to warm amber base.
+To change the palette, update:
 
-**Collections block** — The collections panel lives in the top navigation stack directly under Library/Import. Collection entries use the same `Button.NavItem` chrome as primary navigation buttons. Each entry wraps its emoji glyph in a `Border.NavIconBadge` (30×30, `Radius.Small`), which provides a consistent icon area without adding visual noise. Long collection names are single-line ellipsized and exposed through a tooltip. The scrollable list (`MaxHeight="210"` ≈ 4 items) leaves right-side breathing room so the scrollbar does not overlap buttons.
-
-When no collections exist, the panel shows a 📚 emoji, a caption, and a `CollectionLinkAction` CTA ("Create one" with `IconAddFolder`). When collections exist, a `CollectionAddAction` ghost button ("New collection" with `IconAddFolder`) appears below the list. Delete is via right-click context menu on a collection item — no inline delete button in the header.
-
-Selecting a collection activates only that collection button; the Library nav button is not active while a collection filter is active.
-
-**Version badge** — A small 11 px muted `TextBlock` at the bottom of the sidebar DockPanel, bound to `Shell.ApplicationVersionText`. Only visible when `HasShell=true`.
-
-**Annotation typography** — The book annotation text in the details panel uses `FontStyle="Italic"` to evoke a book excerpt feel.
-
-**First-run hero branding** — The left setup panel keeps the `Librova` wordmark at 22 px Bold with an explicit 30 px line-height so Avalonia does not clip the glyphs vertically on the startup screen.
-
----
-
-## 17. Filter Panel
-
-The library filter panel is a single **ToggleButton + Popup** — a store-style faceted flyout grouping Languages and Genres in one place.
-
-### Trigger button
-
-`ToggleButton` with `Classes="FilterButton"`. Content — `StackPanel` (`Orientation=Horizontal, Spacing=6`) с `TextBlock` и `PathIcon` (`IconChevronDown`, 10×10) — обе иконки используют тот же Fluent-путь, что и `AppComboBox`, обеспечивая визуальное единство. Label bound to `LibraryBrowser.FilterButtonLabel` — shows `"Filters"` when no filter is active, `"Filters · N"` (amber) when N facets are selected. Checked state gets `AccentSurfaceBrush` background. `IsChecked` bound two-way to `LibraryBrowser.IsFilterPanelOpen`.
-
-`PlacementTarget` assigned in code-behind (`LibraryView.axaml.cs`) after `AvaloniaXamlLoader.Load` because Avalonia compiled-XAML bindings do not support `x:Reference` for `PlacementTarget`.
-
-### Popup
-
-`Popup` with `Placement="Bottom"`, `VerticalOffset="6"` (зазор 6px под кнопкой), `IsLightDismissEnabled="True"`, `IsOpen` bound two-way to `LibraryBrowser.IsFilterPanelOpen`. Width 420. Content wrapped in `Border.FilterPopup`.
-
-### Layout inside popup
-
-```
-FilterSectionHeader "LANGUAGES"
-ScrollViewer MaxHeight=100
-  ItemsControl ← LanguageFacets (WrapPanel Orientation=Horizontal)
-    ToggleButton.GenreChip — pill chips, auto-width, wrap to next row
-1 px divider (AppBorderBrush)
-FilterSectionHeader "GENRES"
-TextBox "Search genres…" ← GenreSearchText
-ScrollViewer MaxHeight=200
-  ItemsControl ← FilteredGenreFacets (WrapPanel Orientation=Horizontal)
-    ToggleButton.GenreChip — pill chips, auto-width, wrap to next row
-footer row (visible when HasActiveFilters):
-  "N selected" TextBlock + "Clear all" Button.FilterClearButton
-```
-
-### Facet semantics
-
-Empty selection ≡ no filter applied (all values pass through). Both facets use OR semantics within the facet. SQL: languages → `b.language IN (?,…)`, genres → `AND EXISTS (… WHERE normalized_name IN (?,…))`.
-
-### ViewModel API
-
-| Property / Command | Type | Purpose |
-|---|---|---|
-| `LanguageFacets` | `ObservableCollection<FilterFacetItem>` | Populated from `AvailableLanguages` on each server response |
-| `GenreFacets` | `ObservableCollection<FilterFacetItem>` | Populated from `AvailableGenres` |
-| `FilteredGenreFacets` | computed | Filters `GenreFacets` by `GenreSearchText` |
-| `IsFilterPanelOpen` | `bool` | Opens/closes the Popup |
-| `ActiveFilterCount` | `int` | Sum of selected languages + genres |
-| `FilterButtonLabel` | `string` | `"Filters"` or `"Filters · N"` |
-| `ClearAllFiltersCommand` | `ICommand` | Deselects all facets |
-
-### FilterFacetItem
-
-`sealed class FilterFacetItem : INotifyPropertyChanged` — `Value: string` (display / filter value), `BookCount: uint` (count badge shown beside the facet label), `IsSelected: bool` (two-way bound to `ToggleButton.GenreChip`). ViewModel subscribes to each item's `PropertyChanged` on add, unsubscribes on remove; selection changes trigger `OnFacetSelectionChanged` which updates `LibraryBrowseQueryState` and schedules a debounced refresh.
-
-`SynchronizeFacets(facets, facetModels, desiredValues, selectedValues)` preserves `IsSelected` state for items already in the collection, updates each item's `BookCount`, and aggregates duplicate facet values case-insensitively before applying counts — avoids reset flicker and keeps mixed-case server values from crashing the filter refresh.
-
-### Styles
-
-| Selector | Description |
+| File | What to change |
 |---|---|
-| `ToggleButton.FilterButton` | Default: `AppSurfaceAltBrush` bg (через `/template/ ContentPresenter`), `AppBorderBrush` border, `Radius.Medium`, `MinHeight="42"`, `FontSize="14"`, `HorizontalContentAlignment=Center`, `VerticalContentAlignment=Center` |
-| `ToggleButton.FilterButton:checked` | `AppAccentMutedBrush` (#2A1C06) bg — тёплый amber-тинт, ясно читается как активное; `AppAccentBrush` border+text |
-| `ToggleButton.FilterButton:checked:pointerover` | `AppAccentBorderBrush` (#3D2C0A) bg, `AppAccentBrightBrush` text |
-| `ToggleButton.FilterButton:pointerover` | `AppSurfaceHoverBrush` bg |
-| `ToggleButton.FilterButton PathIcon` | `AppTextSecondaryBrush` — бежевый chevron в обычном состоянии (совпадает с `AppComboBox DropDownGlyph`) |
-| `ToggleButton.FilterButton:checked PathIcon` | `AppAccentBrush` — янтарный chevron при открытом фильтре |
-| `ToggleButton.FilterButton:checked:pointerover PathIcon` | `AppAccentBrightBrush` |
-| `Border.FilterPopup` | `AppSurfaceElevatedBrush` bg (`#2E2414`, warm amber elevated), `AppAccentBorderBrush` amber border, `Radius.Large` (12) — popup выделяется тёплой рамкой без тени (BoxShadow не используется: Avalonia Popup рендерит прямоугольную тень внутри PopupRoot, не уважая CornerRadius) |
-| `TextBlock.FilterSectionHeader` | `FontSize.Xs` (11), uppercase labels, `TextMutedBrush`, 0,0,0,6 margin |
-| `ToggleButton.GenreChip` | Default: `AppSurfaceAltBrush` bg, `AppBorderStrongBrush` border, `AppTextSecondaryBrush` text, `Radius.Large` (18, pill), `Padding=8,4`, `FontSize.Sm` (13), `Margin=0,3,4,3`, `HorizontalAlignment=Left` |
-| `ToggleButton.GenreChip:checked` | `AppAccentBorderBrush` bg, `AppAccentBrush` border, `AppAccentBrightBrush` text, `SemiBold` |
-| `ToggleButton.GenreChip:checked:pointerover` | `AppAccentSurfaceHoverBrush` bg, `AppAccentBrightBrush` text |
-| `ToggleButton.GenreChip:pointerover` | `AppSurfaceHoverBrush` bg, `AppTextPrimaryBrush` text |
-| `ToggleButton.GenreChip:pressed` | `AppSurfaceMutedBrush` bg, `AppTextPrimaryBrush` text |
-| `ToggleButton.GenreChip:checked:pressed` | `AppAccentMutedBrush` bg, `AppAccentBrush` text |
-| `ToggleButton.GenreChip:focus-visible` | `AppAccentBrightBrush` border, `BorderThickness=2` — amber ring for keyboard navigation |
-| `ToggleButton.GenreChip:disabled` | `Opacity=0.4` — keeps original background, uniform fade |
-| `Button.FilterClearButton` | Transparent bg, `AppAccentBrush` text, no border; hover → `AppAccentBrightBrush`; pressed → `AppAccentDimBrush` |
+| `apps/Librova.Qt/qml/theme/LibrovaTheme.qml` | Primitive colours and derived tokens |
+| `apps/Librova.Qt/App/QtWindowsPlatform.*` | Windows title-bar colour if the background token changes |
+| `scripts/GenerateLibrovaIcon.py` | Icon colour constants, then regenerate `librova.ico` |
+| `docs/UiDesignSystem.md` | Token table and any changed component rules |
 
-### Icon
-
-`IconFilter` StreamGeometry in `Colors.axaml` — funnel shape for use as `PathIcon` or `DrawingImage`.
+Run `scripts\Run-Tests.ps1` after design-system changes that affect QML or icon assets.

@@ -5,7 +5,7 @@
 
 #include "Storage/ManagedLibraryLayout.hpp"
 
-namespace Librova::CoreHost {
+namespace Librova::Application {
 namespace {
 
 void EnsureDirectoryExists(const std::filesystem::path& path, const char* label)
@@ -68,7 +68,7 @@ void CLibraryBootstrap::PrepareLibraryRoot(
 {
     switch (libraryOpenMode)
     {
-    case ELibraryOpenMode::OpenExisting:
+    case ELibraryOpenMode::Open:
         ValidateExistingLibraryRoot(libraryRoot);
         break;
     case ELibraryOpenMode::CreateNew:
@@ -77,4 +77,4 @@ void CLibraryBootstrap::PrepareLibraryRoot(
     }
 }
 
-} // namespace Librova::CoreHost
+} // namespace Librova::Application

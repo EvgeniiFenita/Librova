@@ -16,8 +16,7 @@ TEST_CASE("Built-in fb2cng configuration produces the default command profile", 
     const Librova::ConverterConfiguration::SConverterConfiguration configuration{
         .Mode = Librova::ConverterConfiguration::EConverterConfigurationMode::BuiltInFb2Cng,
         .Fb2Cng = {
-            .ExecutablePath = "C:/Tools/fbc.exe",
-            .ConfigPath = "C:/Tools/fb2cng.yml"
+            .ExecutablePath = "C:/Tools/fbc.exe"
         }
     };
 
@@ -28,8 +27,6 @@ TEST_CASE("Built-in fb2cng configuration produces the default command profile", 
     REQUIRE(profile->ExecutablePath == std::filesystem::path("C:/Tools/fbc.exe"));
     REQUIRE(profile->OutputMode == Librova::ConverterCommand::EConverterOutputMode::SingleFileInDestinationDirectory);
     REQUIRE(profile->ArgumentTemplate == std::vector<std::string>({
-        "-c",
-        "C:/Tools/fb2cng.yml",
         "convert",
         "--to",
         "{output_format}",
@@ -48,4 +45,3 @@ TEST_CASE("Invalid enabled converter configuration is rejected", "[converter-con
     REQUIRE_FALSE(configuration.IsValid());
     REQUIRE_FALSE(Librova::ConverterConfiguration::TryBuildCommandProfile(configuration).has_value());
 }
-

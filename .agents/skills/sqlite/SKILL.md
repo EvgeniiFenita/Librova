@@ -17,7 +17,7 @@ This skill is intentionally narrow. It covers the native C++ persistence layer t
 - use this skill when reviewing schema changes, FTS5 changes, duplicate-detection queries, or query-shape changes
 - use this skill when debugging search quality, SQLite locking, or rollback behavior
 - use this skill together with `$code-style` for C++ naming and structure rules
-- do **not** use this skill for Avalonia / C# UI work that does not cross into the native persistence layer
+- do **not** use this skill for Qt/QML UI work that does not cross into the native persistence layer
 
 ## First Orientation
 
@@ -40,9 +40,9 @@ Read only the files relevant to the change:
 
 ### Ownership boundary
 
-- SQLite belongs to the native C++ core
-- `apps/Librova.UI/` must not access SQLite directly
-- if a user-visible data need reaches the UI, expose it through the existing domain and IPC layers instead of adding managed-side SQL
+- SQLite belongs to the native C++ application/backend layers
+- `apps/Librova.Qt/` must not access SQLite directly
+- if a user-visible data need reaches the UI, expose it through the existing domain and application facade layers instead of adding UI-side SQL
 
 ### Use Librova wrappers first
 
@@ -284,7 +284,6 @@ Use this before closing a SQLite-related change:
 
 Pick the smallest relevant set first, then expand if the change crossed boundaries:
 
-- `dotnet test tests\\Librova.UI.Tests\\Librova.UI.Tests.csproj -c Debug` only if the managed contract changed
 - `ctest --test-dir out\\build\\x64-debug -C Debug --output-on-failure` for native coverage
 - targeted native tests are often the fastest signal:
   - `TestSqliteConnection`

@@ -61,9 +61,9 @@ TEST_CASE("Unicode conversion restores Windows absolute UTF-8 paths", "[unicode]
     REQUIRE(Librova::Unicode::PathToUtf8(restored) == utf8Path);
 }
 
-TEST_CASE("Unicode conversion restores Windows named pipe UTF-8 paths", "[unicode]")
+TEST_CASE("Unicode conversion restores Windows device UTF-8 paths", "[unicode]")
 {
-    const auto utf8Bytes = std::filesystem::path(u8R"(\\.\pipe\Librova.Тест)").generic_u8string();
+    const auto utf8Bytes = std::filesystem::path(u8R"(\\?\C:\Книги\Librova.Тест)").generic_u8string();
     const std::string utf8Path(
         reinterpret_cast<const char*>(utf8Bytes.data()),
         utf8Bytes.size());
@@ -104,5 +104,4 @@ TEST_CASE("IsValidUtf8 rejects truncated multi-byte sequence", "[unicode]")
     const std::string truncated = "\xC3";
     REQUIRE_FALSE(Librova::Unicode::IsValidUtf8(truncated));
 }
-
 

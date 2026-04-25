@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 191
+  last_assigned_id: 192
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -32,15 +32,13 @@ tasks:
   type: Feature
   priority: Major
   milestone: unscheduled
-  note: 'the scenario is a user who already has an FB2 library and then configures a converter for the
-    first time; a dedicated action (e.g., in Settings or the Library section) triggers conversion of every
-    managed FB2 book; progress must surface the same aggregate counters as batch import (total, converted,
-    failed, skipped); a per-book conversion failure must keep the original FB2 intact as the managed file
-    — never remove it; the terminal summary must remain visible after the job finishes; cancellation must
-    stop new conversions and leave already-converted books in their new EPUB state; the feature spans
-    a new native pipeline stage, IPC contract, and UI workflow.
-
-    '
+  note: The scenario is a user who already has an FB2 library and then configures a converter for the
+    first time; a dedicated action (for example in Settings or the Library section) triggers conversion
+    of every managed FB2 book; progress must surface the same aggregate counters as batch import (total,
+    converted, failed, skipped); a per-book conversion failure must keep the original FB2 intact as the
+    managed file - never remove it; the terminal summary must remain visible after the job finishes; cancellation
+    must stop new conversions and leave already-converted books in their new EPUB state; the feature spans
+    a new native pipeline stage, application facade contract, and Qt/QML workflow.
 - id: 61
   summary: audit and harden browse, search, and filter query performance at library scales of hundreds
     of thousands of books
@@ -61,45 +59,41 @@ tasks:
   type: Feature
   priority: Major
   milestone: unscheduled
-  note: 'affected areas span the IPC transport (named pipes), the Recycle Bin service, the cover image
-    processor (WIC/COM), and the UI DWM title-bar integration; each should be hidden behind an interface
+  note: Affected areas span the Recycle Bin service, the cover image processor (WIC/COM), DWM title-bar
+    integration, and any remaining Windows-only Qt desktop helpers; each should be hidden behind an interface
     with a Windows-only implementation in a dedicated platform layer; non-Windows stubs must throw explicitly
     rather than fail silently or refuse to compile; where a portable third-party implementation is straightforward
     prefer it over a stub; the existing Unicode conversion guard is the reference pattern.
-
-    '
 - id: 180
   summary: add live search suggestions dropdown to the library search field
   status: Open
   type: Feature
   priority: Major
   milestone: '1.3'
-  note: 'show a dropdown under the search input as the user types with debounce ~200ms; two groups: top-5
-    author matches and top-5 title matches with SectionEyebrow headers; matched substring highlighted
-    in AppAccentBrush; keyboard navigation with up/down arrows, Enter to apply, Escape to close without
-    clearing; dropdown does not appear when there are no results; requires a new or extended RPC method
-    for prefix search returning authors and titles separately'
+  note: 'Show a dropdown under the search input as the user types with debounce around 200 ms; two groups:
+    top-5 author matches and top-5 title matches with eyebrow headers; highlight the matched substring
+    in the accent style; keyboard navigation with Up/Down arrows, Enter to apply, Escape to close without
+    clearing; the dropdown does not appear when there are no results; requires a new or extended native
+    application facade and Qt adapter query for prefix search returning authors and titles separately.'
 - id: 181
   summary: add library statistics dashboard as a dedicated sidebar section
   status: Open
   type: Feature
   priority: Major
   milestone: unscheduled
-  note: 'add a Statistics NavItem (fourth sidebar entry, new icon); content: horizontal bar charts for
-    top-5 genres, authors, languages, and a year histogram; each bar row shows label, proportional fill
-    (AppAccentDimBrush to AppAccentBrush), and MetricPill count; section headers use SectionEyebrow; first
-    load shows a skeleton instead of an empty screen; requires extending LibraryStatisticsModel in proto,
-    new SQL aggregate queries in C++, and a new RPC method'
+  note: 'Add a Statistics sidebar entry with a new icon; content: horizontal bar charts for top-5 genres,
+    authors, languages, and a year histogram; each bar row shows label, proportional fill, and a count
+    pill; section headers use the current eyebrow style; first load shows a skeleton instead of an empty
+    screen; requires extending the native statistics DTO/query surface in C++ and exposing it through
+    the Qt adapter.'
 - id: 183
-  summary: expose supported import file extensions from native host via RPC so C# drag-and-drop layer
-    needs no hardcoded format list
+  summary: expose supported import file extensions from the native application facade for Qt drag-and-drop
   status: Open
   type: Feature
   priority: Minor
   milestone: unscheduled
-  note: Native CImportSourceExpander already owns the canonical list (.fb2, .epub, .zip). Add a GetSupportedImportFormats
-    RPC method returning the extension list; use it in MainWindow drag-over validation instead of any
-    C#-side hardcoded set.
+  note: Qt import drag-and-drop should consume supported extension metadata from the native application
+    surface instead of hardcoding format lists in QML.
 - id: 131
   summary: replace import-stage sub-label with rotating book facts
   status: Open
@@ -142,10 +136,9 @@ tasks:
   type: Feature
   priority: Minor
   milestone: '1.3'
-  note: 'AuthorsText already exists on BookListItemModel; add a BodyMuted TextBlock under the title in
-    the book card DataTemplate with TextTrimming=CharacterEllipsis; the card geometry must be updated:
-    increase BookCardButton Height and remove MaxHeight constraint on the title TextBlock to accommodate
-    the second line without deforming the WrapPanel grid'
+  note: Authors text already exists on the book card model; render a secondary muted line under the title
+    in BookCard.qml with ellipsis support; adjust the card height and responsive grid sizing so the extra
+    line fits without visual distortion.
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open
@@ -167,10 +160,10 @@ tasks:
   note: Replace the removed ad-hoc backlog test scaffolding with a documented, repository-consistent test
     pipeline for backlog tooling, including fixture strategy, runner choice, and mutating-command isolation.
 - id: 174
-  summary: add ToolTip.Tip binding to truncated book title TextBlock on book card
+  summary: show full truncated book title on hover in the Qt book card
   status: Open
   type: Feature
   priority: Low
   milestone: '1.3'
-  note: TextTrimming=CharacterEllipsis already set on the title TextBlock in LibraryView.axaml; add ToolTip.Tip="{Binding
-    Title}" to the same element so the full title is readable on hover without opening the details panel
+  note: When the title is visually elided in BookCard.qml, show the full title on hover with the standard
+    Qt tooltip surface so it is readable without opening the details panel.
