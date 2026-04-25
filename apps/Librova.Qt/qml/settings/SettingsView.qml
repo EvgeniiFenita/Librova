@@ -70,73 +70,75 @@ import LibrovaQt
                     Text { text: "Converter Executable"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; font.weight: LibrovaTypography.weightSemiBold; color: LibrovaTheme.textPrimary }
                     Text { width: parent.width; text: "Settings are applied automatically after validation. Use × to remove the configured converter and disable FB2 conversion."; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textSecondary; wrapMode: Text.WordWrap }
 
-                    Rectangle {
+                    Row {
                         width: parent.width
-                        height: LibrovaTheme.controlHeight
-                        radius: LibrovaTheme.radiusMedium
-                        color: LibrovaTheme.surfaceAlt
-                        border.color: _exeField.activeFocus ? LibrovaTheme.accent : LibrovaTheme.border
-                        border.width: _exeField.activeFocus ? 2 : 1
-                        clip: true
-                        Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                        Behavior on border.width { NumberAnimation { duration: LibrovaTheme.animFast } }
+                        spacing: 8
 
-                        Row {
-                            anchors.fill: parent
+                        Rectangle {
+                            width: parent.width - 8 - 116
+                            height: LibrovaTheme.controlHeight
+                            radius: LibrovaTheme.radiusMedium
+                            color: LibrovaTheme.surfaceAlt
+                            border.color: _exeField.activeFocus ? LibrovaTheme.accent : LibrovaTheme.border
+                            border.width: _exeField.activeFocus ? 2 : 1
+                            clip: true
+                            Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
+                            Behavior on border.width { NumberAnimation { duration: LibrovaTheme.animFast } }
 
-                            TextField {
-                                id: _exeField
-                                height: parent.height
-                                width: parent.width
-                                      - (root.exePath.length > 0 ? 43 : 0)
-                                      - 111
-                                leftPadding:  LibrovaTheme.sp3
-                                rightPadding: LibrovaTheme.sp2
-                                topPadding: 0; bottomPadding: 0
-                                background: null
-                                text: root.exePath
-                                placeholderText: "C:\\Tools\\fbc.exe"
-                                font.family: LibrovaTypography.fontFamily
-                                font.pixelSize: LibrovaTypography.sizeBase
-                                color: LibrovaTheme.textPrimary
-                                placeholderTextColor: LibrovaTheme.textMuted
-                                selectedTextColor: LibrovaTheme.textOnAccent
-                                selectionColor: Qt.rgba(LibrovaTheme.accent.r, LibrovaTheme.accent.g, LibrovaTheme.accent.b, 0.35)
-                                onTextChanged: {
-                                    root.exePath = text
-                                    if (root._settingsInitialized)
-                                        _validateTimer.restart()
+                            Row {
+                                anchors.fill: parent
+
+                                TextField {
+                                    id: _exeField
+                                    height: parent.height
+                                    width: parent.width - (root.exePath.length > 0 ? 43 : 0)
+                                    leftPadding:  LibrovaTheme.sp3
+                                    rightPadding: LibrovaTheme.sp2
+                                    topPadding: 0; bottomPadding: 0
+                                    background: null
+                                    text: root.exePath
+                                    placeholderText: "C:\\Tools\\fbc.exe"
+                                    font.family: LibrovaTypography.fontFamily
+                                    font.pixelSize: LibrovaTypography.sizeBase
+                                    color: LibrovaTheme.textPrimary
+                                    placeholderTextColor: LibrovaTheme.textMuted
+                                    selectedTextColor: LibrovaTheme.textOnAccent
+                                    selectionColor: Qt.rgba(LibrovaTheme.accent.r, LibrovaTheme.accent.g, LibrovaTheme.accent.b, 0.35)
+                                    onTextChanged: {
+                                        root.exePath = text
+                                        if (root._settingsInitialized)
+                                            _validateTimer.restart()
+                                    }
                                 }
-                            }
 
-                            Rectangle { width: 1; height: parent.height; color: LibrovaTheme.border; visible: root.exePath.length > 0 }
-                            Rectangle {
-                                width: 42; height: parent.height
-                                visible: root.exePath.length > 0
-                                color: _clearHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
-                                Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                                Text { anchors.centerIn: parent; text: "×"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; color: LibrovaTheme.textSecondary }
-                                HoverHandler { id: _clearHov; cursorShape: Qt.PointingHandCursor }
-                                TapHandler {
-                                    onTapped: {
-                                        root.exePath = ""
-                                        _exeField.text = ""
-                                        preferences.converterExePath = ""
-                                        preferences.forceEpubConversionOnImport = false
-                                        converterValidator.clear()
+                                Rectangle { width: 1; height: parent.height; color: LibrovaTheme.border; visible: root.exePath.length > 0 }
+                                Rectangle {
+                                    width: 42; height: parent.height
+                                    visible: root.exePath.length > 0
+                                    color: _clearHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+                                    Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
+                                    Text { anchors.centerIn: parent; text: "×"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; color: LibrovaTheme.textSecondary }
+                                    HoverHandler { id: _clearHov; cursorShape: Qt.PointingHandCursor }
+                                    TapHandler {
+                                        onTapped: {
+                                            root.exePath = ""
+                                            _exeField.text = ""
+                                            preferences.converterExePath = ""
+                                            preferences.forceEpubConversionOnImport = false
+                                            converterValidator.clear()
+                                        }
                                     }
                                 }
                             }
+                        }
 
-                            Rectangle { width: 1; height: parent.height; color: LibrovaTheme.border }
-                            Rectangle {
-                                width: 110; height: parent.height
-                                color: _browseHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
-                                Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                                Text { anchors.centerIn: parent; text: "Browse…"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textPrimary }
-                                HoverHandler { id: _browseHov; cursorShape: Qt.PointingHandCursor }
-                                TapHandler { onTapped: _exeDialog.open() }
-                            }
+                        LButton {
+                            width: 116
+                            height: LibrovaTheme.controlHeight
+                            text: "Browse…"
+                            iconPath: LibrovaIcons.folderOpen
+                            variant: "secondary"
+                            onClicked: _exeDialog.open()
                         }
                     }
 
@@ -196,7 +198,7 @@ import LibrovaQt
                         Text { text: "AUTHOR"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeXs; font.weight: LibrovaTypography.weightSemiBold; font.letterSpacing: LibrovaTypography.spacingEyebrow; color: LibrovaTheme.textMuted }
                         Text { text: "Evgenii Volokhovich"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textSecondary }
                         Text { text: "CONTACT"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeXs; font.weight: LibrovaTypography.weightSemiBold; font.letterSpacing: LibrovaTypography.spacingEyebrow; color: LibrovaTheme.textMuted }
-                        Text { text: "evgenii.github@gmail.com"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeXs; color: LibrovaTheme.textSecondary }
+                        Text { text: "evgenii.github@gmail.com"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textSecondary }
                     }
                 }
             }
