@@ -1582,3 +1582,11 @@ tasks:
     restored Escape/Delete library shortcuts, recentered selected cards during layout changes, removed
     the hidden converter config path, synchronized backlog and review-pass wording, and validated the
     Qt-only build, tests, and boundary checks manually.'
+- id: 193
+  summary: add project-specific CMake and Qt/QML agent skills
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Added repository-local CMake and Qt/QML skills with Librova-specific build, architecture, testing,
+    and documentation guidance.

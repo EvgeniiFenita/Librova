@@ -42,7 +42,9 @@ Before making changes, read these documents in order:
 
 Use `$skill-name` in the CLI whenever this file says to use a skill.
 
+When editing `CMakeLists.txt`, `CMakePresets.json`, target wiring, or Qt/QML module build manifests: use the `$cmake` skill.
 When writing new C++, QML, or script code: use the `$code-style` skill.
+When changing `apps/Librova.Qt` C++ shell code, Qt controllers/adapters/models, or `qml/` views/components: use the `$qt-qml` skill.
 When changing the SQLite schema, native SQL queries, FTS behavior, or SQLite review/debugging rules: use the `$sqlite` skill.
 
 ---
@@ -293,10 +295,12 @@ Use these skills for common recurring workflows (type `$` in the CLI to pick a s
 | Skill | Use when |
 |---|---|
 | `$backlog-update` | adding, editing, validating, or closing backlog items |
+| `$cmake` | editing CMakeLists, presets, target wiring, Qt/QML build manifests, or vcpkg-backed build integration |
 | `$commit-message` | composing a commit message after the user explicitly asked for a commit |
 | `$code-style` | resolving naming, formatting, or structure questions not already answered by local context |
 | `$docs-maintenance` | updating, reviewing, de-duplicating, or verifying repository documentation against code and the documentation hierarchy |
 | `$sqlite` | changing the SQLite schema, native SQL queries, FTS/search behavior, or SQLite-specific review/debugging in the C++ persistence layer |
+| `$qt-qml` | changing the Qt shell, QML views/components, controllers, adapters, models, or C++/QML boundary wiring |
 | `$vertical-slice` | implementing a feature or workflow that crosses multiple layers |
 | `$import-pipeline` | changing import formats, stages, cancellation, duplicate handling, or archive behavior |
 | `$analyze-logs` | analyzing Librova import logs after an import run |
