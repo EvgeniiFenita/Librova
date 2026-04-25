@@ -85,7 +85,7 @@ Popup {
                 radius: LibrovaTheme.radiusSmall
                 color: root.selectedIconKey === modelData.key
                     ? LibrovaTheme.accentSurface
-                    : (_iconHover.containsMouse ? LibrovaTheme.surfaceHover : LibrovaTheme.surfaceAlt)
+                    : (_iconHover.hovered ? LibrovaTheme.surfaceHover : LibrovaTheme.surfaceAlt)
                 border.color: root.selectedIconKey === modelData.key
                     ? LibrovaTheme.accent
                     : LibrovaTheme.border

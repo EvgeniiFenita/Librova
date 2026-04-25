@@ -63,7 +63,15 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Filters popup: OR semantics within a group, AND semantics between groups **(RG)**
 - Filters button shows `Filters · N` and turns amber when filters are active **(RG)**
 - Filters popup: light-dismiss closes the popup and keeps filters applied **(RG)**
-- Sorting: `Title` / `Author` / `Date Added` work **(RG)**
+- Filters button: clicking the button while the filter popup is open closes the popup without re-opening it
+- Filters button shows `Filters · N` (correct count) immediately on startup when filters were saved from a previous session
+- Book grid scrollbar: appears on scroll and autohides when idle; handle is amber
+- Book details panel scrollbar: appears on scroll for long metadata; autohides when idle
+- Filters popup genre list scrollbar: appears on scroll when genres overflow; autohides when idle
+- Sort pill hover: left half (label) has left-side rounded corners; right half (direction icon) has right-side rounded corners
+- Sort dropdown items: hover highlight covers the item row with rounded corners
+- Book-card context-menu items: hover highlight applies on mouse-over
+
 - Sorting direction `▲/▼` toggles **(RG)**
 - Sorting state persists across restart
 - Covers: real cover keeps its aspect ratio

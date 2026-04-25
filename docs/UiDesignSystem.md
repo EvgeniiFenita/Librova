@@ -123,6 +123,7 @@ Shared controls live in `apps/Librova.Qt/qml/components/`.
 | `LCheckBox` | Import covers, duplicate override, conversion options |
 | `LNavItem` | Sidebar navigation and collection entries |
 | `LToast` | Non-blocking status/error messages |
+| `LScrollBar` | Styled scrollbar for `Flickable`/`GridView`; autohide, warm amber handle |
 
 Toolbar controls with the same role must share height, background, border, and typography. Prefer minimum dimensions over fixed dimensions when localized or dynamic content may expand.
 
@@ -217,7 +218,7 @@ Two side-by-side `Rectangle` cards — Create New and Open Existing. Interaction
 | Hover | `surfaceHover` | `borderStrong` 1 px |
 | Selected | `accentSurface` | `accent` (#F5A623) 2 px |
 
-Hover is driven by an explicit `property bool _hov` on the card plus `HoverHandler { onHoveredChanged: parent._hov = hovered }`. Do **not** bind card colors directly to `HoverHandler.containsMouse` — it does not reliably trigger QML binding re-evaluation in Qt Quick.
+Hover is driven by `HoverHandler.hovered` bound directly in the color expression. Do **not** use `HoverHandler.containsMouse` — that property does not exist on `HoverHandler` and always evaluates to `undefined`, so hover colors never apply. The indirect `_hov` boolean property pattern is legacy; prefer direct `.hovered` binding.
 
 Both `color` and `border.color` animate with `Behavior { ColorAnimation { duration: LibrovaTheme.animFast } }`. `border.width` is **not** animated (1 → 2 px transition causes blur artifacts).
 
@@ -264,13 +265,36 @@ Applied surfaces include filter popup, sort dropdown, book-card context menu, co
 
 ---
 
-## 15. Section Transitions
+## 15. Scrollbar
+
+Use `LScrollBar` (`qml/components/LScrollBar.qml`) for all scrollable content areas. The component is 5 px wide, autohides when the content fits or is idle, and follows the warm amber palette.
+
+**Attach only to `Flickable` or its subclasses** (`GridView`, `ListView`). Do not attach to `ScrollView` — `ScrollBar.vertical` is not properly forwarded by Qt Quick's `ScrollView` template to custom `ScrollBar` subclasses. Replace `ScrollView` + content item with `Flickable` + `contentHeight: _content.implicitHeight` instead.
+
+Scrollbars are enabled in: `BookGrid` (GridView), `BookDetailsPanel` (Flickable), and the filters popup genre list (Flickable). Other views do not need scrollbars.
+
+---
+
+## 16. Split-Pill Button Hover Radius
+
+When a pill-shaped control is divided into two interactive halves by a 1 px divider (e.g. the sort pill: label + direction-icon), each half's hover background must use per-corner radius instead of a uniform `radius`:
+
+- Left half: `topLeftRadius` + `bottomLeftRadius` = `LibrovaTheme.radiusMedium`; right corners = 0
+- Right half: `topRightRadius` + `bottomRightRadius` = `LibrovaTheme.radiusMedium`; left corners = 0
+
+This requires Qt 6.7+. Librova targets Qt 6.11, so these properties are always available.
+
+Note: `clip: true` on a `Rectangle` clips children to the bounding box, not to the rounded-corner shape. Do not rely on the parent's clip to round child hover backgrounds.
+
+---
+
+## 17. Section Transitions
 
 Section transitions use short opacity fades around 150 ms. Transitions must not destroy section state; `Library`, `Import`, and `Settings` stay instantiated and toggle visibility.
 
 ---
 
-## 16. Palette Change Checklist
+## 18. Palette Change Checklist
 
 To change the palette, update:
 

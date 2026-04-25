@@ -115,7 +115,7 @@ import LibrovaQt
                                 Rectangle {
                                     width: 42; height: parent.height
                                     visible: root.exePath.length > 0
-                                    color: _clearHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+                                    color: _clearHov.hovered ? LibrovaTheme.surfaceHover : "transparent"
                                     Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
                                     Text { anchors.centerIn: parent; text: "×"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; color: LibrovaTheme.textSecondary }
                                     HoverHandler { id: _clearHov; cursorShape: Qt.PointingHandCursor }

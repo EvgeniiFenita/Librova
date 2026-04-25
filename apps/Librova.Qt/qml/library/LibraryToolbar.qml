@@ -10,6 +10,11 @@ Rectangle {
     property string genreSearchText: ""
     readonly property bool hasFocusedTextInput: _search.hasTextInputFocus || _genreSearch.hasTextInputFocus
 
+    property int _langSelCount:   0
+    property int _genreSelCount:  0
+    readonly property int  _activeFiltersCount: _langSelCount + _genreSelCount
+    readonly property bool _filtersActive:      _activeFiltersCount > 0
+
     implicitHeight: 66
     height: implicitHeight
     color: LibrovaTheme.surfaceMuted
@@ -30,11 +35,12 @@ Rectangle {
         spacing: 8
 
         Rectangle {
+            id: _filterBtn
             implicitWidth: _filterRow.implicitWidth + 22
             width: Math.max(118, implicitWidth)
             height: LibrovaTheme.controlHeight
             radius: LibrovaTheme.radiusMedium
-            color: _filterHover.containsMouse ? LibrovaTheme.surfaceHover : LibrovaTheme.surfaceAlt
+            color: _filterHover.hovered ? LibrovaTheme.surfaceHover : LibrovaTheme.surfaceAlt
             border.color: _hasActiveFilters() ? LibrovaTheme.accentBorder : LibrovaTheme.border
             border.width: 1
 
@@ -45,7 +51,7 @@ Rectangle {
                 LIcon {
                     iconPath:  LibrovaIcons.filter
                     iconColor: _hasActiveFilters() ? LibrovaTheme.accent : LibrovaTheme.textSecondary
-                    size:      16
+                    size:      18
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
@@ -55,23 +61,51 @@ Rectangle {
                     color: _hasActiveFilters() ? LibrovaTheme.accent : LibrovaTheme.textPrimary
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                LIcon {
-                    iconPath:  LibrovaIcons.chevronDown
-                    iconColor: LibrovaTheme.accent
-                    size:      12
+                Item {
+                    width:  _hasActiveFilters() ? 20 : 14
+                    height: 20
                     anchors.verticalCenter: parent.verticalCenter
+
+                    LIcon {
+                        visible:   !_hasActiveFilters()
+                        iconPath:  LibrovaIcons.chevronDown
+                        iconColor: LibrovaTheme.textMuted
+                        size:      14
+                        anchors.centerIn: parent
+                    }
+
+                    Rectangle {
+                        visible:  _hasActiveFilters()
+                        width: 20; height: 20; radius: 10
+                        color: LibrovaTheme.accent
+                        anchors.centerIn: parent
+                        Text {
+                            anchors.centerIn: parent
+                            text: _activeFilterCount()
+                            font.family:  LibrovaTypography.fontFamily
+                            font.pixelSize: 11
+                            font.weight:  LibrovaTypography.weightBold
+                            color: LibrovaTheme.textOnAccent
+                        }
+                    }
                 }
             }
 
             HoverHandler { id: _filterHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: _filterPopup.open() }
+            TapHandler {
+                property bool _wasOpen: false
+                onPressedChanged: if (pressed) _wasOpen = _filterPopup.visible
+                onTapped: if (!_wasOpen) _filterPopup.open()
+            }
 
             Popup {
                 id: _filterPopup
+                onClosed: {}
+                x: parent.width - width
                 y: parent.height + 6
                 width: 420
                 padding: 14
-                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
                 background: Rectangle {
                     color: LibrovaTheme.surfaceElevated
                     radius: LibrovaTheme.radiusMedium
@@ -110,12 +144,15 @@ Rectangle {
                         text: root.genreSearchText
                         onTextChanged: root.genreSearchText = text
                     }
-                    ScrollView {
+                    Flickable {
                         width: parent.width
                         height: 200
-                        contentWidth: availableWidth
+                        contentWidth: width
+                        contentHeight: _genreFlow.implicitHeight
                         clip: true
+                        ScrollBar.vertical: LScrollBar {}
                         Flow {
+                            id: _genreFlow
                             width: parent.width
                             spacing: 8
                             Repeater {
@@ -133,11 +170,30 @@ Rectangle {
                         }
                     }
 
-                    Row {
-                        spacing: 10
+                    Rectangle {
+                        width: parent.width; height: 1
+                        color: LibrovaTheme.borderStrong
                         visible: _hasActiveFilters()
-                        Text { text: _activeFilterCountText(); font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeSm; color: LibrovaTheme.textSecondary; verticalAlignment: Text.AlignVCenter }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: _clearBtn.height
+                        visible: _hasActiveFilters()
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: _activeFilterCountText()
+                            font.family: LibrovaTypography.fontFamily
+                            font.pixelSize: LibrovaTypography.sizeSm
+                            color: LibrovaTheme.textSecondary
+                        }
+
                         LButton {
+                            id: _clearBtn
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
                             text: "Clear all"
                             variant: "secondary"
                             implicitWidth: 110
@@ -171,7 +227,9 @@ Rectangle {
                 Rectangle {
                     width: 116
                     height: parent.height
-                    color: _sortHover.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+                    topLeftRadius: LibrovaTheme.radiusMedium
+                    bottomLeftRadius: LibrovaTheme.radiusMedium
+                    color: _sortHover.hovered ? LibrovaTheme.surfaceHover : "transparent"
                     Text { anchors.centerIn: parent; text: _sortLabel(); font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textPrimary }                    HoverHandler { id: _sortHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: _sortPopup.open() }
                     Popup {
@@ -189,7 +247,7 @@ Rectangle {
                                     width: parent.width
                                     height: 36
                                     radius: LibrovaTheme.radiusSmall
-                                    color: _itemHover.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+                                    color: _itemHover.hovered ? LibrovaTheme.surfaceHover : "transparent"
                                     Text {
                                         anchors {
                                             left: parent.left
@@ -212,7 +270,9 @@ Rectangle {
                 Rectangle {
                     width: 51
                     height: parent.height
-                    color: _dirHover.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+                    topRightRadius: LibrovaTheme.radiusMedium
+                    bottomRightRadius: LibrovaTheme.radiusMedium
+                    color: _dirHover.hovered ? LibrovaTheme.surfaceHover : "transparent"
                     LIcon { anchors.centerIn: parent; iconPath: root.sortDir === "asc" ? LibrovaIcons.sortAsc : LibrovaIcons.sortDesc; iconColor: LibrovaTheme.textPrimary; size: 16 }
                     HoverHandler { id: _dirHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: { root.sortDir = root.sortDir === "asc" ? "desc" : "asc"; _applySort() } }
@@ -272,6 +332,25 @@ Rectangle {
         }
     }
 
+    Component.onCompleted: {
+        _langSelCount  = catalogAdapter.languageFacets.selectedValues().length
+        _genreSelCount = catalogAdapter.genreFacets.selectedValues().length
+    }
+
+    Connections {
+        target: catalogAdapter.languageFacets
+        function onSelectionChanged() {
+            root._langSelCount = catalogAdapter.languageFacets.selectedValues().length
+        }
+    }
+
+    Connections {
+        target: catalogAdapter.genreFacets
+        function onSelectionChanged() {
+            root._genreSelCount = catalogAdapter.genreFacets.selectedValues().length
+        }
+    }
+
     function _sortLabel() {
         switch (root.sortBy) {
             case "author": return "Author"
@@ -286,21 +365,15 @@ Rectangle {
         catalogAdapter.setSortBy(root.sortBy, root.sortDir)
     }
 
-    function _activeFilterCount() {
-        return catalogAdapter.languageFacets.selectedValues().length + catalogAdapter.genreFacets.selectedValues().length
-    }
-
-    function _hasActiveFilters() {
-        return _activeFilterCount() > 0
-    }
+    function _activeFilterCount() { return _activeFiltersCount }
+    function _hasActiveFilters()  { return _filtersActive }
 
     function _filterLabel() {
-        const n = _activeFilterCount()
-        return n === 0 ? "Filters" : "Filters · " + n
+        return _activeFiltersCount === 0 ? "Filters" : "Filters · " + _activeFiltersCount
     }
 
     function _activeFilterCountText() {
-        const n = _activeFilterCount()
+        const n = _activeFiltersCount
         if (n === 0) return "No filters active"
         return n === 1 ? "1 filter active" : (n + " filters active")
     }

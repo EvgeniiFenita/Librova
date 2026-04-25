@@ -39,7 +39,7 @@ Rectangle {
         }
         z:      1
         width:  32; height: 32; radius: 16
-        color:  _closeHover.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
+        color:  _closeHover.hovered ? LibrovaTheme.surfaceHover : "transparent"
         Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
 
         Text {
@@ -47,7 +47,7 @@ Rectangle {
             text:           "\u00D7"
             font.family:    LibrovaTypography.fontFamily
             font.pixelSize: LibrovaTypography.sizeMd
-            color:          _closeHover.containsMouse ? LibrovaTheme.textPrimary : LibrovaTheme.textSecondary
+            color:          _closeHover.hovered ? LibrovaTheme.textPrimary : LibrovaTheme.textSecondary
         }
 
         HoverHandler { id: _closeHover; cursorShape: Qt.PointingHandCursor }
@@ -56,12 +56,15 @@ Rectangle {
 
     // ── Scrollable content ────────────────────────────────────────────────────
 
-    ScrollView {
+    Flickable {
         anchors.fill: parent
-        contentWidth: availableWidth
+        contentWidth: width
+        contentHeight: _detailsContent.implicitHeight
         clip:         true
+        ScrollBar.vertical: LScrollBar {}
 
         Column {
+            id: _detailsContent
             width:   parent.width
             padding: LibrovaTheme.paddingCard
             spacing: LibrovaTheme.sp4

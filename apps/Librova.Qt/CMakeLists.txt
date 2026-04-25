@@ -112,6 +112,7 @@ qt_add_qml_module(LibrovaQtApp
         qml/settings/SettingsView.qml
         # Phase J: new component
         qml/components/LToast.qml
+        qml/components/LScrollBar.qml
 )
 
 qt_add_resources(LibrovaQtApp "appresources"

@@ -138,7 +138,7 @@ Item {
 
         model: catalogAdapter.bookListModel
 
-        ScrollBar.vertical: ScrollBar {
+        ScrollBar.vertical: LScrollBar {
             policy: ScrollBar.AsNeeded
         }
 

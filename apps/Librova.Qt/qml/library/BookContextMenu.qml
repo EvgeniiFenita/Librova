@@ -178,7 +178,7 @@ Popup {
         width:  parent ? parent.width : 0
         height: 34
         radius: LibrovaTheme.radiusSmall
-        color:  _miHover.containsMouse
+        color:  _miHover.hovered
                 ? (_mi.isDestruct ? LibrovaTheme.dangerHoverBg : LibrovaTheme.surfaceHover)
                 : "transparent"
 
