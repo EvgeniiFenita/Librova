@@ -50,11 +50,12 @@ Button {
                 width:          root.iconPath.length > 0 ? 14 : 0
                 height:         14
                 clip:           true
+                anchors.verticalCenter: parent.verticalCenter
 
                 LIcon {
                     anchors.centerIn: parent
                     iconPath:  root.iconPath
-                    iconColor: root._fg()
+                    iconColor: root._iconFg()
                     size:      14
                 }
             }
@@ -69,6 +70,7 @@ Button {
                 color:             root._fg()
                 elide:             Text.ElideRight
                 verticalAlignment: Text.AlignVCenter
+                anchors.verticalCenter: parent.verticalCenter
 
                 Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
             }
@@ -135,7 +137,20 @@ Button {
             case "destructive":
                 return (root.hovered && root.enabled) ? LibrovaTheme.dangerText : LibrovaTheme.danger
             default:
-                return LibrovaTheme.textPrimary
+                return LibrovaTheme.textMuted
+        }
+    }
+
+    function _iconFg(): color {
+        switch (root.variant) {
+            case "primary":
+                return LibrovaTheme.textOnAccent
+            case "accent":
+                return (root.hovered && root.enabled) ? LibrovaTheme.accentBright : LibrovaTheme.accent
+            case "destructive":
+                return (root.hovered && root.enabled) ? LibrovaTheme.dangerText : LibrovaTheme.danger
+            default:
+                return LibrovaTheme.textMuted
         }
     }
 }

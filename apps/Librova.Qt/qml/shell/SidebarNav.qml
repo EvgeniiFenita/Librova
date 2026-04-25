@@ -92,52 +92,67 @@ Rectangle {
             right: parent.right
             bottom: _bottom.top
             margins: 14
-            topMargin: 18
+            topMargin: 10
         }
         spacing: 4
 
-        Rectangle {
+        // Brand logo block — icon badge + wordmark + divider
+        Item {
             width: parent.width
-            height: 46
-            radius: LibrovaTheme.radiusSmall
-            color: LibrovaTheme.accentSurface
-            border.color: LibrovaTheme.accentBorder
-            border.width: 1
+            height: 56
 
             Row {
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                    leftMargin: 10
-                    rightMargin: 10
-                }
-                spacing: 10
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 12
+                leftPadding: 2
 
-                LIcon {
+                // Circular amber badge
+                Rectangle {
+                    width: 38
+                    height: 38
+                    radius: 19
+                    color: LibrovaTheme.accentSurface
+                    border.color: LibrovaTheme.accentBorder
+                    border.width: 1
                     anchors.verticalCenter: parent.verticalCenter
-                    iconPath:  LibrovaIcons.book
-                    iconColor: LibrovaTheme.accent
-                    size:      22
+
+                    LIcon {
+                        anchors.centerIn: parent
+                        iconPath:  LibrovaIcons.book
+                        iconColor: LibrovaTheme.accent
+                        size:      20
+                    }
                 }
 
-                Text {
-                    text: "Librova"
-                    font.family: LibrovaTypography.fontFamily
-                    font.pixelSize: 20
-                    font.weight: LibrovaTypography.weightSemiBold
-                    color: LibrovaTheme.textPrimary
-                    verticalAlignment: Text.AlignVCenter
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 3
+
+                    Text {
+                        text: "Librova"
+                        font.family:        LibrovaTypography.fontFamily
+                        font.pixelSize:     LibrovaTypography.sizeMd
+                        font.weight:        LibrovaTypography.weightSemiBold
+                        font.letterSpacing: LibrovaTypography.spacingMeta
+                        color: LibrovaTheme.textPrimary
+                    }
+
+                    Text {
+                        text: "Your shelf, your story"
+                        font.family:    LibrovaTypography.fontFamily
+                        font.pixelSize: LibrovaTypography.sizeXs
+                        color: LibrovaTheme.textMuted
+                    }
                 }
             }
-        }
 
-        Text {
-            text: "Your shelf, your story"
-            leftPadding: 4
-            font.family: LibrovaTypography.fontFamily
-            font.pixelSize: LibrovaTypography.sizeXs
-            color: LibrovaTheme.textMuted
+            // Amber divider at the bottom
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: LibrovaTheme.accentBorder
+            }
         }
 
         Column {
@@ -172,6 +187,8 @@ Rectangle {
             height: Math.min(330, Math.max(80, parent.height - 260))
             radius: LibrovaTheme.radiusMedium
             color: LibrovaTheme.surfaceMuted
+            border.color: LibrovaTheme.border
+            border.width: 1
 
             Column {
                 anchors.fill: parent
@@ -222,6 +239,7 @@ Rectangle {
                     width: parent.width
                     height: Math.max(0, parent.height - 84)
                     clip: true
+                    spacing: 4
                     visible: catalogAdapter.collectionListModel.count > 0
                     model: catalogAdapter.collectionListModel
 

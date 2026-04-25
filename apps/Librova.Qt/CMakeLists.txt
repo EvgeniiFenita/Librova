@@ -7,6 +7,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 QuickDialogs2
 
 qt_standard_project_setup(REQUIRES 6.5)
 
+qt_policy(SET QTP0004 OLD)
+
 # Bake version from VERSION.txt at compile time.
 file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" LIBROVA_VERSION_RAW)
 string(STRIP "${LIBROVA_VERSION_RAW}" LIBROVA_VERSION_STR)

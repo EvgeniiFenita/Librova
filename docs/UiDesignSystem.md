@@ -102,12 +102,13 @@ Minimum desktop dimensions must preserve useful library browsing: at least two v
 
 Navigation controls use `LNavItem` and the sidebar collection item pattern.
 
-- inactive nav label: `textMuted`
+- inactive nav label: `textMuted`; background: `surfaceAlt`; border always visible (`border` token)
 - active nav label: `textPrimary`
 - active state: amber left border and warm active background
+- content indent is fixed (`sp3`) regardless of active state so icon and text never jump
 - disabled during active import where switching would break workflow state
 
-Collections live under primary navigation. Collection entries use emoji glyphs from the approved set rendered with Segoe UI Emoji and a stable 30 x 30 icon area.
+Collections live under primary navigation. Collection entries use emoji glyphs from the approved set rendered with Segoe UI Emoji and a stable 20 px icon slot.
 
 ---
 
@@ -117,7 +118,7 @@ Shared controls live in `apps/Librova.Qt/qml/components/`.
 
 | Component | Usage |
 |---|---|
-| `LButton` | Primary, secondary, destructive, and ghost actions |
+| `LButton` | Primary, secondary, accent, and destructive actions |
 | `LTextInput` | Search, path entry, and form fields |
 | `LCheckBox` | Import covers, duplicate override, conversion options |
 | `LNavItem` | Sidebar navigation and collection entries |

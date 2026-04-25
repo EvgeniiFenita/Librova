@@ -30,7 +30,7 @@ Button {
         color:        root._bg()
         border.color: root.active  ? LibrovaTheme.accentBorder
                     : root.hovered ? LibrovaTheme.borderStrong
-                    : "transparent"
+                    : LibrovaTheme.border
         border.width: 1
 
         Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
@@ -54,10 +54,10 @@ Button {
     contentItem: Item {
         id: _content
 
-        readonly property real  _leftPad:    root.active ? LibrovaTheme.sp3 : LibrovaTheme.sp2
+        readonly property real  _leftPad:    LibrovaTheme.sp3
         readonly property bool  _hasIcon:    root.iconPath !== ""
         readonly property bool  _hasGlyph:   root.glyphText !== ""
-        readonly property real  _iconSlotW:  16 + LibrovaTheme.sp2
+        readonly property real  _iconSlotW:  18 + LibrovaTheme.sp2
         readonly property real  _glyphSlotW: 20
         readonly property color _textColor:  root.active ? LibrovaTheme.textPrimary : LibrovaTheme.textMuted
 
@@ -69,7 +69,7 @@ Button {
             anchors.verticalCenter: parent.verticalCenter
             iconPath:               root.iconPath
             iconColor:              _content._textColor
-            size:                   16
+            size:                   18
         }
 
         // Emoji glyph for collection items — rendered with system emoji font.
@@ -87,11 +87,12 @@ Button {
         }
 
         Text {
-            x:                   _content._leftPad
-                                 + (_content._hasIcon  ? _content._iconSlotW  : 0)
-                                 + (_content._hasGlyph ? _content._glyphSlotW : 0)
-            width:               parent.width - x
-            text:                root.text
+            x:                      _content._leftPad
+                                    + (_content._hasIcon  ? _content._iconSlotW  : 0)
+                                    + (_content._hasGlyph ? _content._glyphSlotW : 0)
+            width:                  parent.width - x
+            anchors.verticalCenter: parent.verticalCenter
+            text:                   root.text
             font.family:         LibrovaTypography.fontFamily
             font.pixelSize:      LibrovaTypography.sizeBase
             font.weight:         LibrovaTypography.weightRegular
@@ -111,6 +112,6 @@ Button {
         }
         if (root.pressed) return LibrovaTheme.surfaceMuted
         if (root.hovered) return LibrovaTheme.surfaceHover
-        return LibrovaTheme.surfaceMuted
+        return LibrovaTheme.surfaceAlt
     }
 }

@@ -59,6 +59,7 @@ Rectangle {
             LButton {
                 width: (parent.width - 6) / 2
                 text: "Open"
+                iconPath: LibrovaIcons.folderOpen
                 variant: "secondary"
                 onClicked: if (root.openAction) root.openAction()
             }
@@ -66,6 +67,7 @@ Rectangle {
             LButton {
                 width: (parent.width - 6) / 2
                 text: "New"
+                iconPath: LibrovaIcons.addFolder
                 variant: "secondary"
                 onClicked: if (root.newAction) root.newAction()
             }
