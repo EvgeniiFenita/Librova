@@ -116,6 +116,7 @@ qt_add_resources(LibrovaQtApp "appresources"
     PREFIX "/"
     FILES
         assets/librova.ico
+        assets/librova_hero.png
 )
 
 if(WIN32)

@@ -1590,3 +1590,11 @@ tasks:
   milestone: '1.3'
   note: Added repository-local CMake and Qt/QML skills with Librova-specific build, architecture, testing,
     and documentation guidance.
+- id: 194
+  summary: polish First Run Screen interaction states and hero panel
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: Fixed hover via explicit _hov+onHoveredChanged, amber selected border, disabled button guard,
+    separated Browse+path row, hero panel with PNG asset and brand typography.

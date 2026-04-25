@@ -43,49 +43,51 @@ Rectangle {
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             color: LibrovaTheme.accentSurface
-            border.color: LibrovaTheme.accentBorder
-            border.width: 1
 
             Rectangle {
-                anchors {
-                    top: parent.top
-                    right: parent.right
-                    bottom: parent.bottom
-                }
+                anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
                 width: 1
                 color: LibrovaTheme.accentBorder
             }
 
             Column {
                 anchors.centerIn: parent
-                spacing: 20
+                spacing: 0
 
-                LIcon {
+                Image {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    iconPath:  LibrovaIcons.library
-                    iconColor: LibrovaTheme.accent
-                    size:      100
+                    source: "qrc:/assets/librova_hero.png"
+                    width:  140
+                    height: 140
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
                 }
 
+                Item { width: 1; height: 20 }
+
                 Column {
-                    spacing: 6
+                    spacing: 10
                     anchors.horizontalCenter: parent.horizontalCenter
 
                     Text {
-                        text: "Librova"
+                        text: "LIBROVA"
                         font.family: LibrovaTypography.fontFamily
-                        font.pixelSize: 22
+                        font.pixelSize: 15
                         font.weight: LibrovaTypography.weightBold
+                        font.letterSpacing: LibrovaTypography.spacingBrand
                         color: LibrovaTheme.textPrimary
                         horizontalAlignment: Text.AlignHCenter
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
 
                     Text {
-                        text: "Your shelf, your story"
+                        text: "YOUR BOOKS. ORGANIZED."
                         font.family: LibrovaTypography.fontFamily
                         font.pixelSize: LibrovaTypography.sizeXs
+                        font.letterSpacing: 1.2
                         color: LibrovaTheme.textMuted
                         horizontalAlignment: Text.AlignHCenter
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
                 }
             }
@@ -171,13 +173,22 @@ Rectangle {
 
                                 Rectangle {
                                     width: (parent.width - 10) / 2
-                                    implicitHeight: _createColumn.implicitHeight + 20
+                                    implicitHeight: _createColumn.implicitHeight + 32
                                     radius: LibrovaTheme.radiusMedium
+                                    activeFocusOnTab: true
+
+                                    property bool _hov: false
+
                                     color: root.isCreateModeSelected
                                         ? LibrovaTheme.accentSurface
-                                        : (_createHover.containsMouse ? LibrovaTheme.surfaceHover : LibrovaTheme.surface)
-                                    border.color: root.isCreateModeSelected ? LibrovaTheme.accentBorder : LibrovaTheme.border
-                                    border.width: 1
+                                        : (_hov ? LibrovaTheme.surfaceHover : LibrovaTheme.surface)
+                                    border.color: root.isCreateModeSelected
+                                        ? LibrovaTheme.accent
+                                        : (activeFocus || _hov ? LibrovaTheme.borderStrong : LibrovaTheme.border)
+                                    border.width: root.isCreateModeSelected ? 2 : 1
+
+                                    Behavior on color        { ColorAnimation { duration: LibrovaTheme.animFast } }
+                                    Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
 
                                     Column {
                                         id: _createColumn
@@ -212,23 +223,34 @@ Rectangle {
                                     }
 
                                     HoverHandler {
-                                        id: _createHover
                                         cursorShape: Qt.PointingHandCursor
+                                        onHoveredChanged: parent._hov = hovered
                                     }
                                     TapHandler {
                                         onTapped: root.selectedMode = "create"
                                     }
+                                    Keys.onSpacePressed:  root.selectedMode = "create"
+                                    Keys.onReturnPressed: root.selectedMode = "create"
                                 }
 
                                 Rectangle {
                                     width: (parent.width - 10) / 2
-                                    implicitHeight: _openColumn.implicitHeight + 20
+                                    implicitHeight: _openColumn.implicitHeight + 32
                                     radius: LibrovaTheme.radiusMedium
+                                    activeFocusOnTab: true
+
+                                    property bool _hov: false
+
                                     color: root.isOpenModeSelected
                                         ? LibrovaTheme.accentSurface
-                                        : (_openHover.containsMouse ? LibrovaTheme.surfaceHover : LibrovaTheme.surface)
-                                    border.color: root.isOpenModeSelected ? LibrovaTheme.accentBorder : LibrovaTheme.border
-                                    border.width: 1
+                                        : (_hov ? LibrovaTheme.surfaceHover : LibrovaTheme.surface)
+                                    border.color: root.isOpenModeSelected
+                                        ? LibrovaTheme.accent
+                                        : (activeFocus || _hov ? LibrovaTheme.borderStrong : LibrovaTheme.border)
+                                    border.width: root.isOpenModeSelected ? 2 : 1
+
+                                    Behavior on color        { ColorAnimation { duration: LibrovaTheme.animFast } }
+                                    Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
 
                                     Column {
                                         id: _openColumn
@@ -263,12 +285,14 @@ Rectangle {
                                     }
 
                                     HoverHandler {
-                                        id: _openHover
                                         cursorShape: Qt.PointingHandCursor
+                                        onHoveredChanged: parent._hov = hovered
                                     }
                                     TapHandler {
                                         onTapped: root.selectedMode = "open"
                                     }
+                                    Keys.onSpacePressed:  root.selectedMode = "open"
+                                    Keys.onReturnPressed: root.selectedMode = "open"
                                 }
                             }
 
@@ -281,44 +305,21 @@ Rectangle {
                                 wrapMode: Text.WordWrap
                             }
 
-                            Rectangle {
+                            Row {
                                 width: parent.width
-                                height: LibrovaTheme.controlHeight
-                                radius: LibrovaTheme.radiusMedium
-                                color: LibrovaTheme.surfaceAlt
-                                border.color: _pathField.activeFocus ? LibrovaTheme.accent : LibrovaTheme.border
-                                border.width: _pathField.activeFocus ? 2 : 1
-                                clip: true
-                                Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                                Behavior on border.width { NumberAnimation { duration: LibrovaTheme.animFast } }
+                                spacing: 8
 
-                                Row {
-                                    anchors.fill: parent
-                                    TextField {
-                                        id: _pathField
-                                        height: parent.height
-                                        width: parent.width - 1 - 110
-                                        leftPadding:  LibrovaTheme.sp3
-                                        rightPadding: LibrovaTheme.sp2
-                                        topPadding: 0; bottomPadding: 0
-                                        background: null
-                                        placeholderText: "C:\\Libraries\\Librova"
-                                        font.family: LibrovaTypography.fontFamily
-                                        font.pixelSize: LibrovaTypography.sizeBase
-                                        color: LibrovaTheme.textPrimary
-                                        placeholderTextColor: LibrovaTheme.textMuted
-                                        selectedTextColor: LibrovaTheme.textOnAccent
-                                        selectionColor: Qt.rgba(LibrovaTheme.accent.r, LibrovaTheme.accent.g, LibrovaTheme.accent.b, 0.35)
-                                    }
-                                    Rectangle { width: 1; height: parent.height; color: LibrovaTheme.border }
-                                    Rectangle {
-                                        width: 110; height: parent.height
-                                        color: _browseHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
-                                        Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                                        Text { anchors.centerIn: parent; text: "Browse…"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textPrimary }
-                                        HoverHandler { id: _browseHov; cursorShape: Qt.PointingHandCursor }
-                                        TapHandler { onTapped: _folderDialog.open() }
-                                    }
+                                LTextInput {
+                                    id: _pathField
+                                    width: parent.width - 8 - 120
+                                    placeholderText: "C:\\Libraries\\Librova"
+                                }
+
+                                LButton {
+                                    width: 120
+                                    text: "Browse…"
+                                    variant: "secondary"
+                                    onClicked: _folderDialog.open()
                                 }
                             }
 

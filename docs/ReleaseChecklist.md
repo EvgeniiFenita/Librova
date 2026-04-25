@@ -8,6 +8,8 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 
 - First-run wizard: Create New (empty folder) **(RG)**
 - First-run wizard: Open Existing (valid library) **(RG)**
+- First-run mode cards: hover state changes background and border **(RG)**
+- First-run mode cards: selected state shows bright amber border **(RG)**
 - First-run validation: relative path is rejected **(RG)**
 - First-run validation: non-empty non-library folder is rejected for Create **(RG)**
 - First-run validation: non-library folder is rejected for Open **(RG)**

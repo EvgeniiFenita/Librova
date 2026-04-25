@@ -202,9 +202,31 @@ First-run provides two explicit modes:
 - create a new managed library in a new or empty folder
 - open an existing complete managed library root
 
-The left hero panel keeps the `Librova` wordmark prominent. The right panel owns mode selection, path input, validation, and continue action.
+### Hero panel (left column)
 
-Startup recovery appears when the saved library root is invalid or damaged and lets the user choose a different library without silently recreating the broken one.
+The left column shows the app brand: `Image` from `qrc:/assets/librova_hero.png` at 140×140 (`fillMode: PreserveAspectFit`), then "LIBROVA" in uppercase with `font.letterSpacing: LibrovaTypography.spacingBrand` (4.0), then "YOUR BOOKS. ORGANIZED." in uppercase with `font.letterSpacing: 1.2` in `textMuted`. The panel background is `accentSurface`.
+
+### Mode cards (right column)
+
+Two side-by-side `Rectangle` cards — Create New and Open Existing. Interaction states:
+
+| State | Background | Border |
+|---|---|---|
+| Default | `surface` | `border` 1 px |
+| Hover | `surfaceHover` | `borderStrong` 1 px |
+| Selected | `accentSurface` | `accent` (#F5A623) 2 px |
+
+Hover is driven by an explicit `property bool _hov` on the card plus `HoverHandler { onHoveredChanged: parent._hov = hovered }`. Do **not** bind card colors directly to `HoverHandler.containsMouse` — it does not reliably trigger QML binding re-evaluation in Qt Quick.
+
+Both `color` and `border.color` animate with `Behavior { ColorAnimation { duration: LibrovaTheme.animFast } }`. `border.width` is **not** animated (1 → 2 px transition causes blur artifacts).
+
+### Path input and Browse
+
+The path row uses a `Row` with `spacing: 8`: an `LTextInput` fills available width, followed by an `LButton` with `variant: "secondary"` labelled "Browse" at fixed width 120 px. The two controls are visually independent — no shared focus border.
+
+### Startup recovery
+
+`StartupRecoveryView.qml` uses the same path+browse `Row` pattern as the first-run path row.
 
 ---
 

@@ -80,6 +80,7 @@ Button {
     // ── Background resolution ─────────────────────────────────────────────────
 
     function _bg(): color {
+        if (!root.enabled) return _bgNormal()
         if (root.pressed) return _bgPressed()
         if (root.hovered) return _bgHover()
         return _bgNormal()
@@ -117,7 +118,7 @@ Button {
     function _borderColor(): color {
         switch (root.variant) {
             case "primary":     return "transparent"
-            case "accent":      return root.hovered ? LibrovaTheme.accentBright : LibrovaTheme.accentBorder
+            case "accent":      return (root.hovered && root.enabled) ? LibrovaTheme.accentBright : LibrovaTheme.accentBorder
             case "destructive": return LibrovaTheme.dangerBorder
             default:            return LibrovaTheme.border
         }
@@ -130,9 +131,9 @@ Button {
             case "primary":
                 return LibrovaTheme.textOnAccent
             case "accent":
-                return root.hovered ? LibrovaTheme.accentBright : LibrovaTheme.accent
+                return (root.hovered && root.enabled) ? LibrovaTheme.accentBright : LibrovaTheme.accent
             case "destructive":
-                return root.hovered ? LibrovaTheme.dangerText : LibrovaTheme.danger
+                return (root.hovered && root.enabled) ? LibrovaTheme.dangerText : LibrovaTheme.danger
             default:
                 return LibrovaTheme.textPrimary
         }

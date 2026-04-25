@@ -124,44 +124,21 @@ Rectangle {
                     Text { text: "Choose Another Library Root"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; font.weight: LibrovaTypography.weightSemiBold; color: LibrovaTheme.textPrimary }
                     Text { width: parent.width; text: "If startup failed because the configured library root is unavailable or invalid, pick a different managed library root and retry startup from here."; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textSecondary; wrapMode: Text.WordWrap }
 
-                    Rectangle {
+                    Row {
                         width: parent.width
-                        height: LibrovaTheme.controlHeight
-                        radius: LibrovaTheme.radiusMedium
-                        color: LibrovaTheme.surfaceAlt
-                        border.color: _pathField.activeFocus ? LibrovaTheme.accent : LibrovaTheme.border
-                        border.width: _pathField.activeFocus ? 2 : 1
-                        clip: true
-                        Behavior on border.color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                        Behavior on border.width { NumberAnimation { duration: LibrovaTheme.animFast } }
+                        spacing: 8
 
-                        Row {
-                            anchors.fill: parent
-                            TextField {
-                                id: _pathField
-                                height: parent.height
-                                width: parent.width - 1 - 110
-                                leftPadding:  LibrovaTheme.sp3
-                                rightPadding: LibrovaTheme.sp2
-                                topPadding: 0; bottomPadding: 0
-                                background: null
-                                placeholderText: "C:\\Libraries\\Librova"
-                                font.family: LibrovaTypography.fontFamily
-                                font.pixelSize: LibrovaTypography.sizeBase
-                                color: LibrovaTheme.textPrimary
-                                placeholderTextColor: LibrovaTheme.textMuted
-                                selectedTextColor: LibrovaTheme.textOnAccent
-                                selectionColor: Qt.rgba(LibrovaTheme.accent.r, LibrovaTheme.accent.g, LibrovaTheme.accent.b, 0.35)
-                            }
-                            Rectangle { width: 1; height: parent.height; color: LibrovaTheme.border }
-                            Rectangle {
-                                width: 110; height: parent.height
-                                color: _browseHov.containsMouse ? LibrovaTheme.surfaceHover : "transparent"
-                                Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
-                                Text { anchors.centerIn: parent; text: "Browse…"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeBase; color: LibrovaTheme.textPrimary }
-                                HoverHandler { id: _browseHov; cursorShape: Qt.PointingHandCursor }
-                                TapHandler { onTapped: _folderDialog.open() }
-                            }
+                        LTextInput {
+                            id: _pathField
+                            width: parent.width - 8 - 120
+                            placeholderText: "C:\\Libraries\\Librova"
+                        }
+
+                        LButton {
+                            width: 120
+                            text: "Browse…"
+                            variant: "secondary"
+                            onClicked: _folderDialog.open()
                         }
                     }
 
