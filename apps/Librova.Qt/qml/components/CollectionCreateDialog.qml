@@ -94,8 +94,8 @@ Popup {
                 Text {
                     anchors.centerIn: parent
                     text: modelData.glyph
+                    font.family: "Segoe UI Emoji"
                     font.pixelSize: 20
-                    lineHeight: 28
                 }
 
                 HoverHandler {
