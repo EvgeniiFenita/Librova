@@ -251,6 +251,16 @@ The path row uses a `Row` with `spacing: 8`: an `LTextInput` fills available wid
 
 The title bar uses the same `background` colour as the window root. Windows-specific title-bar integration belongs in `QtWindowsPlatform`, not in QML views.
 
+Three DWM attributes are applied in `QtWindowsPlatform::setWindow()`:
+
+| Attribute | Value | Purpose |
+|---|---|---|
+| `DWMWA_USE_IMMERSIVE_DARK_MODE` | `TRUE` | Dark chrome fallback (Windows 10 / 11) |
+| `DWMWA_CAPTION_COLOR` | `RGB(0x0D, 0x0A, 0x07)` = `#0D0A07` | Caption background matches `background` token |
+| `DWMWA_TEXT_COLOR` | `RGB(0xF5, 0xED, 0xD8)` = `#F5EDD8` | Caption text matches `textPrimary` token |
+
+`DWMWA_CAPTION_COLOR` and `DWMWA_TEXT_COLOR` require Windows 11 (build 22000+); the calls silently fail on Windows 10, leaving the dark-mode chrome as the fallback.
+
 ---
 
 ## 13. App Icon
