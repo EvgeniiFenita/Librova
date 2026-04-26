@@ -92,15 +92,10 @@ Item {
                     id: _emptyStateButton
                     objectName: "EmptyStateButton"
                     anchors.centerIn: parent
-                    text: catalogAdapter.showGoToImportButton ? "Go to Import" : "Clear all"
-                    variant: catalogAdapter.showGoToImportButton ? "accent" : "secondary"
-                    visible: catalogAdapter.showGoToImportButton || catalogAdapter.showClearFiltersButton
-                    onClicked: {
-                        if (catalogAdapter.showGoToImportButton)
-                            shellState.lastSection = "import"
-                        else
-                            catalogAdapter.clearAllFilters()
-                    }
+                    text: "Go to Import"
+                    variant: "accent"
+                    visible: catalogAdapter.showGoToImportButton
+                    onClicked: shellState.lastSection = "import"
                 }
             }
         }

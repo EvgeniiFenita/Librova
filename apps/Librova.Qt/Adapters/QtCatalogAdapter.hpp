@@ -37,7 +37,6 @@ class QtCatalogAdapter : public QObject
     Q_PROPERTY(bool hasMoreResults READ hasMoreResults NOTIFY hasMoreResultsChanged)
     Q_PROPERTY(bool hasResultRestrictions READ hasResultRestrictions NOTIFY resultRestrictionsChanged)
     Q_PROPERTY(bool showGoToImportButton READ showGoToImportButton NOTIFY emptyStateChanged)
-    Q_PROPERTY(bool showClearFiltersButton READ showClearFiltersButton NOTIFY emptyStateChanged)
     Q_PROPERTY(QString libraryStatisticsText READ libraryStatisticsText NOTIFY libraryStatisticsTextChanged)
 
 public:
@@ -56,7 +55,6 @@ public:
     [[nodiscard]] bool                 hasMoreResults() const;
     [[nodiscard]] bool                 hasResultRestrictions() const;
     [[nodiscard]] bool                 showGoToImportButton() const;
-    [[nodiscard]] bool                 showClearFiltersButton() const;
     [[nodiscard]] QString              libraryStatisticsText() const;
 
     // ── Catalog operations ────────────────────────────────────────────────────
@@ -67,7 +65,6 @@ public:
     Q_INVOKABLE void setGenreFilter(const QStringList& genres);
     Q_INVOKABLE void setCollectionFilter(qint64 collectionId);
     Q_INVOKABLE void clearCollectionFilter();
-    Q_INVOKABLE void clearAllFilters();
     Q_INVOKABLE void setSortBy(const QString& sortBy, const QString& direction);
     Q_INVOKABLE void setPage(int offset, int limit);
     Q_INVOKABLE void loadMore();

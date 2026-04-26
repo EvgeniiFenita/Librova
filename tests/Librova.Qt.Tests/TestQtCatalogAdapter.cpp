@@ -99,7 +99,6 @@ private Q_SLOTS:
         adapter.setSearchText(QStringLiteral("Толстой"));
 
         QVERIFY(adapter.hasResultRestrictions());
-        QVERIFY(adapter.showClearFiltersButton());
     }
 
     void refresh_populates_language_facets()
@@ -157,23 +156,6 @@ private Q_SLOTS:
 
         QCOMPARE(adapter.activeCollectionId(), -1LL);
         QVERIFY(m_app.lastListBooksRequest.has_value());
-        QVERIFY(!m_app.lastListBooksRequest->CollectionId.has_value());
-    }
-
-    void clear_all_filters_resets_search_facets_and_collection()
-    {
-        QtCatalogAdapter adapter(&m_dispatcher);
-
-        adapter.setSearchText(QStringLiteral("query"));
-        adapter.setCollectionFilter(12);
-        adapter.clearAllFilters();
-
-        QVERIFY(!adapter.hasResultRestrictions());
-        QCOMPARE(adapter.activeCollectionId(), -1LL);
-        QVERIFY(m_app.lastListBooksRequest.has_value());
-        QVERIFY(m_app.lastListBooksRequest->TextUtf8.empty());
-        QVERIFY(m_app.lastListBooksRequest->Languages.empty());
-        QVERIFY(m_app.lastListBooksRequest->GenresUtf8.empty());
         QVERIFY(!m_app.lastListBooksRequest->CollectionId.has_value());
     }
 

@@ -121,6 +121,7 @@ qt_add_resources(LibrovaQtApp "appresources"
         assets/librova.ico
         assets/librova_hero.png
         assets/empty_library.png
+        assets/no_results.png
 )
 
 if(WIN32)

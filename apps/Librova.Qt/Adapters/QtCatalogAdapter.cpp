@@ -142,33 +142,6 @@ void QtCatalogAdapter::clearCollectionFilter()
     refresh();
 }
 
-void QtCatalogAdapter::clearAllFilters()
-{
-    const bool hadRestrictions = hasResultRestrictions();
-    m_request.TextUtf8.clear();
-    m_request.Languages.clear();
-    m_request.GenresUtf8.clear();
-    m_request.CollectionId.reset();
-
-    const bool hadCollectionFilter = m_activeCollectionId != -1;
-    m_activeCollectionId = -1;
-    m_languageFacets->clearSelection();
-    m_genreFacets->clearSelection();
-
-    if (hadCollectionFilter)
-    {
-        Q_EMIT activeCollectionIdChanged();
-    }
-
-    if (hadRestrictions)
-    {
-        Q_EMIT resultRestrictionsChanged();
-        Q_EMIT emptyStateChanged();
-    }
-
-    refresh();
-}
-
 void QtCatalogAdapter::setSortBy(const QString& sortBy, const QString& direction)
 {
     if (sortBy.isEmpty())
@@ -238,11 +211,6 @@ bool QtCatalogAdapter::hasResultRestrictions() const
 bool QtCatalogAdapter::showGoToImportButton() const
 {
     return !m_loading && m_totalCount == 0 && !hasResultRestrictions();
-}
-
-bool QtCatalogAdapter::showClearFiltersButton() const
-{
-    return !m_loading && m_totalCount == 0 && hasResultRestrictions();
 }
 
 QString QtCatalogAdapter::libraryStatisticsText() const
