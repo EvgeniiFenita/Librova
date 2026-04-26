@@ -66,7 +66,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Filters button: clicking the button while the filter popup is open closes the popup without re-opening it
 - Filters button shows `Filters · N` (correct count) immediately on startup when filters were saved from a previous session
 - Book grid scrollbar: appears on scroll and autohides when idle; handle is amber
-- Book details panel scrollbar: appears on scroll for long metadata; autohides when idle
+- Book details panel scrollbar: appears on scroll only within the annotation block when annotation text overflows; autohides when idle; the rest of the panel does not scroll
 - Filters popup genre list scrollbar: appears on scroll when genres overflow; autohides when idle
 - Sort pill hover: left half (label) has left-side rounded corners; right half (direction icon) has right-side rounded corners
 - Sort dropdown items: hover highlight covers the item row with rounded corners
@@ -76,6 +76,7 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 - Sorting state persists across restart
 - Book cards: selected card has a full-card amber ring that is not covered by the book cover
 - Book cards: title is readable for up to two lines and long title/author values end with ellipsis
+- Book details: author list truncates to 2 lines with ellipsis; hovering a truncated author row shows a tooltip with the full author list, one per line
 - Covers: real cover keeps its aspect ratio
 - Covers: short or narrow covers do not reveal a separate dark rounded backing frame
 - Covers: missing-cover placeholder is a rounded warm gradient selected deterministically from book metadata

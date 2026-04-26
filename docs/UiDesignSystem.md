@@ -170,6 +170,19 @@ The selected state belongs to the full card, not the cover slot: the amber ring 
 
 The details panel must not overlap the grid. When the details panel opens and the selected card is already fully visible, the grid does not scroll. If the selected card is outside the visible area, the grid scrolls the minimum amount to bring it into view.
 
+### Book Details Panel
+
+`BookDetailsPanel.qml` is a 360 px fixed-width side panel. Layout (top to bottom):
+
+1. **Header row** — book title (full width) + close button pinned top-right. Close button: 28×28 px, `radius: 6`, `surfaceMuted` background with `border` border, `LibrovaIcons.close` icon (14 px), hover animation via `surfaceHover`.
+2. **Two-column row** — cover image (150×210 px) left; authors + Year / Language / Format / Size right. Authors truncate to 2 lines with right-side ellipsis; hovering a truncated author row shows a `ToolTip` (width 280, padding 10) with each author on its own line.
+3. **Full-width metadata** — ISBN and Series side by side in equal columns when both are present; single column at full width when only one is present. Publisher below in full width.
+4. **Genres** — plain non-interactive `Rectangle` pills (no hover, no pointer cursor). Never rendered as `LGenreChip`.
+5. **Annotation** — dynamic-height block. When content is small the block sizes to the content. When content is large the block expands to fill all remaining panel space and a `Flickable` with `LScrollBar` scrolls the text. The panel itself does **not** scroll — only the annotation `Flickable` does.
+6. **Action buttons** — pinned to the bottom by a spacer above. Three equal stacked buttons (full panel width, 46 px height, `sizeMd` font, 22 px icons): `Export as EPUB` (accent colour, visible only when converter is configured), `Export` (neutral), `Move to Recycle Bin` (danger palette). All three are disabled (opacity 0.4) while `exportAdapter.isBusy`. Hover and icon/text color effects are suppressed while busy.
+
+Cover placeholder follows the same 7-palette deterministic warm-gradient rule as `BookCard.qml` (hash seeded by `title + "|" + authors`). The book database ID is never shown in the panel.
+
 ---
 
 ## 9. Import Section
@@ -273,7 +286,7 @@ Use `LScrollBar` (`qml/components/LScrollBar.qml`) for all scrollable content ar
 
 **Attach only to `Flickable` or its subclasses** (`GridView`, `ListView`). Do not attach to `ScrollView` — `ScrollBar.vertical` is not properly forwarded by Qt Quick's `ScrollView` template to custom `ScrollBar` subclasses. Replace `ScrollView` + content item with `Flickable` + `contentHeight: _content.implicitHeight` instead.
 
-Scrollbars are enabled in: `BookGrid` (GridView), `BookDetailsPanel` (Flickable), and the filters popup genre list (Flickable). Other views do not need scrollbars.
+Scrollbars are enabled in: `BookGrid` (GridView), the annotation `Flickable` inside `BookDetailsPanel` (annotation block only — the panel itself does not scroll), and the filters popup genre list (Flickable). Other views do not need scrollbars.
 
 ---
 

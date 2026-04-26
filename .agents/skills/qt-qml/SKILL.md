@@ -155,6 +155,21 @@ Typical Qt test categories already present:
 - strong Qt integration tests
 - QML parity tests
 
+## Per-Corner Radius on Rectangle
+
+Qt 6.7+ supports individual corner radii directly on `Rectangle` — use these instead of hacks (clip tricks, stacked rectangles):
+
+```qml
+Rectangle {
+    topLeftRadius:     LibrovaTheme.radiusMedium
+    bottomLeftRadius:  LibrovaTheme.radiusMedium
+    topRightRadius:    LibrovaTheme.radiusMedium
+    bottomRightRadius: LibrovaTheme.radiusMedium
+}
+```
+
+Use `topRightRadius` / `bottomRightRadius` (without `topLeftRadius` / `bottomLeftRadius`) when a control is the **right segment** of a compound input (e.g. a clear/action button attached to the right edge of a text field). The left side stays square; only the right side is rounded — matching the outer container's rounding. See `LibraryToolbar.qml` and the converter clear button in `SettingsView.qml` for live examples.
+
 ## Common Mistakes To Avoid
 
 - hardcoding colours, spacing, or control sizes when a theme token already exists
