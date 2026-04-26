@@ -133,8 +133,8 @@ Item {
         visible:         catalogAdapter.totalCount > 0
         clip:            true
 
-        cellWidth:  196
-        cellHeight: 324
+        cellWidth:  216
+        cellHeight: 352
 
         model: catalogAdapter.bookListModel
 
@@ -163,8 +163,8 @@ Item {
         }
 
         delegate: BookCard {
-            width:  172
-            height: 300
+            width:  188
+            height: 330
 
             book: ({
                 bookId:      model.bookId,

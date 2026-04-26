@@ -104,7 +104,7 @@ The user can:
 - add or remove a book from collections through the book-card context menu;
 - see a library summary in the left `Current Library` panel with total managed-book count and one aggregate library-size metric in megabytes that includes managed books, stored covers, and the SQLite database;
 - browse books as cover-driven cards in a responsive grid;
-- see stable-size book cards with a generated gradient placeholder when a cover is missing, while real covers keep their aspect ratio and sit on a neutral matte background instead of exposed color bands;
+- see stable-size book cards with aspect-preserving covers, deterministic warm gradient placeholders when covers are missing, visible selection rings that do not sit behind the cover, and title/author text that truncates cleanly;
 - open a right-hand details panel without leaving the `Library` section;
 - keep the selected card visible by re-centering it in the scroll viewport when the details panel opens or closes and the grid reflows;
 - keep desktop-oriented minimum window dimensions so the `Library` section still preserves multiple visible cards, at least two columns with the details panel open, and at least two visible rows of cards;

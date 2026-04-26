@@ -74,7 +74,11 @@ Flat checklist for manual release verification. Items without `(RG)` are recomme
 
 - Sorting direction `▲/▼` toggles **(RG)**
 - Sorting state persists across restart
+- Book cards: selected card has a full-card amber ring that is not covered by the book cover
+- Book cards: title is readable for up to two lines and long title/author values end with ellipsis
 - Covers: real cover keeps its aspect ratio
+- Covers: short or narrow covers do not reveal a separate dark rounded backing frame
+- Covers: missing-cover placeholder is a rounded warm gradient selected deterministically from book metadata
 - Covers: placeholder letter is not clipped, including Cyrillic letters
 - FB2 with `windows-1251` shows title/author without corruption **(RG)**
 - `Esc` with a selected book closes the details panel (clears selection); does nothing when no book is selected

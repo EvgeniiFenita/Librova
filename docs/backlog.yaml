@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 195
+  last_assigned_id: 196
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow
@@ -130,15 +130,6 @@ tasks:
     require pre-filtering — only FB2 entries sent to batch. Match output EPUBs back to BookIds by title+author.
     Eliminates per-book CreateProcess overhead for EPUB conversion. Deferred from #60 to avoid complexity
     in the parallel import slice.'
-- id: 177
-  summary: show author text as second line on book card
-  status: Open
-  type: Feature
-  priority: Minor
-  milestone: '1.3'
-  note: Authors text already exists on the book card model; render a secondary muted line under the title
-    in BookCard.qml with ellipsis support; adjust the card height and responsive grid sizing so the extra
-    line fits without visual distortion.
 - id: 129
   summary: compact database after regular book deletions to reclaim FTS5 tombstone space
   status: Open

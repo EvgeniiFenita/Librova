@@ -1606,3 +1606,20 @@ tasks:
   milestone: '1.3'
   note: 'Implemented: Add to collection row replaced with flyout submenu. Collections with checkmark+disabled
     if book already in them. Remove toggle-remove behavior. ContextMenuItem gains enabled+opacity support.'
+- id: 177
+  summary: redesign and polish library book cards
+  status: Closed
+  type: Feature
+  priority: Major
+  milestone: '1.3'
+  note: 'Redesigned and stabilized the Qt library book card: full-card selection ring, larger stable grid
+    sizing, aspect-preserving cover rendering without effect masks, deterministic warm gradient missing-cover
+    placeholders, no visible inner backing frame under real covers, and title/author ellipsis coverage.'
+- id: 196
+  summary: fix and polish book card cover and missing-cover rendering
+  status: Closed
+  type: Bug
+  priority: Major
+  milestone: '1.3'
+  note: 'Merged into #177; the follow-up cover-rendering and missing-cover placeholder fixes belong to
+    the same book-card redesign task.'

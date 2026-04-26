@@ -164,7 +164,9 @@ The Library section contains:
 - right details panel that opens without leaving the section
 - book-card context menu for export, copy title, collection membership, and trash actions
 
-Book cards keep stable dimensions. Real covers preserve aspect ratio on a neutral matte background. Missing covers use generated placeholders with readable initials, including Cyrillic letters.
+Book cards keep stable dimensions (`188 x 330` delegates in `216 x 352` grid cells). Real covers preserve aspect ratio and sit directly on the card surface without a visible inner backing frame. Missing or failed covers use rounded deterministic warm gradient placeholders with readable initials, including Cyrillic letters.
+
+The selected state belongs to the full card, not the cover slot: the amber ring stays above the card content and must never be hidden by the cover image. Card title text uses up to two lines with right-side ellipsis; author text uses one muted line with ellipsis.
 
 The details panel must not overlap the grid. When the details panel opens and the selected card is already fully visible, the grid does not scroll. If the selected card is outside the visible area, the grid scrolls the minimum amount to bring it into view.
 
