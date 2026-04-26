@@ -1,5 +1,5 @@
 meta:
-  last_assigned_id: 194
+  last_assigned_id: 195
 tasks:
 - id: 100
   summary: add RAR archive import support alongside the existing ZIP archive workflow

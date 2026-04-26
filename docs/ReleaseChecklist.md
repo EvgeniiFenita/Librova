@@ -1,4 +1,4 @@
-# Librova Release Checklist
+﻿# Librova Release Checklist
 
 Flat checklist for manual release verification. Items without `(RG)` are recommended checks; items marked `**(RG)**` are mandatory release gates.
 

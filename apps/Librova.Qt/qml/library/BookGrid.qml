@@ -1,4 +1,4 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls.Basic
 import LibrovaQt
 
@@ -199,13 +199,9 @@ Item {
         interval: 0
         onTriggered: {
             if (root.selectedBookIndex >= 0 && root.selectedBookIndex < _grid.count)
-                _grid.positionViewAtIndex(root.selectedBookIndex, GridView.Center)
+                _grid.positionViewAtIndex(root.selectedBookIndex, GridView.Contain)
         }
     }
 
     onSelectedBookIndexChanged: _selectionPositionTimer.restart()
-    onWidthChanged: {
-        if (root.selectedBookIndex >= 0)
-            _selectionPositionTimer.restart()
-    }
 }

@@ -1598,3 +1598,11 @@ tasks:
   milestone: '1.3'
   note: Fixed hover via explicit _hov+onHoveredChanged, amber selected border, disabled button guard,
     separated Browse+path row, hero panel with PNG asset and brand typography.
+- id: 195
+  summary: two-level Add to collection submenu in book context menu
+  status: Closed
+  type: Feature
+  priority: Minor
+  milestone: '1.3'
+  note: 'Implemented: Add to collection row replaced with flyout submenu. Collections with checkmark+disabled
+    if book already in them. Remove toggle-remove behavior. ContextMenuItem gains enabled+opacity support.'

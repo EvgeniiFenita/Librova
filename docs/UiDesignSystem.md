@@ -1,4 +1,4 @@
-# Librova UI Design System
+﻿# Librova UI Design System
 
 Reference for everyone working on the Librova Qt/QML desktop UI.
 
@@ -166,7 +166,7 @@ The Library section contains:
 
 Book cards keep stable dimensions. Real covers preserve aspect ratio on a neutral matte background. Missing covers use generated placeholders with readable initials, including Cyrillic letters.
 
-The details panel must not overlap the grid. Opening or closing the panel recenters the selected card so selection remains visible after reflow.
+The details panel must not overlap the grid. When the details panel opens and the selected card is already fully visible, the grid does not scroll. If the selected card is outside the visible area, the grid scrolls the minimum amount to bring it into view.
 
 ---
 

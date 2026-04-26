@@ -1,4 +1,4 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls.Basic
 import LibrovaQt
 
@@ -32,6 +32,8 @@ Popup {
     padding:     LibrovaTheme.sp1
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+    onClosed: _collectionsSubmenu.close()
+
     background: Rectangle {
         color:        LibrovaTheme.surfaceElevated
         radius:       LibrovaTheme.radiusMedium
@@ -63,61 +65,83 @@ Popup {
             }
         }
 
-        // Divider
         Rectangle {
             width:  parent.width
             height: 1
             color:  LibrovaTheme.border
         }
 
-        Text {
-            width: parent.width
-            leftPadding: 12
-            topPadding: 7
-            bottomPadding: 5
-            text: "Add to"
-            font.family: LibrovaTypography.fontFamily
-            font.pixelSize: LibrovaTypography.sizeXs
-            font.weight: LibrovaTypography.weightSemiBold
-            color: LibrovaTheme.textMuted
-            visible: catalogAdapter.collectionListModel.count > 0
-        }
+        // ── "Add to collection ▶" row — opens flyout submenu on hover ─────────
+        Rectangle {
+            id: _addToRow
+            width:  parent ? parent.width : 0
+            height: 34
+            radius: LibrovaTheme.radiusSmall
+            color:  _addToHover.hovered || _collectionsSubmenu.visible
+                    ? LibrovaTheme.surfaceHover : "transparent"
 
-        Repeater {
-            model: catalogAdapter.collectionListModel
-            delegate: ContextMenuItem {
-                visible: model.isDeletable
-                text: root._isInCollection(model.collectionId) ? "\u2713 " + model.name : model.name
-                iconText: ""
-                onActivated: {
-                    root.close()
-                    if (root._isInCollection(model.collectionId))
-                        root.removeFromCollectionRequested(root.bookId, model.collectionId)
-                    else
-                        root.addToCollectionRequested(root.bookId, model.collectionId)
+            Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
+
+            Row {
+                anchors {
+                    left:           parent.left
+                    leftMargin:     LibrovaTheme.sp3
+                    verticalCenter: parent.verticalCenter
+                }
+                spacing: LibrovaTheme.sp3
+
+                LIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    iconPath:  LibrovaIcons.addFolder
+                    iconColor: LibrovaTheme.textSecondary
+                    size:      16
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text:           "Add to"
+                    font.family:    LibrovaTypography.fontFamily
+                    font.pixelSize: LibrovaTypography.sizeBase
+                    color:          LibrovaTheme.textPrimary
+                }
+            }
+
+            Text {
+                anchors {
+                    right:          parent.right
+                    rightMargin:    LibrovaTheme.sp3
+                    verticalCenter: parent.verticalCenter
+                }
+                text:           "\u203A"
+                font.family:    LibrovaTypography.fontFamily
+                font.pixelSize: 18
+                color:          LibrovaTheme.textSecondary
+            }
+
+            HoverHandler {
+                id: _addToHover
+                cursorShape: Qt.PointingHandCursor
+                onHoveredChanged: {
+                    if (hovered) {
+                        _closeSubTimer.stop()
+                        root._openSubmenu()
+                    } else {
+                        _closeSubTimer.restart()
+                    }
                 }
             }
         }
 
-        ContextMenuItem {
-            text: "Create new..."
-            iconText: "+"
-            onActivated: {
-                root.close()
-                root.createCollectionForBookRequested(root.bookId)
-            }
-        }
-
         Rectangle {
-            width:  parent.width
-            height: 1
-            color:  LibrovaTheme.border
+            width:   parent.width
+            height:  1
+            color:   LibrovaTheme.border
             visible: catalogAdapter.activeCollectionId > 0
         }
 
         ContextMenuItem {
-            visible: catalogAdapter.activeCollectionId > 0
-            text: "Remove from collection"
+            visible:  catalogAdapter.activeCollectionId > 0
+            text:     "Remove from collection"
             iconText: "\u2715"
             onActivated: {
                 root.close()
@@ -141,14 +165,88 @@ Popup {
         }
 
         ContextMenuItem {
-            text:      "Move to Trash"
-            iconPath:  LibrovaIcons.trash
+            text:       "Move to Trash"
+            iconPath:   LibrovaIcons.trash
             isDestruct: true
             onActivated: {
                 root.close()
                 root.trashRequested(root.bookId)
             }
         }
+    }
+
+    // ── Collections flyout submenu ────────────────────────────────────────────
+
+    Timer {
+        id: _closeSubTimer
+        interval: 300
+        onTriggered: _collectionsSubmenu.close()
+    }
+
+    Popup {
+        id: _collectionsSubmenu
+        parent:      Overlay.overlay
+        padding:     LibrovaTheme.sp1
+        closePolicy: Popup.CloseOnEscape
+
+        background: Rectangle {
+            color:        LibrovaTheme.surfaceElevated
+            radius:       LibrovaTheme.radiusMedium
+            border.color: LibrovaTheme.accentBorder
+            border.width: 1
+        }
+
+        Column {
+            width: 210
+
+            Repeater {
+                model: catalogAdapter.collectionListModel
+                delegate: ContextMenuItem {
+                    required property var model
+                    visible:  model.isDeletable
+                    enabled:  !root._isInCollection(model.collectionId)
+                    text:     root._isInCollection(model.collectionId)
+                              ? "\u2713  " + model.name : model.name
+                    onActivated: {
+                        _collectionsSubmenu.close()
+                        root.close()
+                        root.addToCollectionRequested(root.bookId, model.collectionId)
+                    }
+                }
+            }
+
+            Rectangle {
+                width:   parent.width
+                height:  1
+                color:   LibrovaTheme.border
+                visible: catalogAdapter.collectionListModel.count > 0
+            }
+
+            ContextMenuItem {
+                text:     "Create new..."
+                iconText: "+"
+                onActivated: {
+                    _collectionsSubmenu.close()
+                    root.close()
+                    root.createCollectionForBookRequested(root.bookId)
+                }
+            }
+        }
+
+        HoverHandler {
+            id: _subHover
+            onHoveredChanged: {
+                if (hovered) _closeSubTimer.stop()
+                else         _closeSubTimer.restart()
+            }
+        }
+    }
+
+    function _openSubmenu() {
+        var pt = _addToRow.mapToItem(null, _addToRow.width + root.padding, 0)
+        _collectionsSubmenu.x = pt.x
+        _collectionsSubmenu.y = pt.y - _collectionsSubmenu.padding
+        _collectionsSubmenu.open()
     }
 
     function _canExportAsEpub() {
@@ -175,12 +273,13 @@ Popup {
 
         signal activated()
 
-        width:  parent ? parent.width : 0
-        height: 34
-        radius: LibrovaTheme.radiusSmall
-        color:  _miHover.hovered
-                ? (_mi.isDestruct ? LibrovaTheme.dangerHoverBg : LibrovaTheme.surfaceHover)
-                : "transparent"
+        width:   parent ? parent.width : 0
+        height:  34
+        radius:  LibrovaTheme.radiusSmall
+        opacity: _mi.enabled ? 1.0 : 0.45
+        color:   (_miHover.hovered && _mi.enabled)
+                 ? (_mi.isDestruct ? LibrovaTheme.dangerHoverBg : LibrovaTheme.surfaceHover)
+                 : "transparent"
 
         Behavior on color { ColorAnimation { duration: LibrovaTheme.animFast } }
 
@@ -194,24 +293,24 @@ Popup {
 
             // SVG icon slot
             LIcon {
-                visible:               _mi.iconPath !== ""
-                width:                 visible ? size : 0
-                height:                visible ? size : 0
+                visible:                _mi.iconPath !== ""
+                width:                  visible ? size : 0
+                height:                 visible ? size : 0
                 anchors.verticalCenter: parent.verticalCenter
-                iconPath:              _mi.iconPath
-                iconColor:             _mi.isDestruct ? LibrovaTheme.danger : LibrovaTheme.textSecondary
-                size:                  16
+                iconPath:               _mi.iconPath
+                iconColor:              _mi.isDestruct ? LibrovaTheme.danger : LibrovaTheme.textSecondary
+                size:                   16
             }
 
             // Text icon slot (for "+" etc.)
             Text {
-                visible:               _mi.iconPath === "" && _mi.iconText !== ""
-                width:                 visible ? implicitWidth : 0
+                visible:                _mi.iconPath === "" && _mi.iconText !== ""
+                width:                  visible ? implicitWidth : 0
                 anchors.verticalCenter: parent.verticalCenter
-                text:                  _mi.iconText
-                font.family:           LibrovaTypography.fontFamily
-                font.pixelSize:        LibrovaTypography.sizeBase
-                color:                 _mi.isDestruct ? LibrovaTheme.danger : LibrovaTheme.textSecondary
+                text:                   _mi.iconText
+                font.family:            LibrovaTypography.fontFamily
+                font.pixelSize:         LibrovaTypography.sizeBase
+                color:                  _mi.isDestruct ? LibrovaTheme.danger : LibrovaTheme.textSecondary
             }
 
             Text {
@@ -223,7 +322,7 @@ Popup {
             }
         }
 
-        HoverHandler { id: _miHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler   { onTapped: _mi.activated() }
+        HoverHandler { id: _miHover; cursorShape: _mi.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
+        TapHandler   { enabled: _mi.enabled; onTapped: _mi.activated() }
     }
 }
