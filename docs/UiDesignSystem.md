@@ -165,7 +165,7 @@ The Library section contains:
 
 - toolbar with search, filters, sort, and direction controls
 - responsive cover-card grid
-- centered empty/no-results states with generated illustrations
+- centered empty/no-results states with illustrated assets
 - right details panel that opens without leaving the section
 - book-card context menu for export, copy title, collection membership, and trash actions
 
@@ -188,9 +188,13 @@ The details panel must not overlap the grid. When the details panel opens and th
 
 Cover placeholder follows the same 7-palette deterministic warm-gradient rule as `BookCard.qml` (hash seeded by `title + "|" + authors`). The book database ID is never shown in the panel.
 
----
+### Empty State Illustration
 
-## 9. Import Section
+The "Library is empty" state uses a pre-rendered PNG asset (`assets/empty_library.png`, 440 × 300 px, RGBA) displayed via `EmptyBookIllustration.qml` at 220 × 150 logical px with `mipmap: true`. The asset has a transparent background and blends onto the dark card surface (`surface` token).
+
+To replace the illustration: swap `assets/empty_library.png` (keep dimensions at 440 × 300 px for crisp 2× HiDPI rendering) and rebuild — no QML changes required.
+
+---
 
 Import is immediate-start:
 
@@ -331,6 +335,7 @@ To change the palette, update:
 | File | What to change |
 |---|---|
 | `apps/Librova.Qt/qml/theme/LibrovaTheme.qml` | Primitive colours and derived tokens |
+| `apps/Librova.Qt/assets/empty_library.png` | Empty library state illustration (440 × 300 px RGBA PNG) |
 | `apps/Librova.Qt/App/QtWindowsPlatform.*` | Windows title-bar colour if the background token changes |
 | `scripts/GenerateLibrovaIcon.py` | Icon colour constants, then regenerate `librova.ico` |
 | `docs/UiDesignSystem.md` | Token table and any changed component rules |
