@@ -54,7 +54,6 @@ For agent-oriented task procedures, see the skills listed in `AGENTS.md`.
 | `scripts\Run-LibrovaQt.ps1` | Build and launch the Qt/QML one-process app for manual verification | `-Preset <cmake-preset>`, `-Configuration Debug|Release`, `-QtRoot <path>`, launch flags defined in the script |
 | `python scripts\backlog.py ...` | Inspect and maintain the backlog via the supported CLI instead of editing YAML directly | `list`, `show <id>`, `add`, `edit <id>`, `close <id>`, `validate` |
 | `scripts\PublishPortableQt.ps1` | Build the portable Qt packaged distribution under `out\package\<PackageName>` | `-Preset <cmake-preset>`, `-Configuration Release`, packaging options defined in the script |
-| `scripts\GenerateLibrovaIcon.ps1` | Regenerate the application icon assets from the scripted source | no routine flags; run after editing the icon generator inputs |
 
 Use `Get-Content scripts\<name>.ps1 -TotalCount 40` or `Get-Help` for the full parameter list when a script changes.
 

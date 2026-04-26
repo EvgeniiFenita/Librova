@@ -188,8 +188,8 @@ import LibrovaQt
                     Text { text: "ABOUT"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeXs; font.weight: LibrovaTypography.weightSemiBold; font.letterSpacing: LibrovaTypography.spacingEyebrow; color: LibrovaTheme.accent }
                     Row {
                         spacing: 10
-                        LIcon { iconPath: LibrovaIcons.book; iconColor: LibrovaTheme.accent; size: 20; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "Librova"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; font.weight: LibrovaTypography.weightSemiBold; color: LibrovaTheme.textPrimary }
+                        Image { source: "qrc:/assets/brand_badge.png"; width: 48; height: 48; fillMode: Image.PreserveAspectFit; smooth: true; mipmap: true; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "Librova"; font.family: LibrovaTypography.fontFamily; font.pixelSize: LibrovaTypography.sizeMd; font.weight: LibrovaTypography.weightSemiBold; color: LibrovaTheme.textPrimary; anchors.verticalCenter: parent.verticalCenter }
                     }
                     Grid {
                         columns: 2

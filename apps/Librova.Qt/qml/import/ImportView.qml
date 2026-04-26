@@ -86,7 +86,7 @@ Rectangle {
 
             Rectangle {
                 width: parent.width - 40
-                height: 250
+                height: 340
                 radius: LibrovaTheme.radiusLarge
                 color: LibrovaTheme.accentSurface
                 border.color: LibrovaTheme.border
@@ -97,11 +97,13 @@ Rectangle {
                     anchors.centerIn: parent
                     spacing: 20
 
-                    LIcon {
+                    Image {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        iconPath:  LibrovaIcons.uploadCloud
-                        iconColor: LibrovaTheme.accent
-                        size:      44
+                        source: "qrc:/assets/import_drop.png"
+                        width: 280; height: 140
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
                     }
 
                     Column {

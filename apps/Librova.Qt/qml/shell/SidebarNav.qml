@@ -99,29 +99,21 @@ Rectangle {
         // Brand logo block — icon badge + wordmark + divider
         Item {
             width: parent.width
-            height: 56
+            height: 68
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 12
+                spacing: 10
                 leftPadding: 2
 
-                // Circular amber badge
-                Rectangle {
-                    width: 38
-                    height: 38
-                    radius: 19
-                    color: LibrovaTheme.accentSurface
-                    border.color: LibrovaTheme.accentBorder
-                    border.width: 1
+                // Brand medallion badge
+                Image {
+                    width: 56; height: 56
+                    source: "qrc:/assets/brand_badge.png"
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
                     anchors.verticalCenter: parent.verticalCenter
-
-                    LIcon {
-                        anchors.centerIn: parent
-                        iconPath:  LibrovaIcons.book
-                        iconColor: LibrovaTheme.accent
-                        size:      20
-                    }
                 }
 
                 Column {
@@ -206,15 +198,16 @@ Rectangle {
 
                 Column {
                     width: parent.width
-                    spacing: 4
+                    spacing: 6
                     visible: catalogAdapter.collectionListModel.count === 0
 
-                    Text {
+                    Image {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text:        "📚"
-                        font.family: "Segoe UI Emoji"
-                        font.pixelSize: 26
-                        color: LibrovaTheme.textMuted
+                        source: "qrc:/assets/no_collections.png"
+                        width: 100; height: 65
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
                     }
 
                     Text {

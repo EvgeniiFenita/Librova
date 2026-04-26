@@ -10,8 +10,8 @@ Window {
     y: shellState.windowY
     width: Math.max(shellState.windowWidth, minimumWidth)
     height: Math.max(shellState.windowHeight, minimumHeight)
-    minimumWidth: 1110
-    minimumHeight: 960
+    minimumWidth: 1300
+    minimumHeight: 1040
     visible: true
     color: LibrovaTheme.background
 
