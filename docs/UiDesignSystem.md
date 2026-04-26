@@ -96,6 +96,11 @@ The ready shell has:
 
 Minimum desktop dimensions must preserve useful library browsing: at least two visible book-card columns and two visible rows when the details panel is open.
 
+The enforced minimum window size is **1110 × 960 px** (set in `Main.qml`):
+
+- `minimumWidth: 1110` — sidebar (244 px) + 1 px divider + content area wide enough for the library grid with two card columns and the details panel open
+- `minimumHeight: 960` — tall enough to show the full import progress card without scrolling on FHD displays (1080 px − ~40 px taskbar = ~1040 px client area); the import section stacks header + drop zone + options + the running job card in ~934 px of scroll content
+
 ---
 
 ## 5. Navigation
